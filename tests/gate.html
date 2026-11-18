@@ -1,0 +1,10 @@
+<meta charset="utf-8"><title>Architekturnachweis</title><style>*{margin:0}</style><script type="module">
+import * as T from 'three';import {R,basis,position} from '/src/geo.ts';
+const gl=new T.WebGLRenderer(),s=new T.Scene(),c=new T.PerspectiveCamera(38,2,.0001,50000);
+gl.setSize(640,320);document.body.append(gl.domElement);
+const a=basis(54.57,8.52),p=position(54.57,8.52);
+for(const [r,color] of [[R,0x478499],[3481,0xd79766],[1221,0xffdeac]]){
+ const m=new T.Mesh(new T.SphereGeometry(r,96,64,0,4.9),new T.MeshBasicMaterial({color,side:T.DoubleSide}));s.add(m);}
+const local=new T.Mesh(new T.ConeGeometry(.2,.012,16),new T.MeshBasicMaterial({color:0x81ad76}));local.position.copy(p);local.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),a.up);s.add(local);
+window.sample=d=>{c.position.copy(p).addScaledVector(a.up,d);c.up.copy(a.north);c.lookAt(p);c.updateProjectionMatrix();gl.render(s,c);const x=new Uint8Array(4);gl.getContext().readPixels(320,160,1,1,6408,5121,x);return [...x];};window.sample(16000);
+</script>

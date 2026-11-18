@@ -1,0 +1,123 @@
+{
+  "roi": "45\u201385% x, 26\u201372% y; 64 \u00d7 40 Luma",
+  "cdpFrames": 86,
+  "durationMs": 7450,
+  "longestPresentationGapMs": 334,
+  "gapsAbove250Ms": 3,
+  "largestChanges": [
+    {
+      "timeMs": 2000,
+      "meanAbsoluteLumaChange": 0.1446,
+      "nearestAnimationFrame": {
+        "t": 1927,
+        "d": 3350.7698542566254,
+        "lat": 37.616901110536816,
+        "lon": 13.394013427367515,
+        "tiles": 32,
+        "triangles": 26256,
+        "ratio": 1,
+        "local": false
+      }
+    },
+    {
+      "timeMs": 3960,
+      "meanAbsoluteLumaChange": 0.1307,
+      "nearestAnimationFrame": {
+        "t": 3942,
+        "d": 30.406322783460663,
+        "lat": 54.5660014,
+        "lon": 8.550413100000014,
+        "tiles": 136,
+        "triangles": 11745,
+        "ratio": 0.85,
+        "local": true
+      }
+    },
+    {
+      "timeMs": 2160,
+      "meanAbsoluteLumaChange": 0.1174,
+      "nearestAnimationFrame": {
+        "t": 2141,
+        "d": 2222.788796542321,
+        "lat": 41.774403985252846,
+        "lon": 12.205910109722698,
+        "tiles": 32,
+        "triangles": 25488,
+        "ratio": 0.85,
+        "local": false
+      }
+    },
+    {
+      "timeMs": 160,
+      "meanAbsoluteLumaChange": 0.1039,
+      "nearestAnimationFrame": {
+        "t": 159,
+        "d": 14450.000000000007,
+        "lat": 18,
+        "lon": 19,
+        "tiles": 32,
+        "triangles": 27408,
+        "ratio": 1,
+        "local": false
+      }
+    },
+    {
+      "timeMs": 3840,
+      "meanAbsoluteLumaChange": 0.094,
+      "nearestAnimationFrame": {
+        "t": 3853,
+        "d": 39.147250513635946,
+        "lat": 54.5660014,
+        "lon": 8.550413100000014,
+        "tiles": 130,
+        "triangles": 13161,
+        "ratio": 0.85,
+        "local": true
+      }
+    },
+    {
+      "timeMs": 600,
+      "meanAbsoluteLumaChange": 0.0929,
+      "nearestAnimationFrame": {
+        "t": 525,
+        "d": 14390.393714072849,
+        "lat": 18.071480379457014,
+        "lon": 18.97957281605363,
+        "tiles": 32,
+        "triangles": 27408,
+        "ratio": 1,
+        "local": false
+      }
+    },
+    {
+      "timeMs": 2080,
+      "meanAbsoluteLumaChange": 0.088,
+      "nearestAnimationFrame": {
+        "t": 2087,
+        "d": 2965.122872542275,
+        "lat": 38.912717899600004,
+        "lon": 13.023703586932111,
+        "tiles": 32,
+        "triangles": 26256,
+        "ratio": 0.85,
+        "local": false
+      }
+    },
+    {
+      "timeMs": 3000,
+      "meanAbsoluteLumaChange": 0.0797,
+      "nearestAnimationFrame": {
+        "t": 2989,
+        "d": 331.8352586794697,
+        "lat": 53.62340158524054,
+        "lon": 8.819782959955575,
+        "tiles": 64,
+        "triangles": 7680,
+        "ratio": 0.85,
+        "local": false
+      }
+    }
+  ],
+  "lowContrastAtMs": [],
+  "nearUniformFrames": 0
+}

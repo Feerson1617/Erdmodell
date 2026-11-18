@@ -1,0 +1,43 @@
+{
+  "roi": "45\u201385% x, 26\u201372% y; 64 \u00d7 40 Luma",
+  "cdpFrames": 70,
+  "durationMs": 7450,
+  "longestPresentationGapMs": 534,
+  "gapsAbove250Ms": 5,
+  "largestChanges": [
+    {
+      "timeMs": 3720,
+      "meanAbsoluteLumaChange": 0.2777
+    },
+    {
+      "timeMs": 960,
+      "meanAbsoluteLumaChange": 0.1338
+    },
+    {
+      "timeMs": 3280,
+      "meanAbsoluteLumaChange": 0.1285
+    },
+    {
+      "timeMs": 2560,
+      "meanAbsoluteLumaChange": 0.1211
+    },
+    {
+      "timeMs": 5040,
+      "meanAbsoluteLumaChange": 0.1194
+    },
+    {
+      "timeMs": 3240,
+      "meanAbsoluteLumaChange": 0.1191
+    },
+    {
+      "timeMs": 880,
+      "meanAbsoluteLumaChange": 0.1111
+    },
+    {
+      "timeMs": 1760,
+      "meanAbsoluteLumaChange": 0.0986
+    }
+  ],
+  "lowContrastAtMs": [],
+  "nearUniformFrames": 0
+}

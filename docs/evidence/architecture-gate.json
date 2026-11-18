@@ -1,0 +1,1 @@
+{"browser":"Chromium 156, WebGL2 / SwiftShader","entry":"tests/gate.html","distanceKm":[16000,1000,1,0.15],"centerPixelRGB":[[255,222,172],[71,132,153],[129,173,118],[129,173,118]],"scene":"One perspective camera, partial Earth surface and core meshes, geographically anchored local test cone. Technical prototype, not visual acceptance."}
