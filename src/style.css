@@ -1455,3 +1455,30 @@ dialog summary {
     display: none;
   }
 }
+.readingActions #investigate { min-height: 46px; border-color: #809c81; color: #d3edbf; }
+.readingActions #investigate, .readingActions #limits { grid-column: auto; }
+.invest { font-size: clamp(16px, 1.1vw, 22px); line-height: 1.4; }
+.invest h2 { font-size: clamp(26px, 2.1vw, 40px); margin: .35em 0; line-height: 1.12; }
+.investQuestion { color: #ecf2df; font-size: 1.12em; margin: .6em 0; }
+.investCard { border-left: 3px solid #536e70; padding: .5em .8em; margin: .6em 0; background: #1b2b30; }
+.investCard.marked { border-color: #c5e895; background: #324334; }
+.investCard h3 { font-size: 1em; color: #d2e6d3; margin: 0 0 .25em; }
+.investCard p { margin: 0; }
+.investCard table { width: 100%; margin: .5em 0; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.investCard th, .investCard td { text-align: left; padding: .18em .25em; border-bottom: 1px solid #455b60; }
+.investCard small { color: #c2d0cc; }
+.investAids, .investNav { display: flex; flex-wrap: wrap; gap: .3em; margin: .6em 0; }
+.invest button { min-height: 44px; padding: .35em .7em; font-size: .93em; }
+.present .invest button, .present .readingActions #investigate { min-height: 60px; }
+.investNav button { flex: 1; }
+.invest button { border: 1px solid #61776f; border-radius: 7px; }
+.invest button[aria-expanded="true"], .invest button[aria-pressed="true"] { color: var(--lime); background: #293c31; }
+#investNext { background: #c1dda7; color: #18251d; }
+.invest button:disabled { opacity: .48; }
+#pauseInvest { width: 100%; }
+@media (min-width: 721px) and (orientation: landscape) {
+  .present .invest { display: flex; flex-direction: column; height: 100%; }
+  .present .investBody { flex: 1; min-height: 0; overflow-y: auto; padding-right: 5px; }
+  .present .investFooter { flex: none; border-top: 1px solid var(--line); }
+  .present .investNav { margin: 6px 0; }
+}

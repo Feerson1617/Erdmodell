@@ -4,3 +4,5 @@ artifacts/
 test-results/
 .scratch/
 *.log
+
+dist-g2a/

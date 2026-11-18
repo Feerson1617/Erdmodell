@@ -6,6 +6,7 @@ import { regions, firstRegion, type Region } from "./regions";
 import { LocalTerrain } from "./local";
 import { Shells, shellRadii } from "./shells";
 import { type Style, styles } from "./model";
+import { RenderResolution } from "./resolution";
 export class World {
   scene = new T.Scene();
   gl: T.WebGLRenderer;
@@ -28,7 +29,8 @@ export class World {
   private running = true;
   private waitingForAscent = false;
   private last = 0;
-  private slow = 0;
+  private resolution = new RenderResolution(devicePixelRatio);
+  private frameMs = 0;
   private shadowStamp = "";
   private fpsStart = 0;
   private frameCount = 0;
@@ -49,7 +51,7 @@ export class World {
       alpha: true,
       powerPreference: "high-performance",
     });
-    this.gl.setPixelRatio(Math.min(devicePixelRatio, 1.5));
+    this.gl.setPixelRatio(this.resolution.ratio);
     this.gl.shadowMap.enabled = true;
     this.gl.shadowMap.autoUpdate = false;
     this.gl.shadowMap.type = T.PCFSoftShadowMap;
@@ -133,6 +135,7 @@ export class World {
     canvas.addEventListener("webglcontextlost", (e) => {
       e.preventDefault();
       this.running = false;
+      this.planet.uploadedTiles.clear();
       this.warn(
         "Grafikkontext unterbrochen. Seite neu laden, um das Modell wieder zu öffnen.",
       );
@@ -271,7 +274,11 @@ export class World {
       fps: this.fps,
       frames: this.frames,
       pixelRatio: this.gl.getPixelRatio(),
+      frameMs: this.frameMs,
+      resolution: { initial: this.resolution.maximum, minimum: this.resolution.minimum, maximum: this.resolution.maximum, width: this.canvas.width, height: this.canvas.height, reductions: this.resolution.reductions, recoveries: this.resolution.recoveries },
       tiles: this.planet.tileCount,
+      uploadedTiles: this.planet.uploadedTiles.size,
+      cachedTiles: this.planet.cachedTileCount,
       region: this.region.id,
       renderMs: this.renderMs,
       terrainMs: this.terrainMs,
@@ -296,7 +303,13 @@ export class World {
   private render = (now: number) => {
     if (!this.running) return;
     requestAnimationFrame(this.render);
-    if (document.hidden) return;
+    if (document.hidden) { this.last = 0; return; }
+    if (!this.last || now - this.last > 2000) {
+      this.fpsStart = now;
+      this.frameCount = 0;
+      this.resolution.resetWindow();
+    }
+    this.frameMs = this.last ? now - this.last : 0;
     const dt = clamp((now - this.last) / 1000, 0.001, 0.12);
     this.last = now;
     if (this.sizeDirty) this.applySize();
@@ -304,14 +317,10 @@ export class World {
     this.frameCount++;
     if (now - this.fpsStart >= 900) {
       this.fps = (this.frameCount * 1000) / (now - this.fpsStart);
+      const ratio = this.resolution.sample(this.fps, (now - this.fpsStart) / 1000);
+      if (ratio !== undefined) this.gl.setPixelRatio(ratio);
       this.frameCount = 0;
       this.fpsStart = now;
-      if (this.frames > 12 && this.fps < 22) this.slow++;
-      else this.slow = 0;
-      if (this.slow >= 2 && this.gl.getPixelRatio() > 0.76) {
-        this.gl.setPixelRatio(Math.max(0.75, this.gl.getPixelRatio() * 0.85));
-        this.slow = 0;
-      }
     }
     const prev = this.nav.pose;
     const ground =

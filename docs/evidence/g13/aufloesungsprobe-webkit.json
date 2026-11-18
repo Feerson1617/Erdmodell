@@ -1,0 +1,127 @@
+{
+  "version": "26.0",
+  "commit": "7cc7d867aa670fe869434ef3eb7b25adfdb6b97f",
+  "full": {
+    "mode": "inside",
+    "fps": 3.4722222222222223,
+    "ratio": 0.85,
+    "initial": 1,
+    "minimum": 0.75,
+    "maximum": 1,
+    "width": 1190,
+    "height": 815,
+    "reductions": 1,
+    "recoveries": 0
+  },
+  "scenario": "Linux-WebKit. Von Smartboard-Vollbild auf kleines Fenster, isolierte innere Schale, Zeichenfläche 120 × 120 CSS-Pixel. Echte Bildfolge ohne synthetische Framezeiten.",
+  "samples": [
+    {
+      "mode": "inside",
+      "fps": 37.03703703703704,
+      "ratio": 0.85,
+      "initial": 1,
+      "minimum": 0.75,
+      "maximum": 1,
+      "width": 102,
+      "height": 102,
+      "reductions": 1,
+      "recoveries": 0
+    },
+    {
+      "mode": "inside",
+      "fps": 61.742006615215,
+      "ratio": 0.85,
+      "initial": 1,
+      "minimum": 0.75,
+      "maximum": 1,
+      "width": 102,
+      "height": 102,
+      "reductions": 1,
+      "recoveries": 0
+    },
+    {
+      "mode": "inside",
+      "fps": 61.87845303867403,
+      "ratio": 0.85,
+      "initial": 1,
+      "minimum": 0.75,
+      "maximum": 1,
+      "width": 102,
+      "height": 102,
+      "reductions": 1,
+      "recoveries": 0
+    },
+    {
+      "mode": "inside",
+      "fps": 61.67400881057269,
+      "ratio": 0.85,
+      "initial": 1,
+      "minimum": 0.75,
+      "maximum": 1,
+      "width": 102,
+      "height": 102,
+      "reductions": 1,
+      "recoveries": 0
+    },
+    {
+      "mode": "inside",
+      "fps": 62.01550387596899,
+      "ratio": 0.85,
+      "initial": 1,
+      "minimum": 0.75,
+      "maximum": 1,
+      "width": 102,
+      "height": 102,
+      "reductions": 1,
+      "recoveries": 0
+    },
+    {
+      "mode": "inside",
+      "fps": 62.01550387596899,
+      "ratio": 0.85,
+      "initial": 1,
+      "minimum": 0.75,
+      "maximum": 1,
+      "width": 102,
+      "height": 102,
+      "reductions": 1,
+      "recoveries": 0
+    },
+    {
+      "mode": "inside",
+      "fps": 61.2691466083151,
+      "ratio": 0.85,
+      "initial": 1,
+      "minimum": 0.75,
+      "maximum": 1,
+      "width": 102,
+      "height": 102,
+      "reductions": 1,
+      "recoveries": 0
+    },
+    {
+      "mode": "inside",
+      "fps": 58.75831485587583,
+      "ratio": 0.85,
+      "initial": 1,
+      "minimum": 0.75,
+      "maximum": 1,
+      "width": 102,
+      "height": 102,
+      "reductions": 1,
+      "recoveries": 0
+    },
+    {
+      "mode": "inside",
+      "fps": 60.639470782800444,
+      "ratio": 0.95,
+      "initial": 1,
+      "minimum": 0.75,
+      "maximum": 1,
+      "width": 114,
+      "height": 114,
+      "reductions": 1,
+      "recoveries": 1
+    }
+  ]
+}

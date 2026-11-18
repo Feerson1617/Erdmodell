@@ -67,11 +67,16 @@ export class Shells {
         if (part.morphTargetInfluences)
           part.morphTargetInfluences[0] = Number(this.expanded);
         const mat = part.material,
-          selected = layer === this.selected;
+          selected = layer === this.selected,
+          dim = this.selected !== null && this.subdued && !selected;
+        if (part.userData.selected === selected && part.userData.dim === dim &&
+            mat.opacity === this.opacity[layer]) continue;
+        part.userData.selected = selected;
+        part.userData.dim = dim;
         mat.color
           .setHex(base)
           .multiplyScalar(
-            this.selected !== null && this.subdued && !selected ? 0.44 : 1,
+            dim ? 0.44 : 1,
           );
         mat.emissive.setHex(selected ? layers[layer].color : 0);
         mat.emissiveIntensity = selected ? 0.28 : 0;

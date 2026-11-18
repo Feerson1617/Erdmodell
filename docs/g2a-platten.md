@@ -1,0 +1,29 @@
+# G2a · Lithosphärenplatten untersuchen
+
+Das separate Vorschau-ZIP vollständig entpacken und mit Python 3 über START.command oder start_lokal.py öffnen. Die Unterrichtsfassung für Freitag ist weiterhin der eigenständige G1.3-Download.
+
+## Daten und Bewegung
+
+Die 52 Plattenflächen und alle 5.819 klassifizierten Abschnitte stammen aus Peter Birds globalem Modell PB2002 (2003). Die Umwandlung in GIS-Formate stammt von Hugo Ahlenius, Nordpil. Die ODC Attribution License 1.0 gestattet die Weitergabe unter Quellenangabe. Die Flächen sind aus den Polygonen auf ein globales Raster von 2048 × 1024 Pixeln gerastert. Die Grenzen werden getrennt aus den Endpunkten der Originalschritte am Globus gezeichnet. Das Datenraster bildet sehr kleine Platten gröber ab als die Linien. Beschriftungspunkte liegen innerhalb der Quellpolygone. Bei globaler Ansicht und am Horizont begrenzt der Platz die Zahl der sichtbaren Namen. [Fachartikel](https://doi.org/10.1029/2001GC000252) · [Datenstand mit Originaltabellen](https://github.com/fraxen/tectonicplates/tree/339b0c56563c118307b1f4542703047f5f698fae) · [Lizenz](https://opendatacommons.org/licenses/by/1-0/)
+
+Jede auswählbare Grenze verwendet den Modellvektor am Mittelpunkt ihres digitalisierten Abschnitts. Er beschreibt die linke Platte relativ zur rechten, gesehen entlang der digitalisierten Linie. In der Ansicht stehen die Platten ausgeschrieben. Geschwindigkeit in mm/Jahr, Azimut ab geografisch Nord im Uhrzeigersinn. Der Pfeil wird in diesem lokalen Tangentialsystem erzeugt und beim Drehen ins Kamerabild projiziert. Alle Pfeile haben zur Lesbarkeit dieselbe Bildlänge. Das Modell beschreibt eine mittlere horizontale Relativbewegung starrer Platten. Es enthält weder eine Zeitrafferanimation noch zeitaufgelöste GNSS-Stationsmessungen. [Felddefinition des Datensatzes](https://github.com/fraxen/tectonicplates/blob/339b0c56563c118307b1f4542703047f5f698fae/original/PB2002_steps_desc.txt)
+
+| Untersuchungsort und PB2002-Schritt | Bewegte Platte relativ zur Referenz | Fachliche Einordnung |
+| --- | --- | --- |
+| Reykjanes, Island, 4209 · 63,88° N, 22,30° W | Eurasien relativ zu Nordamerika, 18,9 mm/Jahr bei 103° | OSR, divergenter Rücken. Druckentlastungsschmelzen, Bildung neuer ozeanischer Lithosphäre am Rücken und zusätzlicher Hotspoteinfluss auf Island. |
+| Japangraben vor Tōhoku, 2629 · 38,26° N, 143,95° O | Pazifik relativ zu Ochotsk, 92,0 mm/Jahr bei 295° | SUB, Abtauchen der Pazifischen Platte unter die im Modell eigenständige Ochotskplatte. Der Standort markiert einen Grabenabschnitt. |
+| San-Andreas-System nahe Parkfield, 2877 · 35,68° N, 120,19° W | Nordamerika relativ zum Pazifik, 45,6 mm/Jahr bei 144° | CTF, rechtsseitige Transformbewegung. Beim Wechsel der Referenz kehrt sich die Richtung um. Die Plattengeschwindigkeit verteilt sich über ein Störungssystem. |
+
+Die Karte bündelt OSR/CRB als divergent, SUB/CCB/OCB als konvergent und OTF/CTF als Transformbewegung. Lokale Schrägbewegung ist möglich. Die Grenzlinie abstrahiert eine zum Teil breite Deformationszone. Die Platten reichen durch Kruste und starren obersten Mantel. Die Asthenosphäre ist im betrachteten Zeitmaßstab verformbar. Plattenflächen enthalten häufig sowohl Kontinente als auch Ozeanboden. Welche kleineren Platten unterschieden werden, hängt vom verwendeten Modell ab. [USGS, Understanding Plate Motions](https://pubs.usgs.gov/gip/dynamic/understanding.html) · [USGS, Hotspots](https://pubs.usgs.gov/gip/dynamic/hotspots.html)
+
+Die drei regionalen Unterlagen zeigen statische Ausschnitte aus NASA Blue Marble Shaded Relief/Bathymetry (GIBS, EPSG:4326, 500m-Matrix, Stufe 6). Ein Bildpunkt umfasst rund 0,00879° bzw. rund 0,98 km in Nord-Süd-Richtung. Die Auflösung in Ost-West-Richtung hängt von der Breite ab. Die Übergangsränder der lokal gespeicherten Bildmosaike sind weich eingeblendet. Aufnahmedatum, Plattenmodell und heutige Küsten können zeitlich voneinander abweichen. Die Bildfarben dienen der Orientierung. Die hochgesetzten Linien und Bildflächen vermeiden grafische Überdeckung und geben keine reale Höhe an. Nachbau mit scripts/prepare_plate_imagery.py und Pillow. [NASA GIBS](https://www.earthdata.nasa.gov/data/tools/gibs) · [Blue Marble](https://science.nasa.gov/earth/earth-observatory/the-blue-marble/) · [NASA-Nutzungsbedingungen](https://www.nasa.gov/nasa-brand-center/images-and-media/)
+
+## Unterricht und Anschluss
+
+Erst nur die Oberfläche zeigen und eine vermutete Plattengrenze beschreiben lassen. Die Lernenden schalten Grenzen und Namen zu und suchen Gegenbeispiele zur Vermutung, alle Küsten seien Plattengrenzen. Anschließend für einen Ort eine Vorhersage zur Bewegungsrichtung begründen. Erst danach den Modellvektor einblenden. Beim Vergleich von Japan und Kalifornien erklären die Lernenden die unterschiedliche Bewegung trotz derselben Pazifischen Platte.
+
+Struktur betrifft Lage und Verteilung (O3 S6, M3 S6/S7). Prozess betrifft die aus den Relativbewegungen abgeleitete Veränderung (F2 S4/S5/S7). Für spätere Gefährdungsmodule braucht es Ereigniskataloge mit Zeit, Ort, Tiefe und Unsicherheit, regional geprüfte Störungs- und Subduktionsgeometrien sowie für Vulkanismus belastbare Angaben zu tektonischer Umgebung und Magmabildung. Für Tsunamis wären zusätzlich vertikaler Meeresbodenversatz, Bathymetrie und ein validiertes Ausbreitungsmodell nötig. Aus diesen Pfeilen lassen sich keine Ereigniszeitpunkte, Magnituden oder Gefährdungskarten ableiten.
+
+## Nachbau
+
+Für scripts/prepare_plates.py werden Python 3, Pillow und zwei unveränderte Quelldateien des oben verlinkten Datenstands benötigt. Als erstes Argument original/PB2002_steps.dat.txt, als zweites GeoJSON/PB2002_plates.json übergeben. Der Import prüft beide SHA-256-Summen, die fortlaufende Schrittnummerierung und die Anzahl der Platten. Die gebaute Anwendung verwendet ausschließlich lokale Daten.

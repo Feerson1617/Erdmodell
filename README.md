@@ -4,11 +4,11 @@ Ein deutschsprachiges 3D-Werkzeug für den Geographieunterricht der Jahrgangsstu
 
 In G1.1 lässt sich im Ortsmenü auch Helgoland erkunden. Der Korrekturbericht enthält die Messergebnisse, die Vergleichsbilder und die noch offenen Punkte für den Schuleinsatz. [Prüfbericht G1.1](docs/g1.1-pruefbericht.md)
 
-G1.2 startet im Stil A. Der Unterricht beginnt mit der geschlossenen Erde und anonymen Schalen. **Namen einblenden** gibt die fachliche Erklärung gezielt frei. [Unterricht am 20. November](docs/unterricht-20-11.md) · [Prüfbericht G1.2](docs/g1.2-pruefbericht.md)
+G1.3 startet im Stil A. **Hinweise aus dem Erdinneren** öffnet die schrittweise Untersuchung mit echten seismischen Ankunftszeiten. Der Unterricht beginnt mit der geschlossenen Erde und anonymen Schalen. **Namen einblenden** gibt die fachliche Erklärung gezielt frei. [Unterricht am 20. November](docs/unterricht-20-11.md) · [Prüfbericht G1.3](docs/g1.3-pruefbericht.md)
 
 ## In der Schule starten
 
-**GeoRisiko-G1.2-Unterricht.zip** entpacken. Auf macOS mit Python 3 die Datei **START.command** öffnen. Alternativ im entpackten Ordner `python3 start_lokal.py` aufrufen. Die Ausgabe enthält Karten, Luftbilder, Schrift und 3D-Programm. Der Browser benötigt WebGL 2 für das räumliche Modell. Bei fehlendem WebGL erscheint eine beschriftete lokale Weltkarte.
+**GeoRisiko-G1.3-Unterricht.zip** entpacken. Auf macOS mit Python 3 die Datei **START.command** öffnen. Alternativ im entpackten Ordner `python3 start_lokal.py` aufrufen. Die Ausgabe enthält Karten, Luftbilder, Schrift und 3D-Programm. Der Browser benötigt WebGL 2 für das räumliche Modell. Bei fehlendem WebGL erscheint eine beschriftete lokale Weltkarte.
 
 | Ziel | Bedienung |
 | --- | --- |
@@ -20,7 +20,7 @@ G1.2 startet im Stil A. Der Unterricht beginnt mit der geschlossenen Erde und an
 | Designs vergleichen | A oder B wählen. Ausschnitt, Navigation, Warftlage und Schichtgrenzen bleiben vergleichbar. |
 | Präsentieren | „Präsentieren“ blendet die Menüs aus und fordert Vollbild an. Die Steuerleiste wechselt zwischen Globus und Erdinnerem. Die Modellwerkzeuge bleiben seitlich erreichbar. „Menü zeigen“ kehrt zurück. Esc schließt einen Info-Dialog. Pos1 oder die Rücksetztaste stellen den Ausgangszustand der Ansicht wieder her. |
 
-In einem itslearning-Kurs die Datei **GeoRisiko-G1.2-SCORM-1.2.zip** als SCORM-Lernpaket importieren. Diese Version meldet nur Start und Ende einer Sitzung. Die tatsächliche Verarbeitung im Schulmandanten ist noch zu erproben.
+In einem itslearning-Kurs die Datei **GeoRisiko-G1.3-SCORM-1.2.zip** als SCORM-Lernpaket importieren. Diese Version meldet nur Start und Ende einer Sitzung. Die tatsächliche Verarbeitung im Schulmandanten ist noch zu erproben.
 
 ## Entwickeln und prüfen
 
@@ -44,11 +44,15 @@ npm run package
 node tests/packages.mjs
 ```
 
-`npm run preview` startet die gebaute App. Für vorhandene Testbrowser lassen sich `CHROMIUM_PATH` und `WEBKIT_PATH` setzen. `TEST_ENGINES=chromium npm test` ist ein Teillauf. Das Sichtprüfungs-ZIP setzt Ergebnisse beider Engines voraus. Für die MP4-Aufzeichnungen wird FFmpeg mit libx264 benötigt. Der Pakettest startet beide extrahierten ZIPs in einem verschachtelten HTTP-Unterpfad und besucht beide Orte.
+`npm run preview` startet die gebaute App. Für vorhandene Testbrowser lassen sich `CHROMIUM_PATH` und `WEBKIT_PATH` setzen. `TEST_ENGINES=chromium npm test` ist ein Teillauf. Das Sichtprüfungs-ZIP setzt Ergebnisse beider Engines voraus. Für die MP4-Aufzeichnungen wird FFmpeg mit libx264 benötigt. Der Pakettest startet alle drei extrahierten ZIPs in einem verschachtelten HTTP-Unterpfad und besucht beide Orte.
+
+## Separate Plattentektonik-Vorschau
+
+Der Freitagsstand ist auf `release/g1.3-unterricht-2026-11-20` gesichert. Das eigene G2a-Paket zeigt PB2002-Platten und die Relativbewegung auf demselben Globus. Drei Ortsansichten führen zu Island, Japan und Kalifornien. Lokal mit `npm run build:g2a && npm run test:g2a && npm run package:g2a` bauen, prüfen und paketieren. [Plattenmodell, Daten, Unterricht und Grenzen](docs/g2a-platten.md) · [Abschlussbericht](docs/abschluss-g1.3-g2a.md)
 
 ## GitHub Pages und Übergabe
 
-Der Workflow „GeoRisiko G1.2“ baut und prüft Pull Requests. Unter **Actions → Workflow-Lauf → Artifacts** stehen bei erfolgreichem Lauf die drei ZIPs als „GeoRisiko-G1.2-Pakete“ sowie „Browsertests“ bereit. Lokal liegen dieselben Dateien unter `artifacts/` und `test-results/`.
+Der Workflow „GeoRisiko G1.3“ baut und prüft Pull Requests. Unter **Actions → Workflow-Lauf → Artifacts** stehen bei erfolgreichem Lauf die drei ZIPs als „GeoRisiko-G1.3-Pakete“ sowie „Browsertests“ bereit. Lokal liegen dieselben Dateien unter `artifacts/` und `test-results/`.
 
 Für eine spätere Freigabe nach dem Merge auf `main` in **Settings → Pages → Source** „GitHub Actions“ wählen und den Workflow auf `main` mit `publish_pages` starten. Erst der explizite Veröffentlichungsauftrag löst das Deployment aus. Zielpfad ist `/Erdmodell/`. Relative Assetpfade erlauben andere statische Installationsorte und den SCORM-Unterordner.
 
