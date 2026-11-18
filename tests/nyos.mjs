@@ -524,7 +524,14 @@ async function still(page) {
     while (performance.now() - start < 24000) {
       await new Promise(requestAnimationFrame);
       const w = window.geoObservatory(),
-        values = [w.lat, w.lon, w.d, w.tilt, w.bearing, w.nyos.focusHeightKm ?? 0];
+        values = [
+          w.lat,
+          w.lon,
+          w.d,
+          w.tilt,
+          w.bearing,
+          w.nyos.focusHeightKm ?? 0,
+        ];
       if (
         !w.flying &&
         previous &&
@@ -1027,6 +1034,24 @@ async function deviceProfile(browser, type) {
   const errors = [];
   errorsOn(p, errors);
   try {
+    await p.addInitScript(() => {
+      window.nyosTouch = { starts: 0, pointers: 0 };
+      addEventListener(
+        "touchstart",
+        (event) => {
+          if (event.isTrusted) window.nyosTouch.starts++;
+        },
+        true,
+      );
+      addEventListener(
+        "pointerdown",
+        (event) => {
+          if (event.isTrusted && event.pointerType === "touch")
+            window.nyosTouch.pointers++;
+        },
+        true,
+      );
+    });
     await p.goto(url);
     await settled(p);
     if (board) await p.tap("#present");
@@ -1072,13 +1097,26 @@ async function deviceProfile(browser, type) {
         unobstructed:
           (canvas.width * canvas.height - overlap) / (innerWidth * innerHeight),
         touchPoints: navigator.maxTouchPoints,
+        events: window.nyosTouch,
         fullscreenMode: document
           .getElementById("present")
           .getAttribute("aria-pressed"),
       };
     });
     assert.ok(
-      layout.touchPoints >= 1 && layout.scrollWidth <= viewport.width + 1,
+      layout.events.starts + layout.events.pointers >= 1,
+      type +
+        " hat keine vertrauenswürdigen Touch-Ereignisse empfangen: " +
+        JSON.stringify(layout),
+    );
+    assert.deepEqual(
+      layout.viewport,
+      { w: viewport.width, h: viewport.height },
+      type + " erreicht den vorgegebenen Browserausschnitt nicht",
+    );
+    assert.ok(
+      layout.scrollWidth <= layout.viewport.w + 1,
+      type + " hat horizontalen Überlauf: " + JSON.stringify(layout),
     );
     assert.ok(
       layout.unobstructed > (board ? 0.7 : 0.34),

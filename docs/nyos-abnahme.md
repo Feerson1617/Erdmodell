@@ -25,6 +25,8 @@ Beim ersten visuellen Durchgang zeigte die Regionsansicht einen gepunkteten rech
 
 Die getrennten lokalen Entwicklungsläufe auf Linux nutzten Chromium mit SwiftShader auf geteilter Rechenleistung. Im Kontrolllauf B wurden für die Seeansicht bei 1.080 × 624 Renderpixeln 4,0 Bilder/s und ein 95. Perzentil von 433 ms gemessen. Im Kontrolllauf C waren es bei gleicher Geometrieansicht 1,9 Bilder/s und 1.350 ms. Für die späte Ereignisphase ergab der korrigierte Kontrolllauf C2 1,4 Bilder/s und 883 ms. Diese Software-Renderwerte zeigen deutlich sichtbare Bildsprünge. Die Endmessungen für den Auslieferungsstand stehen separat im paketierten Messbericht.
 
+**Gate E und Touchbedienung.** Im emulierten WebKit-Smartboardprofil wurden 1.920 × 1.080 CSS-Pixel, 86,2 % freie Modellfläche und vier Haupttasten mit jeweils 133 × 60 Pixeln gemessen. Im iPad-Hochformat waren es 820 × 1.180 Pixel, 80,0 % freie Fläche und 44 Pixel hohe Tasten. Beide Seiten passten horizontal vollständig ins Fenster. Bei den tatsächlichen Fingereingaben registrierte die Seite am Board vier und im Tabletprofil zunächst drei als vertrauenswürdig gekennzeichnete Berührungsereignisse samt passenden Zeigerereignissen. Die Zahl `navigator.maxTouchPoints` allein hätte in dieser Linux-WebKit-Umgebung trotz der funktionierenden Touchbedienung null ergeben. Seitenbreite, Ereignisse und Größe der Bedienelemente werden deshalb getrennt ausgewiesen. Der künstlich beschädigte Höhenraster führte zur regionalen Ersatzansicht. Die Schaltfläche zum erneuten Laden stellte die örtliche 3D-Ansicht im selben Browserfenster wieder her.
+
 ## Antworten zur Übergabe
 
 | Frage | Einordnung |
