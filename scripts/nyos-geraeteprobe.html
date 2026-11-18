@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="de">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Nyos-See · Geräteprobe</title>
+<style>
+  * { box-sizing:border-box }
+  body { margin:0; display:flex; flex-direction:column; height:100svh; color:#ecf2ea; background:#14211c; font:16px/1.45 system-ui,sans-serif }
+  header { display:flex; flex-wrap:wrap; align-items:center; gap:8px 14px; padding:8px 16px }
+  button,a { border:1px solid #799576; border-radius:6px; background:#2e422f; color:#e0f8d0; font:inherit; padding:8px 14px }
+  button:disabled { opacity:.55 }
+  output { flex:1 0 250px }
+  iframe { flex:1; width:100%; min-height:0; border:0; background:#112018 }
+</style>
+<header>
+  <strong>Nyos-Geräteprobe</strong><button id="sample" disabled>Ansicht 8 Sekunden messen</button>
+  <a id="save" download="Nyos-Geraeteprobe.json" hidden>Messprotokoll speichern</a>
+  <output id="status" aria-live="polite">Modell wird geladen.</output>
+</header>
+<iframe title="GeoRisiko 3D am Testplatz" src="../index.html" allow="fullscreen"></iframe>
+<script>
+  const frame=document.querySelector('iframe'), sample=document.querySelector('#sample'), save=document.querySelector('#save'), status=document.querySelector('#status');
+  const runs=[];
+  let downloadUrl, build;
+  frame.addEventListener('load',async()=>{
+    if(location.protocol==='file:'){status.textContent='Den Starter im entpackten Ordner öffnen und /Pruefung/geraeteprobe.html über die lokale Adresse aufrufen.';return}
+    const start=performance.now();
+    while(!frame.contentWindow.geoObservatory && performance.now()-start<45000) await new Promise(r=>setTimeout(r,250));
+    if(!frame.contentWindow.geoObservatory){status.textContent='Das 3D-Modell konnte in diesem Browser nicht starten.';return}
+    try {
+      const version=await fetch('../Pruefstand.txt');
+      if(version.ok) build=(await version.text()).trim();
+    } catch { /* Die lokale Bildzeitmessung ist auch ohne Paketkennung möglich. */ }
+    status.textContent='Im Modell eine Ansicht wählen. Während der Messung wie im Unterricht bedienen.';
+    sample.disabled=false;
+  });
+  sample.onclick=async()=>{
+    sample.disabled=true;
+    const browser=frame.contentWindow, start=browser.performance.now(), gaps=[];
+    let last=start;
+    const first=browser.geoObservatory();
+    status.textContent='Messung läuft …';
+    while(last-start<8000){
+      const t=await new Promise(done=>browser.requestAnimationFrame(done));
+      if(t>last) gaps.push(t-last);
+      last=t;
+    }
+    const end=browser.geoObservatory(), sorted=[...gaps].sort((a,b)=>a-b);
+    const bilder=end.frames-first.frames, fps=bilder*1000/(last-start);
+    runs.push({pruefstand:build,system:navigator.platform,browser:navigator.userAgent,zeitpunkt:new Date().toISOString(),
+      viewport:[browser.innerWidth,browser.innerHeight],dauerMs:last-start,bilder,bildabstaendeMs:gaps,fps,
+      medianMs:sorted[Math.floor(sorted.length/2)],p95Ms:sorted[Math.min(sorted.length-1,Math.floor(.95*sorted.length))],maxMs:sorted.at(-1),
+      start:{mode:first.mode,nyos:first.nyos},ende:{mode:end.mode,nyos:end.nyos,renderpuffer:end.resolution,geometrien:end.geometries,texturen:end.textures,programme:end.programs}});
+    if(downloadUrl) URL.revokeObjectURL(downloadUrl);
+    downloadUrl=URL.createObjectURL(new Blob([JSON.stringify(runs,null,2)],{type:'application/json'}));
+    save.href=downloadUrl; save.hidden=false; sample.disabled=false;
+    status.textContent='Messung '+runs.length+' · '+fps.toFixed(1)+' Bilder/s. Weitere Ansicht wählen oder Protokoll speichern.';
+  };
+</script>
+</html>
