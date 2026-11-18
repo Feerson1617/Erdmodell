@@ -1,0 +1,53 @@
+name: GeoRisiko G1
+on:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      publish_pages:
+        description: GitHub Pages vom Hauptbranch veröffentlichen
+        type: boolean
+        default: false
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium webkit
+      - run: npm test
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Browsertests
+          path: test-results/
+      - run: npm run package && node tests/packages.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: GeoRisiko-G1-Pakete
+          path: artifacts/*.zip
+      - uses: actions/upload-pages-artifact@v3
+        if: github.event_name == 'workflow_dispatch' && inputs.publish_pages && github.ref == 'refs/heads/main'
+        with:
+          path: dist
+  pages:
+    if: github.event_name == 'workflow_dispatch' && inputs.publish_pages && github.ref == 'refs/heads/main'
+    needs: validate
+    runs-on: ubuntu-24.04
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4
+
