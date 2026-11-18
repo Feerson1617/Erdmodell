@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="theme-color" content="#102025" />
+    <title>GeoRisiko 3D · Plattentektonik</title>
+  </head>
+  <body>
+    <main id="atlas">
+      <header>
+        <strong>GeoRisiko <b>3D</b></strong
+        ><span>Entwicklungsvorschau G2a</span
+        ><button id="full">Präsentieren</button>
+      </header>
+      <aside>
+        <h1>Plattentektonik</h1>
+        <p class="question">
+          Wo folgen Plattengrenzen einer Küste, wo durchqueren sie Land oder
+          Ozean?
+        </p>
+        <label class="switch"
+          ><input type="checkbox" id="layer" checked /> Plattentektonik
+          einblenden</label
+        >
+        <fieldset id="controls">
+          <legend>Kartenebenen</legend>
+          <label
+            ><input id="areas" type="checkbox" checked /> Plattenflächen</label
+          ><label
+            ><input id="bounds" type="checkbox" checked /> Plattengrenzen</label
+          ><label
+            ><input id="names" type="checkbox" checked /> Plattennamen</label
+          ><label
+            ><input id="motion" type="checkbox" checked />
+            Relativbewegung</label
+          >
+          <nav aria-label="Untersuchungsgebiet">
+            <button data-site="world" aria-pressed="true">Weltkarte</button
+            ><button data-site="island">Island</button
+            ><button data-site="japan">Tōhoku</button
+            ><button data-site="san">San Andreas</button>
+          </nav>
+        </fieldset>
+        <section id="region" aria-live="polite"></section>
+        <details>
+          <summary>Was bewegt sich?</summary>
+          <p>
+            Die Lithosphäre umfasst Erdkruste und starren obersten Mantel. Eine
+            Platte kann kontinentale und ozeanische Lithosphäre tragen. Darunter
+            verformt sich Gestein im asthenosphärischen Bereich des oberen
+            Mantels über lange Zeiträume. Es ist überwiegend fest.
+          </p>
+          <p>
+            Der Schalenbau ordnet nach stofflichen Eigenschaften. Die
+            Plattenkarte zeigt eine mechanische Gliederung. Breite
+            Deformationszonen erscheinen als Linien.
+          </p>
+        </details>
+      </aside>
+      <section id="map" aria-label="Globus mit Plattentektonik">
+        <canvas
+          id="earth"
+          tabindex="0"
+          aria-label="Globus drehen und zoomen. Grenze antippen, um die Relativbewegung zu untersuchen."
+        ></canvas>
+        <div id="placeLabels" aria-hidden="true"></div>
+        <svg id="vector" aria-hidden="true">
+          <g>
+            <circle r="5" />
+            <path d="M0 0 H60 M45 -10 L60 0 L45 10" />
+          </g>
+        </svg>
+        <div class="zoom">
+          <button id="plus" aria-label="Vergrößern">+</button
+          ><button id="minus" aria-label="Verkleinern">−</button>
+        </div>
+        <div id="key">
+          <span class="divergent">Divergent</span
+          ><span class="convergent">Konvergent</span
+          ><span class="transform">Transform</span>
+        </div>
+      </section>
+      <footer>
+        <span id="state" role="status">Globus wird geladen …</span
+        ><span
+          ><a id="sources" target="_blank" rel="noopener"
+            >PB2002 · P. Bird / Nordpil · ODC-By 1.0 · Quellen</a
+          ></span
+        >
+      </footer>
+    </main>
+    <script type="module" src="/entry.ts"></script>
+  </body>
+</html>

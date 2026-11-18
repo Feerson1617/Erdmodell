@@ -46,6 +46,10 @@ node tests/packages.mjs
 
 `npm run preview` startet die gebaute App. Für vorhandene Testbrowser lassen sich `CHROMIUM_PATH` und `WEBKIT_PATH` setzen. `TEST_ENGINES=chromium npm test` ist ein Teillauf. Das Sichtprüfungs-ZIP setzt Ergebnisse beider Engines voraus. Für die MP4-Aufzeichnungen wird FFmpeg mit libx264 benötigt. Der Pakettest startet alle drei extrahierten ZIPs in einem verschachtelten HTTP-Unterpfad und besucht beide Orte.
 
+## Separate Plattentektonik-Vorschau
+
+Der Freitagsstand ist auf `release/g1.3-unterricht-2026-11-20` gesichert. Das eigene G2a-Paket zeigt PB2002-Platten und die Relativbewegung auf demselben Globus. Drei Ortsansichten führen zu Island, Japan und Kalifornien. Lokal mit `npm run build:g2a && npm run test:g2a && npm run package:g2a` bauen, prüfen und paketieren. [Plattenmodell, Daten, Unterricht und Grenzen](docs/g2a-platten.md) · [Abschlussbericht](docs/abschluss-g1.3-g2a.md)
+
 ## GitHub Pages und Übergabe
 
 Der Workflow „GeoRisiko G1.3“ baut und prüft Pull Requests. Unter **Actions → Workflow-Lauf → Artifacts** stehen bei erfolgreichem Lauf die drei ZIPs als „GeoRisiko-G1.3-Pakete“ sowie „Browsertests“ bereit. Lokal liegen dieselben Dateien unter `artifacts/` und `test-results/`.

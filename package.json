@@ -8,6 +8,9 @@
     "check": "tsc --noEmit",
     "build": "npm run check && vite build",
     "preview": "vite preview",
+    "build:g2a": "npm run check && vite build --config g2a/vite.config.ts",
+    "test:g2a": "node tests/g2a.mjs",
+    "package:g2a": "python3 scripts/package_plates.py",
     "test": "node tests/resolution.mjs && node tests/site-data.mjs && node tests/classroom.mjs && node tests/browser.mjs",
     "package": "python3 scripts/package.py",
     "audit": "node tests/flight-audit.mjs && python3 scripts/analyse_flight.py test-results/audit"

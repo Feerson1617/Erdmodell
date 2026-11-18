@@ -47,6 +47,25 @@ jobs:
         if: github.event_name == 'workflow_dispatch' && inputs.publish_pages && github.ref == 'refs/heads/main'
         with:
           path: dist
+  preview-plates:
+    runs-on: ubuntu-24.04
+    container: mcr.microsoft.com/playwright:v1.56.1-noble@sha256:f1e7e01021efd65dd1a2c56064be399f3e4de00fd021ac561325f2bfbb2b837a
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - run: npm ci
+      - run: npm run build:g2a && npm run test:g2a && npm run package:g2a
+      - uses: actions/upload-artifact@v4
+        with:
+          name: GeoRisiko-G2a-Vorschau
+          path: artifacts/GeoRisiko-G2a-Vorschau.zip
   pages:
     if: github.event_name == 'workflow_dispatch' && inputs.publish_pages && github.ref == 'refs/heads/main'
     needs: validate
