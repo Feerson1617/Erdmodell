@@ -168,8 +168,17 @@ export class World {
   }
   visit() {
     this.mode = "place";
-    void this.local.load();
     this.nav.fly(HOOGE);
+    const flight = this.nav.flight;
+    void this.local.load().then(() => {
+      if (
+        !this.local.ready &&
+        this.mode === "place" &&
+        (this.nav.flight === flight || this.nav.pose.d <= HOOGE.d + 0.001)
+      ) {
+        this.nav.fly({ ...HOOGE, d: 140, tilt: 0, bearing: 0 });
+      }
+    });
   }
   globe() {
     this.mode = "globe";

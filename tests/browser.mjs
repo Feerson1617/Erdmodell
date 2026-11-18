@@ -365,6 +365,10 @@ async function run(engine) {
         .querySelector("#status")
         .textContent.includes("Hallig-Detaildaten fehlen"),
     );
+    await f.waitForFunction(
+      () => Math.abs(window.geoObservatory().d - 140) < 0.001,
+    );
+    await visual(f, "regionale-ersatzkarte", false);
     await f.click("#home");
     await settled(f);
     pass(
