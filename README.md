@@ -41,7 +41,7 @@ node tests/packages.mjs
 
 ## Pakete und Nachweise
 
-Im erfolgreichen GitHub-Actions-Lauf stehen die drei ZIPs im Artefakt **GeoRisiko-G1.3.1-Pakete**. Sie liegen beim lokalen Build unter `artifacts/`.
+Im erfolgreichen GitHub-Actions-Lauf stehen die drei ZIPs einzeln unter **Artifacts** zum Download. Sie liegen beim lokalen Build unter `artifacts/`.
 
 - **Unterricht** enthält die ausführbare Offline-Anwendung, den lokalen Starter und die Unterrichtsanleitung.
 - **SCORM-1.2** wird als ZIP in das LMS importiert. Das Paket meldet Sitzungsstart und -ende.

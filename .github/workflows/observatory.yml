@@ -38,10 +38,24 @@ jobs:
           name: Browsertests
           path: test-results/
       - run: npm run package && node tests/packages.mjs
-      - uses: actions/upload-artifact@v4
+      - name: Unterricht-ZIP zum direkten Download bereitstellen
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
-          name: GeoRisiko-G1.3.1-Pakete
-          path: artifacts/GeoRisiko-G1.3.1-*.zip
+          path: artifacts/GeoRisiko-G1.3.1-Unterricht.zip
+          archive: false
+          if-no-files-found: error
+      - name: SCORM-1.2-ZIP zum direkten Download bereitstellen
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          path: artifacts/GeoRisiko-G1.3.1-SCORM-1.2.zip
+          archive: false
+          if-no-files-found: error
+      - name: Sichtpruefung-ZIP zum direkten Download bereitstellen
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          path: artifacts/GeoRisiko-G1.3.1-Sichtpruefung.zip
+          archive: false
+          if-no-files-found: error
       - uses: actions/upload-pages-artifact@v3
         if: github.event_name == 'workflow_dispatch' && inputs.publish_pages && github.ref == 'refs/heads/main'
         with:
