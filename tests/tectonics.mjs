@@ -39,27 +39,30 @@ const canvasImage = async page => PNG.sync.read(await page.locator("#earth").scr
   // Playwright clips the composited frame. Exclude text, controls and projected DOM labels.
   style: "#sidebar,.view > :not(canvas){visibility:hidden!important}",
 }));
-async function boundaryCycle(page) {
+async function boundaryCycle(page, navigation = false) {
   // Read three consecutive rendered frames before browser compositing. Comparing this
   // narrow window avoids DOM overlays, variable screenshot delays and changes of LOD.
   // Retry only when the actual render-buffer dimensions changed during that triplet.
   for (let attempt=0; attempt<4; attempt++) {
-    const frames = await page.evaluate(async () => {
+    const frames = await page.evaluate(async navigation => {
       const surface=document.getElementById("earth"), image=document.createElement("canvas");
       image.width=840; image.height=Math.round(image.width*surface.clientHeight/surface.clientWidth);
       const ctx=image.getContext("2d"), captures=[];
       for (let i=0; i<3; i++) {
-        if (i) document.getElementById("boundaries").click();
+        if (i) {
+          const control = navigation ? (i === 1 ? "nav-plates" : "nav-globe") : "boundaries";
+          document.getElementById(control).click();
+        }
         const frame=await new Promise(resolve=>requestAnimationFrame(() => {
           const w=window.geoObservatory();
           ctx.drawImage(surface,0,0,image.width,image.height);
           resolve({png:image.toDataURL(), ratio:w.pixelRatio, width:surface.width, height:surface.height,
-            draws:w.draws, boundaries:w.tectonics.boundaries, uploadedTiles:w.uploadedTiles});
+            draws:w.draws, boundaries:w.mode === "plates" && w.tectonics.boundaries, uploadedTiles:w.uploadedTiles});
         }));
         captures.push(frame);
       }
       return captures;
-    });
+    }, navigation);
     if (!frames.every(f=>f.width===frames[0].width && f.height===frames[0].height)) continue;
     const [off,on,hidden]=frames.map(f=>PNG.sync.read(Buffer.from(f.png.split(",")[1],"base64")));
     const added=changed(off,on), removed=changed(on,hidden), drift=changed(off,hidden);
@@ -221,7 +224,6 @@ async function exercise(browser, engine) {
     await page.waitForFunction(() => document.querySelector("#present").getAttribute("aria-pressed") === "true");
     assert.equal((await diagnostics(page)).style, "A");
     await snap("01-globus");
-    const untouchedGlobe = await canvasImage(page);
     const before = await diagnostics(page);
     await page.tap("#nav-plates");
     await page.waitForFunction(() => window.geoObservatory().tectonics.ready);
@@ -254,10 +256,8 @@ async function exercise(browser, engine) {
     assert.ok(changed(chosen,await canvasImage(page))>0.003, "Gewählte Plattenfläche erscheint ohne eigene Tönung");
     await page.tap("#nav-globe");
     assert.deepEqual(pose(before),pose(await diagnostics(page)));
-    await painted(page);
-    const returnedGlobe = await canvasImage(page);
-    if (before.pixelRatio === (await diagnostics(page)).pixelRatio)
-      assert.ok(changed(untouchedGlobe, returnedGlobe) < 0.007, "Tektonikebene bleibt beim Rückweg sichtbar");
+    run.navigationFrames = await boundaryCycle(page, true);
+    assert.deepEqual(pose(await diagnostics(page)), pose(before), "Kamerapose beim Rückweg");
     await page.tap("#nav-plates");
     pass("Gemeinsamer Globus ohne Kamerasprung, Grenzen, Kategorien, Flächen und Namen");
     // First flight uses full motion. Other site visits use the real reduced-motion path.
