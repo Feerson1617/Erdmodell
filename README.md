@@ -22,7 +22,7 @@ Das Unterrichts-ZIP vollständig entpacken und mit installiertem Python 3 `START
 | Präsentieren | Vergrößert die Bedienelemente und nutzt Vollbild, soweit der Browser dies erlaubt. |
 | Rücksetzpfeil oder Pos1 | Zum anonymen Globus und zur ursprünglichen Kamera zurückkehren. |
 
-Unterrichtsanleitung, Modellgrenzen und fachliche Quellen stehen der Lehrkraft zur Vorbereitung zur Verfügung. [Unterricht am 15. Dezember](docs/unterricht-15-12.md) · [Schalenmodell am 20. November](docs/unterricht-20-11.md) · [Fachanhang Plattentektonik](docs/g2.1-daten.md)
+Unterrichtsanleitung, Modellgrenzen und fachliche Quellen stehen der Lehrkraft zur Vorbereitung zur Verfügung. [Nyos-Unterrichtsbesuch am 15. Dezember](docs/nyos-unterrichtsverwendung.md) · [Bisheriger Unterrichtsvorschlag zur Plattentektonik](docs/unterricht-15-12.md) · [Schalenmodell am 20. November](docs/unterricht-20-11.md) · [Fachanhang Plattentektonik](docs/g2.1-daten.md)
 
 ## Entwicklung und Prüfung
 

@@ -6,6 +6,7 @@ const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 const angle = (a: number, b: number) => ((b - a + 540) % 360) - 180;
 export class CameraController {
   readonly camera = new PerspectiveCamera(39, 1, 0.01, 60000);
+  readonly reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
   pose = { ...HOME };
   goal = { ...HOME };
   orbit = false;
@@ -107,7 +108,7 @@ export class CameraController {
       from: { ...this.pose },
       to: { ...to },
       start: now,
-      ms: matchMedia("(prefers-reduced-motion: reduce)").matches
+      ms: this.reducedMotion.matches
         ? 0
         : clamp(Math.max(Math.abs(Math.log(from.d / to.d)) * 590, cruise * 0.55), minimumMs, 6400),
     };

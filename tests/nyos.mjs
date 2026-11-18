@@ -524,7 +524,7 @@ async function still(page) {
     while (performance.now() - start < 24000) {
       await new Promise(requestAnimationFrame);
       const w = window.geoObservatory(),
-        values = [w.lat, w.lon, w.d, w.tilt, w.bearing];
+        values = [w.lat, w.lon, w.d, w.tilt, w.bearing, w.nyos.focusHeightKm ?? 0];
       if (
         !w.flying &&
         previous &&
@@ -540,6 +540,7 @@ async function still(page) {
 }
 async function overlayCycle(page, selector, visibleField) {
   // Consecutive frames from the same render buffer. Exclude UI and camera motion.
+  const comparisons = [];
   for (let attempt = 0; attempt < 4; attempt++) {
     const frames = await page.evaluate(
       async ({ selector, visibleField }) => {
@@ -551,8 +552,8 @@ async function overlayCycle(page, selector, visibleField) {
         );
         const ctx = copy.getContext("2d"),
           captures = [];
-        for (let i = 0; i < 3; i++) {
-          if (i) document.querySelector(selector).click();
+        for (let i = 0; i < 4; i++) {
+          if (i >= 2) document.querySelector(selector).click();
           const frame = await new Promise((resolve) =>
             requestAnimationFrame(() => {
               const w = window.geoObservatory();
@@ -582,32 +583,47 @@ async function overlayCycle(page, selector, visibleField) {
       continue;
     assert.deepEqual(
       frames.map((s) => s.visible),
-      [false, true, false],
+      [false, false, true, false],
     );
-    const [off, on, restored] = frames.map((s) =>
+    const [previous, off, on, restored] = frames.map((s) =>
       PNG.sync.read(Buffer.from(s.png.split(",")[1], "base64")),
     );
     const added = difference(off, on),
       removed = difference(on, restored),
-      drift = difference(off, restored);
+      drift = difference(off, restored),
+      baselineDrift = difference(previous, off);
+    comparisons.push({ added, removed, drift, baselineDrift });
+    // A section can finish uploading terrain, or update its below-surface focus,
+    // after the geographic camera has arrived. Compare again on that settled scene.
+    if (
+      drift >= Math.min(added, removed) * 0.65 ||
+      baselineDrift >= Math.min(added, removed) * 0.4
+    ) {
+      await still(page);
+      continue;
+    }
     assert.ok(
-      added > 0.00045 &&
-        removed > 0.00045 &&
-        drift < Math.min(added, removed) * 0.65,
-      "Kein sichtbarer, reversibler Beitrag des Overlays " +
+      added > 0.00045 && removed > 0.00045,
+      "Overlay bleibt beim Schalten unsichtbar: " +
         selector +
-        ": " +
-        [added, removed, drift].join(", "),
+        " " +
+        JSON.stringify(comparisons),
     );
     return {
       added,
       removed,
       drift,
+      baselineDrift,
       width: frames[0].width,
       height: frames[0].height,
     };
   }
-  throw Error("Kein konstanter Renderpuffer bei " + selector);
+  throw Error(
+    "Keine stabile reversible Pixel-Gegenprobe für " +
+      selector +
+      " " +
+      JSON.stringify(comparisons),
+  );
 }
 async function checkSection(p, run, snap) {
   const surface = await raster(p);
@@ -818,10 +834,14 @@ async function checkProtection(p, run, snap) {
     await p.locator("#sidebar").innerText(),
     /nach 1986|später|2001/i,
   );
-  assert.equal(await p.locator("#nyos-dissolved").isChecked(),false);
-  assert.equal(n.dissolvedVisible,false);
+  assert.equal(await p.locator("#nyos-dissolved").isChecked(), false);
+  assert.equal(n.dissolvedVisible, false);
   await still(p);
-  run.pipeOverlay=await overlayCycle(p,"#nyos-dissolved","dissolvedVisible");
+  run.pipeOverlay = await overlayCycle(
+    p,
+    "#nyos-dissolved",
+    "dissolvedVisible",
+  );
   await p.locator("#nyos-dissolved").check();
   await painted(p);
   const resting = await raster(p);
@@ -889,11 +909,14 @@ async function checkProtection(p, run, snap) {
     );
     if (measure === "settlements") {
       const pins = p.locator("#nyosRelief span:visible");
-      await p.waitForFunction(()=>["nyos-Talboden","nyos-Hang"].every(id=>{
-        const el=document.getElementById(id); return el && !el.hidden && el.getClientRects().length>0;
-      }));
+      await p.waitForFunction(() =>
+        ["nyos-Talboden", "nyos-Hang"].every((id) => {
+          const el = document.getElementById(id);
+          return el && !el.hidden && el.getClientRects().length > 0;
+        }),
+      );
       const names = await pins.allTextContents();
-      assert.deepEqual(names.map(s=>s.trim()).sort(), ["Hang","Talboden"]);
+      assert.deepEqual(names.map((s) => s.trim()).sort(), ["Hang", "Talboden"]);
     }
     alternatives[measure] = { caption, image: pictureStats(await raster(p)) };
   }

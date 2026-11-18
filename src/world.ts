@@ -598,7 +598,7 @@ export class World {
       ready: this.nyos.ready, error: this.nyos.error,
       detail: this.mode === "nyos" && this.nyosDetail, stage: this.nyosStage, distance: this.nav.pose.d,
       regionalWeight: this.nyosFarWeight, vicinityWeight: this.nyosMidWeight, localWeight: this.nyos.localWeight,
-      globeOccluded: this.globeOccluded,
+      globeOccluded: this.globeOccluded, focusHeightKm: this.nyosFocusOffset,
       terrainVisible: this.nyos.ready && this.nyos.localWeight > 0, groundKm: this.nyosGround,
       cameraClearanceKm: floor === null ? null : radius - R - floor,
       nearKm: this.nav.camera.near, farKm: this.nav.camera.far,
@@ -794,7 +794,8 @@ export class World {
       // Reduced-motion journeys also arrive correctly framed on their first frame.
       this.focusOffset = this.focusReveal * Math.max(0, PROCESS_FOCUS_HEIGHT - ground);
       const sectionHeight = this.nyosSectionActive() ? -0.07 * this.nyos.localWeight : 0;
-      if (!holdEventFlight)
+      if (this.nav.reducedMotion.matches) this.nyosFocusOffset = sectionHeight;
+      else if (!holdEventFlight)
         this.nyosFocusOffset += (sectionHeight - this.nyosFocusOffset) * (1 - Math.exp(-6 * dt));
       return ground + this.focusOffset + this.nyosFocusOffset;
     }, this.mode === "nyos" && this.nyos.ready ? (lat, lon) => this.nyos.ground(lat, lon) : undefined, holdEventFlight);
