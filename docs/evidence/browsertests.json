@@ -1,0 +1,439 @@
+{
+  "date": "2026-11-18T06:01:18.813Z",
+  "cpu": "AMD EPYC 9V74 80-Core Processor",
+  "platform": "linux",
+  "scope": "Linux cloud browsers. Tablet is an emulation.",
+  "runs": [
+    {
+      "engine": "chromium",
+      "version": "156.0.8078.79",
+      "checks": [
+        "Produktionsstart unter /Erdmodell/ und gerenderte Erdoberfläche",
+        "A/B verändert das Renderbild bei identischer Kamera",
+        "Mausrotation, Radzoom und Zurücksetzen",
+        "Schichtauswahl, Sichtbarkeit, Transparenz, Keilschnitt und gekennzeichneter Maßstab",
+        "Vollständiger Hin- und Rückflug A mit kontinuierlichen Distanzproben",
+        "Vollständiger Hin- und Rückflug B mit kontinuierlichen Distanzproben",
+        "Unterbrechbarer Flug",
+        "Präsentationsansicht und wiederholter Designwechsel",
+        "Standardlauf ohne Konsolen- oder Ladefehler",
+        "Zwei-Finger-Zoom über Chromium-Touch-Ereignisse",
+        "Tablet quer, Hochformat, Touch-Navigation, reduzierte Bewegung",
+        "Ausfall der Halligdaten wird gemeldet und der Rückweg bleibt bedienbar",
+        "Ausfall des Detailbilds mit gerenderter lokaler Ersatzkarte"
+      ],
+      "errors": [],
+      "console": [],
+      "loads": [
+        {
+          "path": "/Erdmodell/",
+          "status": 200
+        },
+        {
+          "path": "/Erdmodell/assets/index-Ck654ds1.css",
+          "status": 200
+        },
+        {
+          "path": "/Erdmodell/assets/index-BQeIl1bx.js",
+          "status": 200
+        },
+        {
+          "path": "/Erdmodell/data/sky.png",
+          "status": 200
+        },
+        {
+          "path": "/Erdmodell/data/earth-base.webp",
+          "status": 200
+        },
+        {
+          "path": "/Erdmodell/assets/dm-sans-latin-wght-normal-Xz1IZZA0.woff2",
+          "status": 200
+        },
+        {
+          "path": "/Erdmodell/data/relief.i16",
+          "status": 200
+        },
+        {
+          "path": "/Erdmodell/data/earth-soft.webp",
+          "status": 200
+        },
+        {
+          "path": "/Erdmodell/data/region.webp",
+          "status": 200
+        },
+        {
+          "path": "/Erdmodell/data/earth.webp",
+          "status": 200
+        },
+        {
+          "path": "/Erdmodell/data/hooge.webp",
+          "status": 200
+        },
+        {
+          "path": "/Erdmodell/data/locator.webp",
+          "status": 200
+        },
+        {
+          "path": "/Erdmodell/data/hooge.json",
+          "status": 200
+        },
+        {
+          "path": "/Erdmodell/data/hooge-air.webp",
+          "status": 200
+        },
+        {
+          "path": "/Erdmodell/data/hooge-soft.webp",
+          "status": 200
+        },
+        {
+          "path": "/Erdmodell/data/hanswarft.webp",
+          "status": 200
+        },
+        {
+          "path": "/Erdmodell/data/locator.webp",
+          "status": 200
+        }
+      ],
+      "flights": [
+        {
+          "style": "A",
+          "intermediateFrames": 72,
+          "startKm": 14450.000000000007,
+          "endKm": 0.29000000000000004,
+          "ms": 5633,
+          "maxFrameGapMs": 567
+        },
+        {
+          "style": "B",
+          "intermediateFrames": 92,
+          "startKm": 14450.000000000007,
+          "endKm": 0.29000000000000004,
+          "ms": 6067,
+          "maxFrameGapMs": 483
+        }
+      ],
+      "metrics": [
+        {
+          "view": "Hooge A",
+          "viewport": {
+            "width": 1366,
+            "height": 768
+          },
+          "ready": true,
+          "mode": "place",
+          "style": "A",
+          "lat": 54.5660014,
+          "lon": 8.55041310000004,
+          "d": 0.29000000000000004,
+          "tilt": 75,
+          "bearing": -27,
+          "flying": false,
+          "fps": 3.4284734721865173,
+          "frames": 264,
+          "pixelRatio": 0.75,
+          "tiles": 166,
+          "localReady": true,
+          "localVisible": true,
+          "draws": 58,
+          "triangles": 218396,
+          "geometries": 109,
+          "textures": 6
+        },
+        {
+          "view": "Hooge B",
+          "viewport": {
+            "width": 1366,
+            "height": 768
+          },
+          "ready": true,
+          "mode": "place",
+          "style": "B",
+          "lat": 54.5660014,
+          "lon": 8.55041310000004,
+          "d": 0.29000000000000004,
+          "tilt": 75,
+          "bearing": -27,
+          "flying": false,
+          "fps": 5.263711969681011,
+          "frames": 440,
+          "pixelRatio": 0.75,
+          "tiles": 166,
+          "localReady": true,
+          "localVisible": true,
+          "draws": 58,
+          "triangles": 84146,
+          "geometries": 108,
+          "textures": 7
+        },
+        {
+          "view": "Globus",
+          "viewport": {
+            "width": 1366,
+            "height": 768
+          },
+          "ready": true,
+          "mode": "globe",
+          "style": "A",
+          "lat": 18,
+          "lon": 18.999999999999993,
+          "d": 14450.000000000007,
+          "tilt": 0,
+          "bearing": -4.1300296516055823e-14,
+          "flying": false,
+          "fps": 7.241129616220098,
+          "frames": 594,
+          "pixelRatio": 0.75,
+          "tiles": 32,
+          "localReady": true,
+          "localVisible": false,
+          "draws": 34,
+          "triangles": 58128,
+          "geometries": 34,
+          "textures": 7
+        },
+        {
+          "view": "Tablet Hooge",
+          "viewport": {
+            "width": 1024,
+            "height": 768
+          },
+          "cpuThrottle": 3,
+          "ready": true,
+          "mode": "place",
+          "style": "A",
+          "lat": 54.5660014,
+          "lon": 8.550413100000014,
+          "d": 0.29000000000000004,
+          "tilt": 75,
+          "bearing": -27,
+          "flying": false,
+          "fps": 5.934326783594882,
+          "frames": 36,
+          "pixelRatio": 0.75,
+          "tiles": 162,
+          "localReady": true,
+          "localVisible": true,
+          "draws": 54,
+          "triangles": 213020,
+          "geometries": 80,
+          "textures": 6
+        }
+      ],
+      "firstRenderMs": 1879,
+      "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)"
+    },
+    {
+      "engine": "webkit",
+      "version": "26.0",
+      "checks": [
+        "Produktionsstart unter /Erdmodell/ und gerenderte Erdoberfläche",
+        "A/B verändert das Renderbild bei identischer Kamera",
+        "Mausrotation, Radzoom und Zurücksetzen",
+        "Schichtauswahl, Sichtbarkeit, Transparenz, Keilschnitt und gekennzeichneter Maßstab",
+        "Vollständiger Hin- und Rückflug A mit kontinuierlichen Distanzproben",
+        "Vollständiger Hin- und Rückflug B mit kontinuierlichen Distanzproben",
+        "Unterbrechbarer Flug",
+        "Präsentationsansicht und wiederholter Designwechsel",
+        "Standardlauf ohne Konsolen- oder Ladefehler",
+        "Tablet quer, Hochformat, Touch-Navigation, reduzierte Bewegung",
+        "Ausfall der Halligdaten wird gemeldet und der Rückweg bleibt bedienbar",
+        "Ausfall des Detailbilds mit gerenderter lokaler Ersatzkarte"
+      ],
+      "errors": [],
+      "console": [],
+      "loads": [
+        {
+          "path": "/Erdmodell/",
+          "status": 200
+        },
+        {
+          "path": "/Erdmodell/assets/index-Ck654ds1.css",
+          "status": 200
+        },
+        {
+          "path": "/Erdmodell/assets/index-BQeIl1bx.js",
+          "status": 200
+        },
+        {
+          "path": "/Erdmodell/assets/dm-sans-latin-wght-normal-Xz1IZZA0.woff2",
+          "status": 200
+        },
+        {
+          "path": "/Erdmodell/data/sky.png",
+          "status": 200
+        },
+        {
+          "path": "/Erdmodell/data/earth-base.webp",
+          "status": 200
+        },
+        {
+          "path": "/Erdmodell/data/relief.i16",
+          "status": 200
+        },
+        {
+          "path": "/Erdmodell/data/earth.webp",
+          "status": 200
+        },
+        {
+          "path": "/Erdmodell/data/earth-soft.webp",
+          "status": 200
+        },
+        {
+          "path": "/Erdmodell/data/region.webp",
+          "status": 200
+        },
+        {
+          "path": "/Erdmodell/data/hooge.json",
+          "status": 200
+        },
+        {
+          "path": "/Erdmodell/data/hooge.webp",
+          "status": 200
+        },
+        {
+          "path": "/Erdmodell/data/locator.webp",
+          "status": 200
+        },
+        {
+          "path": "/Erdmodell/data/hooge-air.webp",
+          "status": 200
+        },
+        {
+          "path": "/Erdmodell/data/hanswarft.webp",
+          "status": 200
+        },
+        {
+          "path": "/Erdmodell/data/hooge-soft.webp",
+          "status": 200
+        }
+      ],
+      "flights": [
+        {
+          "style": "A",
+          "intermediateFrames": 157,
+          "startKm": 14450.000000000007,
+          "endKm": 0.29000000000000004,
+          "ms": 6265,
+          "maxFrameGapMs": 891
+        },
+        {
+          "style": "B",
+          "intermediateFrames": 215,
+          "startKm": 14450.000000000007,
+          "endKm": 0.29000000000000004,
+          "ms": 6200,
+          "maxFrameGapMs": 795
+        }
+      ],
+      "metrics": [
+        {
+          "view": "Hooge A",
+          "viewport": {
+            "width": 1366,
+            "height": 768
+          },
+          "ready": true,
+          "mode": "place",
+          "style": "A",
+          "lat": 54.5660014,
+          "lon": 8.550413099999957,
+          "d": 0.29000000000000004,
+          "tilt": 75,
+          "bearing": -27,
+          "flying": false,
+          "fps": 15.334063526834612,
+          "frames": 461,
+          "pixelRatio": 0.75,
+          "tiles": 166,
+          "localReady": true,
+          "localVisible": true,
+          "draws": 59,
+          "triangles": 219740,
+          "geometries": 108,
+          "textures": 6
+        },
+        {
+          "view": "Hooge B",
+          "viewport": {
+            "width": 1366,
+            "height": 768
+          },
+          "ready": true,
+          "mode": "place",
+          "style": "B",
+          "lat": 54.5660014,
+          "lon": 8.550413099999957,
+          "d": 0.29000000000000004,
+          "tilt": 75,
+          "bearing": -27,
+          "flying": false,
+          "fps": 23.504273504273506,
+          "frames": 994,
+          "pixelRatio": 0.75,
+          "tiles": 166,
+          "localReady": true,
+          "localVisible": true,
+          "draws": 59,
+          "triangles": 84530,
+          "geometries": 108,
+          "textures": 7
+        },
+        {
+          "view": "Globus",
+          "viewport": {
+            "width": 1366,
+            "height": 768
+          },
+          "ready": true,
+          "mode": "globe",
+          "style": "A",
+          "lat": 18,
+          "lon": 18.99999999999997,
+          "d": 14450.000000000007,
+          "tilt": 0,
+          "bearing": 3.907985046680551e-14,
+          "flying": false,
+          "fps": 26.881720430107528,
+          "frames": 1436,
+          "pixelRatio": 0.75,
+          "tiles": 32,
+          "localReady": true,
+          "localVisible": false,
+          "draws": 34,
+          "triangles": 58128,
+          "geometries": 34,
+          "textures": 7
+        },
+        {
+          "view": "Tablet Hooge",
+          "viewport": {
+            "width": 1024,
+            "height": 768
+          },
+          "cpuThrottle": 1,
+          "ready": true,
+          "mode": "place",
+          "style": "A",
+          "lat": 54.5660014,
+          "lon": 8.550413100000014,
+          "d": 0.29000000000000004,
+          "tilt": 75,
+          "bearing": -27,
+          "flying": false,
+          "fps": 17.929910350448246,
+          "frames": 24,
+          "pixelRatio": 1,
+          "tiles": 162,
+          "localReady": true,
+          "localVisible": true,
+          "draws": 54,
+          "triangles": 213020,
+          "geometries": 80,
+          "textures": 5
+        }
+      ],
+      "firstRenderMs": 2543,
+      "renderer": "Apple GPU"
+    }
+  ]
+}
