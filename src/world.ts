@@ -1,12 +1,24 @@
 import * as T from "three";
-import { CameraController, HOME } from "./camera";
+import { CameraController, HOME, type Pose } from "./camera";
 import { R, position, basis, smooth, clamp } from "./geo";
 import { TerrainLODManager } from "./planet";
-import { regions, firstRegion, type Region } from "./regions";
+import { regions, firstRegion, tectonicSites, type Region, type TectonicSiteId } from "./regions";
 import { LocalTerrain } from "./local";
 import { Shells, shellRadii } from "./shells";
 import { type Style, styles } from "./model";
 import { RenderResolution } from "./resolution";
+import { loadAtlas, center, typeOf, names, type BoundaryKind, type Step } from "./tectonics/atlas";
+import { regionalImagery } from "./tectonics/imagery";
+import { ProcessModel, processView, PROCESS_FOCUS_HEIGHT } from "./tectonics/process";
+
+interface PlateOptions {
+  boundaries: boolean;
+  names: boolean;
+  types: boolean;
+  category: "all" | BoundaryKind;
+  plate: string;
+}
+
 export class World {
   scene = new T.Scene();
   gl: T.WebGLRenderer;
@@ -21,7 +33,7 @@ export class World {
   private terrainMs = 0;
 
   shell = new Shells();
-  mode: "globe" | "inside" | "place" = "globe";
+  mode: "globe" | "inside" | "place" | "plates" = "globe";
   style: Style = "A";
   ready = false;
   fps = 0;
@@ -41,6 +53,28 @@ export class World {
   private marker = position(firstRegion.target.lat, firstRegion.target.lon, 10);
   onFrame?: () => void;
   onLayer?: (i: number) => void;
+  onBoundary?: () => void;
+  plateOptions: PlateOptions = { boundaries: false, names: false, types: false, category: "all", plate: "" };
+  processSite: TectonicSiteId | null = null;
+  processDetail = false;
+  processProgress = 0;
+  processPlaying = false;
+  processLoop = false;
+  processSlow = false;
+  private atlas?: Awaited<ReturnType<typeof loadAtlas>>;
+  private atlasLoading?: Promise<void>;
+  private images?: T.Group;
+  private imagesLoading?: Promise<void>;
+  private models = new Map<TectonicSiteId, ProcessModel>();
+  private selectedStep: Step | null = null;
+  private atlasReturn: Pose = { ...HOME };
+  private atlasFilters?: Pick<PlateOptions, "category" | "plate">;
+  private anchor: { lat: number; lon: number } | null = null;
+  private departure: { id: TectonicSiteId; lat: number; lon: number; showModel: boolean } | null = null;
+  private patchOpacity = 0;
+  private processReveal = 0;
+  private focusOffset = 0;
+  private focusReveal = 0;
   constructor(
     public canvas: HTMLCanvasElement,
     public warn: (s: string) => void,
@@ -115,7 +149,7 @@ export class World {
     this.scene.add(this.air);
     this.scene.fog = new T.FogExp2(0xb6cfd0, 0);
     this.nav.onPick = (x, y) => {
-      if (this.mode !== "inside") return;
+      if (this.mode !== "inside" && !(this.mode === "plates" && this.plateOptions.boundaries && !this.processDetail && this.atlas)) return;
       const b = canvas.getBoundingClientRect(),
         ray = new T.Raycaster();
       ray.setFromCamera(
@@ -125,6 +159,15 @@ export class World {
         ),
         this.nav.camera,
       );
+      if (this.mode === "plates") {
+        const point = ray.ray.intersectSphere(new T.Sphere(new T.Vector3(), R), new T.Vector3());
+        if (point) {
+          const tolerance = (this.nav.pose.d * 2 * Math.tan(T.MathUtils.degToRad(this.nav.camera.fov / 2)) * 16) / (b.height * R);
+          this.selectBoundary(this.atlas!.pick(point.normalize(), tolerance));
+          this.onBoundary?.();
+        }
+        return;
+      }
       const hit = ray
         .intersectObjects(this.shell.group.children, true)
         .find((entry) => entry.object.visible);
@@ -188,14 +231,217 @@ export class World {
     this.hemi.intensity = styles[s].sky;
     this.sun.intensity = styles[s].sun;
   }
+  private loadPlates() {
+    if (!this.atlasLoading) {
+      this.atlasLoading = loadAtlas((lat, lon) => this.planet.elevation(lat, lon)).then((atlas) => {
+        this.atlas = atlas;
+        this.scene.add(atlas.group);
+        this.updatePlateLayers();
+      }).catch(() => {
+        this.atlasLoading = undefined;
+        this.warn("Plattendaten konnten nicht geladen werden. Plattenansicht erneut öffnen.");
+      });
+    }
+    return this.atlasLoading;
+  }
+  private loadRegionalImages() {
+    if (this.imagesLoading) return this.imagesLoading;
+    this.imagesLoading = regionalImagery((lat, lon) => this.planet.elevation(lat, lon)).then((images) => {
+      this.images = images;
+      images.visible = false;
+      this.scene.add(images);
+    }).catch(() => {
+      this.imagesLoading = undefined;
+      this.warn("Regionales Satellitenbild fehlt · globale Erdkarte aktiv");
+    });
+    return this.imagesLoading;
+  }
+  private selectBoundary(step: Step | null) {
+    this.selectedStep = step;
+    this.atlas?.selectStep(step);
+  }
+  get selectedBoundary() {
+    if (!this.selectedStep) return null;
+    const pair = this.selectedStep[1];
+    return { kind: typeOf(this.selectedStep[2]), plates: [names[pair.slice(0, 2)], names[pair.slice(-2)]] };
+  }
+  private updatePlateLayers() {
+    if (!this.atlas) return;
+    const { boundaries, types, category, plate } = this.plateOptions;
+    this.atlas.setLayers(this.mode === "plates" && boundaries, types, types && category !== "all" ? category : null, plate || null);
+  }
+  setPlateOptions(options: Partial<PlateOptions>) {
+    Object.assign(this.plateOptions, options);
+    const { types, category, boundaries } = this.plateOptions;
+    if (this.selectedStep && (!boundaries || (types && category !== "all" && typeOf(this.selectedStep[2]) !== category))) {
+      this.selectBoundary(null);
+    }
+    this.updatePlateLayers();
+  }
+  plateLabels() {
+    if (!this.atlas || this.mode !== "plates" || !this.plateOptions.names || !this.plateOptions.boundaries || this.processReveal > 0.5) return [];
+    return this.atlas.labels(this.nav.camera, this.canvas.clientWidth, this.canvas.clientHeight, this.nav.pose.d, this.processSite ?? undefined);
+  }
+  plates() {
+    if (this.mode === "plates" && this.processSite) {
+      this.plateOverview();
+      return;
+    }
+    if (this.mode === "place" || this.mode === "inside") this.nav.fly(this.atlasReturn);
+    this.mode = "plates";
+    this.updatePlateLayers();
+    void this.loadPlates();
+  }
+  private leaveProcess(keepFilters = false) {
+    if (this.atlasFilters && !keepFilters) {
+      this.setPlateOptions(this.atlasFilters);
+      this.atlasFilters = undefined;
+    }
+    const id = this.processSite;
+    if (id && this.anchor && (this.processReveal > 0 || this.patchOpacity > 0)) {
+      if (this.departure && this.departure.id !== id) {
+        const previous = this.models.get(this.departure.id);
+        if (previous) previous.group.visible = false;
+      }
+      this.departure = { id, ...this.anchor, showModel: this.processReveal > 0 };
+    }
+    this.processSite = null;
+    this.processDetail = false;
+    this.anchor = null;
+    this.processReveal = 0;
+    this.nav.orbit = false;
+    this.resetProcess();
+    this.patchOpacity = 0;
+    this.selectBoundary(null);
+  }
+  plateOverview() {
+    this.leaveProcess();
+    this.mode = "plates";
+    this.nav.fly(this.atlasReturn, true);
+    this.updatePlateLayers();
+    void this.loadPlates();
+  }
+  private visitBoundary(id: TectonicSiteId, overview: boolean) {
+    if (!this.processSite) {
+      if (this.mode === "globe" || this.mode === "plates") this.atlasReturn = { ...this.nav.pose };
+      else this.atlasReturn = { ...HOME };
+      this.atlasFilters = { category: this.plateOptions.category, plate: this.plateOptions.plate };
+    }
+    this.leaveProcess(true);
+    this.mode = "plates";
+    this.processSite = id;
+    this.processDetail = !overview;
+    // A global filter such as divergence must not hide the Japan trench.
+    this.setPlateOptions({ boundaries: true, category: "all", plate: "" });
+    const arrive = () => {
+      if (!this.atlas || this.mode !== "plates" || this.processSite !== id || this.processDetail === overview) return;
+      const site = tectonicSites[id];
+      const step = this.atlas.steps[site.stepId - 1];
+      this.anchor = center(step);
+      this.selectBoundary(step);
+      if (!overview) {
+        let model = this.models.get(id);
+        if (!model) {
+          model = new ProcessModel(id, this.anchor);
+          model.group.visible = false;
+          this.models.set(id, model);
+          this.scene.add(model.group);
+        }
+        model.setProgress(0);
+      }
+      const close = processView(id);
+      this.nav.fly({
+        ...this.anchor,
+        ...(overview ? { d: site.regionalDistance, tilt: 8, bearing: 0 } : close),
+      }, true);
+      if (this.images?.userData.missing.includes(id)) this.warn("Regionales Satellitenbild fehlt · globale Erdkarte aktiv");
+      this.onBoundary?.();
+    };
+    if (this.atlas && this.images) arrive();
+    else void Promise.all([this.loadPlates(), this.loadRegionalImages()]).then(arrive);
+  }
+  toggleProcess() {
+    if (!this.processDetail || !this.processSite) return;
+    if (this.processProgress >= 1) this.resetProcess();
+    this.processPlaying = !this.processPlaying;
+  }
+  resetProcess() {
+    this.processPlaying = false;
+    this.processProgress = 0;
+    if (this.processSite) this.models.get(this.processSite)?.setProgress(0);
+  }
+  private updateTectonics(dt: number) {
+    const id = this.processSite;
+    if (!id && !this.departure) return;
+    const { d, lat, lon } = this.nav.pose;
+    const visibleAt = (anchor: { lat: number; lon: number }, near: number, span: number) => {
+      const deltaLon = ((lon - anchor.lon + 540) % 360) - 180;
+      const offset = Math.hypot(lat - anchor.lat, deltaLon * Math.cos(lat * Math.PI / 180));
+      return 1 - smooth((offset - near) / span);
+    };
+    const regional = 1 - smooth((d - 1800) / 1800);
+    const detail = 1 - smooth((d - 155) / 320);
+    this.patchOpacity = id && this.anchor && this.images && !this.images.userData.missing.includes(id)
+      ? regional * visibleAt(this.anchor, 8, 10) : 0;
+    this.processReveal = this.processDetail && this.anchor ? detail * visibleAt(this.anchor, 0.8, 1.5) : 0;
+
+    // Keep the outgoing imagery and block in world coordinates until the shared
+    // camera ascends past the corresponding scale. This also covers inter-site travel.
+    let departingPatch = 0, departingModel = 0;
+    const old = this.departure;
+    if (old) {
+      departingPatch = regional * visibleAt(old, 8, 10);
+      departingModel = old.showModel ? detail * visibleAt(old, 0.8, 1.5) : 0;
+      const model = this.models.get(old.id);
+      if (model && !(id === old.id && this.processDetail)) {
+        model.group.visible = departingModel > 0;
+        if (model.group.visible) model.setReveal(departingModel);
+      }
+      if ((departingPatch <= 0 && departingModel <= 0) || (id === old.id && (this.processDetail || departingModel <= 0))) {
+        this.departure = null;
+      }
+    }
+    this.focusReveal = Math.max(this.processReveal, departingModel);
+    this.atlas?.setOpacity(1 - this.focusReveal);
+    if (this.images) {
+      this.images.visible = this.patchOpacity > 0 || departingPatch > 0;
+      for (const image of this.images.children) {
+        const opacity = Math.max(image.name === id ? this.patchOpacity : 0, image.name === old?.id ? departingPatch : 0);
+        image.visible = opacity > 0;
+        if (image.visible) ((image as T.Mesh).material as T.MeshLambertMaterial).opacity = opacity;
+      }
+    }
+    this.nav.orbit = this.processReveal > 0.5;
+    if (!id || !this.processDetail) return;
+    const model = this.models.get(id);
+    if (!model) return;
+    model.group.visible = this.processReveal > 0;
+    if (!model.group.visible) return;
+    model.setReveal(this.processReveal);
+    if (this.processPlaying && !this.nav.flight) {
+      this.processProgress += dt / (this.processSlow ? 26 : 13);
+      if (this.processProgress >= 1) {
+        if (this.processLoop) this.processProgress %= 1;
+        else { this.processProgress = 1; this.processPlaying = false; }
+      }
+      model.setProgress(this.processProgress);
+    }
+  }
   visit(id = firstRegion.id, overview = false) {
+    if (Object.hasOwn(tectonicSites, id)) {
+      this.visitBoundary(id as TectonicSiteId, overview);
+      return;
+    }
     const r = regions.get(id);
     if (!r) return;
+    const fromProcess = !!this.processSite;
+    this.leaveProcess();
     this.region = r;
     this.local.setStyle(this.style);
     this.mode = "place";
+    this.updatePlateLayers();
     const target = overview ? { ...r.target, ...r.overview } : r.target;
-    this.nav.fly(target);
+    this.nav.fly(target, fromProcess);
     const flight = this.nav.flight;
     void this.local.load().then(() => {
       if (
@@ -207,15 +453,23 @@ export class World {
         this.nav.fly({ ...target, d: r.lod.fallbackKm, tilt: 0, bearing: 0 });
     });
   }
-  globe() {
+  globe(forceHome = false) {
+    const wasAtlas = this.mode === "plates";
+    const wasLocal = this.processSite !== null;
+    this.leaveProcess();
     this.mode = "globe";
-    this.nav.fly(HOME);
+    this.updatePlateLayers();
+    if (forceHome) { this.processSlow = false; this.processLoop = false; }
+    if (forceHome || !wasAtlas) this.nav.fly(HOME, wasLocal);
+    else if (wasLocal) this.nav.fly(this.atlasReturn, true);
   }
   inside() {
     this.waitingForAscent = this.mode !== "inside" && this.nav.pose.d < 3500;
+    this.leaveProcess();
     this.mode = "inside";
+    this.updatePlateLayers();
     this.shell.rebuild();
-    this.nav.fly({ ...HOME, lon: 3, lat: 17 });
+    this.nav.fly({ ...HOME, lon: 3, lat: 17 }, !!this.departure);
   }
   layerMarkers() {
     const camera = this.nav.camera,
@@ -279,10 +533,22 @@ export class World {
       tiles: this.planet.tileCount,
       uploadedTiles: this.planet.uploadedTiles.size,
       cachedTiles: this.planet.cachedTileCount,
-      region: this.region.id,
+      region: this.processSite ?? this.region.id,
       renderMs: this.renderMs,
       terrainMs: this.terrainMs,
       programs: this.gl.info.programs?.length,
+      tectonics: {
+        ...this.plateOptions,
+        ready: !!this.atlas, count: this.atlas?.steps.length ?? 0,
+        selected: this.selectedStep?.[0] ?? null, site: this.processSite, anchor: this.anchor,
+        patchOpacity: this.patchOpacity, processVisible: this.processReveal > 0 && !!this.processSite && this.models.has(this.processSite),
+        reveal: this.processReveal, detail: this.processDetail, progress: this.processProgress,
+        playing: this.processPlaying, loop: this.processLoop, slow: this.processSlow,
+        models: this.models.size, focusHeight: this.focusOffset,
+        model: this.processSite ? this.models.get(this.processSite)?.diagnostics() ?? null : null,
+        processBearing: this.processSite ? processView(this.processSite).bearing : null,
+        processDistance: this.processSite ? processView(this.processSite).d : null,
+      },
       shell: {
         radii: shellRadii(this.shell.expanded),
         cut: this.shell.cut,
@@ -322,17 +588,19 @@ export class World {
       this.frameCount = 0;
       this.fpsStart = now;
     }
-    const prev = this.nav.pose;
-    const ground =
-      this.mode === "inside"
-        ? 0
-        : Math.max(
-            ...Array.from(this.terrains.values(), (t) =>
-              t.ground(prev.lat, prev.lon),
-            ),
-            this.planet.elevation(prev.lat, prev.lon),
-          );
-    this.nav.update(now, dt, ground);
+    this.nav.update(now, dt, ({ lat, lon }) => {
+      const ground = this.mode === "inside" ? 0 : Math.max(
+        ...Array.from(this.terrains.values(), terrain => terrain.ground(lat, lon)),
+        this.planet.elevation(lat, lon),
+      );
+      // Play the geological timeline in wall time, but never leap over a whole
+      // phase after a suspended tab or an unusually long upload.
+      this.updateTectonics(Math.min(this.frameMs / 1000, 0.45));
+      // Sample the target height at the SAME pose as the imagery and process.
+      // Reduced-motion journeys also arrive correctly framed on their first frame.
+      this.focusOffset = this.focusReveal * Math.max(0, PROCESS_FOCUS_HEIGHT - ground);
+      return ground + this.focusOffset;
+    });
     const { lat, lon, d } = this.nav.pose;
     if (d >= 3500 || !this.nav.flight) this.waitingForAscent = false;
     const inside = this.mode === "inside" && !this.waitingForAscent,

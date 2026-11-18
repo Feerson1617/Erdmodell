@@ -38,6 +38,18 @@ export const regions: ReadonlyMap<string, Region> = new Map(
   (sites as unknown as Region[]).map((r) => [r.id, r]),
 );
 export const firstRegion = regions.values().next().value!;
+
+// The coordinates come from the midpoint of the cited PB2002 segment at runtime.
+export const tectonicSites = {
+  island: { id: "island", name: "Island · Reykjanes", stepId: 4209, regionalDistance: 1000 },
+  japan: { id: "japan", name: "Japan · Tōhoku", stepId: 2629, regionalDistance: 1200 },
+  san: { id: "san", name: "Kalifornien · San Andreas", stepId: 2877, regionalDistance: 950 },
+} as const;
+export type TectonicSiteId = keyof typeof tectonicSites;
+export const siteCatalog = [
+  ...Array.from(regions.values(), ({ id, name }) => ({ id, name })),
+  ...Object.values(tectonicSites),
+];
 export class LocalFrame {
   xScale: number;
   zScale = R * RAD;

@@ -8,7 +8,7 @@
     "check": "tsc --noEmit",
     "build": "npm run check && vite build",
     "preview": "vite preview",
-    "test": "node tests/resolution.mjs && node tests/site-data.mjs && node tests/classroom.mjs && node tests/browser.mjs",
+    "test": "node tests/resolution.mjs && node tests/site-data.mjs && node tests/plate-data.mjs && node tests/classroom.mjs && node tests/browser.mjs && node tests/tectonics.mjs",
     "package": "python3 scripts/package.py",
     "audit": "node tests/flight-audit.mjs && python3 scripts/analyse_flight.py test-results/audit"
   },

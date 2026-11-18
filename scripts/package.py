@@ -20,7 +20,7 @@ def files(folder):
 
 
 def archive(name, entries):
-    dest = out / ("GeoRisiko-G1.3.1-" + name + ".zip")
+    dest = out / ("GeoRisiko-G2.1-" + name + ".zip")
     with zipfile.ZipFile(dest, "w") as z:
         for key, value in sorted(entries.items()):
             entry = zipfile.ZipInfo(key, date_time=(2026, 1, 1, 0, 0, 0))
@@ -39,6 +39,8 @@ source = (root / "docs/data-sources-and-licenses.md").read_bytes()
 web["Quellen.md"] = source
 web["g1.1-data.md"] = (root / "docs/g1.1-data.md").read_bytes()
 web["data-sources-and-licenses.md"] = source
+for name in ("g2.1-daten.md", "g2.1-prozessmodelle.md"):
+    web[name] = (root / "docs" / name).read_bytes()
 sco = dict(web)
 sco["scorm.js"] = (root / "scripts/scorm.js").read_bytes()
 sco["index.html"] = sco["index.html"].replace(
@@ -62,7 +64,7 @@ def add(el, name, value=None, **attrs):
 
 xsi = "http://www.w3.org/2001/XMLSchema-instance"
 ET.register_namespace("xsi", xsi)
-m = ET.Element(tag("manifest"), identifier="GEORISIKO-G131", version="1.2")
+m = ET.Element(tag("manifest"), identifier="GEORISIKO-G21", version="1.2")
 m.set(
     "{" + xsi + "}schemaLocation",
     ns + " imscp_rootv1p1p2.xsd " + adl + " adlcp_rootv1p2.xsd",
@@ -90,24 +92,25 @@ sco.update(files(root / "scripts/scorm12"))
 results_dir = root / "test-results"
 checks = {name: (results_dir / name).read_bytes() for name in ("results.json", "architecture-gate.json")}
 lesson_checks = {"unterricht/" + name: value for name, value in files(results_dir / "unterricht-g131").items()}
+tectonic_checks = {"tektonik/" + name: value for name, value in files(results_dir / "g2.1").items()}
 checks.update(lesson_checks)
+checks.update(tectonic_checks)
 commit = subprocess.check_output(
     ["git", "rev-parse", "HEAD"], cwd=root, text=True
 ).strip()
-for name in ("results.json", "unterricht/pruefung.json"):
+for name in ("results.json", "unterricht/pruefung.json", "tektonik/pruefung.json"):
     result = json.loads(checks[name])
     assert result["commit"] == commit, f"{name} gehört zu einem anderen Commit"
     assert not result.get("failure") and {r["engine"] for r in result["runs"]} == {
         "chromium",
         "webkit",
     }
-assert (
-    len([k for k in lesson_checks if k.endswith(".jpg")]) == 10
-    and "unterricht/bedienung.webm" in lesson_checks
-)
-shots = [v for k, v in lesson_checks.items() if k.endswith(".jpg")]
-assert len(shots) == len(set(shots)), "Unterrichtsbilder müssen unterschiedliche Zustände zeigen"
-version = ("GeoRisiko 3D · G1.3.1\nGeprüfter Git-Commit: " + commit + "\n").encode()
+for section, evidence in (("unterricht", lesson_checks), ("tektonik", tectonic_checks)):
+    shots = [content for name, content in evidence.items() if name.endswith(".jpg")]
+    assert len(shots) == 10 and len(set(shots)) == 10, f"{section}: zehn unterschiedliche Ansichten erwartet"
+    assert len(evidence[f"{section}/bedienung.webm"]) > 0, f"{section}: Bedienfilm fehlt"
+assert tectonic_checks["tektonik/Messbericht.md"], "G2.1-Messbericht fehlt"
+version = ("GeoRisiko 3D · G2.1\nGeprüfter Git-Commit: " + commit + "\n").encode()
 # The SCO contains only the application and the files declared in its manifest.
 archive("SCORM-1.2", sco)
 lesson = dict(web)
@@ -118,34 +121,39 @@ lesson.update(
     }
 )
 lesson["Pruefstand.txt"] = version
-for name in ("unterricht-20-11.md", "geoscience-validation.md"):
+for name in ("unterricht-15-12.md", "unterricht-20-11.md", "geoscience-validation.md", "roadmap.md"):
     lesson[name] = (root / "docs" / name).read_bytes()
-lesson["START-macOS.txt"] = """GeoRisiko 3D · Unterricht am 20. November 2026
+lesson["START.txt"] = """GeoRisiko 3D · Globus, Schalenschnitt und Plattentektonik
 
 1. Das ZIP vollständig in einen eigenen Ordner entpacken.
-2. Mit installiertem Python 3 START.command doppelklicken.
-   Der Browser öffnet sich automatisch. Falls macOS den Start über den
-   Finder einschränkt, Terminal öffnen, „cd “ tippen, den entpackten
-   Ordner hineinziehen und die Eingabetaste drücken. Anschließend:
+2. Auf dem Mac mit installiertem Python 3 START.command doppelklicken.
+   Der Browser öffnet das Modell. Falls macOS den Start über den Finder
+   einschränkt, Terminal öffnen, „cd “ tippen, den entpackten Ordner
+   hineinziehen und die Eingabetaste drücken. Dann ausführen:
      python3 start_lokal.py
-3. „Präsentieren“ und dann „Schalenschnitt“ antippen. Die Fachbegriffe werden
-   erst mit „Namen zeigen“ freigegeben.
-4. Das Terminal während der Stunde offen lassen. Ctrl+C beendet den Server.
+   Unter Windows in diesem Ordner ein Terminal öffnen:
+     py -3 start_lokal.py
+3. Falls kein Browser aufgeht, die im Terminal angezeigte lokale Adresse
+   mit 127.0.0.1 in den Browser kopieren. Das Terminal während der Stunde
+   offen lassen. Ctrl+C beendet den Server.
 
-Der Server wählt einen freien Port und lauscht nur auf 127.0.0.1.
-Falls sich kein Browser öffnet, die angezeigte lokale Adresse aufrufen.
-Bei fehlendem Python 3 kann die Schule den Ordner auf einem statischen
-Webserver bereitstellen oder das SCORM-Paket in ihr LMS importieren.
-Unterrichtsimpulse stehen in unterricht-20-11.md.
+Der Server lauscht ausschließlich auf dem eigenen Rechner und wählt
+automatisch einen freien Port. Für die Darstellung ist WebGL 2 erforderlich.
+Alternativ kann die Schule den Ordner auf einem statischen Webserver
+bereitstellen oder das SCORM-Paket ins LMS importieren.
+
+Unterrichtsvorbereitung: unterricht-15-12.md
+Fachliche Quellen und Modellgrenzen: g2.1-daten.md
 """.encode()
 archive("Unterricht", lesson)
 review = dict(lesson)
-review.update({"Pruefung/" + k: v for k, v in lesson_checks.items()})
+for evidence in (lesson_checks, tectonic_checks):
+    review.update({"Pruefung/" + name: value for name, value in evidence.items()})
 for key in ("results.json", "architecture-gate.json"):
     review["Pruefung/" + key] = checks[key]
-for name in ("g1.3.1-pruefbericht", "unterricht-20-11", "geoscience-validation"):
+for name in ("g2.1-bericht", "g2.1-daten", "g2.1-prozessmodelle", "unterricht-15-12", "geoscience-validation", "roadmap"):
     review["Pruefung/" + name + ".md"] = (root / f"docs/{name}.md").read_bytes()
-measured = ["# Messbericht G1.3.1", "", f"Produktionsbuild `{commit}`", "",
+measured = ["# Messbericht zum Schalenmodell im G2.1-Build", "", f"Produktionsbuild `{commit}`", "",
             "14 Bedienfolgen pro Engine. Bildzeiten stammen aus einer separaten ruhenden Schalenansicht bei 1920 × 1080. Die Auflösung gilt für das Modell neben der Bedienleiste.", ""]
 for run in json.loads(checks["unterricht/pruefung.json"])["runs"]:
     cadence = run["cadence"]

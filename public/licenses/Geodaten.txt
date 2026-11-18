@@ -39,3 +39,18 @@ do not incur any liability for any use of the Copernicus WorldDEM-30.
 Bei Weitergabe gelten die Pflichten aus Artikel 6 der beiliegenden Lizenz
 Copernicus-DEM-GLO30.pdf.
 https://dataspace.copernicus.eu/explore-data/data-collections/copernicus-contributing-missions/collections-description/COP-DEM
+
+Globale Plattentektonik und regionale Unterlagen
+PB2002 (Peter Bird, 2003), doi:10.1029/2001GC000252.
+World tectonic plates and boundaries, Hugo Ahlenius / Nordpil; GeoJSON: csterling.
+Open Data Commons Attribution License 1.0. G2.1 rasterisiert die Flächen und
+leitet Linien, Anker und Modellvektoren aus der Sammlung ab.
+https://github.com/fraxen/tectonicplates/tree/339b0c56563c118307b1f4542703047f5f698fae
+https://opendatacommons.org/licenses/by/1-0/
+
+Regionale Bildmosaike Island, Japan und Kalifornien: NASA GIBS,
+Blue Marble Shaded Relief and Bathymetry (MODIS). Zuschnitt und weiche
+Bildränder für GeoRisiko 3D. Für Bildungs- und Informationszwecke
+gemäß den NASA-Medienrichtlinien.
+https://www.earthdata.nasa.gov/data/tools/gibs
+https://www.nasa.gov/nasa-brand-center/images-and-media/

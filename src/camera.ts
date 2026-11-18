@@ -8,7 +8,8 @@ export class CameraController {
   readonly camera = new PerspectiveCamera(39, 1, 0.01, 60000);
   pose = { ...HOME };
   goal = { ...HOME };
-  flight?: { from: Pose; to: Pose; start: number; ms: number };
+  orbit = false;
+  flight?: { from: Pose; to: Pose; start: number; ms: number; cruise: number; paced: boolean; elapsed: number; last: number };
   private pointers = new Map<number, { x: number; y: number }>();
   private drag = 0;
   onPick?: (x: number, y: number) => void;
@@ -67,10 +68,15 @@ export class CameraController {
   }
   zoom(f: number) {
     this.stop();
-    this.goal.d = clamp(this.goal.d * f, 0.06, 35000);
+    this.goal.d = clamp(this.goal.d * f, this.orbit ? 38 : 0.06, 35000);
   }
   pan(dx: number, dy: number) {
     this.stop();
+    if (this.orbit) {
+      this.goal.bearing -= dx * 0.32;
+      this.goal.tilt = clamp(this.goal.tilt + dy * 0.25, 8, 75);
+      return;
+    }
     const scale =
       (Math.min(1.8, this.goal.d / R) * 52) / this.canvas.clientHeight;
     const a = this.goal.bearing * RAD;
@@ -83,20 +89,34 @@ export class CameraController {
       89.7,
     );
   }
-  fly(to: Pose) {
+  fly(to: Pose, paced = false) {
+    const from = this.pose;
+    const separation = R * Math.acos(clamp(
+      basis(from.lat, from.lon).up.dot(basis(to.lat, to.lon).up), -1, 1,
+    ));
+    // Rise before crossing distant sites. Near-island flights keep their original route.
+    const cruise = separation > 10 && Math.max(from.d, to.d) < separation / 3
+      ? Math.min(separation * 0.8, 10500)
+      : 0;
+    const now = performance.now();
     this.flight = {
+      cruise, paced, elapsed: 0, last: now,
       from: { ...this.pose },
       to: { ...to },
-      start: performance.now(),
+      start: now,
       ms: matchMedia("(prefers-reduced-motion: reduce)").matches
         ? 0
-        : clamp(Math.abs(Math.log(this.pose.d / to.d)) * 590, 950, 6400),
+        : clamp(Math.max(Math.abs(Math.log(from.d / to.d)) * 590, cruise * 0.55), 950, 6400),
     };
   }
-  update(now: number, dt: number, height: number) {
+  update(now: number, dt: number, heightAt: (pose: Pose) => number) {
     if (this.flight) {
-      const { from: a, to: b, start, ms } = this.flight;
-      const p = ms ? clamp((now - start) / ms, 0, 1) : 1,
+      const { from: a, to: b, start, ms, cruise } = this.flight;
+      // Do not skip an entire regional LOD when the first GPU upload takes a long frame.
+      this.flight.elapsed += clamp(now - this.flight.last, 0, 125);
+      this.flight.last = now;
+      const elapsed = this.flight.paced ? this.flight.elapsed : now - start;
+      const p = ms ? clamp(elapsed / ms, 0, 1) : 1,
         t = smooth(p);
       // Arrive over the target region before descending. On ascent clear the region first.
       const geo =
@@ -110,15 +130,7 @@ export class CameraController {
         tilt: lerp(a.tilt, b.tilt, t),
         bearing: a.bearing + angle(a.bearing, b.bearing) * t,
       };
-      const separation =
-        R *
-        RAD *
-        Math.hypot(
-          b.lat - a.lat,
-          angle(a.lon, b.lon) * Math.cos(((a.lat + b.lat) * RAD) / 2),
-        );
-      if (separation > 10 && Math.max(a.d, b.d) < separation / 3) {
-        const cruise = Math.min(separation * 0.8, 400);
+      if (cruise) {
         this.pose.d =
           p < 0.5
             ? Math.exp(lerp(Math.log(a.d), Math.log(cruise), smooth(2 * p)))
@@ -146,7 +158,7 @@ export class CameraController {
       .clone()
       .multiplyScalar(-Math.cos(bearing * RAD))
       .addScaledVector(b.east, Math.sin(bearing * RAD));
-    const target = b.up.clone().multiplyScalar(R + height);
+    const target = b.up.clone().multiplyScalar(R + heightAt(this.pose));
     this.camera.position
       .copy(target)
       .addScaledVector(b.up, d * Math.cos(a))
