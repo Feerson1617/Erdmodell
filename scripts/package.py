@@ -1,8 +1,9 @@
 """Build reproducible ZIPs from the production build and the current browser run."""
 
-import json, zipfile, subprocess
+import hashlib, json, zipfile, subprocess
 from statistics import median
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from xml.etree import ElementTree as ET
 
 root = Path(__file__).resolve().parents[1]
@@ -19,8 +20,8 @@ def files(folder):
     }
 
 
-def archive(name, entries):
-    dest = out / ("GeoRisiko-G2.1-" + name + ".zip")
+def archive(folder, name, entries):
+    dest = folder / ("GeoRisiko-G4-Nyos-" + name + ".zip")
     with zipfile.ZipFile(dest, "w") as z:
         for key, value in sorted(entries.items()):
             entry = zipfile.ZipInfo(key, date_time=(2026, 1, 1, 0, 0, 0))
@@ -30,16 +31,28 @@ def archive(name, entries):
             z.writestr(entry, value)
     with zipfile.ZipFile(dest) as z:
         assert z.testzip() is None
-    print(dest.name, dest.stat().st_size)
+    return dest
 
 
+commit = subprocess.check_output(
+    ["git", "rev-parse", "HEAD"], cwd=root, text=True
+).strip()
+nyos_docs = (
+    "nyos-geodaten.md",
+    "nyos-geowissenschaften.md",
+    "nyos-design.md",
+    "nyos-technik.md",
+    "nyos-unterrichtsverwendung.md",
+    "nyos-abnahme.md",
+)
 web = files(dist)
+web["Pruefstand.txt"] = f"GeoRisiko 3D · G4 Nyos\nGeprüfter Git-Commit: {commit}\n".encode()
 assert "index.html" in web
 source = (root / "docs/data-sources-and-licenses.md").read_bytes()
 web["Quellen.md"] = source
 web["g1.1-data.md"] = (root / "docs/g1.1-data.md").read_bytes()
 web["data-sources-and-licenses.md"] = source
-for name in ("g2.1-daten.md", "g2.1-prozessmodelle.md"):
+for name in (*nyos_docs, "g2.1-daten.md", "g2.1-prozessmodelle.md"):
     web[name] = (root / "docs" / name).read_bytes()
 sco = dict(web)
 sco["scorm.js"] = (root / "scripts/scorm.js").read_bytes()
@@ -64,7 +77,7 @@ def add(el, name, value=None, **attrs):
 
 xsi = "http://www.w3.org/2001/XMLSchema-instance"
 ET.register_namespace("xsi", xsi)
-m = ET.Element(tag("manifest"), identifier="GEORISIKO-G21", version="1.2")
+m = ET.Element(tag("manifest"), identifier="GEORISIKO-G4-NYOS", version="1.2")
 m.set(
     "{" + xsi + "}schemaLocation",
     ns + " imscp_rootv1p1p2.xsd " + adl + " adlcp_rootv1p2.xsd",
@@ -74,9 +87,9 @@ add(meta, "schema", "ADL SCORM")
 add(meta, "schemaversion", "1.2")
 os = add(m, "organizations", default="ATLAS")
 org = add(os, "organization", identifier="ATLAS")
-add(org, "title", "GeoRisiko 3D")
+add(org, "title", "GeoRisiko 3D · Nyos-See")
 item = add(org, "item", identifier="OBSERVATORIUM", identifierref="SCO")
-add(item, "title", "Erdobservatorium")
+add(item, "title", "Nyos-See im Erdobservatorium")
 rs = add(m, "resources")
 r = add(rs, "resource", identifier="SCO", type="webcontent", href="index.html")
 r.set("{" + adl + "}scormtype", "sco")
@@ -91,28 +104,37 @@ assert all(
 sco.update(files(root / "scripts/scorm12"))
 results_dir = root / "test-results"
 checks = {name: (results_dir / name).read_bytes() for name in ("results.json", "architecture-gate.json")}
-lesson_checks = {"unterricht/" + name: value for name, value in files(results_dir / "unterricht-g131").items()}
-tectonic_checks = {"tektonik/" + name: value for name, value in files(results_dir / "g2.1").items()}
-checks.update(lesson_checks)
-checks.update(tectonic_checks)
-commit = subprocess.check_output(
-    ["git", "rev-parse", "HEAD"], cwd=root, text=True
-).strip()
-for name in ("results.json", "unterricht/pruefung.json", "tektonik/pruefung.json"):
+# Keep each suite's media separate, including runs of the older model views.
+suites = (
+    ("unterricht", "unterricht-g131", 10),
+    ("tektonik", "g2.1", 10),
+    ("nyos", "nyos", 12),
+)
+for section, directory, expected_count in suites:
+    assets = files(results_dir / directory)
+    shots = [content for name, content in assets.items() if name.endswith(".jpg")]
+    assert len(shots) == len(set(shots)) == expected_count, (
+        f"{section}: {expected_count} unterschiedliche Ansichten erwartet"
+    )
+    assert assets["bedienung.webm"], f"{section}: Bedienfilm fehlt"
+    if section != "unterricht":
+        assert assets["Messbericht.md"], f"{section}: Messbericht fehlt"
+    checks.update({section + "/" + name: content for name, content in assets.items()})
+
+reports = ["results.json", *(section + "/pruefung.json" for section, _, _ in suites)]
+for name in reports:
     result = json.loads(checks[name])
     assert result["commit"] == commit, f"{name} gehört zu einem anderen Commit"
     assert not result.get("failure") and {r["engine"] for r in result["runs"]} == {
         "chromium",
         "webkit",
-    }
-for section, evidence in (("unterricht", lesson_checks), ("tektonik", tectonic_checks)):
-    shots = [content for name, content in evidence.items() if name.endswith(".jpg")]
-    assert len(shots) == 10 and len(set(shots)) == 10, f"{section}: zehn unterschiedliche Ansichten erwartet"
-    assert len(evidence[f"{section}/bedienung.webm"]) > 0, f"{section}: Bedienfilm fehlt"
-assert tectonic_checks["tektonik/Messbericht.md"], "G2.1-Messbericht fehlt"
-version = ("GeoRisiko 3D · G2.1\nGeprüfter Git-Commit: " + commit + "\n").encode()
-# The SCO contains only the application and the files declared in its manifest.
-archive("SCORM-1.2", sco)
+    }, f"{name}: erfolgreiche Prüfungen in beiden Browsern erforderlich"
+    if name == "nyos/pruefung.json":
+        images = next(r["images"] for r in result["runs"] if r["engine"] == "chromium")
+        expected = {f"nyos/{image['name']}.jpg": image["hash"] for image in images}
+        actual = {key: hashlib.sha256(content).hexdigest() for key, content in checks.items()
+                  if key.startswith("nyos/") and key.endswith(".jpg")}
+        assert actual == expected, "Die Nyos-Bilder müssen exakt zum Browserprotokoll gehören"
 lesson = dict(web)
 lesson.update(
     {
@@ -120,10 +142,9 @@ lesson.update(
         for name in ("start_lokal.py", "START.command")
     }
 )
-lesson["Pruefstand.txt"] = version
 for name in ("unterricht-15-12.md", "unterricht-20-11.md", "geoscience-validation.md", "roadmap.md"):
     lesson[name] = (root / "docs" / name).read_bytes()
-lesson["START.txt"] = """GeoRisiko 3D · Globus, Schalenschnitt und Plattentektonik
+lesson["START.txt"] = """GeoRisiko 3D · Nyos-See
 
 1. Das ZIP vollständig in einen eigenen Ordner entpacken.
 2. Auf dem Mac mit installiertem Python 3 START.command doppelklicken.
@@ -142,18 +163,21 @@ automatisch einen freien Port. Für die Darstellung ist WebGL 2 erforderlich.
 Alternativ kann die Schule den Ordner auf einem statischen Webserver
 bereitstellen oder das SCORM-Paket ins LMS importieren.
 
-Unterrichtsvorbereitung: unterricht-15-12.md
-Fachliche Quellen und Modellgrenzen: g2.1-daten.md
+Die Ansicht „Nyos-See“ führt zur Landschaft und zum Seeschnitt.
+Die Anleitung für den Unterricht steht in nyos-unterrichtsverwendung.md.
+nyos-geowissenschaften.md und nyos-geodaten.md erläutern Quellen und Modellgrenzen.
 """.encode()
-archive("Unterricht", lesson)
 review = dict(lesson)
-for evidence in (lesson_checks, tectonic_checks):
-    review.update({"Pruefung/" + name: value for name, value in evidence.items()})
-for key in ("results.json", "architecture-gate.json"):
-    review["Pruefung/" + key] = checks[key]
+review["START.txt"] += (
+    "\nFür die Geräteprobe auf dem Mac und Smartboard den lokalen Starter öffnen. "
+    "Im Browser hinter dem letzten Schrägstrich der Startadresse Pruefung/geraeteprobe.html eingeben. "
+    "Im eingebetteten Modell die Ansicht wählen, die Messung starten und das JSON-Protokoll speichern.\n"
+).encode()
+review["Pruefung/geraeteprobe.html"] = (root / "scripts/nyos-geraeteprobe.html").read_bytes()
+review.update({"Pruefung/" + name: content for name, content in checks.items()})
 for name in ("g2.1-bericht", "g2.1-daten", "g2.1-prozessmodelle", "unterricht-15-12", "geoscience-validation", "roadmap"):
     review["Pruefung/" + name + ".md"] = (root / f"docs/{name}.md").read_bytes()
-measured = ["# Messbericht zum Schalenmodell im G2.1-Build", "", f"Produktionsbuild `{commit}`", "",
+measured = ["# Messbericht zum Schalenmodell im Nyos-Build", "", f"Produktionsbuild `{commit}`", "",
             "14 Bedienfolgen pro Engine. Bildzeiten stammen aus einer separaten ruhenden Schalenansicht bei 1920 × 1080. Die Auflösung gilt für das Modell neben der Bedienleiste.", ""]
 for run in json.loads(checks["unterricht/pruefung.json"])["runs"]:
     cadence = run["cadence"]
@@ -170,4 +194,9 @@ for run in json.loads(checks["unterricht/pruefung.json"])["runs"]:
                  f"- Bedienfolge bis zur Bildausgabe im Median {median(c['interactionMs'] for c in cycles):.0f} ms, maximal {max(c['interactionMs'] for c in cycles)} ms.",
                  f"- JS-Heap in den warmen Zyklen: {min(heap)/1048576:.1f}–{max(heap)/1048576:.1f} MiB." if heap else "- JS-Heap vom Browser nicht ausgewiesen.", ""]
 review["Pruefung/Messbericht.md"] = "\n".join(measured).encode()
-archive("Sichtpruefung", review)
+with TemporaryDirectory(dir=out) as temporary:
+    packages = (("SCORM-1.2", sco), ("Unterricht", lesson), ("Sichtpruefung", review))
+    verified = [archive(Path(temporary), name, entries) for name, entries in packages]
+    for package in verified:
+        destination = package.replace(out / package.name)
+        print(destination.name, destination.stat().st_size)

@@ -55,19 +55,69 @@ async function checkFileHint(folder) {
   }
 }
 
+async function checkDeviceProbe(page, folder, base) {
+  await page.goto(base + "/Pruefung/geraeteprobe.html");
+  const model = page.frameLocator("iframe");
+  await model.locator("#nav-nyos").click();
+  await page.waitForFunction(() => {
+    const w = document.querySelector("iframe").contentWindow.geoObservatory?.();
+    return w?.nyos.ready && w.mode === "nyos" && w.nyos.terrainVisible && !w.flying;
+  });
+  await page.locator("#sample").click();
+  const fileEvent = page.waitForEvent("download", { timeout: 60000 });
+  await page.locator("#save").click({ timeout: 60000 });
+  const file = await fileEvent;
+  assert.equal(file.suggestedFilename(), "Nyos-Geraeteprobe.json");
+  const samples = JSON.parse(await readFile(await file.path(), "utf8"));
+  assert.equal(samples.length, 1);
+  const [sample] = samples;
+  assert.equal(sample.pruefstand, (await readFile(join(folder, "Pruefstand.txt"), "utf8")).trim());
+  assert.match(sample.pruefstand, /Geprüfter Git-Commit: [a-f0-9]{40}$/);
+  assert.equal(sample.start.mode, "nyos");
+  assert.equal(sample.ende.mode, "nyos");
+  assert.ok(sample.dauerMs >= 8000 && sample.bilder > 0 && sample.fps > 0);
+  assert.ok(sample.bildabstaendeMs.length > 0 && sample.bildabstaendeMs.every(ms => ms > 0));
+  console.log("Geräteprobe im Sichtprüfungs-ZIP:", sample.bilder, "reale Bilder in", Math.round(sample.dauerMs), "ms · JSON heruntergeladen.");
+}
+
 try {
   for (const name of ["SCORM-1.2", "Unterricht", "Sichtpruefung"]) {
     const path = join(tmp, name);
     execFileSync("python3", ["-c", `
 from pathlib import Path
 import sys, zipfile
+from xml.etree import ElementTree as ET
 with zipfile.ZipFile(sys.argv[1]) as archive:
+    assert archive.testzip() is None
+    names = set(archive.namelist())
+    assert ("Pruefung/geraeteprobe.html" in names) == sys.argv[1].endswith("-Sichtpruefung.zip")
+    for document in ("nyos-geodaten", "nyos-geowissenschaften", "nyos-design", "nyos-technik", "nyos-unterrichtsverwendung", "nyos-abnahme"):
+        assert document + ".md" in names, document
+    if sys.argv[1].endswith("-SCORM-1.2.zip"):
+        assert "imsmanifest.xml" in names
+        manifest = ET.fromstring(archive.read("imsmanifest.xml"))
+        sco = manifest.find(".//{*}resource")
+        assert manifest.findtext(".//{*}schemaversion") == "1.2"
+        assert sco.get("{http://www.adlnet.org/xsd/adlcp_rootv1p2}scormtype") == "sco"
+        assert sco.get("href") == "index.html"
+        files = {f.get("href") for f in sco.findall("{*}file")}
+        assert files == {name for name in names if name != "imsmanifest.xml" and not name.endswith(".xsd")}
     archive.extractall(sys.argv[2])
+    if sys.argv[1].endswith("-SCORM-1.2.zip"):
+        try:
+            from lxml import etree
+        except ImportError:
+            print("Lokale XSD-Prüfung ausgelassen (python3-lxml fehlt).")
+        else:
+            folder = Path(sys.argv[2])
+            schema = etree.XMLSchema(etree.parse(str(folder / "adlcp_rootv1p2.xsd")))
+            schema.assertValid(etree.parse(str(folder / "imsmanifest.xml")))
+            print("SCORM-Manifest gegen ADL- und IMS-Schema validiert.")
     if "START.command" in archive.namelist():
         mode = archive.getinfo("START.command").external_attr >> 16
         assert mode & 0o111
         (Path(sys.argv[2]) / "START.command").chmod(mode & 0o777)
-`, "artifacts/GeoRisiko-G2.1-" + name + ".zip", path]);
+`, "artifacts/GeoRisiko-G4-Nyos-" + name + ".zip", path], { stdio: "inherit" });
     if (name === "Unterricht") {
       await checkFileHint(path);
       await checkLocalStart(path);
@@ -104,13 +154,16 @@ with zipfile.ZipFile(sys.argv[1]) as archive:
     try {
       const page = await browser.newPage({ reducedMotion: "reduce" });
       const failures = [];
+      const origin = "http://127.0.0.1:" + server.address().port;
+      page.on("pageerror", (e) => failures.push(e.message));
       page.on("request", (r) => {
-        if (!r.url().startsWith("http://127.0.0.1:")) failures.push(r.url());
+        const url = new URL(r.url());
+        if (url.origin !== origin && url.protocol !== "data:") failures.push(r.url());
       });
       page.on("response", (r) => {
         if (r.status() >= 400) failures.push(r.url());
       });
-      await page.goto("http://127.0.0.1:" + server.address().port + "/host");
+      await page.goto(origin + "/host");
       const frame = page.frames()[1];
       await frame.waitForFunction(() => window.geoObservatory?.().draws > 0);
       assert.ok(await frame.locator("#file-start").isHidden());
@@ -158,6 +211,33 @@ with zipfile.ZipFile(sys.argv[1]) as archive:
       await frame.click("#playProcess");
       await frame.click("#resetProcess");
       assert.equal(await frame.evaluate(() => window.geoObservatory().tectonics.progress), 0);
+      await frame.click("#nav-nyos");
+      await frame.waitForFunction(() => {
+        const w = window.geoObservatory();
+        return w.mode === "nyos" && w.nyos.ready && w.nyos.terrainVisible
+          && w.nyos.localWeight > 0.99 && !w.flying;
+      });
+      await frame.click("#nyos-section");
+      await frame.check("#nyos-dissolved");
+      await frame.waitForFunction(() => {
+        const n = window.geoObservatory().nyos;
+        return n.view === "section" && n.sectionVisible && n.dissolved && n.dissolvedVisible;
+      });
+      await frame.click("#nyos-event");
+      await frame.waitForFunction(() => {
+        const n = window.geoObservatory().nyos;
+        return n.view === "event" && n.pipeVisible === false && n.protectionVisible === false;
+      });
+      await frame.click("#nyos-play");
+      await frame.waitForFunction(() => window.geoObservatory().nyos.progress > 0);
+      await frame.click("#nyos-reset");
+      assert.equal(await frame.evaluate(() => window.geoObservatory().nyos.progress), 0);
+      await frame.click("#nyos-protection");
+      await frame.selectOption("#nyos-measure", "pipe");
+      await frame.waitForFunction(() => {
+        const n = window.geoObservatory().nyos;
+        return n.view === "protection" && n.measure === "pipe" && n.pipeVisible && n.protectionVisible;
+      });
       const persistence = await frame.evaluate(async () => ({
         local: localStorage.length,
         session: sessionStorage.length,
@@ -165,14 +245,16 @@ with zipfile.ZipFile(sys.argv[1]) as archive:
         databases: await indexedDB.databases(),
       }));
       assert.deepEqual(persistence, { local: 0, session: 0, cookie: "", databases: [] });
-      assert.deepEqual(failures, []);
       await frame.goto("about:blank");
       assert.deepEqual(
         await page.evaluate(() => window.calls),
         name === "SCORM-1.2" ? ["initialize", "finish"] : [],
       );
+      if (name === "Sichtpruefung")
+        await checkDeviceProbe(page, path, origin + "/lms/kurse/erde");
+      assert.deepEqual(failures, []);
       await page.close();
-      console.log(name, "entpackt, Schalen, Ortsnavigation und tektonisches 3D-Modell geprüft.");
+      console.log(name, "entpackt, Schalen, Platten, Nyos-Seeschnitt, Ereignis und Schutzmodell geprüft.");
     } finally {
       server.close();
     }

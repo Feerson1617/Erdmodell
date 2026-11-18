@@ -5,6 +5,8 @@ import { createIcons, Globe2, Layers3, MapPin, Maximize, Minimize, Info, Plus, M
 import { World } from "./world";
 import { layers } from "./model";
 import { waveModel } from "./knowledge";
+import { nyosContext } from "./nyos/context";
+import { nyosControls, bindNyosControls, syncNyos } from "./nyos/controls";
 import { plateControls, bindPlateControls, syncPlayback } from "./tectonics/controls";
 
 const icons = { Globe2, Layers3, MapPin, Maximize, Minimize, Info, Plus, Minus, RotateCcw, Waypoints, Orbit, Compass, X, Eye, EyeOff, Navigation2, Waves };
@@ -17,14 +19,15 @@ const $ = <T extends HTMLElement = HTMLElement>(id: string) =>
   document.getElementById(id) as T;
 $("app").innerHTML =
   `<header><div class="brand">${brand}<span>GeoRisiko <b>3D</b></span></div>
-  <nav aria-label="Modellansicht">${[["globe","Globus","globe-2"],["inside","Schalenschnitt","layers-3"],["plates","Plattentektonik","waypoints"],["place","Orte","map-pin"]].map(([id,label,glyph]) => `<button id="nav-${id}">${icon(glyph)}<span>${label}</span></button>`).join("")}</nav>
+  <nav aria-label="Modellansicht">${[["globe","Globus","globe-2"],["inside","Schalenschnitt","layers-3"],["plates","Plattentektonik","waypoints"],["nyos","Nyos-See","waves"],["place","Orte","map-pin"]].map(([id,label,glyph]) => `<button id="nav-${id}">${icon(glyph)}<span>${label}</span></button>`).join("")}</nav>
   <div class="headTools">${button("info","Modellhinweise und Quellen","info")}<button id="present" aria-label="Präsentieren" aria-pressed="false">${icon("maximize")}<span>Präsentieren</span></button></div></header>
   <main id="desk" data-mode="globe"><aside id="sidebar" hidden aria-label="Modellsteuerung"></aside>
   <section class="view" aria-label="Interaktive 3D-Ansicht"><canvas id="earth" tabindex="0" aria-label="Drehbares Erdmodell. Pfeiltasten drehen, Plus und Minus zoomen."></canvas>
   <div class="orientation" title="Geografischer Norden">${icon("navigation-2")} N</div>
   <div class="tools"><button id="orbitProcess" hidden aria-label="Prozessmodell drehen" title="Prozessmodell drehen">${icon("orbit")}</button>${button("in","Vergrößern","plus")}${button("out","Verkleinern","minus")}${button("tilt","Neigung ändern","compass")}${button("home","Zur Startansicht zurücksetzen","rotate-ccw")}</div>
   <div id="pins" aria-hidden="true">${layers.map((l,i)=>`<span style="--rock:#${l.color.toString(16)}" hidden>${i+1}</span>`).join("")}</div>
-  <div id="platePins" aria-hidden="true"></div>
+  <span id="nyosPin" hidden aria-hidden="true">Nyos-See</span><div id="platePins" aria-hidden="true"></div>
+  <div id="nyosRelief" hidden aria-hidden="true"><span id="nyos-Talboden" hidden>Talboden</span><span id="nyos-Hang" hidden>Hang</span></div>
   <div id="modelnote" hidden></div><div class="hint">Ziehen zum Drehen · Mit zwei Fingern oder Mausrad zoomen</div></section></main>
   <div id="status" role="status">Erdmodell wird geladen …</div>
   <dialog id="dialog" aria-labelledby="dialogTitle">${button("closeDialog","Schließen","x")}<div id="content"></div></dialog>`;
@@ -42,6 +45,11 @@ function warn(s: string) {
   status.textContent = s;
 }
 function infoPage() {
+  if (world?.mode === "nyos") {
+    content.innerHTML = nyosContext;
+    openDialog();
+    return;
+  }
   if (world?.mode === "plates") {
     content.innerHTML = `<h2 id="dialogTitle">Über die Plattenmodelle</h2><p>Die Linien folgen dem globalen Plattenmodell PB2002. In der Natur kann sich die Verformung über eine breite Zone verteilen. Eine Platte umfasst die Kruste und den starren obersten Teil des Mantels.</p><p>Das regionale Satellitenbild zeigt die Landschaft. Der vergrößerte Schnitt darüber erklärt den Prozess schematisch. Pfeillängen, Schichtdicken und Spielzeit haben keinen gemeinsamen Maßstab.</p><p><a href="${import.meta.env.BASE_URL}licenses/Geodaten.txt" target="_blank" rel="noopener">Quellen und Nutzungsrechte</a></p>`;
     openDialog();
@@ -78,7 +86,7 @@ function siteInfo() {
 function renderSide() {
   const mode = world.mode;
   desk.dataset.mode = mode;
-  for (const id of ["globe", "inside", "plates", "place"]) {
+  for (const id of ["globe", "inside", "plates", "nyos", "place"]) {
     $("nav-" + id).setAttribute("aria-current", mode === id ? "page" : "false");
   }
   side.hidden = mode === "globe";
@@ -88,6 +96,13 @@ function renderSide() {
     side.innerHTML = plateControls(world);
     bindPlateControls(side, world, renderSide);
   }
+  $("nyosPin").hidden = true;
+  $("nyosRelief").hidden = true;
+  if (mode === "nyos") {
+    side.dataset.nyosError = String(!!world.nyos.error);
+    side.innerHTML = nyosControls(world);
+    bindNyosControls(side, world, renderSide);
+  }
   syncPlatePins();
   if (mode === "place") {
     const r = world.region;
@@ -95,7 +110,7 @@ function renderSide() {
     $<HTMLSelectElement>("siteSelect").onchange = (e) => {
       world.visit((e.target as HTMLSelectElement).value);
       renderSide();
-      ($("siteSelect") || $("tectonicSite"))?.focus();
+      ($("siteSelect") || $("tectonicSite") || $("nyos-near"))?.focus();
     };
     $("overview").onclick = () => world.visit(r.id, true);
     $("nearby").onclick = () => world.visit(r.id);
@@ -176,6 +191,7 @@ function select(i: number) {
   side.querySelector<HTMLButtonElement>('[data-layer="' + i + '"]')?.focus();
 }
 function updateNote() {
+  if (world.mode === "nyos") { syncNyos(world); return; }
   const note = $("modelnote");
   note.hidden = world.mode === "globe" || (world.mode === "plates" && !world.processSite);
   note.classList.toggle(
@@ -197,6 +213,7 @@ function updateNote() {
 }
 function navigate(mode: World["mode"]) {
   if (mode === "inside") world.inside();
+  else if (mode === "nyos") world.visit("nyos");
   else if (mode === "plates") world.plates();
   else if (mode === "place") world.visit();
   else world.globe();
@@ -295,7 +312,7 @@ async function boot() {
   renderSide();
   world.onLayer = select;
   world.onBoundary = () => { if (world.mode === "plates") renderSide(); };
-  for (const m of ["globe", "inside", "plates", "place"] as const)
+  for (const m of ["globe", "inside", "plates", "nyos", "place"] as const)
     $("nav-" + m).onclick = () => navigate(m);
   $("in").onclick = () => world.nav.zoom(0.68);
   $("out").onclick = () => world.nav.zoom(1 / 0.68);
@@ -344,7 +361,11 @@ async function boot() {
       `rotate(${world.nav.pose.bearing}deg)`;
     if (labels && world.mode === "inside") updatePins();
     if (world.mode === "plates") { syncPlatePins(); syncPlayback(world); }
-    const message = (world.mode === "place" && world.local.warning) || alertText || "";
+    if (world.mode === "nyos") {
+      if (side.dataset.nyosError !== String(!!world.nyos.error)) renderSide();
+      syncNyos(world);
+    }
+    const message = world.nyosWarning || (world.mode === "place" && world.local.warning) || alertText || "";
     if (status.textContent !== message) status.textContent = message;
   };
   await world.init();

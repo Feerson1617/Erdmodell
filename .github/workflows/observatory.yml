@@ -1,4 +1,4 @@
-name: GeoRisiko G2.1
+name: GeoRisiko G4 Nyos
 on:
   pull_request:
   workflow_dispatch:
@@ -10,11 +10,9 @@ on:
 permissions:
   contents: read
 jobs:
-  validate:
+  build:
     runs-on: ubuntu-24.04
-    # Browser binaries and Linux libraries match the pinned Playwright version.
-    container: mcr.microsoft.com/playwright:v1.56.1-noble@sha256:f1e7e01021efd65dd1a2c56064be399f3e4de00fd021ac561325f2bfbb2b837a
-    timeout-minutes: 50
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
         with:
@@ -25,36 +23,106 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+      - run: npm run test:data
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Produktionsbuild
+          path: dist/
+          overwrite: true
+          if-no-files-found: error
+
+  test:
+    name: Browserprüfung ${{ matrix.suite }}
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [g1, g2, nyos]
+    runs-on: ubuntu-24.04
+    container: mcr.microsoft.com/playwright:v1.56.1-noble@sha256:f1e7e01021efd65dd1a2c56064be399f3e4de00fd021ac561325f2bfbb2b837a
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
       - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
-      - run: node tests/gate.mjs
-      - run: npm test
-      - name: Kamerafahrt aufnehmen und Bildfolge auswerten
+      - uses: actions/download-artifact@v4
+        with:
+          name: Produktionsbuild
+          path: dist/
+      - if: matrix.suite == 'g1'
+        run: node tests/gate.mjs
+      - run: npm run test:${{ matrix.suite }}
+      - name: Kamerafahrt zu Hooge aufnehmen und auswerten
+        if: matrix.suite == 'g1'
         run: |
           if ! command -v ffmpeg >/dev/null; then apt-get update && apt-get install -y ffmpeg; fi
           npm run audit
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: Browsertests
+          name: Browsertests-${{ matrix.suite }}
           path: test-results/
-      - run: npm run package && node tests/packages.mjs
+          overwrite: true
+          if-no-files-found: warn
+
+  pack:
+    needs: test
+    runs-on: ubuntu-24.04
+    container: mcr.microsoft.com/playwright:v1.56.1-noble@sha256:f1e7e01021efd65dd1a2c56064be399f3e4de00fd021ac561325f2bfbb2b837a
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - uses: actions/download-artifact@v4
+        with:
+          name: Produktionsbuild
+          path: dist/
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: Browsertests-*
+          merge-multiple: true
+          path: test-results/
+      - run: npm run package
+      - name: XML-Schemaprüfung für SCORM vorbereiten
+        run: |
+          if ! python3 -c 'import lxml.etree' 2>/dev/null; then
+            apt-get update && apt-get install -y python3-lxml
+          fi
+          python3 -c 'import lxml.etree'
+      - run: node tests/packages.mjs
       - name: Unterricht-ZIP zum direkten Download bereitstellen
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
-          path: artifacts/GeoRisiko-G2.1-Unterricht.zip
+          path: artifacts/GeoRisiko-G4-Nyos-Unterricht.zip
           archive: false
+          overwrite: true
           if-no-files-found: error
       - name: SCORM-1.2-ZIP zum direkten Download bereitstellen
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
-          path: artifacts/GeoRisiko-G2.1-SCORM-1.2.zip
+          path: artifacts/GeoRisiko-G4-Nyos-SCORM-1.2.zip
           archive: false
+          overwrite: true
           if-no-files-found: error
       - name: Sichtpruefung-ZIP zum direkten Download bereitstellen
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
-          path: artifacts/GeoRisiko-G2.1-Sichtpruefung.zip
+          path: artifacts/GeoRisiko-G4-Nyos-Sichtpruefung.zip
           archive: false
+          overwrite: true
           if-no-files-found: error
       - uses: actions/upload-pages-artifact@v3
         if: github.event_name == 'workflow_dispatch' && inputs.publish_pages && github.ref == 'refs/heads/main'
@@ -62,7 +130,7 @@ jobs:
           path: dist
   pages:
     if: github.event_name == 'workflow_dispatch' && inputs.publish_pages && github.ref == 'refs/heads/main'
-    needs: validate
+    needs: pack
     runs-on: ubuntu-24.04
     permissions:
       pages: write

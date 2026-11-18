@@ -1,0 +1,31 @@
+# Nyos-See · Geodaten, Herkunft und Modellgrenzen
+
+Das Modell ist am Schwerpunkt der beobachteten Wasserfläche bei **6,438340° N, 10,298663° O** verankert. Die örtliche Landschaft erstreckt sich von 10,244° bis 10,354° O und von 6,394° bis 6,516° N. Diese rund 12,2 × 13,6 km umfassen den länglichen See, seine Flanken und die tiefer liegenden Geländeformen nördlich des Sees.
+
+| Bestandteil | Grundlage | Geografische Aussage |
+| --- | --- | --- |
+| Gelände | Copernicus DEM GLO-30, Kachel N06/E010, 1 Bogensekunde | Oberflächenhöhen mit etwa 31 m horizontalem Probenabstand |
+| Örtliche Bodenfarben | Copernicus Sentinel-2A Level-2A, 10. Januar 2025, 09:48:52 UTC | Trockenzeitaufnahme in natürlichen Farben. Örtlicher Bildausschnitt mit rund 10 m pro Bildpunkt |
+| Seeufer | Grün- und Nahinfrarotband derselben Aufnahme, ergänzt durch die Sentinel-Szenenklassifikation | Äußere Wasserlinie zu diesem Aufnahmedatum |
+| Umgebung | Dieselbe Sentinel-Aufnahme, etwa 55 × 49 km | Größere Geländeformen schon beim regionalen Anflug, etwa 36 m pro Bildpunkt |
+| Kamerun und Golf von Guinea | NASA GIBS Blue Marble Shaded Relief and Bathymetry | Geografische Orientierung in Kamerun und seiner Umgebung, etwa 0,98 km Bildabstand in Nord-Süd-Richtung |
+
+## Höhen und Wasserfläche
+
+GLO-30 beschreibt die Oberfläche einschließlich Vegetation und Bauwerken. Die TanDEM-X-Aufnahmen für das Produkt stammen überwiegend aus den Jahren 2011–2015. Die Geolage bezieht sich auf WGS 84, die orthometrischen Höhen auf EGM2008 (EPSG:3855). Für das Modell wurde der Ausschnitt bilinear auf 397 × 441 Knoten abgetastet und auf Meter gerundet. Die Knoten liegen in einem Abstand von rund 31 m. Der Ausschnitt umfasst Höhen von 670 bis 1.724 m. Diese Werte charakterisieren Geländerelief und Kraterflanken. Die tatsächliche vertikale Genauigkeit an einem bestimmten Ort hängt unter anderem von Oberflächenbedeckung und Datenerfassung ab. [Copernicus-Produktspezifikation](https://dataspace.copernicus.eu/explore-data/data-collections/copernicus-contributing-missions/collections-description/COP-DEM) · [Originalkachel](https://copernicus-dem-30m.s3.amazonaws.com/Copernicus_DSM_COG_10_N06_00_E010_00_DEM/Copernicus_DSM_COG_10_N06_00_E010_00_DEM.tif)
+
+In der Seemitte weist das bearbeitete Radar-Höhenmodell eine ebene Fläche bei 1.093 m EGM2008 aus. Das ist die Wasserhöhe der Darstellung. Flache Bereiche auf dem See enthalten keine Information über den Seegrund. Der östliche Hang erreicht beispielsweise bei 10,307° O und 6,439° N rund 1.190 m. Nördlich des Sees liegen Geländepunkte bei 10,290° O und 6,456° N auf rund 1.023 m und bei 10,283° O und 6,465° N auf rund 898 m. Aus solchen Geländewerten allein lässt sich die historische Ausdehnung einer Gasfreisetzung nicht berechnen. [Copernicus DEM](https://registry.opendata.aws/copernicus-dem/)
+
+Die optische Aufnahme verwendet das atmosphärenkorrigierte Sentinel-2A-Produkt `S2A_MSIL2A_20250110T093351_N0511_R136_T32NPN_20250110T134949.SAFE`. Die Bilddateien stammen aus dem True-Colour-Produkt der Szene. Die braun-grünen Flächen geben die Vegetation zur Trockenzeit wieder. Im örtlichen Ausschnitt enthält die 20-m-Szenenklassifikation keine als Wolke, Cirrus, Wolkenschatten oder Schnee gekennzeichneten Pixel. Aufnahmejahr und Landschaftszustand sind für die zeitliche Einordnung wichtig. Die Oberfläche zeigt den Stand von 2025. [Metadaten der Szene](https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items/S2A_32NPN_20250110_0_L2A) · [Sentinel-2-Mission](https://sentiwiki.copernicus.eu/web/s2-mission)
+
+Das Ufer wurde als zusammenhängende Wasserfläche um die Seemitte aus den 10-m-Bändern Grün (B03) und Nahinfrarot (B08) abgeleitet. Die Wasserklassifikation des 20-m-Rasters grenzt den Suchbereich ein. Kleine Innenlücken wurden geschlossen, die Pixelkante mit einer Filterbreite von acht Metern geglättet und die Linie auf 90 Stützpunkte vereinfacht. Das Polygon misst rund **1,55 km²** und erstreckt sich rund 1,73 km Nord–Süd sowie 1,26 km West–Ost. Ufervegetation, Mischpixel, Wasserstand und die Vereinfachung begrenzen die Lagegenauigkeit. Das Polygon beschreibt die sichtbare Wasserlinie vom 10. Januar 2025. Als unabhängigen Vergleich nennt die Fachliteratur eine maximale Seeoberfläche von rund 1,58 km². Aussagen zur Tiefe des Sees beruhen auf limnologischen Untersuchungen. Der gezeichnete Unterwasserschnitt bleibt schematisch. [Kling et al. 2005](https://doi.org/10.1073/pnas.0502274102)
+
+## Regionaler Anflug
+
+Die landesweite Ansicht verwendet neun NASA-GIBS-Kacheln des Produkts *Blue Marble Shaded Relief and Bathymetry (MODIS)* im Koordinatensystem EPSG:4326. Das 1536 × 1536 Pixel große Mosaik reicht von 4,5° bis 18° O und vom Äquator bis 13,5° N. Für die Umgebung des Sees deckt die mittlere Sentinel-Auflösung 10,055° bis 10,550° O und 6,258° bis 6,702° N ab. Die Szenenaufnahmen, das Radar-Geländemodell und die historische Katastrophe haben unterschiedliche Zeitbezüge. Physisch vermessene Ausbreitungsgrenzen oder individuelle Risiken einzelner Häuser sind aus diesen Karten nicht abzulesen. [NASA GIBS](https://www.earthdata.nasa.gov/data/tools/gibs) · [Blue Marble](https://science.nasa.gov/earth/earth-observatory/the-blue-marble/)
+
+## Reproduktion und Offline-Nutzung
+
+`python3 scripts/prepare_nyos.py --cache /pfad/zum/cache` erstellt sämtliche Geodateien aus der festgelegten Sentinel-Szene, der per SHA-256 verifizierten DEM-Kachel und den neun statischen NASA-Kacheln. Benötigt werden Python mit GDAL-Bindungen, NumPy, SciPy und Pillow. Die Auslieferung nutzt nur die fertigen Dateien. Das Höhenraster enthält zeilenweise vorzeichenbehaftete 16-Bit-Höhenwerte in Metern (Little Endian), beginnend im Nordwesten. Die Randknoten entsprechen den angegebenen geografischen Grenzen. WebP-Bilder zeigen Norden oben. Das Ufer ist ein einfacher Ring in der Reihenfolge Längengrad/Breitengrad.
+
+Im entpackten Paket stehen die Quellenangaben und Weitergabebedingungen unter `data/nyos/NOTICE.txt`. Für WorldDEM-30 liegt der vollständige Text unter `licenses/Copernicus-DEM-GLO30.pdf` bei. Im Quellrepository liegen beide Dateien unter `public/`. [Sentinel-Nutzungsrecht](https://dataspace.copernicus.eu/terms-and-conditions) · [NASA-Medienrichtlinien](https://www.nasa.gov/nasa-brand-center/images-and-media/)

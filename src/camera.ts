@@ -6,9 +6,12 @@ const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 const angle = (a: number, b: number) => ((b - a + 540) % 360) - 180;
 export class CameraController {
   readonly camera = new PerspectiveCamera(39, 1, 0.01, 60000);
+  readonly reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
   pose = { ...HOME };
   goal = { ...HOME };
   orbit = false;
+  orbitMinimum = 38;
+  inputRevision = 0;
   flight?: { from: Pose; to: Pose; start: number; ms: number; cruise: number; paced: boolean; elapsed: number; last: number };
   private pointers = new Map<number, { x: number; y: number }>();
   private drag = 0;
@@ -61,6 +64,7 @@ export class CameraController {
     canvas.onpointercancel = (e) => this.pointers.delete(e.pointerId);
   }
   stop() {
+    this.inputRevision++;
     if (this.flight) {
       this.goal = { ...this.pose };
       this.flight = undefined;
@@ -68,7 +72,7 @@ export class CameraController {
   }
   zoom(f: number) {
     this.stop();
-    this.goal.d = clamp(this.goal.d * f, this.orbit ? 38 : 0.06, 35000);
+    this.goal.d = clamp(this.goal.d * f, this.orbit ? this.orbitMinimum : 0.06, 35000);
   }
   pan(dx: number, dy: number) {
     this.stop();
@@ -89,7 +93,7 @@ export class CameraController {
       89.7,
     );
   }
-  fly(to: Pose, paced = false) {
+  fly(to: Pose, paced = false, minimumMs = 950) {
     const from = this.pose;
     const separation = R * Math.acos(clamp(
       basis(from.lat, from.lon).up.dot(basis(to.lat, to.lon).up), -1, 1,
@@ -104,16 +108,20 @@ export class CameraController {
       from: { ...this.pose },
       to: { ...to },
       start: now,
-      ms: matchMedia("(prefers-reduced-motion: reduce)").matches
+      ms: this.reducedMotion.matches
         ? 0
-        : clamp(Math.max(Math.abs(Math.log(from.d / to.d)) * 590, cruise * 0.55), 950, 6400),
+        : clamp(Math.max(Math.abs(Math.log(from.d / to.d)) * 590, cruise * 0.55), minimumMs, 6400),
     };
   }
-  update(now: number, dt: number, heightAt: (pose: Pose) => number) {
+  update(
+    now: number, dt: number, heightAt: (pose: Pose) => number,
+    terrainBelowEye?: (lat: number, lon: number) => number | null,
+    holdPacedFlight = false,
+  ) {
     if (this.flight) {
       const { from: a, to: b, start, ms, cruise } = this.flight;
       // Do not skip an entire regional LOD when the first GPU upload takes a long frame.
-      this.flight.elapsed += clamp(now - this.flight.last, 0, 125);
+      if (!holdPacedFlight) this.flight.elapsed += clamp(now - this.flight.last, 0, 125);
       this.flight.last = now;
       const elapsed = this.flight.paced ? this.flight.elapsed : now - start;
       const p = ms ? clamp(elapsed / ms, 0, 1) : 1,
@@ -163,6 +171,13 @@ export class CameraController {
       .copy(target)
       .addScaledVector(b.up, d * Math.cos(a))
       .addScaledVector(back, d * Math.sin(a));
+    if (terrainBelowEye) {
+      const eye = this.camera.position, radius = eye.length();
+      const surface = terrainBelowEye(Math.asin(eye.y / radius) / RAD, Math.atan2(eye.x, eye.z) / RAD);
+      if (surface !== null && radius < R + surface + 0.045) {
+        eye.multiplyScalar((R + surface + 0.045) / radius);
+      }
+    }
     this.camera.up
       .copy(b.up)
       .multiplyScalar(Math.sin(a))
