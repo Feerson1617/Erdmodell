@@ -4,7 +4,7 @@ import { R, position, basis, smooth, clamp } from "./geo";
 import { TerrainLODManager } from "./planet";
 import { regions, firstRegion, type Region } from "./regions";
 import { LocalTerrain } from "./local";
-import { Shells } from "./shells";
+import { Shells, shellRadii } from "./shells";
 import { type Style, styles } from "./model";
 export class World {
   scene = new T.Scene();
@@ -214,6 +214,35 @@ export class World {
     this.shell.rebuild();
     this.nav.fly({ ...HOME, lon: 3, lat: 17 });
   }
+  layerMarkers() {
+    const camera = this.nav.camera,
+      eyeLongitude =
+        (Math.atan2(camera.position.x, camera.position.z) * 180) / Math.PI;
+    if (
+      !this.shell.cut ||
+      !this.shell.group.visible ||
+      eyeLongitude <= -25 ||
+      eyeLongitude >= 65
+    )
+      return [];
+    const radii = shellRadii(this.shell.expanded),
+      face = eyeLongitude < 20 ? 65 : -25;
+    return this.shell.visible.map((visible, i) => {
+      if (!visible) return null;
+      const projected = position(
+        [38, 18, -7, -48][i],
+        face,
+        (radii[i] + radii[i + 1]) / 2 - R,
+      ).project(camera);
+      if (
+        Math.abs(projected.x) > 1 ||
+        Math.abs(projected.y) > 1 ||
+        Math.abs(projected.z) > 1
+      )
+        return null;
+      return { x: (projected.x + 1) * 50, y: (1 - projected.y) * 50 };
+    });
+  }
   markerPosition() {
     const c = this.nav.camera;
     const p = this.marker.clone().project(c);
@@ -247,6 +276,16 @@ export class World {
       renderMs: this.renderMs,
       terrainMs: this.terrainMs,
       programs: this.gl.info.programs?.length,
+      shell: {
+        radii: shellRadii(this.shell.expanded),
+        cut: this.shell.cut,
+        expanded: this.shell.expanded,
+        selected: this.shell.selected,
+        visible: [...this.shell.visible],
+        opacity: [...this.shell.opacity],
+        subdued: this.shell.subdued,
+        builds: this.shell.builds,
+      },
       localReady: this.local.ready,
       localVisible: this.local.group.visible,
       draws: this.gl.info.render.calls,

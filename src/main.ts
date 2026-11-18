@@ -1,4 +1,4 @@
-import { regions } from "./regions";
+import { regions, firstRegion } from "./regions";
 import "@fontsource-variable/dm-sans/wght.css";
 import "./style.css";
 import {
@@ -36,7 +36,7 @@ import {
 import { World } from "./world";
 
 import { layers, type Style } from "./model";
-import { dataUrl } from "./planet";
+import { modelLimits, evidence } from "./knowledge";
 const icons = {
   Globe2,
   Layers3,
@@ -89,11 +89,11 @@ $("app").innerHTML =
       "",
     )}</nav><div class="headTools">${button("info", "Informationen", "info")}<button id="present" title="Präsentationsmodus">${icon("maximize")}<span>Präsentieren</span></button></div></header>
 <main id="desk"><div class="stars" aria-hidden="true"></div><div class="mast"><span class="live"></span> ERDOBSERVATORIUM <span class="slash">/</span> <span id="section">GLOBALE ANSICHT</span></div>
-<aside id="sidebar"></aside>
+<div id="boardBar" hidden><div class="boardBrand">${brand}<span>Unterrichtsansicht</span></div><div class="boardViews"><button id="boardGlobe">${icon("globe-2")} Globus</button><button id="boardInside">${icon("layers-3")} Erdinneres</button></div><button id="exitPresent">${icon("panel-left-close")} Menü zeigen</button></div><aside id="sidebar"></aside>
 <section class="view" aria-label="Interaktive 3D-Ansicht"><div id="reticle" aria-hidden="true"><span>N</span><span>S</span><i></i><i></i></div><canvas id="earth" tabindex="0" aria-label="Drehbares Erdmodell. Pfeiltasten drehen, Plus und Minus zoomen."></canvas><div id="marker"><button title="Hallig Hooge besuchen">Hallig Hooge ${icon("arrow-up-right")}</button></div><div class="orientation" title="Geografischer Norden">${icon("navigation-2")} N</div>
 <div class="tools">${button("in", "Vergrößern", "plus")}${button("out", "Verkleinern", "minus")}${button("tilt", "Neigung ändern", "compass")}${button("home", "Startansicht", "rotate-ccw")}</div>
-<div id="modelnote" hidden></div><div class="teachingTools" hidden id="teachingTools"><button id="teach" aria-expanded="false" aria-controls="teachingCard">${icon("info")} Lerntext</button><button id="exitPresent" hidden>${icon("panel-left-close")} Menü zeigen</button></div><article id="teachingCard" hidden></article></section>
-<section class="bottom" aria-label="Darstellung und Bedienung"><div class="stylePicker"><span class="caption">DARSTELLUNG</span><div class="switch"><button id="designA"><b>A</b> Realistisch</button><button id="designB"><b>B</b> Soft-Low-Poly</button></div></div><div class="hint">${icon("mouse-pointer-2")} Ziehen zum Drehen <em></em> Scrollen zum Zoomen</div></section>
+<div id="pins" aria-hidden="true">${layers.map((l, i) => `<span style="--rock:#${l.color.toString(16)}" hidden>${i + 1}</span>`).join("")}</div><div id="modelnote" hidden></div></section>
+<section class="bottom" aria-label="Darstellung und Bedienung"><div class="stylePicker"><span class="caption">GRAFIKSTIL</span><div class="switch"><button id="designA"><b>A</b> Realistisch</button><button id="designB">Vergleich · B</button></div></div><div class="hint">${icon("mouse-pointer-2")} Ziehen zum Drehen <em></em> Scrollen zum Zoomen</div></section>
 </main><footer><span><i class="live"></i><span id="status" role="status">Erdmodell wird geladen …</span></span><span class="readings"><span class="cross">⌖</span> <span id="coords"></span><em></em><span id="distance"></span></span></footer>
 <dialog id="dialog"><div class="dialogHead"><span class="caption">GEO<span class="green">RISIKO</span> 3D</span>${button("closeDialog", "Schließen", "x")}</div><div id="content"></div></dialog>`;
 const desk = $("desk"),
@@ -106,7 +106,7 @@ let world: World,
   alertText = "",
   present = false,
   previous = "",
-  scaleMode = false;
+  labels = false;
 const format = (n: number) =>
   new Intl.NumberFormat("de-DE", { maximumFractionDigits: 0 }).format(n);
 function warn(s: string) {
@@ -114,40 +114,53 @@ function warn(s: string) {
   status.textContent = s;
 }
 function infoPage() {
-  content.innerHTML = `<h2>Das Erdobservatorium</h2><p>Erkunde die Oberfläche, öffne das Erdinnere oder folge dem Globus bis zur Hallig Hooge.</p><h3>Navigation</h3><p>Ziehen oder Pfeiltasten drehen die Erde. Mausrad, zwei Finger oder + / − zoomen. Umschalt + Ziehen neigt die Kamera. Eine eigene Bewegung unterbricht den Flug. Pos1 führt zurück.</p><h3>Daten & Modellgrenzen</h3><p>Regionale Landbedeckung: ESA WorldCover 2021 (CC BY 4.0). Helgoländer Höhen: Copernicus DEM GLO-30. Luftbilder: © GeoBasis-DE/LVermGeo SH/CC BY 4.0. NASA Blue Marble, NOAA ETOPO1, Natural Earth und <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">© OpenStreetMap-Mitwirkende (ODbL)</a>. Alle Karten liegen lokal vor. Bildfarben, Wasserbewegung und Beleuchtung sind stilisiert. <a href="${import.meta.env.BASE_URL}licenses/Geodaten.txt" target="_blank" rel="noopener">Quellen und Lizenzen</a></p><p>Globale Höhen sind geglättet. Für Hooge stammen Küste, Grundrisse und Warftlagen aus der Karte. Höhen, Dächer und Bäume sind modelliert. Der Wasserstand zeigt keine bestimmte Tide.</p><h3>Für den Unterricht</h3><p>Vorhersagen, betrachten, vergleichen. Welche Schicht nimmt den größten Raum ein? Prüft eure Vermutung mit dem Schnitt und wechselt zwischen den beiden Krustenmaßstäben.</p>`;
+  content.innerHTML = `<h2>Das Erdobservatorium</h2><p>Erkunde die Oberfläche, öffne das Erdinnere oder folge dem Globus bis zur Hallig Hooge.</p><h3>Navigation</h3><p>Ziehen oder Pfeiltasten drehen die Erde. Mausrad, zwei Finger oder + / − zoomen. Umschalt + Ziehen neigt die Kamera. Eine eigene Bewegung unterbricht den Flug. Pos1 führt zurück.</p><h3>Daten & Modellgrenzen</h3><p>Regionale Landbedeckung: ESA WorldCover 2021 (CC BY 4.0). Helgoländer Höhen: Copernicus DEM GLO-30. Luftbilder: © GeoBasis-DE/LVermGeo SH/CC BY 4.0. NASA Blue Marble, NOAA ETOPO1, Natural Earth und <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">© OpenStreetMap-Mitwirkende (ODbL)</a>. Alle Karten liegen lokal vor. Bildfarben, Wasserbewegung und Beleuchtung sind stilisiert. <a href="${import.meta.env.BASE_URL}licenses/Geodaten.txt" target="_blank" rel="noopener">Quellen und Lizenzen</a></p><p>Globale Höhen sind geglättet. Für Hooge stammen Küste, Grundrisse und Warftlagen aus der Karte. Höhen, Dächer und Bäume sind modelliert. Der Wasserstand zeigt keine bestimmte Tide.</p><h3>Für den Unterricht</h3><p>Vorhersagen, betrachten, vergleichen. Welche Schicht nimmt den größten Raum ein? Prüft eure Vermutung mit dem Schnitt und wechselt zwischen den beiden Maßstäben.</p>`;
   openDialog();
 }
 function openDialog() {
   if (!dialog.open) dialog.showModal();
   $("closeDialog").focus();
 }
+function layerName(i: number) {
+  return labels ? layers[i].name : `Schale ${i + 1}`;
+}
 function layerInfo() {
+  if (!labels) {
+    content.innerHTML =
+      '<span class="caption">ENTDECKEN UND VERMUTEN</span><h2>Wie sieht es innen aus?</h2><p>Skizziert eure Vorstellung auf Papier. Welche Bereiche könnten fest sein, welche flüssig? Nennt einen Grund für eure Vermutung.</p>';
+    openDialog();
+    return;
+  }
   const l = layers[choice];
-  content.innerHTML = `<span class="caption">STOFFLICHE GLIEDERUNG</span><h2>${l.name}</h2><p>${l.text}</p><dl><dt>Tiefe</dt><dd>${l.range}</dd><dt>Mächtigkeit</dt><dd>${l.thickness}</dd></dl><details><summary>Fachwissen vertiefen</summary><p>${l.deep}</p><h3>Wie können wir das wissen?</h3><p>${waveText}</p></details><p class="small">Die Schichten sind ein Erklärungsmodell aus indirekten Messungen. Die Referenzkruste ist überall 35 km dick (¹ Tiefenangaben im Modell). In der Natur variiert ihre Dicke. Die Lithosphäre umfasst Kruste und starren obersten Mantel.</p>`;
+  content.innerHTML = `<span class="caption">GRUNDWISSEN · STOFFLICHE GLIEDERUNG</span><h2>${l.name}</h2><p>${l.text}</p><dl><dt>Tiefe im Referenzmodell</dt><dd>${l.range.replace("¹", "")}</dd><dt>${choice === 3 ? "Radius" : "Mächtigkeit"}</dt><dd>${l.thickness.replace("Radius ", "")}</dd></dl><details><summary>Fachwissen vertiefen</summary><p>${l.deep}</p><p>Die stoffliche Gliederung beschreibt, woraus die Erde besteht. Bei der mechanischen Gliederung fragen wir, wie sich Material verformt. Die Lithosphäre umfasst die Kruste und den starren obersten Mantel. Ihre Platten bewegen sich über lange Zeiträume.</p></details><div class="lessonNav"><button id="prevLayer" aria-label="Vorherige Schicht">←</button><span>${choice + 1} von 4</span><button id="nextLayer" aria-label="Nächste Schicht">→</button></div>`;
+  for (const [id, delta] of [
+    ["prevLayer", 3],
+    ["nextLayer", 1],
+  ] as const)
+    $(id).onclick = () => {
+      select((choice + delta) % 4);
+      layerInfo();
+      $(id).focus();
+    };
   openDialog();
 }
-const waveText =
-  "Erdbeben erzeugen P- und S-Wellen. P-Wellen breiten sich in Feststoffen und Flüssigkeiten aus. S-Wellen brauchen festes Material. Messstationen zeichnen auf, wann der Boden wie stark schwingt. Aus den Ankunftszeiten an vielen Orten lassen sich Wege und Geschwindigkeiten der Wellen erschließen. Wo direkte S-Wellen fehlen und P-Wellen abgelenkt werden, erschließen Forschende den flüssigen äußeren Kern.";
-function teachingCard() {
-  const card = $("teachingCard");
-  if (!present || card.hidden) return;
-  const l = layers[choice],
-    inside = world.mode === "inside";
-  card.innerHTML = inside
-    ? `<span class="caption">STOFFLICHER AUFBAU</span><h2>${l.name}</h2><p>${l.text}</p><div class="lessonNav"><button id="prevLayer" aria-label="Vorherige Schicht">←</button><span>${choice + 1} von 4</span><button id="nextLayer" aria-label="Nächste Schicht">→</button></div>`
-    : `<h2>${world.mode === "place" ? world.region.name : "Die Erdoberfläche"}</h2><p>${world.mode === "place" ? world.region.description : "Kontinente und Ozeane bilden die Oberfläche unseres Planeten. Vergleicht ihre Verteilung auf der Nord- und Südhalbkugel."}</p>`;
-  if (inside) {
-    $("prevLayer").onclick = () => {
-      choice = (choice + 3) % 4;
-      renderSide();
-      $("prevLayer").focus();
-    };
-    $("nextLayer").onclick = () => {
-      choice = (choice + 1) % 4;
-      renderSide();
-      $("nextLayer").focus();
-    };
-  }
+function showEvidence() {
+  content.innerHTML = evidence(labels);
+  openDialog();
+}
+function showLimits() {
+  content.innerHTML = `<span class="caption">MODELLKRITIK</span><h2>Was vereinfacht das Modell?</h2><p>${labels ? modelLimits : "Farben unterscheiden die Bereiche. Sie sind keine Fotografien aus der Tiefe. Die glatten Grenzen sind vereinfacht. Die Dicke der äußeren Schale variiert in der Natur."}</p><p>Ein Keil legt die gedachten Schnittflächen frei. Beim Verbreitern der äußeren Schale verschiebt sich nur ihre untere Grenze. Die Tiefenangaben beziehen sich auf das Referenzmodell.</p><p>Seismische Signale, Dichtemessungen und Experimente liefern unterschiedliche Belege. Forschende vergleichen die Modellannahmen mit diesen Beobachtungen.</p>`;
+  openDialog();
+}
+function renderShellControls() {
+  const shell = world.shell;
+  return `<div class="eyebrow"><i></i> SCHALENMODELL</div><h1>${labels ? "Untersuchen" : "Entdecken"}<span>.</span></h1>
+  <button id="labels" class="reveal" aria-pressed="${labels}">${icon(labels ? "eye-off" : "eye")}${labels ? "Namen verbergen" : "Namen einblenden"}</button>
+  <div class="layerlist">${layers.map((l, i) => `<div class="layer ${shell.selected === i ? "chosen" : ""}" style="--rock:#${l.color.toString(16)}"><button data-layer="${i}" aria-pressed="${shell.selected === i}"><span class="rockNumber">${i + 1}</span>${layerName(i)}</button><button class="eye" data-eye="${i}" aria-label="${layerName(i)} ${shell.visible[i] ? "ausblenden" : "einblenden"}" aria-pressed="${shell.visible[i]}">${icon(shell.visible[i] ? "eye" : "eye-off")}</button></div>`).join("")}</div>
+  <div class="shellActions"><button id="isolate">${icon("focus")} Isolieren</button><button id="subdue" aria-pressed="${shell.subdued}" ${shell.selected === null ? "disabled" : ""}>Umfeld dämpfen</button><button id="restoreLayers">${icon("rotate-ccw")} Alle zeigen</button></div>
+  <div class="range"><label for="opacity">Deckkraft · ${layerName(choice)}</label><input id="opacity" type="range" min="15" max="100" value="${shell.opacity[choice] * 100}"></div>
+  <div class="options"><label><input id="cut" type="checkbox" ${shell.cut ? "checked" : ""}> Keilschnitt</label><label><input id="scale" type="checkbox" ${shell.expanded ? "checked" : ""}> ${labels ? "Kruste" : "Außenschale"} verbreitern</label></div>
+  <div class="readingActions"><button class="action primary" id="layerInfo">${icon("info")}${labels ? "Grundwissen" : "Impulsfrage"}</button><button class="action secondary" id="evidence">Woher wissen wir das?</button><button id="limits">Modellgrenzen</button></div>`;
 }
 function siteInfo() {
   const r = world.region;
@@ -167,7 +180,7 @@ function renderSide() {
     place: "LOKALE ANSICHT",
   }[mode];
   if (mode === "globe")
-    side.innerHTML = `<div class="eyebrow"><i></i> GLOBALER ATLAS</div><h1>Planet Erde<span>.</span></h1><p class="intro">Erkunde unseren Planeten von der Oberfläche bis zum inneren Kern.</p><div class="facts"><div><b>6.371 <small>km</small></b><span>Mittlerer Radius</span></div><div><b>71 <small>%</small></b><span>Wasseroberfläche</span></div></div><button class="action primary" id="openInside">${icon("layers-3")} Erdinneres erkunden ${icon("arrow-right")}</button><button class="action secondary" id="visit">${icon("map-pin")} Hallig Hooge besuchen ${icon("arrow-up-right")}</button>`;
+    side.innerHTML = `<div class="eyebrow"><i></i> GLOBALER ATLAS</div><h1>Planet Erde<span>.</span></h1><p class="intro">Erkunde unseren Planeten von der Oberfläche bis in die Tiefe.</p><div class="facts"><div><b>6.371 <small>km</small></b><span>Mittlerer Radius</span></div><div><b>71 <small>%</small></b><span>Wasseroberfläche</span></div></div><button class="action primary" id="openInside">${icon("layers-3")} Erdinneres erkunden ${icon("arrow-right")}</button><button class="action secondary" id="visit">${icon("map-pin")} Hallig Hooge besuchen ${icon("arrow-up-right")}</button>`;
   if (mode === "place") {
     const r = world.region;
     side.innerHTML = `<div class="eyebrow"><i></i>${r.context}</div><h1>${r.name}<span>.</span></h1><p class="intro">${r.description}</p><label class="siteSelect">Untersuchungsort <select id="siteSelect">${[...regions.values()].map((site) => `<option value="${site.id}" ${site === r ? "selected" : ""}>${site.name}</option>`).join("")}</select></label><div class="siteActions"><button id="overview" class="action secondary">${icon("compass")} Inselübersicht</button><button id="nearby" class="action secondary">${icon("map-pin")} Nahansicht</button></div><button id="siteInfo" class="action primary">${icon("info")} Daten & Landschaft</button><button id="return" class="action secondary">${icon("globe-2")} Zur globalen Ansicht</button>`;
@@ -179,8 +192,31 @@ function renderSide() {
     $("overview").onclick = () => world.visit(r.id, true);
     $("nearby").onclick = () => world.visit(r.id);
   }
-  if (mode === "inside")
-    side.innerHTML = `<div class="eyebrow"><i></i> WISSENSCHAFTLICHES ERKLÄRUNGSMODELL</div><h1>Erdinneres<span>.</span></h1><div class="layerlist">${layers.map((l, i) => `<div class="layer ${i === choice ? "chosen" : ""}"><button data-layer="${i}" aria-pressed="${i === choice}"><i style="background:#${l.color.toString(16)}"></i>${l.name}</button><button class="eye" data-eye="${i}" aria-label="${l.name} ${world.shell.visible[i] ? "ausblenden" : "einblenden"}" aria-pressed="${world.shell.visible[i]}">${icon(world.shell.visible[i] ? "eye" : "eye-off")}</button></div>`).join("")}</div><div class="range"><label for="opacity">Deckkraft · ${layers[choice].name}</label><input id="opacity" type="range" min="15" max="100" value="${world.shell.opacity[choice] * 100}"></div><div class="options"><label><input id="cut" type="checkbox" ${world.shell.cut ? "checked" : ""}> Keilschnitt</label><label><input id="scale" type="checkbox" ${scaleMode ? "checked" : ""}> Kruste verbreitern</label></div><button class="action primary" id="layerInfo">${icon("info")} Schicht untersuchen ${icon("arrow-right")}</button>`;
+  if (mode === "inside") side.innerHTML = renderShellControls();
+  if (mode === "globe" && present)
+    side.innerHTML = `<div class="eyebrow"><i></i> ENTDECKEN UND VERMUTEN</div><h1>Planet Erde<span>.</span></h1><p class="intro">Wie könnte unsere Erde im Inneren aufgebaut sein?</p><button class="action primary" id="openInside">${icon("layers-3")} Schnitt öffnen</button>`;
+  $("boardGlobe").setAttribute("aria-pressed", String(mode === "globe"));
+  $("boardInside").setAttribute("aria-pressed", String(mode === "inside"));
+  $("labels")?.addEventListener("click", () => {
+    labels = !labels;
+    renderSide();
+    $("labels").focus();
+  });
+  $("isolate")?.addEventListener("click", () => {
+    world.shell.selected = choice;
+    world.shell.visible = layers.map((_, i) => i === choice);
+    updateShell("isolate");
+  });
+  $("restoreLayers")?.addEventListener("click", () => {
+    world.shell.restore();
+    updateShell("restoreLayers");
+  });
+  $("subdue")?.addEventListener("click", () => {
+    world.shell.subdued = !world.shell.subdued;
+    updateShell("subdue");
+  });
+  $("evidence")?.addEventListener("click", showEvidence);
+  $("limits")?.addEventListener("click", showLimits);
   $("openInside")?.addEventListener("click", () => navigate("inside"));
   $("visit")?.addEventListener("click", () => navigate("place"));
   $("return")?.addEventListener("click", () => navigate("globe"));
@@ -211,32 +247,46 @@ function renderSide() {
     $<HTMLInputElement>("cut").onchange = (e) => {
       world.shell.cut = (e.target as HTMLInputElement).checked;
       world.shell.rebuild();
+      updatePins();
     };
   if ($("scale"))
     $<HTMLInputElement>("scale").onchange = (e) => {
-      scaleMode = (e.target as HTMLInputElement).checked;
-      world.shell.expanded = scaleMode;
+      world.shell.expanded = (e.target as HTMLInputElement).checked;
       world.shell.rebuild();
       updateNote();
+      updatePins();
     };
   updateNote();
-  teachingCard();
+  updatePins();
   paint();
+}
+function updateShell(focus: string) {
+  world.shell.rebuild();
+  renderSide();
+  $(focus)?.focus();
 }
 function select(i: number) {
   choice = i;
+  world.shell.selected = i;
+  world.shell.visible[i] = true;
+  world.shell.rebuild();
   renderSide();
   side.querySelector<HTMLButtonElement>('[data-layer="' + i + '"]')?.focus();
 }
 function updateNote() {
   const note = $("modelnote");
   note.hidden = world.mode === "globe";
-  note.classList.toggle("exaggerated", world.mode === "inside" && scaleMode);
+  note.classList.toggle(
+    "exaggerated",
+    world.mode === "inside" && world.shell.expanded,
+  );
   note.textContent =
     world.mode === "inside"
-      ? scaleMode
-        ? "Erklärungsmodell · didaktisch überhöht: Kruste verbreitert"
-        : "Erklärungsmodell · Referenzkruste überall 35 km"
+      ? world.shell.expanded
+        ? `Didaktisch überhöht · ${labels ? "Kruste" : "äußere Schale"} verbreitert`
+        : labels
+          ? "Maßstabsgetreu · Referenzkruste 35 km"
+          : "Maßstabsgetreues Erklärungsmodell"
       : world.region.label;
 }
 function navigate(mode: World["mode"]) {
@@ -247,13 +297,12 @@ function navigate(mode: World["mode"]) {
 }
 function reset() {
   choice = 1;
-  scaleMode = false;
-  Object.assign(world.shell, {
-    cut: true,
-    expanded: false,
-    visible: [true, true, true, true],
-    opacity: [1, 1, 1, 1],
-  });
+  labels = false;
+  world.region = firstRegion;
+  world.shell.restore();
+  world.shell.cut = true;
+  world.shell.expanded = false;
+  if (world.style !== "A") style("A");
   navigate("globe");
 }
 function style(s: Style) {
@@ -264,18 +313,36 @@ function style(s: Style) {
 function flipPresent(value: boolean) {
   present = value;
   document.body.classList.toggle("present", value);
-  $("teachingTools").hidden = !value;
-  $("exitPresent").hidden = !value;
-  $("teachingCard").hidden = true;
-  $("teach").setAttribute("aria-expanded", "false");
-  requestAnimationFrame(() => world.resize());
+  $("boardBar").hidden = !value;
+  const home = $("home");
+  if (value) {
+    $("boardBar").insertBefore(home, $("exitPresent"));
+    home.insertAdjacentHTML("beforeend", "<span>Startansicht</span>");
+  } else {
+    home.querySelector("span")?.remove();
+    document.querySelector(".tools")!.append(home);
+  }
+  renderSide();
+  requestAnimationFrame(() => {
+    world.resize();
+    (value ? $("boardGlobe") : $("present")).focus({ preventScroll: true });
+  });
 }
-$("teach").onclick = () => {
-  const card = $("teachingCard");
-  card.hidden = !card.hidden;
-  $("teach").setAttribute("aria-expanded", String(!card.hidden));
-  teachingCard();
-};
+$("boardGlobe").onclick = () => navigate("globe");
+$("boardInside").onclick = () => navigate("inside");
+function updatePins() {
+  const pins = $("pins").children;
+  const points = labels && world.mode === "inside" ? world.layerMarkers() : [];
+  for (let i = 0; i < pins.length; i++) {
+    const el = pins[i] as HTMLElement,
+      p = points[i];
+    el.hidden = !p;
+    if (p) {
+      el.style.left = p.x + "%";
+      el.style.top = p.y + "%";
+    }
+  }
+}
 $("info").onclick = infoPage;
 $("closeDialog").onclick = () => dialog.close();
 dialog.onclick = (e) => {
@@ -366,11 +433,15 @@ async function boot() {
       lat.toFixed(4),
       lonN.toFixed(4),
       d.toPrecision(6),
+      world.nav.pose.tilt.toFixed(3),
+      world.nav.pose.bearing.toFixed(3),
       world.mode,
       canvas.clientHeight,
+      canvas.clientWidth,
     ].join("/");
     if (poseKey !== previousPose) {
       previousPose = poseKey;
+      updatePins();
       $("coords").textContent =
         Math.abs(lat).toFixed(2) +
         "° " +

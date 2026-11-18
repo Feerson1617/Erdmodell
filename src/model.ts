@@ -12,8 +12,8 @@ export const layers = [
     color: 0x8c9f86,
     range: "0–35 km¹",
     thickness: "meist 5–70 km",
-    text: "Eine dünne Haut aus festem Gestein. Unter Ozeanen ist sie meist dünner als unter Kontinenten.",
-    deep: "Ozeanische Kruste enthält vor allem basaltisches Gestein, kontinentale Kruste unter anderem Granit. Lithosphäre nennt man die Kruste und den starren obersten Mantel zusammen.",
+    text: "Die Kruste ist die äußerste feste Gesteinsschicht. Unter Ozeanen ist sie meist dünner als unter Kontinenten.",
+    deep: "Ozeanische Kruste ist häufig 5–10 km dick, kontinentale etwa 30–70 km. Ozeanische Kruste enthält vor allem basaltisches Gestein, kontinentale Kruste unter anderem Granit. Lithosphäre nennt man die Kruste und den starren obersten Mantel zusammen.",
   },
   {
     name: "Erdmantel",
@@ -23,7 +23,7 @@ export const layers = [
     range: "35–2.890 km¹",
     thickness: "rund 2.855 km",
     text: "Der Mantel besteht überwiegend aus festem Gestein. Über Millionen Jahre kann es sich langsam verformen.",
-    deep: "Magnesium- und eisenreiche Silikate prägen den Mantel. Langsame Konvektion transportiert Wärme. Nur örtlich schmilzt ein Teil des Gesteins.",
+    deep: "Magnesium- und eisenreiche Silikate prägen den Mantel. Langsame Konvektion transportiert Wärme. Nur örtlich schmilzt ein Teil des Gesteins. Dabei kann Magma entstehen.",
   },
   {
     name: "Äußerer Erdkern",

@@ -4,21 +4,23 @@ Ein deutschsprachiges 3D-Werkzeug für den Geographieunterricht der Jahrgangsstu
 
 In G1.1 lässt sich im Ortsmenü auch Helgoland erkunden. Der Korrekturbericht enthält die Messergebnisse, die Vergleichsbilder und die noch offenen Punkte für den Schuleinsatz. [Prüfbericht G1.1](docs/g1.1-pruefbericht.md)
 
+G1.2 startet im Stil A. Der Unterricht beginnt mit der geschlossenen Erde und anonymen Schalen. **Namen einblenden** gibt die fachliche Erklärung gezielt frei. [Unterricht am 20. November](docs/unterricht-20-11.md) · [Prüfbericht G1.2](docs/g1.2-pruefbericht.md)
+
 ## In der Schule starten
 
-Die **Sichtprüfung** entpacken. Im entpackten Ordner mit Python 3 `python3 -m http.server 8000 --bind 127.0.0.1` starten, dann `http://127.0.0.1:8000` im Browser öffnen. Das Entwicklungswerkzeug Node ist dafür entbehrlich. Die Ausgabe enthält Karten, Luftbilder, Schrift und 3D-Programm. Der Browser benötigt WebGL 2 für das räumliche Modell. Bei fehlendem WebGL erscheint eine beschriftete lokale Weltkarte.
+**GeoRisiko-G1.2-Unterricht.zip** entpacken. Auf macOS mit Python 3 die Datei **START.command** öffnen. Alternativ im entpackten Ordner `python3 start_lokal.py` aufrufen. Die Ausgabe enthält Karten, Luftbilder, Schrift und 3D-Programm. Der Browser benötigt WebGL 2 für das räumliche Modell. Bei fehlendem WebGL erscheint eine beschriftete lokale Weltkarte.
 
 | Ziel | Bedienung |
 | --- | --- |
 | Globus erkunden | Oberfläche ziehen, Mausrad oder zwei Finger zum Zoomen. Pfeiltasten und + / − funktionieren ebenfalls. |
 | Um einen Ort blicken | Umschalt + Ziehen oder rechte Maustaste verändert Blickrichtung und Neigung. Die Kompasstaste wechselt die Neigung. |
 | Warft betrachten | „Hallig Hooge besuchen“. Jede eigene Kamerabewegung unterbricht den Flug. „Zur globalen Ansicht“ startet den Rückflug. |
-| Erdaufbau vergleichen | „Erdinneres“. Schicht in der Liste oder Schnittfläche anklicken, Auge für Sichtbarkeit, Regler für Deckkraft. „Schicht untersuchen“ öffnet Grundwissen und Vertiefung. |
+| Erdaufbau vergleichen | „Erdinneres“. Schicht in der Liste oder Schnittfläche anklicken, Auge für Sichtbarkeit, Regler für Deckkraft. „Namen einblenden“ gibt die Fachbegriffe frei. „Grundwissen“ öffnet Grundtext und Vertiefung. |
 | Größenverhältnisse prüfen | Der Keil zeigt zunächst eine einheitliche Kruste von 35 km im richtigen Modellmaßstab. „Kruste verbreitern“ kennzeichnet die Überhöhung direkt an der Ansicht. |
 | Designs vergleichen | A oder B wählen. Ausschnitt, Navigation, Warftlage und Schichtgrenzen bleiben vergleichbar. |
-| Präsentieren | „Präsentieren“ blendet die Menüs aus und fordert Vollbild an. „Lerntext“ blendet die Unterrichtskarte ein oder aus. Im Erdschnitt blättern die Pfeile durch die vier Schichten. „Menü zeigen“ kehrt zurück. Esc schließt einen Info-Dialog. Pos1 oder die Rücksetztaste stellen den Ausgangszustand der Ansicht wieder her. |
+| Präsentieren | „Präsentieren“ blendet die Menüs aus und fordert Vollbild an. Die Steuerleiste wechselt zwischen Globus und Erdinnerem. Die Modellwerkzeuge bleiben seitlich erreichbar. „Menü zeigen“ kehrt zurück. Esc schließt einen Info-Dialog. Pos1 oder die Rücksetztaste stellen den Ausgangszustand der Ansicht wieder her. |
 
-In einem itslearning-Kurs die Datei **GeoRisiko-G1-SCORM-1.2.zip** als SCORM-Lernpaket importieren. Diese Version meldet nur Start und Ende einer Sitzung. Die tatsächliche Verarbeitung im Schulmandanten ist noch zu erproben.
+In einem itslearning-Kurs die Datei **GeoRisiko-G1.2-SCORM-1.2.zip** als SCORM-Lernpaket importieren. Diese Version meldet nur Start und Ende einer Sitzung. Die tatsächliche Verarbeitung im Schulmandanten ist noch zu erproben.
 
 ## Entwickeln und prüfen
 
@@ -46,7 +48,7 @@ node tests/packages.mjs
 
 ## GitHub Pages und Übergabe
 
-Der Workflow „GeoRisiko G1“ baut und prüft Pull Requests. Unter **Actions → Workflow-Lauf → Artifacts** stehen bei erfolgreichem Lauf die beiden ZIPs als „GeoRisiko-G1-Pakete“ sowie „Browsertests“ bereit. Lokal liegen dieselben Dateien unter `artifacts/` und `test-results/`.
+Der Workflow „GeoRisiko G1.2“ baut und prüft Pull Requests. Unter **Actions → Workflow-Lauf → Artifacts** stehen bei erfolgreichem Lauf die drei ZIPs als „GeoRisiko-G1.2-Pakete“ sowie „Browsertests“ bereit. Lokal liegen dieselben Dateien unter `artifacts/` und `test-results/`.
 
 Für eine spätere Freigabe nach dem Merge auf `main` in **Settings → Pages → Source** „GitHub Actions“ wählen und den Workflow auf `main` mit `publish_pages` starten. Erst der explizite Veröffentlichungsauftrag löst das Deployment aus. Zielpfad ist `/Erdmodell/`. Relative Assetpfade erlauben andere statische Installationsorte und den SCORM-Unterordner.
 

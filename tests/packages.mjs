@@ -11,13 +11,13 @@ const browser = await chromium.launch({
   args: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader"],
 });
 try {
-  for (const name of ["SCORM-1.2", "Sichtpruefung"]) {
+  for (const name of ["SCORM-1.2", "Unterricht", "Sichtpruefung"]) {
     const path = join(tmp, name);
     execFileSync("python3", [
       "-m",
       "zipfile",
       "-e",
-      "artifacts/GeoRisiko-G1-" + name + ".zip",
+      "artifacts/GeoRisiko-G1.2-" + name + ".zip",
       path,
     ]);
     const server = createServer(async (req, res) => {
@@ -25,6 +25,7 @@ try {
         const f = new URL(req.url, "http://localhost").pathname;
         if (f === "/host") {
           res.setHeader("Content-Type", "text/html");
+          res.setHeader("Permissions-Policy", "fullscreen=()");
           res.end(
             '<script>window.calls=[];window.API={LMSInitialize(){calls.push("initialize");return "true"},LMSFinish(){calls.push("finish");return "true"}}</script><iframe src="/lms/kurse/erde/index.html" width="1024" height="768"></iframe>',
           );
@@ -51,6 +52,9 @@ try {
     try {
       const page = await browser.newPage({ reducedMotion: "reduce" });
       const failures = [];
+      page.on("request", (r) => {
+        if (!r.url().startsWith("http://127.0.0.1:")) failures.push(r.url());
+      });
       page.on("response", (r) => {
         if (r.status() >= 400) failures.push(r.url());
       });
@@ -60,6 +64,25 @@ try {
       await frame.locator("#nav-inside").click();
       await frame.waitForFunction(
         () => window.geoObservatory().mode === "inside",
+      );
+      await frame.click("#present");
+      assert.ok(await frame.locator("#boardBar").isVisible());
+      assert.equal(
+        await frame.evaluate(() => !!document.fullscreenElement),
+        false,
+      );
+      await frame.click("#labels");
+      await frame.click("[data-layer='2']");
+      await frame.click("#layerInfo");
+      assert.match(
+        await frame.locator("#content").innerText(),
+        /flüssige Schicht/,
+      );
+      await frame.click("#closeDialog");
+      await frame.click("#exitPresent");
+      assert.equal(
+        await frame.evaluate(() => localStorage.length + sessionStorage.length),
+        0,
       );
       await frame.click("#nav-place");
       await frame.waitForFunction(() => window.geoObservatory().localVisible);

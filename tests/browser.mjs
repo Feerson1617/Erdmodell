@@ -4,6 +4,7 @@ import { createServer } from "node:http";
 import { readFile, writeFile, mkdir, stat } from "node:fs/promises";
 import { resolve, extname, sep } from "node:path";
 import { PNG } from "pngjs";
+import { execFileSync } from "node:child_process";
 import { cpus } from "node:os";
 
 const root = resolve("dist"),
@@ -41,6 +42,9 @@ await new Promise((r) => server.listen(0, "127.0.0.1", r));
 const base = "http://127.0.0.1:" + server.address().port + "/Erdmodell/";
 const report = {
   date: new Date().toISOString(),
+  commit: execFileSync("git", ["rev-parse", "HEAD"], {
+    encoding: "utf8",
+  }).trim(),
   cpu: cpus()[0]?.model,
   platform: process.platform,
   scope: "Linux cloud browsers. Tablet is an emulation.",
@@ -234,6 +238,7 @@ async function run(engine) {
     pass(
       "Schichtauswahl, Sichtbarkeit, Transparenz, Keilschnitt und gekennzeichneter Maßstab",
     );
+    await p.click("#labels");
     await p.click('[data-layer="2"]');
     await p.click("#layerInfo");
     assert.match(await p.locator("#content").innerText(), /flüssige/);
@@ -327,24 +332,23 @@ async function run(engine) {
     await p.click("#scale");
     await p.setViewportSize({ width: 1920, height: 1080 });
     await p.click("#present");
-    await p.click("#teach");
-    assert.ok(await p.locator("#teachingCard").isVisible());
-    const first = await p.locator("#teachingCard h2").innerText();
+    await p.click("#labels");
+    await p.click("#layerInfo");
+    assert.ok(await p.locator("#dialog").isVisible());
+    const first = await p.locator("#content h2").innerText();
     await p.click("#nextLayer");
-    assert.notEqual(await p.locator("#teachingCard h2").innerText(), first);
+    assert.notEqual(await p.locator("#content h2").innerText(), first);
+    await p.click("#closeDialog");
     assert.match(
       await p.locator("#modelnote").innerText(),
-      /didaktisch überhöht/,
+      /didaktisch überhöht/i,
     );
-    for (const selector of ["#prevLayer", "#teach", "#exitPresent"]) {
+    for (const selector of ["#layerInfo", "#labels", "#exitPresent"]) {
       const box = await p.locator(selector).boundingBox();
-      assert.ok(box.height >= 44 && box.width >= 44);
+      assert.ok(box.height >= 60 && box.width >= 60);
     }
     if (isChrome)
       await p.screenshot({ path: out + "/11-unterricht.jpg", quality: 88 });
-    await p.click("#teach");
-    assert.equal(await p.locator("#teachingCard").isVisible(), false);
-    assert.ok(await p.locator("#modelnote").isVisible());
     await p.click("#exitPresent");
     await p.click("#scale");
     pass(
