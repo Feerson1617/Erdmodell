@@ -1,6 +1,26 @@
 {
-  "name":"georisiko-3d","version":"1.0.0","private":true,"type":"module",
-  "scripts":{"dev":"vite","check":"tsc --noEmit","build":"npm run check && vite build","preview":"vite preview","test":"node tests/browser.mjs","package":"python3 scripts/package.py"},
-  "dependencies":{"three":"0.180.0","lucide":"0.468.0","@fontsource-variable/dm-sans":"5.2.8"},
-  "devDependencies":{"@types/three":"0.180.0","typescript":"5.9.3","vite":"7.2.2","playwright":"1.56.1","pngjs":"7.0.0"}
+  "name": "georisiko-3d",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "check": "tsc --noEmit",
+    "build": "npm run check && vite build",
+    "preview": "vite preview",
+    "test": "node tests/browser.mjs",
+    "package": "python3 scripts/package.py"
+  },
+  "dependencies": {
+    "three": "0.180.0",
+    "lucide": "0.468.0",
+    "@fontsource-variable/dm-sans": "5.2.8"
+  },
+  "devDependencies": {
+    "@types/three": "0.180.0",
+    "typescript": "5.9.3",
+    "vite": "7.2.2",
+    "playwright": "1.56.1",
+    "pngjs": "7.0.0"
+  }
 }

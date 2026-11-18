@@ -1,68 +1,356 @@
-import '@fontsource-variable/dm-sans/wght.css';
-import './style.css';
-import {createIcons,Globe2,Layers3,MapPin,Maximize,Info,ChevronRight,ArrowUpRight,ArrowRight,Plus,Minus,RotateCcw,MousePointer2,Focus,Orbit,Compass,Check,X,Scan,Eye,EyeOff,Move,SlidersHorizontal,Map as MapIcon,PanelLeftClose,Mountain,Sun,Keyboard,Navigation2,ChevronDown} from 'lucide';
-import {World} from './world';import {HOME,HOOGE} from './camera';import {layers,type Style} from './model';import {dataUrl} from './planet';
-const icons={Globe2,Layers3,MapPin,Maximize,Info,ChevronRight,ArrowUpRight,ArrowRight,Plus,Minus,RotateCcw,MousePointer2,Focus,Orbit,Compass,Check,X,Scan,Eye,EyeOff,Move,SlidersHorizontal,Map:MapIcon,PanelLeftClose,Mountain,Sun,Keyboard,Navigation2,ChevronDown};
-const icon=(n:string)=>`<i data-lucide="${n}" aria-hidden="true"></i>`;const paint=()=>createIcons({icons,attrs:{'stroke-width':1.65}});
-const button=(id:string,label:string,glyph:string)=>`<button type="button" id="${id}" aria-label="${label}" title="${label}">${icon(glyph)}</button>`;
-const brand=`<svg class="brandmark" width="40" height="40" viewBox="0 0 40 40" fill="none" aria-hidden="true"><defs><clipPath id="disc"><circle cx="20" cy="20" r="16"/></clipPath></defs><circle cx="20" cy="20" r="16" fill="currentColor"/><g clip-path="url(#disc)" stroke="#17251f" stroke-width="2.4"><path d="M-5 19Q6 30 18 12T45 5M-5 26Q7 37 22 17T46 13M-4 33Q10 44 26 23T48 20M0 39Q13 50 30 29T49 28"/></g></svg>`;
-const $=<T extends HTMLElement=HTMLElement>(id:string)=>document.getElementById(id) as T;
-$('app').innerHTML=`<header><div class="brand">${brand}<span>GeoRisiko <b>3D</b></span></div><nav aria-label="Hauptansichten">${[['globe','Globus','globe-2'],['inside','Erdinneres','layers-3'],['place','Orte entdecken','map-pin']].map(([id,s,i])=>`<button id="nav-${id}">${icon(i)}<span>${s}</span></button>`).join('')}</nav><div class="headTools">${button('info','Informationen','info')}<button id="present" title="Präsentationsmodus">${icon('maximize')}<span>Präsentieren</span></button></div></header>
+import "@fontsource-variable/dm-sans/wght.css";
+import "./style.css";
+import {
+  createIcons,
+  Globe2,
+  Layers3,
+  MapPin,
+  Maximize,
+  Info,
+  ChevronRight,
+  ArrowUpRight,
+  ArrowRight,
+  Plus,
+  Minus,
+  RotateCcw,
+  MousePointer2,
+  Focus,
+  Orbit,
+  Compass,
+  Check,
+  X,
+  Scan,
+  Eye,
+  EyeOff,
+  Move,
+  SlidersHorizontal,
+  Map as MapIcon,
+  PanelLeftClose,
+  Mountain,
+  Sun,
+  Keyboard,
+  Navigation2,
+  ChevronDown,
+} from "lucide";
+import { World } from "./world";
+
+import { layers, type Style } from "./model";
+import { dataUrl } from "./planet";
+const icons = {
+  Globe2,
+  Layers3,
+  MapPin,
+  Maximize,
+  Info,
+  ChevronRight,
+  ArrowUpRight,
+  ArrowRight,
+  Plus,
+  Minus,
+  RotateCcw,
+  MousePointer2,
+  Focus,
+  Orbit,
+  Compass,
+  Check,
+  X,
+  Scan,
+  Eye,
+  EyeOff,
+  Move,
+  SlidersHorizontal,
+  Map: MapIcon,
+  PanelLeftClose,
+  Mountain,
+  Sun,
+  Keyboard,
+  Navigation2,
+  ChevronDown,
+};
+const icon = (n: string) => `<i data-lucide="${n}" aria-hidden="true"></i>`;
+const paint = () => createIcons({ icons, attrs: { "stroke-width": 1.65 } });
+const button = (id: string, label: string, glyph: string) =>
+  `<button type="button" id="${id}" aria-label="${label}" title="${label}">${icon(glyph)}</button>`;
+const brand = `<svg class="brandmark" width="40" height="40" viewBox="0 0 40 40" fill="none" aria-hidden="true"><defs><clipPath id="disc"><circle cx="20" cy="20" r="16"/></clipPath></defs><circle cx="20" cy="20" r="16" fill="currentColor"/><g clip-path="url(#disc)" stroke="#17251f" stroke-width="2.4"><path d="M-5 19Q6 30 18 12T45 5M-5 26Q7 37 22 17T46 13M-4 33Q10 44 26 23T48 20M0 39Q13 50 30 29T49 28"/></g></svg>`;
+const $ = <T extends HTMLElement = HTMLElement>(id: string) =>
+  document.getElementById(id) as T;
+$("app").innerHTML =
+  `<header><div class="brand">${brand}<span>GeoRisiko <b>3D</b></span></div><nav aria-label="Hauptansichten">${[
+    ["globe", "Globus", "globe-2"],
+    ["inside", "Erdinneres", "layers-3"],
+    ["place", "Orte entdecken", "map-pin"],
+  ]
+    .map(
+      ([id, s, i]) =>
+        `<button id="nav-${id}">${icon(i)}<span>${s}</span></button>`,
+    )
+    .join(
+      "",
+    )}</nav><div class="headTools">${button("info", "Informationen", "info")}<button id="present" title="Präsentationsmodus">${icon("maximize")}<span>Präsentieren</span></button></div></header>
 <main id="desk"><div class="stars" aria-hidden="true"></div><div class="mast"><span class="live"></span> ERDOBSERVATORIUM <span class="slash">/</span> <span id="section">GLOBALE ANSICHT</span></div>
 <aside id="sidebar"></aside>
-<section class="view" aria-label="Interaktive 3D-Ansicht"><div id="reticle" aria-hidden="true"><span>N</span><span>S</span><i></i><i></i></div><canvas id="earth" tabindex="0" aria-label="Drehbares Erdmodell. Pfeiltasten drehen, Plus und Minus zoomen."></canvas><div id="marker"><button title="Hallig Hooge besuchen">Hallig Hooge ${icon('arrow-up-right')}</button></div><div class="orientation" title="Geografischer Norden">${icon('navigation-2')} N</div>
-<div class="tools">${button('in','Vergrößern','plus')}${button('out','Verkleinern','minus')}${button('tilt','Neigung ändern','compass')}${button('home','Startansicht','rotate-ccw')}</div>
-<div id="modelnote" hidden></div><button id="exitPresent" hidden>${icon('panel-left-close')} Menü zeigen</button></section>
-<section class="bottom" aria-label="Darstellung und Bedienung"><div class="stylePicker"><span class="caption">DARSTELLUNG</span><div class="switch"><button id="designA"><b>A</b> Realistisch</button><button id="designB"><b>B</b> Soft-Low-Poly</button></div></div><div class="hint">${icon('mouse-pointer-2')} Ziehen zum Drehen <em></em> Scrollen zum Zoomen</div></section>
+<section class="view" aria-label="Interaktive 3D-Ansicht"><div id="reticle" aria-hidden="true"><span>N</span><span>S</span><i></i><i></i></div><canvas id="earth" tabindex="0" aria-label="Drehbares Erdmodell. Pfeiltasten drehen, Plus und Minus zoomen."></canvas><div id="marker"><button title="Hallig Hooge besuchen">Hallig Hooge ${icon("arrow-up-right")}</button></div><div class="orientation" title="Geografischer Norden">${icon("navigation-2")} N</div>
+<div class="tools">${button("in", "Vergrößern", "plus")}${button("out", "Verkleinern", "minus")}${button("tilt", "Neigung ändern", "compass")}${button("home", "Startansicht", "rotate-ccw")}</div>
+<div id="modelnote" hidden></div><button id="exitPresent" hidden>${icon("panel-left-close")} Menü zeigen</button></section>
+<section class="bottom" aria-label="Darstellung und Bedienung"><div class="stylePicker"><span class="caption">DARSTELLUNG</span><div class="switch"><button id="designA"><b>A</b> Realistisch</button><button id="designB"><b>B</b> Soft-Low-Poly</button></div></div><div class="hint">${icon("mouse-pointer-2")} Ziehen zum Drehen <em></em> Scrollen zum Zoomen</div></section>
 </main><footer><span><i class="live"></i><span id="status" role="status">Erdmodell wird geladen …</span></span><span class="readings"><span class="cross">⌖</span> <span id="coords"></span><em></em><span id="distance"></span></span></footer>
-<dialog id="dialog"><div class="dialogHead"><span class="caption">GEO<span class="green">RISIKO</span> 3D</span>${button('closeDialog','Schließen','x')}</div><div id="content"></div></dialog>`;
-const desk=$('desk'),side=$('sidebar'),dialog=$<HTMLDialogElement>('dialog'),content=$('content'),status=$('status');
-let world:World,choice=1,alertText='',present=false,previous='',scaleMode=false;
-const format=(n:number)=>new Intl.NumberFormat('de-DE',{maximumFractionDigits:0}).format(n);
-function warn(s:string){alertText=s;status.textContent=s;}
-function infoPage(){content.innerHTML=`<h2>Das Erdobservatorium</h2><p>Erkunde die Oberfläche, öffne das Erdinnere oder folge dem Globus bis zur Hallig Hooge.</p><h3>Navigation</h3><p>Ziehen oder Pfeiltasten drehen die Erde. Mausrad, zwei Finger oder + / − zoomen. Umschalt + Ziehen neigt die Kamera. Eine eigene Bewegung unterbricht den Flug. Pos1 führt zurück.</p><h3>Daten & Modellgrenzen</h3><p>NASA Blue Marble, SRTM15+ (Tozer et al.), Natural Earth und © OpenStreetMap-Mitwirkende (ODbL). Alle Karten liegen lokal vor. Bildfarben, Wasserbewegung und Beleuchtung sind stilisiert.</p><p>Globale Höhen sind geglättet. Für Hooge stammen Küste, Grundrisse und Warftlagen aus der Karte. Höhen, Dächer und Bäume sind modelliert. Der Wasserstand zeigt keine bestimmte Tide.</p><h3>Für den Unterricht</h3><p>Vorhersagen, betrachten, vergleichen. Welche Schicht nimmt den größten Raum ein? Prüft eure Vermutung mit dem Schnitt und wechselt zwischen den beiden Krustenmaßstäben.</p>`;openDialog();}
-function openDialog(){if(!dialog.open)dialog.showModal();$('closeDialog').focus();}
-function layerInfo(){const l=layers[choice];content.innerHTML=`<span class="caption">STOFFLICHE GLIEDERUNG</span><h2>${l.name}</h2><p>${l.text}</p><dl><dt>Tiefe</dt><dd>${l.range}</dd><dt>Mächtigkeit</dt><dd>${l.thickness}</dd></dl><details><summary>Fachwissen vertiefen</summary><p>${l.deep}</p></details><p class="small">¹ Die Kruste ist hier einheitlich 35 km dick. Ihre tatsächliche Mächtigkeit variiert.</p>`;openDialog();}
-const placesIntro='Wattenmeer · Nordfriesland';
-function renderSide(){
- const mode=world.mode;desk.dataset.mode=mode;
- for(const id of ['globe','inside','place']){$('nav-'+id).setAttribute('aria-current',mode===id?'page':'false');}
- $('section').textContent=({globe:'GLOBALE ANSICHT',inside:'SCHALENMODELL',place:'LOKALE ANSICHT'})[mode];
- if(mode==='globe')side.innerHTML=`<div class="eyebrow"><i></i> GLOBALER ATLAS</div><h1>Planet Erde<span>.</span></h1><p class="intro">Erkunde unseren Planeten von der Oberfläche bis zum inneren Kern.</p><div class="facts"><div><b>6.371 <small>km</small></b><span>Mittlerer Radius</span></div><div><b>71 <small>%</small></b><span>Wasseroberfläche</span></div></div><button class="action primary" id="openInside">${icon('layers-3')} Erdinneres erkunden ${icon('arrow-right')}</button><button class="action secondary" id="visit">${icon('map-pin')} Hallig Hooge besuchen ${icon('arrow-up-right')}</button>`;
- if(mode==='place')side.innerHTML=`<div class="eyebrow"><i></i> SCHLESWIG-HOLSTEIN</div><h1>Hallig Hooge<span>.</span></h1><p class="intro">${placesIntro}. Die Häuser stehen auf erhöhten Siedlungshügeln, den Warften.</p><div class="siteCard"><img src="${dataUrl('locator.webp')}" alt=""><i></i><span>54,566° N · 8,550° O</span></div><button id="siteInfo" class="action primary">${icon('info')} Daten & Landschaft ${icon('arrow-right')}</button><button id="return" class="action secondary">${icon('globe-2')} Zur globalen Ansicht</button>`;
- if(mode==='inside')side.innerHTML=`<div class="eyebrow"><i></i> SCHALENMODELL</div><h1>Erdinneres<span>.</span></h1><div class="layerlist">${layers.map((l,i)=>`<div class="layer ${i===choice?'chosen':''}"><button data-layer="${i}" aria-pressed="${i===choice}"><i style="background:#${l.color.toString(16)}"></i>${l.name}</button><button class="eye" data-eye="${i}" aria-label="${l.name} ${world.shell.visible[i]?'ausblenden':'einblenden'}" aria-pressed="${world.shell.visible[i]}">${icon(world.shell.visible[i]?'eye':'eye-off')}</button></div>`).join('')}</div><div class="range"><label for="opacity">Deckkraft · ${layers[choice].name}</label><input id="opacity" type="range" min="15" max="100" value="${world.shell.opacity[choice]*100}"></div><div class="options"><label><input id="cut" type="checkbox" ${world.shell.cut?'checked':''}> Keilschnitt</label><label><input id="scale" type="checkbox" ${scaleMode?'checked':''}> Kruste verbreitern</label></div><button class="action primary" id="layerInfo">${icon('info')} Schicht untersuchen ${icon('arrow-right')}</button>`;
- $('openInside')?.addEventListener('click',()=>navigate('inside'));$('visit')?.addEventListener('click',()=>navigate('place'));$('return')?.addEventListener('click',()=>navigate('globe'));$('layerInfo')?.addEventListener('click',layerInfo);$('siteInfo')?.addEventListener('click',infoPage);
- side.querySelectorAll<HTMLButtonElement>('[data-layer]').forEach(b=>b.onclick=()=>select(+b.dataset.layer!));
- side.querySelectorAll<HTMLButtonElement>('[data-eye]').forEach(b=>b.onclick=()=>{const i=+b.dataset.eye!;world.shell.visible[i]=!world.shell.visible[i];world.shell.rebuild();renderSide();side.querySelector<HTMLButtonElement>('[data-eye="'+i+'"]')?.focus();});
- const range=$<HTMLInputElement>('opacity');if(range)range.oninput=()=>{world.shell.opacity[choice]=+range.value/100;world.shell.rebuild();};
- if($('cut'))$<HTMLInputElement>('cut').onchange=e=>{world.shell.cut=(e.target as HTMLInputElement).checked;world.shell.rebuild();};
- if($('scale'))$<HTMLInputElement>('scale').onchange=e=>{scaleMode=(e.target as HTMLInputElement).checked;world.shell.expanded=scaleMode;world.shell.rebuild();updateNote();};
- updateNote();paint();
+<dialog id="dialog"><div class="dialogHead"><span class="caption">GEO<span class="green">RISIKO</span> 3D</span>${button("closeDialog", "Schließen", "x")}</div><div id="content"></div></dialog>`;
+const desk = $("desk"),
+  side = $("sidebar"),
+  dialog = $<HTMLDialogElement>("dialog"),
+  content = $("content"),
+  status = $("status");
+let world: World,
+  choice = 1,
+  alertText = "",
+  present = false,
+  previous = "",
+  scaleMode = false;
+const format = (n: number) =>
+  new Intl.NumberFormat("de-DE", { maximumFractionDigits: 0 }).format(n);
+function warn(s: string) {
+  alertText = s;
+  status.textContent = s;
 }
-function select(i:number){choice=i;renderSide();side.querySelector<HTMLButtonElement>('[data-layer="'+i+'"]')?.focus();}
-function updateNote(){const note=$('modelnote');note.hidden=world.mode==='globe';note.textContent=world.mode==='inside'?(scaleMode?'Didaktisch überhöht · Kruste verbreitert':'Maßstabsgetreu · Referenzkruste 35 km'):'Warft- und Gebäudehöhen modelliert';}
-function navigate(mode:World['mode']){if(mode==='inside')world.inside();else if(mode==='place')world.visit();else world.globe();renderSide();}
-function reset(){choice=1;scaleMode=false;Object.assign(world.shell,{cut:true,expanded:false,visible:[true,true,true,true],opacity:[1,1,1,1]});world.shell.rebuild();navigate('globe');}
-function style(s:Style){world.setStyle(s);for(const a of ['A','B'])$('design'+a).setAttribute('aria-pressed',String(a===s));}
-function flipPresent(value:boolean){present=value;document.body.classList.toggle('present',value);$('exitPresent').hidden=!value;requestAnimationFrame(()=>world.resize());}
-$('info').onclick=infoPage;$('closeDialog').onclick=()=>dialog.close();dialog.onclick=e=>{if(e.target===dialog)dialog.close();};
-$('present').onclick=async()=>{flipPresent(true);try{await document.documentElement.requestFullscreen?.();}catch{/* Inline presentation remains available in an LMS iframe. */}};
-$('exitPresent').onclick=()=>{flipPresent(false);if(document.fullscreenElement)void document.exitFullscreen();};document.onfullscreenchange=()=>{if(!document.fullscreenElement)flipPresent(false);};
-const canvas=$<HTMLCanvasElement>('earth');paint();
-async function boot(){
- try{world=new World(canvas,warn);}catch{side.innerHTML=`<div class="eyebrow">ERSATZANSICHT</div><h1>Weltkarte</h1><p class="intro">WebGL 2 ist auf diesem Gerät nicht verfügbar. Die lokale Erdkarte zeigt die Kontinente zur Orientierung.</p>`;canvas.parentElement!.classList.add('fallback');document.querySelectorAll<HTMLButtonElement>('nav button,.tools button,.switch button,#marker button,#present').forEach(b=>b.disabled=true);warn('Ersatzansicht · lokale Weltkarte');return;}
- renderSide();world.onLayer=select;for(const m of ['globe','inside','place'] as const)$('nav-'+m).onclick=()=>navigate(m);
- $('marker').querySelector('button')!.onclick=()=>navigate('place');$('in').onclick=()=>world.nav.zoom(.68);$('out').onclick=()=>world.nav.zoom(1/.68);$('home').onclick=reset;
- $('tilt').onclick=()=>{world.nav.stop();world.nav.goal.tilt=world.nav.goal.tilt>55?0:world.nav.goal.tilt+30;};$('designA').onclick=()=>style('A');$('designB').onclick=()=>style('B');$('designA').setAttribute('aria-pressed','true');$('designB').setAttribute('aria-pressed','false');
- document.addEventListener('keydown',e=>{if(dialog.open || e.target instanceof HTMLInputElement || e.altKey || e.ctrlKey || e.metaKey)return;
- const n=world.nav;if(e.key==='Home')reset();else if(['+','=','-'].includes(e.key))n.zoom(e.key==='-'?1.35:.74);else if(e.key.startsWith('Arrow'))n.pan(e.key==='ArrowLeft'?42:e.key==='ArrowRight'?-42:0,e.key==='ArrowUp'?42:e.key==='ArrowDown'?-42:0);else if(e.key==='Escape'&&present)flipPresent(false);else return;e.preventDefault();});
- let lastHud=0;world.onFrame=()=>{const now=performance.now();if(now-lastHud<55)return;lastHud=now;const {lat,lon,d}=world.nav.pose;const lonN=((lon+540)%360)-180;
- $('coords').textContent=Math.abs(lat).toFixed(2)+'° '+(lat>=0?'N':'S')+'  /  '+Math.abs(lonN).toFixed(2)+'° '+(lonN>=0?'O':'W');
- $('distance').textContent=(d<1?format(d*1000)+' m':format(d)+' km')+' Distanz';
- const m=world.markerPosition(),marker=$('marker');marker.hidden=!m.visible;marker.style.left=m.x+'%';marker.style.top=m.y+'%';
- const r=$('reticle');r.hidden=d<8500||world.mode==='place';const h=canvas.clientHeight,rad=h/2/Math.tan(world.nav.camera.fov*Math.PI/360)*6371/Math.sqrt((6371+d)**2-6371**2);r.style.width=r.style.height=(rad*2+35)+'px';
- const s=alertText||(world.nav.flight?'Kameraflug aktiv':world.mode==='place'&&world.local.ready?'Hallig Hooge · © OpenStreetMap':'Lokale Geodaten');if(s!==previous){status.textContent=s;previous=s;}};
- await world.init();Object.defineProperty(window,'geoObservatory',{value:()=>world.diagnostics()});
+function infoPage() {
+  content.innerHTML = `<h2>Das Erdobservatorium</h2><p>Erkunde die Oberfläche, öffne das Erdinnere oder folge dem Globus bis zur Hallig Hooge.</p><h3>Navigation</h3><p>Ziehen oder Pfeiltasten drehen die Erde. Mausrad, zwei Finger oder + / − zoomen. Umschalt + Ziehen neigt die Kamera. Eine eigene Bewegung unterbricht den Flug. Pos1 führt zurück.</p><h3>Daten & Modellgrenzen</h3><p>Luftbilder von Hooge: © GeoBasis-DE/LVermGeo SH/CC BY 4.0. NASA Blue Marble, NOAA ETOPO1, Natural Earth und © OpenStreetMap-Mitwirkende (ODbL). Alle Karten liegen lokal vor. Bildfarben, Wasserbewegung und Beleuchtung sind stilisiert.</p><p>Globale Höhen sind geglättet. Für Hooge stammen Küste, Grundrisse und Warftlagen aus der Karte. Höhen, Dächer und Bäume sind modelliert. Der Wasserstand zeigt keine bestimmte Tide.</p><h3>Für den Unterricht</h3><p>Vorhersagen, betrachten, vergleichen. Welche Schicht nimmt den größten Raum ein? Prüft eure Vermutung mit dem Schnitt und wechselt zwischen den beiden Krustenmaßstäben.</p>`;
+  openDialog();
 }
-void boot().catch(()=>warn('Das Erdmodell konnte nicht geladen werden. Bitte die Seite neu laden.'));
-
+function openDialog() {
+  if (!dialog.open) dialog.showModal();
+  $("closeDialog").focus();
+}
+function layerInfo() {
+  const l = layers[choice];
+  content.innerHTML = `<span class="caption">STOFFLICHE GLIEDERUNG</span><h2>${l.name}</h2><p>${l.text}</p><dl><dt>Tiefe</dt><dd>${l.range}</dd><dt>Mächtigkeit</dt><dd>${l.thickness}</dd></dl><details><summary>Fachwissen vertiefen</summary><p>${l.deep}</p></details><p class="small">¹ Die Kruste ist hier einheitlich 35 km dick. Ihre tatsächliche Mächtigkeit variiert.</p>`;
+  openDialog();
+}
+const placesIntro = "Wattenmeer · Nordfriesland";
+function renderSide() {
+  const mode = world.mode;
+  desk.dataset.mode = mode;
+  for (const id of ["globe", "inside", "place"]) {
+    $("nav-" + id).setAttribute("aria-current", mode === id ? "page" : "false");
+  }
+  $("section").textContent = {
+    globe: "GLOBALE ANSICHT",
+    inside: "SCHALENMODELL",
+    place: "LOKALE ANSICHT",
+  }[mode];
+  if (mode === "globe")
+    side.innerHTML = `<div class="eyebrow"><i></i> GLOBALER ATLAS</div><h1>Planet Erde<span>.</span></h1><p class="intro">Erkunde unseren Planeten von der Oberfläche bis zum inneren Kern.</p><div class="facts"><div><b>6.371 <small>km</small></b><span>Mittlerer Radius</span></div><div><b>71 <small>%</small></b><span>Wasseroberfläche</span></div></div><button class="action primary" id="openInside">${icon("layers-3")} Erdinneres erkunden ${icon("arrow-right")}</button><button class="action secondary" id="visit">${icon("map-pin")} Hallig Hooge besuchen ${icon("arrow-up-right")}</button>`;
+  if (mode === "place")
+    side.innerHTML = `<div class="eyebrow"><i></i> SCHLESWIG-HOLSTEIN</div><h1>Hallig Hooge<span>.</span></h1><p class="intro">${placesIntro}. Die Häuser stehen auf erhöhten Siedlungshügeln, den Warften.</p><div class="siteCard"><img src="${dataUrl("locator.webp")}" alt=""><i></i><span>54,566° N · 8,550° O</span></div><button id="siteInfo" class="action primary">${icon("info")} Daten & Landschaft ${icon("arrow-right")}</button><button id="return" class="action secondary">${icon("globe-2")} Zur globalen Ansicht</button>`;
+  if (mode === "inside")
+    side.innerHTML = `<div class="eyebrow"><i></i> SCHALENMODELL</div><h1>Erdinneres<span>.</span></h1><div class="layerlist">${layers.map((l, i) => `<div class="layer ${i === choice ? "chosen" : ""}"><button data-layer="${i}" aria-pressed="${i === choice}"><i style="background:#${l.color.toString(16)}"></i>${l.name}</button><button class="eye" data-eye="${i}" aria-label="${l.name} ${world.shell.visible[i] ? "ausblenden" : "einblenden"}" aria-pressed="${world.shell.visible[i]}">${icon(world.shell.visible[i] ? "eye" : "eye-off")}</button></div>`).join("")}</div><div class="range"><label for="opacity">Deckkraft · ${layers[choice].name}</label><input id="opacity" type="range" min="15" max="100" value="${world.shell.opacity[choice] * 100}"></div><div class="options"><label><input id="cut" type="checkbox" ${world.shell.cut ? "checked" : ""}> Keilschnitt</label><label><input id="scale" type="checkbox" ${scaleMode ? "checked" : ""}> Kruste verbreitern</label></div><button class="action primary" id="layerInfo">${icon("info")} Schicht untersuchen ${icon("arrow-right")}</button>`;
+  $("openInside")?.addEventListener("click", () => navigate("inside"));
+  $("visit")?.addEventListener("click", () => navigate("place"));
+  $("return")?.addEventListener("click", () => navigate("globe"));
+  $("layerInfo")?.addEventListener("click", layerInfo);
+  $("siteInfo")?.addEventListener("click", infoPage);
+  side
+    .querySelectorAll<HTMLButtonElement>("[data-layer]")
+    .forEach((b) => (b.onclick = () => select(+b.dataset.layer!)));
+  side.querySelectorAll<HTMLButtonElement>("[data-eye]").forEach(
+    (b) =>
+      (b.onclick = () => {
+        const i = +b.dataset.eye!;
+        world.shell.visible[i] = !world.shell.visible[i];
+        world.shell.rebuild();
+        renderSide();
+        side
+          .querySelector<HTMLButtonElement>('[data-eye="' + i + '"]')
+          ?.focus();
+      }),
+  );
+  const range = $<HTMLInputElement>("opacity");
+  if (range)
+    range.oninput = () => {
+      world.shell.opacity[choice] = +range.value / 100;
+      world.shell.rebuild();
+    };
+  if ($("cut"))
+    $<HTMLInputElement>("cut").onchange = (e) => {
+      world.shell.cut = (e.target as HTMLInputElement).checked;
+      world.shell.rebuild();
+    };
+  if ($("scale"))
+    $<HTMLInputElement>("scale").onchange = (e) => {
+      scaleMode = (e.target as HTMLInputElement).checked;
+      world.shell.expanded = scaleMode;
+      world.shell.rebuild();
+      updateNote();
+    };
+  updateNote();
+  paint();
+}
+function select(i: number) {
+  choice = i;
+  renderSide();
+  side.querySelector<HTMLButtonElement>('[data-layer="' + i + '"]')?.focus();
+}
+function updateNote() {
+  const note = $("modelnote");
+  note.hidden = world.mode === "globe";
+  note.textContent =
+    world.mode === "inside"
+      ? scaleMode
+        ? "Didaktisch überhöht · Kruste verbreitert"
+        : "Maßstabsgetreu · Referenzkruste 35 km"
+      : "Warft- und Gebäudehöhen modelliert";
+}
+function navigate(mode: World["mode"]) {
+  if (mode === "inside") world.inside();
+  else if (mode === "place") world.visit();
+  else world.globe();
+  renderSide();
+}
+function reset() {
+  choice = 1;
+  scaleMode = false;
+  Object.assign(world.shell, {
+    cut: true,
+    expanded: false,
+    visible: [true, true, true, true],
+    opacity: [1, 1, 1, 1],
+  });
+  world.shell.rebuild();
+  navigate("globe");
+}
+function style(s: Style) {
+  world.setStyle(s);
+  for (const a of ["A", "B"])
+    $("design" + a).setAttribute("aria-pressed", String(a === s));
+}
+function flipPresent(value: boolean) {
+  present = value;
+  document.body.classList.toggle("present", value);
+  $("exitPresent").hidden = !value;
+  requestAnimationFrame(() => world.resize());
+}
+$("info").onclick = infoPage;
+$("closeDialog").onclick = () => dialog.close();
+dialog.onclick = (e) => {
+  if (e.target === dialog) dialog.close();
+};
+$("present").onclick = async () => {
+  flipPresent(true);
+  try {
+    await document.documentElement.requestFullscreen?.();
+  } catch {
+    /* Inline presentation remains available in an LMS iframe. */
+  }
+};
+$("exitPresent").onclick = () => {
+  flipPresent(false);
+  if (document.fullscreenElement) void document.exitFullscreen();
+};
+document.onfullscreenchange = () => {
+  if (!document.fullscreenElement) flipPresent(false);
+};
+const canvas = $<HTMLCanvasElement>("earth");
+paint();
+async function boot() {
+  try {
+    world = new World(canvas, warn);
+  } catch {
+    side.innerHTML = `<div class="eyebrow">ERSATZANSICHT</div><h1>Weltkarte</h1><p class="intro">WebGL 2 ist auf diesem Gerät nicht verfügbar. Die lokale Erdkarte zeigt die Kontinente zur Orientierung.</p>`;
+    canvas.parentElement!.classList.add("fallback");
+    document
+      .querySelectorAll<HTMLButtonElement>(
+        "nav button,.tools button,.switch button,#marker button,#present",
+      )
+      .forEach((b) => (b.disabled = true));
+    warn("Ersatzansicht · lokale Weltkarte");
+    return;
+  }
+  renderSide();
+  world.onLayer = select;
+  for (const m of ["globe", "inside", "place"] as const)
+    $("nav-" + m).onclick = () => navigate(m);
+  $("marker").querySelector("button")!.onclick = () => navigate("place");
+  $("in").onclick = () => world.nav.zoom(0.68);
+  $("out").onclick = () => world.nav.zoom(1 / 0.68);
+  $("home").onclick = reset;
+  $("tilt").onclick = () => {
+    world.nav.stop();
+    world.nav.goal.tilt =
+      world.nav.goal.tilt > 55 ? 0 : world.nav.goal.tilt + 30;
+  };
+  $("designA").onclick = () => style("A");
+  $("designB").onclick = () => style("B");
+  $("designA").setAttribute("aria-pressed", "true");
+  $("designB").setAttribute("aria-pressed", "false");
+  document.addEventListener("keydown", (e) => {
+    if (
+      dialog.open ||
+      e.target instanceof HTMLInputElement ||
+      e.altKey ||
+      e.ctrlKey ||
+      e.metaKey
+    )
+      return;
+    const n = world.nav;
+    if (e.key === "Home") reset();
+    else if (["+", "=", "-"].includes(e.key))
+      n.zoom(e.key === "-" ? 1.35 : 0.74);
+    else if (e.key.startsWith("Arrow"))
+      n.pan(
+        e.key === "ArrowLeft" ? 42 : e.key === "ArrowRight" ? -42 : 0,
+        e.key === "ArrowUp" ? 42 : e.key === "ArrowDown" ? -42 : 0,
+      );
+    else if (e.key === "Escape" && present) flipPresent(false);
+    else return;
+    e.preventDefault();
+  });
+  let lastHud = 0;
+  world.onFrame = () => {
+    const now = performance.now();
+    if (now - lastHud < 55) return;
+    lastHud = now;
+    const { lat, lon, d } = world.nav.pose;
+    document.querySelector<SVGElement>(".orientation svg")!.style.transform =
+      "rotate(" + world.nav.pose.bearing + "deg)";
+    const lonN = ((lon + 540) % 360) - 180;
+    $("coords").textContent =
+      Math.abs(lat).toFixed(2) +
+      "° " +
+      (lat >= 0 ? "N" : "S") +
+      "  /  " +
+      Math.abs(lonN).toFixed(2) +
+      "° " +
+      (lonN >= 0 ? "O" : "W");
+    $("distance").textContent =
+      (d < 1 ? format(d * 1000) + " m" : format(d) + " km") + " Distanz";
+    const m = world.markerPosition(),
+      marker = $("marker");
+    marker.hidden = !m.visible;
+    marker.style.left = m.x + "%";
+    marker.style.top = m.y + "%";
+    const r = $("reticle");
+    r.hidden = d < 8500 || world.mode === "place";
+    const h = canvas.clientHeight,
+      rad =
+        ((h / 2 / Math.tan((world.nav.camera.fov * Math.PI) / 360)) * 6371) /
+        Math.sqrt((6371 + d) ** 2 - 6371 ** 2);
+    r.style.width = r.style.height = rad * 2 + 35 + "px";
+    const s =
+      alertText ||
+      (world.nav.flight
+        ? "Kameraflug aktiv"
+        : world.mode === "place" && world.local.ready
+          ? "Hooge · © OpenStreetMap · © GeoBasis-DE/LVermGeo SH/CC BY 4.0"
+          : "Lokale Geodaten");
+    if (s !== previous) {
+      status.textContent = s;
+      previous = s;
+    }
+  };
+  await world.init();
+  Object.defineProperty(window, "geoObservatory", {
+    value: () => world.diagnostics(),
+  });
+}
+void boot().catch(() =>
+  warn("Das Erdmodell konnte nicht geladen werden. Bitte die Seite neu laden."),
+);

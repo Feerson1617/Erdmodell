@@ -12,7 +12,6 @@ out.mkdir(exist_ok=True, parents=True)
 def save(name,obj): (out/name).write_text(json.dumps(obj,separators=(',',':')))
 with zipfile.ZipFile(args.wheel) as z:
     im=Image.open(io.BytesIO(z.read('mpl_toolkits/basemap_data/bmng.jpg'))).convert('RGB')
-    relief=Image.open(io.BytesIO(z.read('mpl_toolkits/basemap_data/etopo1.jpg'))).convert('L').resize(im.size)
     (out/'BASEMAP-LICENSE.txt').write_bytes(z.read('basemap_data-2.0.0.dist-info/licenses/LICENSE.mit'))
 rgb=np.asarray(im.resize((4096,2048)),dtype=float)
 v=rgb.max(axis=2); ocean=(rgb[:,:,2]>rgb[:,:,0]*1.24)&(rgb[:,:,2]>rgb[:,:,1]*1.13)
