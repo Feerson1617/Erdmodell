@@ -72,8 +72,6 @@ export class LocalTerrain {
     this.map = map;
     this.coast = data.coast.map(local);
     this.mounds = data.mounds.map((m) => local(m.point));
-    this.ready = true;
-    this.rebuild();
     const extras = await Promise.allSettled([
       texture("hooge-air.webp"),
       texture("hanswarft.webp"),
@@ -84,12 +82,14 @@ export class LocalTerrain {
     if (extras[2].status === "fulfilled") this.soft = extras[2].value;
     if (extras.some((e) => e.status === "rejected"))
       this.warn("Luftbild unvollständig · lokale Vektorkarte als Ersatz");
+    this.ready = true;
     this.rebuild();
   }
   private height(x: number, z: number, land = true) {
     let h = land ? 0.0017 : 0;
     if (land)
       for (const [cx, cz] of this.mounds) {
+        if (Math.abs(x - cx) > 0.186 || Math.abs(z - cz) > 0.127) continue;
         const r = Math.hypot((x - cx) / 0.125, (z - cz) / 0.085);
         if (r < 1.48) h += 0.0058 * (1 - smooth(r - 0.48));
       }
@@ -128,17 +128,32 @@ export class LocalTerrain {
       uv = [],
       idx = [],
       mask = [];
-    for (let j = 0; j <= nz; j++)
+    for (let j = 0; j <= nz; j++) {
+      const z = z0 + ((z1 - z0) * j) / nz;
+      const crossings: number[] = [];
+      for (
+        let a = 0, b = this.coast.length - 1;
+        a < this.coast.length;
+        b = a++
+      ) {
+        const [xa, za] = this.coast[a],
+          [xb, zb] = this.coast[b];
+        if (za > z !== zb > z)
+          crossings.push(xa + ((z - za) * (xb - xa)) / (zb - za));
+      }
+      crossings.sort((a, b) => a - b);
+      let edge = 0;
       for (let i = 0; i <= nx; i++) {
         const u = i / nx,
           v = j / nz,
-          x = x0 + (x1 - x0) * u,
-          z = z0 + (z1 - z0) * v,
-          land = inside(x, z, this.coast);
+          x = x0 + (x1 - x0) * u;
+        while (edge < crossings.length && x >= crossings[edge]) edge++;
+        const land = edge % 2 === 1;
         pos.push(x, this.height(x, z, land), z);
         uv.push(u, 1 - v);
         mask.push(land ? 1 : 0);
       }
+    }
     for (let j = 0; j < nz; j++)
       for (let i = 0; i < nx; i++) {
         const a = j * (nx + 1) + i,

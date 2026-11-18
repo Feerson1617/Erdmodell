@@ -105,7 +105,10 @@ export class TerrainLODManager {
     const span = 45 / 2 ** z,
       west = -180 + x * span,
       south = -90 + y * span,
-      n = styles[this.style].segments;
+      n =
+        z < 3
+          ? styles[this.style].segments
+          : Math.max(6, styles[this.style].segments / 3);
     const center = position(south + span / 2, west + span / 2),
       pos: number[] = [],
       uv: number[] = [],
