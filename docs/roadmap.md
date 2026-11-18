@@ -1,14 +1,12 @@
-# Weitere Meilensteine
+# Weitere Entwicklung nach G2.1
 
-Vor G2 stehen die Unterrichtserprobung an Smartboard und Schul-iPad, eine Messung auf einem MacBook Air M1 und der Import in den konkreten itslearning-Kurs an. Für belastbare Geländeschnitte auf Hooge werden ein amtliches DGM, Höhenbezug und Abgleich der Gebäudehöhen benötigt.
+Die gemeinsame Erde, der Ortskatalog, georeferenzierte Bildausschnitte und die zeitgesteuerten Prozessmodelle bilden den Ausgangspunkt. Ein neuer Ort erhält einen belegten Koordinatenbezug, lizenzierte Geodaten und ein regional begründetes Prozessmodell. Eine lokale Prozessdarstellung wird erst mit geprüftem Ort und passender geologischer Situation freigegeben.
 
-| Stufe | Entwicklungsziel | Fachliches Freigabekriterium |
+| Stufe | Nächste Entwicklung | Fachliche und technische Abnahme |
 | --- | --- | --- |
-| G2 | Globale Platten, Bewegungsvektoren und Grenzen | Herkunft und Bezugsrahmen der Vektoren, Trennung von stofflichem und mechanischem Aufbau |
-| G3 | Erdbeben, Seebeben und Vulkanismus | Ereignistyp zur Plattengrenze und Region passend; Parameter und Einheiten belegt |
-| G4 | Maare und CO₂-Freisetzung, Nyos | Maarbildung von limnischer Eruption unterscheiden; regionale Fallbeispiele validieren |
-| G5 | Tsunamis | Bathymetrie, Initialbedingungen, Ausbreitung und lokale Exposition dokumentieren |
-| G6 | Sturmfluten und Küstenschutz | Tide, Windstau, Deichhöhe, Warft und Geländehöhe in konsistentem vertikalem Bezug |
-| G7 | Fachlich-didaktische Unterrichtsmodule | Aufgaben mit der Lerngruppe und Lehrkraft erproben, verständliche Differenzierung |
+| G3 · Vulkanismus | Unterschiedliche Vulkantypen und regional begründete Eruptionsverläufe steuerbar darstellen. | Tektonisches Umfeld, Magmenbildung, Lage des Fördersystems und Modellzeit getrennt belegen. Zunächst ein überschaubares, ortsbezogenes Beispiel mit Pause und Rücksetzen prüfen. |
+| **G4 · Maarbildung und Nyos-See** | **Priorität für den 15. Dezember.** Einen belegten Krater-/Seeausschnitt auf derselben Erde verankern. Zwei getrennte Erklärmodelle für Kraterentstehung und limnische CO₂-Freisetzung vorbereiten. | Die Wechselwirkung von Magma und externem Wasser bei der Maarbildung von der viel späteren Freisetzung gelösten CO₂ aus tiefem Seewasser unterscheiden. Seetiefe, Schichtung und Gasbeobachtungen quellenbasiert sichern. Unsicherheit des historischen Auslösers kennzeichnen. |
+| G5 · Erdbeben und Tsunamis | Regional geeignete Bruchgeometrien, Bodenbewegung und gegebenenfalls Meeresbodendeformation modellieren. | Mechanismus, Tiefe und Versatz des Bruchs belegen. Ein Tsunamimodul benötigt zusätzlich Bathymetrie und begründete Anfangsbedingungen. |
+| G6 · Sturmfluten und Küstenschutz | Hooge und weitere Küstenorte mit standortspezifischem Schutz und Nutzung untersuchen. | Höhenbezug von Tide, Windstau, Deich, Warft und Gelände abgleichen. Erst dann Wasserstand und Exposition gemeinsam zeigen. |
 
-Für den Datenkatalog sind Japan/Tōhoku, Sumatra, Chile, Cascadia, San Andreas, Island, Merapi, Hawaii, Eifel, Ukinrek, Nyos, Monoun, Hooge, Sylt und New Orleans vorgemerkt. Nur Hooge ist als G1-Ort registriert. Neue Standorte erhalten eine belegte Ausdehnung, Datenlizenzen, Auflösungen, Bezugssysteme, regionale Exposition und eine ausdrückliche Freigabe je anwendbarem Ereignis. Ein zukünftiges Modell kann mehrfach registrierte Regionen mit unterschiedlichen validierten Parametern bedienen.
+Mit G5 und G6 gewinnt das Basiskonzept *Funktion* an Gewicht. Naturprozess, räumliche Exposition und menschliche Nutzung erhalten jeweils nachvollziehbare Daten und Modellgrenzen. Vor einer Freigabe für die Schule sind Bedienung und Bildrate auf MacBook Air M1, Smartboard und iPad sowie der Start im konkreten LMS zu erproben.

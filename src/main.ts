@@ -1,12 +1,13 @@
-import { regions, firstRegion } from "./regions";
+import { siteCatalog, firstRegion } from "./regions";
 import "@fontsource-variable/dm-sans/wght.css";
 import "./style.css";
-import { createIcons, Globe2, Layers3, MapPin, Maximize, Minimize, Info, Plus, Minus, RotateCcw, Focus, Compass, X, Eye, EyeOff, Navigation2, Waves } from "lucide";
+import { createIcons, Globe2, Layers3, MapPin, Maximize, Minimize, Info, Plus, Minus, RotateCcw, Waypoints, Orbit, Compass, X, Eye, EyeOff, Navigation2, Waves } from "lucide";
 import { World } from "./world";
 import { layers } from "./model";
 import { waveModel } from "./knowledge";
+import { plateControls, bindPlateControls, syncPlayback } from "./tectonics/controls";
 
-const icons = { Globe2, Layers3, MapPin, Maximize, Minimize, Info, Plus, Minus, RotateCcw, Focus, Compass, X, Eye, EyeOff, Navigation2, Waves };
+const icons = { Globe2, Layers3, MapPin, Maximize, Minimize, Info, Plus, Minus, RotateCcw, Waypoints, Orbit, Compass, X, Eye, EyeOff, Navigation2, Waves };
 const icon = (n: string) => `<i data-lucide="${n}" aria-hidden="true"></i>`;
 const paint = () => createIcons({ icons, attrs: { "stroke-width": 1.65 } });
 const button = (id: string, label: string, glyph: string) =>
@@ -16,13 +17,14 @@ const $ = <T extends HTMLElement = HTMLElement>(id: string) =>
   document.getElementById(id) as T;
 $("app").innerHTML =
   `<header><div class="brand">${brand}<span>GeoRisiko <b>3D</b></span></div>
-  <nav aria-label="Modellansicht">${[["globe","Globus","globe-2"],["inside","Schalenschnitt","layers-3"],["place","Orte","map-pin"]].map(([id,label,glyph]) => `<button id="nav-${id}">${icon(glyph)}<span>${label}</span></button>`).join("")}</nav>
+  <nav aria-label="Modellansicht">${[["globe","Globus","globe-2"],["inside","Schalenschnitt","layers-3"],["plates","Plattentektonik","waypoints"],["place","Orte","map-pin"]].map(([id,label,glyph]) => `<button id="nav-${id}">${icon(glyph)}<span>${label}</span></button>`).join("")}</nav>
   <div class="headTools">${button("info","Modellhinweise und Quellen","info")}<button id="present" aria-label="Präsentieren" aria-pressed="false">${icon("maximize")}<span>Präsentieren</span></button></div></header>
   <main id="desk" data-mode="globe"><aside id="sidebar" hidden aria-label="Modellsteuerung"></aside>
   <section class="view" aria-label="Interaktive 3D-Ansicht"><canvas id="earth" tabindex="0" aria-label="Drehbares Erdmodell. Pfeiltasten drehen, Plus und Minus zoomen."></canvas>
   <div class="orientation" title="Geografischer Norden">${icon("navigation-2")} N</div>
-  <div class="tools">${button("in","Vergrößern","plus")}${button("out","Verkleinern","minus")}${button("tilt","Neigung ändern","compass")}${button("home","Zur Startansicht zurücksetzen","rotate-ccw")}</div>
+  <div class="tools"><button id="orbitProcess" hidden aria-label="Prozessmodell drehen" title="Prozessmodell drehen">${icon("orbit")}</button>${button("in","Vergrößern","plus")}${button("out","Verkleinern","minus")}${button("tilt","Neigung ändern","compass")}${button("home","Zur Startansicht zurücksetzen","rotate-ccw")}</div>
   <div id="pins" aria-hidden="true">${layers.map((l,i)=>`<span style="--rock:#${l.color.toString(16)}" hidden>${i+1}</span>`).join("")}</div>
+  <div id="platePins" aria-hidden="true"></div>
   <div id="modelnote" hidden></div><div class="hint">Ziehen zum Drehen · Mit zwei Fingern oder Mausrad zoomen</div></section></main>
   <div id="status" role="status">Erdmodell wird geladen …</div>
   <dialog id="dialog" aria-labelledby="dialogTitle">${button("closeDialog","Schließen","x")}<div id="content"></div></dialog>`;
@@ -40,6 +42,11 @@ function warn(s: string) {
   status.textContent = s;
 }
 function infoPage() {
+  if (world?.mode === "plates") {
+    content.innerHTML = `<h2 id="dialogTitle">Über die Plattenmodelle</h2><p>Die Linien folgen dem globalen Plattenmodell PB2002. In der Natur kann sich die Verformung über eine breite Zone verteilen. Eine Platte umfasst die Kruste und den starren obersten Teil des Mantels.</p><p>Das regionale Satellitenbild zeigt die Landschaft. Der vergrößerte Schnitt darüber erklärt den Prozess schematisch. Pfeillängen, Schichtdicken und Spielzeit haben keinen gemeinsamen Maßstab.</p><p><a href="${import.meta.env.BASE_URL}licenses/Geodaten.txt" target="_blank" rel="noopener">Quellen und Nutzungsrechte</a></p>`;
+    openDialog();
+    return;
+  }
   content.innerHTML = `<h2 id="dialogTitle">Über das Modell</h2><p>Farben unterscheiden die Schalen. Der Keil macht ihr Inneres sichtbar.</p><p>${labels ? "Die Kruste ist im Referenzmodell überall 35 km dick. In der Natur variiert ihre Dicke." : "Die äußerste Schale hat im Referenzmodell überall dieselbe Dicke. In der Natur ist sie unterschiedlich dick."} Beim Verbreitern der Außenschale bleiben der Erdradius und die tieferen Grenzen gleich.</p><p><a href="${import.meta.env.BASE_URL}licenses/Geodaten.txt" target="_blank" rel="noopener">Geodaten und Bildquellen</a></p>`;
   openDialog();
 }
@@ -71,18 +78,24 @@ function siteInfo() {
 function renderSide() {
   const mode = world.mode;
   desk.dataset.mode = mode;
-  for (const id of ["globe", "inside", "place"]) {
+  for (const id of ["globe", "inside", "plates", "place"]) {
     $("nav-" + id).setAttribute("aria-current", mode === id ? "page" : "false");
   }
   side.hidden = mode === "globe";
   if (side.hidden) side.replaceChildren();
+  $("orbitProcess").hidden = !(mode === "plates" && world.processDetail);
+  if (mode === "plates") {
+    side.innerHTML = plateControls(world);
+    bindPlateControls(side, world, renderSide);
+  }
+  syncPlatePins();
   if (mode === "place") {
     const r = world.region;
-    side.innerHTML = `<h1>Orte</h1><label class="siteSelect">Ort wählen <select id="siteSelect">${[...regions.values()].map((site) => `<option value="${site.id}" ${site === r ? "selected" : ""}>${site.name}</option>`).join("")}</select></label><div class="siteActions"><button id="overview" class="action secondary">${icon("compass")} Inselübersicht</button><button id="nearby" class="action secondary">${icon("map-pin")} Nahansicht</button></div><button id="siteInfo" class="action primary">${icon("info")} Ort und Quellen</button><button id="return" class="action secondary">${icon("globe-2")} Zur globalen Ansicht</button>`;
+    side.innerHTML = `<h1>Orte</h1><label class="siteSelect">Ort wählen <select id="siteSelect">${siteCatalog.map((site) => `<option value="${site.id}" ${site.id === r.id ? "selected" : ""}>${site.name}</option>`).join("")}</select></label><div class="siteActions"><button id="overview" class="action secondary">${icon("compass")} Inselübersicht</button><button id="nearby" class="action secondary">${icon("map-pin")} Nahansicht</button></div><button id="siteInfo" class="action primary">${icon("info")} Ort und Quellen</button><button id="return" class="action secondary">${icon("globe-2")} Zur globalen Ansicht</button>`;
     $<HTMLSelectElement>("siteSelect").onchange = (e) => {
       world.visit((e.target as HTMLSelectElement).value);
       renderSide();
-      $("siteSelect").focus();
+      ($("siteSelect") || $("tectonicSite"))?.focus();
     };
     $("overview").onclick = () => world.visit(r.id, true);
     $("nearby").onclick = () => world.visit(r.id);
@@ -164,7 +177,7 @@ function select(i: number) {
 }
 function updateNote() {
   const note = $("modelnote");
-  note.hidden = world.mode === "globe";
+  note.hidden = world.mode === "globe" || (world.mode === "plates" && !world.processSite);
   note.classList.toggle(
     "exaggerated",
     world.mode === "inside" && world.shell.expanded,
@@ -176,10 +189,15 @@ function updateNote() {
         : labels
           ? "Maßstabsgetreu · vereinfachte Krustendicke"
           : "Maßstabsgetreu · vereinfachte Dicke der Außenschale"
-      : world.region.label;
+      : world.mode === "plates"
+        ? world.processDetail
+          ? "Schematischer Schnitt · Zeit stark überhöht"
+          : "Regionale Ansicht"
+        : world.region.label;
 }
 function navigate(mode: World["mode"]) {
   if (mode === "inside") world.inside();
+  else if (mode === "plates") world.plates();
   else if (mode === "place") world.visit();
   else world.globe();
   renderSide();
@@ -190,7 +208,9 @@ function reset() {
   world.shell.restore();
   world.shell.cut = true;
   world.shell.expanded = false;
-  navigate("globe");
+  world.globe(true);
+  world.setPlateOptions({ boundaries:false, names:false, types:false, category:"all", plate:"" });
+  renderSide();
 }
 function setPresentation(value: boolean) {
   present = value;
@@ -213,6 +233,27 @@ function updatePins() {
       el.style.left = p.x + "%";
       el.style.top = p.y + "%";
     }
+  }
+}
+const platePins = new Map<string, HTMLElement>();
+function syncPlatePins() {
+  const holder = $("platePins");
+  const show = world.mode === "plates" && world.plateOptions.boundaries && world.plateOptions.names && !world.processSite;
+  holder.hidden = !show;
+  if (!show) return;
+  const projected = world.plateLabels();
+  for (const pin of platePins.values()) pin.hidden = true;
+  for (const label of projected) {
+    let pin = platePins.get(label.code);
+    if (!pin) {
+      pin = document.createElement("span");
+      pin.textContent = label.name;
+      holder.appendChild(pin);
+      platePins.set(label.code, pin);
+    }
+    pin.style.left = label.x + "px";
+    pin.style.top = label.y + "px";
+    pin.hidden = false;
   }
 }
 $("info").onclick = infoPage;
@@ -253,11 +294,16 @@ async function boot() {
   }
   renderSide();
   world.onLayer = select;
-  for (const m of ["globe", "inside", "place"] as const)
+  world.onBoundary = () => { if (world.mode === "plates") renderSide(); };
+  for (const m of ["globe", "inside", "plates", "place"] as const)
     $("nav-" + m).onclick = () => navigate(m);
   $("in").onclick = () => world.nav.zoom(0.68);
   $("out").onclick = () => world.nav.zoom(1 / 0.68);
   $("home").onclick = reset;
+  $("orbitProcess").onclick = () => {
+    world.nav.stop();
+    world.nav.goal.bearing += 35;
+  };
   $("tilt").onclick = () => {
     world.nav.stop();
     world.nav.goal.tilt =
@@ -297,6 +343,7 @@ async function boot() {
     document.querySelector<SVGElement>(".orientation svg")!.style.transform =
       `rotate(${world.nav.pose.bearing}deg)`;
     if (labels && world.mode === "inside") updatePins();
+    if (world.mode === "plates") { syncPlatePins(); syncPlayback(world); }
     const message = (world.mode === "place" && world.local.warning) || alertText || "";
     if (status.textContent !== message) status.textContent = message;
   };
