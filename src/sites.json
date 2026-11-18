@@ -1,0 +1,127 @@
+[
+  {
+    "id": "hooge",
+    "name": "Hallig Hooge",
+    "target": {
+      "lat": 54.5660014,
+      "lon": 8.5504131,
+      "d": 0.29,
+      "tilt": 75,
+      "bearing": -27
+    },
+    "bounds": [
+      8.48,
+      54.54,
+      8.604,
+      54.6
+    ],
+    "overview": {
+      "d": 9,
+      "tilt": 35,
+      "bearing": 0
+    },
+    "context": "Nordfriesisches Wattenmeer",
+    "description": "Auf der Hanswarft stehen Häuser auf einem erhöhten Siedlungshügel. Ringsum verlaufen Gräben durch das Grünland.",
+    "sources": [
+      "© OpenStreetMap-Mitwirkende · ODbL 1.0",
+      "© GeoBasis-DE/LVermGeo SH · CC BY 4.0"
+    ],
+    "height": {
+      "kind": "mounds",
+      "baseM": 1.7,
+      "riseM": 5.8,
+      "radiusKm": [
+        0.125,
+        0.085
+      ]
+    },
+    "mesh": "hooge-surface.bin",
+    "features": "hooge.json",
+    "maps": {
+      "base": "hooge.webp",
+      "A": "hooge-coast-air.webp",
+      "B": "hooge-atlas.webp",
+      "detail": "hanswarft.webp",
+      "detailBounds": [
+        8.5404131,
+        54.5600014,
+        8.5604131,
+        54.5720014
+      ]
+    },
+    "lod": {
+      "loadKm": 1400,
+      "fadeKm": [
+        10,
+        135
+      ],
+      "buildingsKm": 12,
+      "fallbackKm": 140
+    },
+    "limits": "Warftprofile, Dächer und Bäume sind modelliert. Luftbild und Wasser zeigen keinen bestimmten Gezeitenstand.",
+    "label": "Warft- und Gebäudehöhen modelliert",
+    "validatedHazards": [],
+    "inputs": {
+      "orthoBase": "hooge-air.webp"
+    }
+  },
+  {
+    "id": "helgoland",
+    "name": "Helgoland",
+    "target": {
+      "lat": 54.184,
+      "lon": 7.879,
+      "d": 2.5,
+      "tilt": 49,
+      "bearing": 34
+    },
+    "bounds": [
+      7.855,
+      54.166,
+      7.932,
+      54.2
+    ],
+    "overview": {
+      "d": 6,
+      "tilt": 28,
+      "bearing": 0
+    },
+    "context": "Deutsche Bucht · Teststandort",
+    "description": "Hauptinsel und Düne aus der Vogelperspektive. Das Oberland hebt sich von der flachen Nachbarinsel ab.",
+    "sources": [
+      "Copernicus DEM GLO-30 · Copernicus DEM Licence",
+      "© GeoBasis-DE/LVermGeo SH · CC BY 4.0"
+    ],
+    "height": {
+      "kind": "dsm",
+      "file": "helgoland-dsm.json"
+    },
+    "mesh": "helgoland-surface.bin",
+    "features": null,
+    "maps": {
+      "base": "helgoland-atlas.webp",
+      "A": "helgoland-air.webp",
+      "B": "helgoland-atlas.webp"
+    },
+    "lod": {
+      "loadKm": 900,
+      "fadeKm": [
+        8,
+        100
+      ],
+      "buildingsKm": 0,
+      "fallbackKm": 140
+    },
+    "limits": "Das Oberflächenmodell umfasst auch Vegetation und Bauwerke. Die steile Kliffkante ist durch das Messraster geglättet.",
+    "label": "Oberflächenmodell · ca. 30 m Messraster",
+    "validatedHazards": [],
+    "inputs": {
+      "dem": "helgoland.tif",
+      "ortho": "helgoland.jpg",
+      "grid": [
+        167,
+        135
+      ]
+    }
+  }
+]

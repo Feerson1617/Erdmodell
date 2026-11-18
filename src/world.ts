@@ -1,7 +1,8 @@
 import * as T from "three";
-import { CameraController, HOME, HOOGE } from "./camera";
+import { CameraController, HOME } from "./camera";
 import { R, position, basis, smooth, clamp } from "./geo";
 import { TerrainLODManager } from "./planet";
+import { regions, firstRegion, type Region } from "./regions";
 import { LocalTerrain } from "./local";
 import { Shells } from "./shells";
 import { type Style, styles } from "./model";
@@ -10,7 +11,14 @@ export class World {
   gl: T.WebGLRenderer;
   nav: CameraController;
   planet: TerrainLODManager;
-  local: LocalTerrain;
+  private terrains = new Map<string, LocalTerrain>();
+  region: Region = firstRegion;
+  get local() {
+    return this.terrains.get(this.region.id)!;
+  }
+  private renderMs = 0;
+  private terrainMs = 0;
+
   shell = new Shells();
   mode: "globe" | "inside" | "place" = "globe";
   style: Style = "A";
@@ -28,7 +36,7 @@ export class World {
   private sun = new T.DirectionalLight(0xfff1da, 2.05);
   private grid = new T.Group();
   private air: T.Mesh;
-  private marker = position(HOOGE.lat, HOOGE.lon, 10);
+  private marker = position(firstRegion.target.lat, firstRegion.target.lon, 10);
   onFrame?: () => void;
   onLayer?: (i: number) => void;
   constructor(
@@ -44,17 +52,21 @@ export class World {
     this.gl.setPixelRatio(Math.min(devicePixelRatio, 1.5));
     this.gl.shadowMap.enabled = true;
     this.gl.shadowMap.autoUpdate = false;
-    this.gl.shadowMap.type = T.PCFShadowMap;
+    this.gl.shadowMap.type = T.PCFSoftShadowMap;
     this.gl.toneMapping = T.ACESFilmicToneMapping;
     this.gl.toneMappingExposure = 1.06;
     this.gl.setClearColor(0, 0);
     this.nav = new CameraController(canvas);
     this.planet = new TerrainLODManager(warn);
-    this.local = new LocalTerrain(warn);
+    for (const region of regions.values()) {
+      const terrain = new LocalTerrain(region);
+      this.terrains.set(region.id, terrain);
+      this.scene.add(terrain.group);
+    }
     this.scene.add(
       this.planet.group,
       this.shell.group,
-      this.local.group,
+
       this.hemi,
       this.sun,
       this.sun.target,
@@ -111,7 +123,9 @@ export class World {
         ),
         this.nav.camera,
       );
-      const hit = ray.intersectObjects(this.shell.group.children, true)[0];
+      const hit = ray
+        .intersectObjects(this.shell.group.children, true)
+        .find((entry) => entry.object.visible);
       if (hit) this.onLayer?.(hit.object.userData.layer);
     };
     new ResizeObserver(() => this.resize()).observe(canvas);
@@ -129,7 +143,12 @@ export class World {
       requestAnimationFrame(this.render);
     });
   }
+  private sizeDirty = true;
   resize() {
+    this.sizeDirty = true;
+  }
+  private applySize() {
+    this.sizeDirty = false;
     const w = this.canvas.clientWidth,
       h = this.canvas.clientHeight;
     if (!w || !h) return;
@@ -155,29 +174,34 @@ export class World {
   setStyle(s: Style) {
     this.style = s;
     this.planet.setStyle(s);
-    this.local.setStyle(s);
+    for (const terrain of this.terrains.values()) terrain.setStyle(s);
     this.shell.style = s;
     this.shell.map = this.planet.maps[s] ?? this.planet.baseline;
     if (this.shell.map) {
       this.shell.map.wrapS = T.RepeatWrapping;
-      this.shell.map.needsUpdate = true;
+      if (this.shell.map.version === 0) this.shell.map.needsUpdate = true;
     }
-    this.shell.rebuild();
+    if (this.mode === "inside") this.shell.rebuild();
     this.hemi.intensity = styles[s].sky;
     this.sun.intensity = styles[s].sun;
   }
-  visit() {
+  visit(id = firstRegion.id, overview = false) {
+    const r = regions.get(id);
+    if (!r) return;
+    this.region = r;
+    this.local.setStyle(this.style);
     this.mode = "place";
-    this.nav.fly(HOOGE);
+    const target = overview ? { ...r.target, ...r.overview } : r.target;
+    this.nav.fly(target);
     const flight = this.nav.flight;
     void this.local.load().then(() => {
       if (
         !this.local.ready &&
+        this.region === r &&
         this.mode === "place" &&
-        (this.nav.flight === flight || this.nav.pose.d <= HOOGE.d + 0.001)
-      ) {
-        this.nav.fly({ ...HOOGE, d: 140, tilt: 0, bearing: 0 });
-      }
+        (this.nav.flight === flight || this.nav.pose.d <= target.d + 0.001)
+      )
+        this.nav.fly({ ...target, d: r.lod.fallbackKm, tilt: 0, bearing: 0 });
     });
   }
   globe() {
@@ -187,6 +211,7 @@ export class World {
   inside() {
     this.waitingForAscent = this.mode !== "inside" && this.nav.pose.d < 3500;
     this.mode = "inside";
+    this.shell.rebuild();
     this.nav.fly({ ...HOME, lon: 3, lat: 17 });
   }
   markerPosition() {
@@ -218,6 +243,10 @@ export class World {
       frames: this.frames,
       pixelRatio: this.gl.getPixelRatio(),
       tiles: this.planet.tileCount,
+      region: this.region.id,
+      renderMs: this.renderMs,
+      terrainMs: this.terrainMs,
+      programs: this.gl.info.programs?.length,
       localReady: this.local.ready,
       localVisible: this.local.group.visible,
       draws: this.gl.info.render.calls,
@@ -231,6 +260,7 @@ export class World {
     if (document.hidden) return;
     const dt = clamp((now - this.last) / 1000, 0.001, 0.12);
     this.last = now;
+    if (this.sizeDirty) this.applySize();
     this.frames++;
     this.frameCount++;
     if (now - this.fpsStart >= 900) {
@@ -242,7 +272,6 @@ export class World {
       if (this.slow >= 2 && this.gl.getPixelRatio() > 0.76) {
         this.gl.setPixelRatio(Math.max(0.75, this.gl.getPixelRatio() * 0.85));
         this.slow = 0;
-        this.resize();
       }
     }
     const prev = this.nav.pose;
@@ -250,7 +279,9 @@ export class World {
       this.mode === "inside"
         ? 0
         : Math.max(
-            this.local.ground(prev.lat, prev.lon),
+            ...Array.from(this.terrains.values(), (t) =>
+              t.ground(prev.lat, prev.lon),
+            ),
             this.planet.elevation(prev.lat, prev.lon),
           );
     this.nav.update(now, dt, ground);
@@ -262,9 +293,14 @@ export class World {
     this.shell.group.visible = inside;
     this.air.visible = !inside && d > 2200;
     this.grid.visible = !inside && d > 2400;
+    const before = performance.now();
     if (!inside) this.planet.update(lat, lon, d);
-    this.local.update(lat, lon, d, now);
-    if (inside) this.local.group.visible = false;
+    this.terrainMs = performance.now() - before;
+    for (const terrain of this.terrains.values()) {
+      if (terrain === this.local || terrain.ready)
+        terrain.update(lat, lon, d, now);
+      if (inside) terrain.group.visible = false;
+    }
     const b = basis(lat, lon),
       target = position(lat, lon),
       dir = b.up
@@ -273,13 +309,20 @@ export class World {
         .addScaledVector(b.north, 1.05)
         .addScaledVector(b.east, -1.2)
         .normalize();
+    this.planet.lightDirection(dir);
     const shadow = this.local.group.visible && d < 2.3;
     this.sun.castShadow = shadow;
     this.sun.target.position.copy(target);
     this.sun.position.copy(target).addScaledVector(dir, shadow ? 4 : 20000);
     if (shadow) {
       const cam = this.sun.shadow.camera,
-        r = clamp(d * 1.5, 0.28, 2.5);
+        r = d > 1 ? 2.5 : 0.9;
+      const anchored = position(
+        Math.round(lat * 150) / 150,
+        Math.round(lon * 100) / 100,
+      );
+      this.sun.target.position.copy(anchored);
+      this.sun.position.copy(anchored).addScaledVector(dir, 4);
       Object.assign(cam, {
         left: -r,
         right: r,
@@ -292,8 +335,8 @@ export class World {
       this.sun.shadow.bias = -0.00012;
       this.sun.shadow.normalBias = 0.0003;
       const stamp = [
-        lat.toFixed(6),
-        lon.toFixed(6),
+        Math.round(lat * 150),
+        Math.round(lon * 100),
         r.toFixed(3),
         this.style,
         this.local.ready,
@@ -304,9 +347,18 @@ export class World {
       }
     }
     const fog = this.scene.fog as T.FogExp2;
-    fog.density = 0.095 * zoom;
+    fog.density = Math.min(0.085, 0.28 / Math.max(1, d)) * zoom;
+    if (fog.density > 0.0001) {
+      this.nav.camera.far = Math.min(
+        this.nav.camera.far,
+        Math.max(d * 2.5, 3.6 / fog.density),
+      );
+      this.nav.camera.updateProjectionMatrix();
+    }
     this.gl.setClearColor(0xaccbd0, zoom);
+    const submit = performance.now();
     this.gl.render(this.scene, this.nav.camera);
+    this.renderMs = performance.now() - submit;
     this.onFrame?.();
   };
 }

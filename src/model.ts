@@ -1,3 +1,4 @@
+import { regions, type Region } from "./regions";
 export type Style = "A" | "B";
 export const styles = {
   A: { name: "Realistisch", segments: 24, sun: 2.05, sky: 1.55 },
@@ -45,25 +46,6 @@ export const layers = [
     deep: "Die Grenze bei etwa 5.150 km Tiefe trennt festes und flüssiges Kernmaterial. Die Temperaturen im Modell sind nicht durch Farben messbar.",
   },
 ];
-export interface Region {
-  id: string;
-  name: string;
-  lat: number;
-  lon: number;
-  validatedHazards: readonly string[];
-}
-export const regions: ReadonlyMap<string, Region> = new Map([
-  [
-    "hooge",
-    {
-      id: "hooge",
-      name: "Hallig Hooge",
-      lat: 54.5660014,
-      lon: 8.5504131,
-      validatedHazards: [],
-    },
-  ],
-]);
 export interface SimulationParameterSet {
   regionId: string;
   source: string;

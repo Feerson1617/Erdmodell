@@ -10,7 +10,30 @@ export class Shells {
   opacity = [1, 1, 1, 1];
   style: Style = "A";
   map?: T.Texture;
+  private shapeKey = "";
+  private applyVisibility() {
+    this.group.traverse((o) => {
+      if (!(o instanceof T.Mesh)) return;
+      const i = o.userData.layer;
+      o.visible =
+        this.visible[i] &&
+        (!o.userData.inner || !this.visible[i + 1] || this.opacity[i + 1] < 1);
+      o.material.opacity = this.opacity[i];
+      const blend = this.opacity[i] < 1;
+      if (o.material.transparent !== blend) {
+        o.material.transparent = blend;
+        o.material.depthWrite = !blend;
+        o.material.needsUpdate = true;
+      }
+    });
+  }
   rebuild() {
+    const key = [this.style, this.cut, this.expanded, this.map?.uuid].join("/");
+    if (key === this.shapeKey) {
+      this.applyVisibility();
+      return;
+    }
+    this.shapeKey = key;
     this.group.traverse((o) => {
       if (o instanceof T.Mesh) {
         o.geometry.dispose();
@@ -20,7 +43,10 @@ export class Shells {
     this.group.clear();
     const radii = [R, this.expanded ? R * 0.935 : 6336, 3481, 1221, 0];
     layers.forEach((l, i) => {
-      if (!this.visible[i]) return;
+      const pigment =
+        this.style === "A"
+          ? l.color
+          : [0x879d88, 0xa96853, 0xe2a568, 0xeedbb5][i];
       const start = this.cut ? 65 : -180,
         end = this.cut ? 335 : 180,
         n = this.style === "A" ? 120 : 64,
@@ -61,13 +87,13 @@ export class Shells {
         g.setAttribute("uv", new T.Float32BufferAttribute(uv, 2));
         g.setIndex(indices);
         const mat = new T.MeshStandardMaterial({
-          color: i === 0 && !inner ? 0xffffff : l.color,
+          color: i === 0 && !inner ? 0xffffff : pigment,
           map: i === 0 && !inner ? this.map : null,
           roughness: 0.9,
           flatShading: this.style === "B",
           side: T.DoubleSide,
         });
-        add(g, mat);
+        add(g, mat).userData.inner = inner;
       };
       const add = (g: T.BufferGeometry, mat: T.MeshStandardMaterial) => {
         mat.transparent = this.opacity[i] < 1;
@@ -77,10 +103,10 @@ export class Shells {
         mesh.userData.layer = i;
         mesh.renderOrder = 4 - i;
         shell.add(mesh);
+        return mesh;
       };
       surface(hi, false);
-      if (lo > 0 && (!this.visible[i + 1] || this.opacity[i + 1] < 1))
-        surface(lo + 0.002, true);
+      if (lo > 0) surface(lo + 0.002, true);
       if (!this.cut) return;
       for (const lon of [start, end]) {
         const pos = [],
@@ -117,7 +143,9 @@ export class Shells {
           const color = face.getAttribute("color");
           for (let v = 0; v < color.count; v += 3) {
             const grain = 0.82 + 0.22 * (0.5 + 0.5 * Math.sin(v * 4.91 + i));
-            const tone = new T.Color(l.color).multiplyScalar(grain);
+            const tone = new T.Color(pigment).multiplyScalar(
+              grain * (v % (steps * 6) < 6 ? 1.1 : 1),
+            );
             for (let corner = 0; corner < 3; corner++)
               color.setXYZ(v + corner, tone.r, tone.g, tone.b);
           }
@@ -132,5 +160,6 @@ export class Shells {
         );
       }
     });
+    this.applyVisibility();
   }
 }

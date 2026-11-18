@@ -1,14 +1,7 @@
 import { PerspectiveCamera, Vector3 } from "three";
 import { R, RAD, basis, clamp, smooth } from "./geo";
 export const HOME = { lat: 18, lon: 19, d: 14450, tilt: 0, bearing: 0 };
-export const HOOGE = {
-  lat: 54.5660014,
-  lon: 8.5504131,
-  d: 0.29,
-  tilt: 75,
-  bearing: -27,
-};
-type Pose = typeof HOME;
+export type Pose = typeof HOME;
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 const angle = (a: number, b: number) => ((b - a + 540) % 360) - 180;
 export class CameraController {
@@ -108,8 +101,8 @@ export class CameraController {
       // Arrive over the target region before descending. On ascent clear the region first.
       const geo =
         b.d < a.d
-          ? smooth(clamp(p / 0.59, 0, 1))
-          : smooth(clamp((p - 0.41) / 0.59, 0, 1));
+          ? smooth(clamp(p / 0.44, 0, 1))
+          : smooth(clamp((p - 0.56) / 0.44, 0, 1));
       this.pose = {
         lat: lerp(a.lat, b.lat, geo),
         lon: a.lon + angle(a.lon, b.lon) * geo,
@@ -117,6 +110,25 @@ export class CameraController {
         tilt: lerp(a.tilt, b.tilt, t),
         bearing: a.bearing + angle(a.bearing, b.bearing) * t,
       };
+      const separation =
+        R *
+        RAD *
+        Math.hypot(
+          b.lat - a.lat,
+          angle(a.lon, b.lon) * Math.cos(((a.lat + b.lat) * RAD) / 2),
+        );
+      if (separation > 10 && Math.max(a.d, b.d) < separation / 3) {
+        const cruise = Math.min(separation * 0.8, 400);
+        this.pose.d =
+          p < 0.5
+            ? Math.exp(lerp(Math.log(a.d), Math.log(cruise), smooth(2 * p)))
+            : Math.exp(
+                lerp(Math.log(cruise), Math.log(b.d), smooth(2 * p - 1)),
+              );
+        const horizontal = smooth(clamp((p - 0.16) / 0.68, 0, 1));
+        this.pose.lat = lerp(a.lat, b.lat, horizontal);
+        this.pose.lon = a.lon + angle(a.lon, b.lon) * horizontal;
+      }
       this.goal = { ...this.pose };
       if (p === 1) this.flight = undefined;
     } else {

@@ -2,6 +2,8 @@
 
 Alle ausgelieferten Bild- und Geometriedaten werden unter derselben Herkunft wie die Anwendung geladen. Pages und die SCORM-Version benötigen zur Laufzeit ausschließlich die eigenen Paketdateien. Die folgenden Netzquellen dienten der Datenaufbereitung. Daher ist externes CORS keine Voraussetzung für den Unterricht. Abruf für G1 am 18. November 2026. Ein Abrufdatum ist kein Aufnahmedatum.
 
+Die zusätzlichen G1.1-Daten, geographischen Grenzen und Änderungen an Variante B sind im [Nachweis G1.1](g1.1-data.md) dokumentiert.
+
 | Bestandteil | Herkunft und Nutzung | Auflösung, Bearbeitung und Grenzen |
 | --- | --- | --- |
 | `earth*.webp` | NASA Blue Marble Next Generation aus `basemap-data 2.0.0`, Datei `bmng.jpg`. MIT-Hinweis des Datenpakets unter `data/BASEMAP-LICENSE.txt`. [Basemap-Daten](https://pypi.org/project/basemap-data/2.0.0/) · [NASA Blue Marble](https://science.nasa.gov/earth/earth-observatory/blue-marble-next-generation/) | Historisches Komposit. Quelle im Paket 5.400 × 2.700 Pixel; A 4.096 × 2.048, B 1.536 × 768 mit reduzierter Palette, Basiskarte 512 × 256. Ozean- und Landfarben bearbeitet. Keine Live-Satellitenaufnahme. |
