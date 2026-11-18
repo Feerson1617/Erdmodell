@@ -13,6 +13,7 @@ export async function texture(file: string) {
 type Tile = { mesh: T.Mesh; used: number };
 export class TerrainLODManager {
   group = new T.Group();
+  readonly uploadedTiles = new Set<T.BufferGeometry>();
   private cache = new Map<string, Tile>();
   private tick = 0;
   private stamp = "";
@@ -203,6 +204,8 @@ export class TerrainLODManager {
       }
     } else for (let i = 0; i < pos.length / 3; i++) col.push(1, 1, 1);
     g.setAttribute("color", new T.Float32BufferAttribute(col, 3));
+    // Count an actual WebGL upload, including reupload after context restoration.
+    (g.getAttribute("position") as T.BufferAttribute).onUpload(() => this.uploadedTiles.add(g));
     const mesh = new T.Mesh(g, this.material);
     mesh.position.copy(center);
     this.group.add(mesh);
@@ -278,10 +281,14 @@ export class TerrainLODManager {
         !k.startsWith("0/")
       ) {
         this.group.remove(t.mesh);
+        this.uploadedTiles.delete(t.mesh.geometry);
         t.mesh.geometry.dispose();
         this.cache.delete(k);
       }
     }
+  }
+  get cachedTileCount() {
+    return this.cache.size + this.alternate.size;
   }
   get tileCount() {
     return this.cache.size;

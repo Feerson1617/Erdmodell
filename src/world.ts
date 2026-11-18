@@ -135,6 +135,7 @@ export class World {
     canvas.addEventListener("webglcontextlost", (e) => {
       e.preventDefault();
       this.running = false;
+      this.planet.uploadedTiles.clear();
       this.warn(
         "Grafikkontext unterbrochen. Seite neu laden, um das Modell wieder zu öffnen.",
       );
@@ -276,6 +277,8 @@ export class World {
       frameMs: this.frameMs,
       resolution: { initial: this.resolution.maximum, minimum: this.resolution.minimum, maximum: this.resolution.maximum, width: this.canvas.width, height: this.canvas.height, reductions: this.resolution.reductions, recoveries: this.resolution.recoveries },
       tiles: this.planet.tileCount,
+      uploadedTiles: this.planet.uploadedTiles.size,
+      cachedTiles: this.planet.cachedTileCount,
       region: this.region.id,
       renderMs: this.renderMs,
       terrainMs: this.terrainMs,

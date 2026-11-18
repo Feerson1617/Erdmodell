@@ -384,6 +384,8 @@ async function run(engine) {
       const w = await diag(p);
       run.soak.push({
         ms: Date.now() - started,
+        uploadedTiles: w.uploadedTiles, cachedTiles: w.cachedTiles,
+        fixedGeometries: w.geometries - w.uploadedTiles,
         geometries: w.geometries,
         textures: w.textures,
         programs: w.programs,
@@ -394,11 +396,11 @@ async function run(engine) {
       cycle++;
     } while (cycle < 6 || Date.now() - started < 120000);
     const warm = run.soak.slice(2),
-      ends = warm.at(-1);
+      start = warm[0];
     assert.ok(
-      ends.textures <= warm[0].textures + 2 &&
-        ends.geometries <= warm[0].geometries + 12 &&
-        ends.programs <= warm[0].programs + 2,
+      warm.every(s => s.textures <= start.textures + 2 && s.programs <= start.programs + 2 &&
+        s.fixedGeometries >= 0 && s.fixedGeometries <= start.fixedGeometries + 12 &&
+        s.uploadedTiles <= s.cachedTiles && s.cachedTiles <= 2 * (260 + 64)),
       "Ressourcen wachsen nach wiederholten Rundreisen",
     );
     pass(

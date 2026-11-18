@@ -12,6 +12,8 @@ permissions:
 jobs:
   validate:
     runs-on: ubuntu-24.04
+    # Browser binaries and Linux libraries match the pinned Playwright version.
+    container: mcr.microsoft.com/playwright:v1.56.1-noble@sha256:f1e7e01021efd65dd1a2c56064be399f3e4de00fd021ac561325f2bfbb2b837a
     timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
@@ -23,12 +25,12 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
-      - run: npx playwright install --with-deps chromium webkit
+      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - run: node tests/gate.mjs
       - run: npm test
       - name: Kamerafahrt aufnehmen und Bildfolge auswerten
         run: |
-          if ! command -v ffmpeg >/dev/null; then sudo apt-get update && sudo apt-get install -y ffmpeg; fi
+          if ! command -v ffmpeg >/dev/null; then apt-get update && apt-get install -y ffmpeg; fi
           npm run audit
           python3 scripts/compare_views.py
       - uses: actions/upload-artifact@v4
