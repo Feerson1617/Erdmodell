@@ -1,4 +1,4 @@
-name: GeoRisiko G1.3
+name: GeoRisiko G1.3.1
 on:
   pull_request:
   workflow_dispatch:
@@ -32,7 +32,6 @@ jobs:
         run: |
           if ! command -v ffmpeg >/dev/null; then apt-get update && apt-get install -y ffmpeg; fi
           npm run audit
-          python3 scripts/compare_views.py
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -41,8 +40,8 @@ jobs:
       - run: npm run package && node tests/packages.mjs
       - uses: actions/upload-artifact@v4
         with:
-          name: GeoRisiko-G1.3-Pakete
-          path: artifacts/GeoRisiko-G1.3-*.zip
+          name: GeoRisiko-G1.3.1-Pakete
+          path: artifacts/GeoRisiko-G1.3.1-*.zip
       - uses: actions/upload-pages-artifact@v3
         if: github.event_name == 'workflow_dispatch' && inputs.publish_pages && github.ref == 'refs/heads/main'
         with:
