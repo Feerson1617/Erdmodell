@@ -47,6 +47,13 @@ const major = [
   "OK",
 ];
 type Region = keyof typeof regions;
+// For regional scales the worldwide label sites often fall outside the view.
+// Each replacement lies within the corresponding PB2002 polygon.
+const regionalLabels: Record<Region, Record<string, T.Vector3>> = {
+  island: { EU: position(63.88, -18.65, 18), NA: position(64.55, -24.7, 18) },
+  japan: { PA: position(38.18, 146.15, 18), OK: position(38.7, 141.55, 18) },
+  san: { NA: position(36.5, -118.75, 18), PA: position(35.3, -122, 18) },
+};
 async function boot() {
   const canvas = el<HTMLCanvasElement>("earth");
   const world = new World(
@@ -147,7 +154,10 @@ async function boot() {
     }
     if (labelLayer.hidden) return;
     const used: { x: number; y: number; width: number }[] = [];
-    for (const { code, label, p } of labels) {
+    for (const { code, label, p: globalPoint } of labels) {
+      const p =
+        (region && world.nav.pose.d < 4000 && regionalLabels[region][code]) ||
+        globalPoint;
       let visible =
         front(p, camera) && (major.includes(code) || world.nav.pose.d < 5000);
       const { x, y } = project(p);

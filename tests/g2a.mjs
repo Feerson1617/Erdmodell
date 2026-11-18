@@ -105,6 +105,16 @@ try {
         await wait();
         const w = await page.evaluate(() => window.tectonicsAtlas());
         assert.equal(w.selected, id);
+        const localNames = await page
+          .locator("#placeLabels span:visible")
+          .allTextContents();
+        const pair =
+          site === "san"
+            ? ["Nordamerikanische Platte", "Pazifische Platte"]
+            : site === "japan"
+              ? ["Ochotskplatte", "Pazifische Platte"]
+              : ["Nordamerikanische Platte", "Eurasische Platte"];
+        for (const name of pair) assert.ok(localNames.includes(name), name);
         assert.ok(
           await page
             .locator("#region")
