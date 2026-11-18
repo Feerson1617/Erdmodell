@@ -1,5 +1,5 @@
 {
-  "date": "2026-11-18T06:01:18.813Z",
+  "date": "2026-11-18T06:08:02.783Z",
   "cpu": "AMD EPYC 9V74 80-Core Processor",
   "platform": "linux",
   "scope": "Linux cloud browsers. Tablet is an emulation.",
@@ -34,7 +34,7 @@
           "status": 200
         },
         {
-          "path": "/Erdmodell/assets/index-BQeIl1bx.js",
+          "path": "/Erdmodell/assets/index-aFcBUPZA.js",
           "status": 200
         },
         {
@@ -58,11 +58,11 @@
           "status": 200
         },
         {
-          "path": "/Erdmodell/data/region.webp",
+          "path": "/Erdmodell/data/earth.webp",
           "status": 200
         },
         {
-          "path": "/Erdmodell/data/earth.webp",
+          "path": "/Erdmodell/data/region.webp",
           "status": 200
         },
         {
@@ -78,15 +78,19 @@
           "status": 200
         },
         {
-          "path": "/Erdmodell/data/hooge-air.webp",
-          "status": 200
-        },
-        {
           "path": "/Erdmodell/data/hooge-soft.webp",
           "status": 200
         },
         {
           "path": "/Erdmodell/data/hanswarft.webp",
+          "status": 200
+        },
+        {
+          "path": "/Erdmodell/data/hooge-air.webp",
+          "status": 200
+        },
+        {
+          "path": "/Erdmodell/data/locator.webp",
           "status": 200
         },
         {
@@ -97,18 +101,18 @@
       "flights": [
         {
           "style": "A",
-          "intermediateFrames": 72,
+          "intermediateFrames": 70,
           "startKm": 14450.000000000007,
           "endKm": 0.29000000000000004,
-          "ms": 5633,
-          "maxFrameGapMs": 567
+          "ms": 5616,
+          "maxFrameGapMs": 500
         },
         {
           "style": "B",
-          "intermediateFrames": 92,
+          "intermediateFrames": 89,
           "startKm": 14450.000000000007,
           "endKm": 0.29000000000000004,
-          "ms": 6067,
+          "ms": 6200,
           "maxFrameGapMs": 483
         }
       ],
@@ -123,20 +127,20 @@
           "mode": "place",
           "style": "A",
           "lat": 54.5660014,
-          "lon": 8.55041310000004,
+          "lon": 8.550413099999997,
           "d": 0.29000000000000004,
           "tilt": 75,
           "bearing": -27,
           "flying": false,
-          "fps": 3.4284734721865173,
-          "frames": 264,
+          "fps": 4.225828262339416,
+          "frames": 247,
           "pixelRatio": 0.75,
           "tiles": 166,
           "localReady": true,
           "localVisible": true,
           "draws": 58,
-          "triangles": 218396,
-          "geometries": 109,
+          "triangles": 173468,
+          "geometries": 111,
           "textures": 6
         },
         {
@@ -149,19 +153,19 @@
           "mode": "place",
           "style": "B",
           "lat": 54.5660014,
-          "lon": 8.55041310000004,
+          "lon": 8.550413099999997,
           "d": 0.29000000000000004,
           "tilt": 75,
           "bearing": -27,
           "flying": false,
-          "fps": 5.263711969681011,
-          "frames": 440,
+          "fps": 5.806077027288554,
+          "frames": 427,
           "pixelRatio": 0.75,
           "tiles": 166,
           "localReady": true,
           "localVisible": true,
           "draws": 58,
-          "triangles": 84146,
+          "triangles": 73850,
           "geometries": 108,
           "textures": 7
         },
@@ -175,13 +179,13 @@
           "mode": "globe",
           "style": "A",
           "lat": 18,
-          "lon": 18.999999999999993,
+          "lon": 18.999999999999982,
           "d": 14450.000000000007,
           "tilt": 0,
-          "bearing": -4.1300296516055823e-14,
+          "bearing": -2.886579864025407e-14,
           "flying": false,
-          "fps": 7.241129616220098,
-          "frames": 594,
+          "fps": 4.8388657698635305,
+          "frames": 580,
           "pixelRatio": 0.75,
           "tiles": 32,
           "localReady": true,
@@ -207,19 +211,19 @@
           "tilt": 75,
           "bearing": -27,
           "flying": false,
-          "fps": 5.934326783594882,
-          "frames": 36,
+          "fps": 2.4658885418379084,
+          "frames": 35,
           "pixelRatio": 0.75,
           "tiles": 162,
           "localReady": true,
           "localVisible": true,
           "draws": 54,
-          "triangles": 213020,
+          "triangles": 171548,
           "geometries": 80,
-          "textures": 6
+          "textures": 5
         }
       ],
-      "firstRenderMs": 1879,
+      "firstRenderMs": 1940,
       "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)"
     },
     {
@@ -251,7 +255,7 @@
           "status": 200
         },
         {
-          "path": "/Erdmodell/assets/index-BQeIl1bx.js",
+          "path": "/Erdmodell/assets/index-aFcBUPZA.js",
           "status": 200
         },
         {
@@ -267,7 +271,7 @@
           "status": 200
         },
         {
-          "path": "/Erdmodell/data/relief.i16",
+          "path": "/Erdmodell/data/earth-soft.webp",
           "status": 200
         },
         {
@@ -275,7 +279,7 @@
           "status": 200
         },
         {
-          "path": "/Erdmodell/data/earth-soft.webp",
+          "path": "/Erdmodell/data/relief.i16",
           "status": 200
         },
         {
@@ -310,19 +314,19 @@
       "flights": [
         {
           "style": "A",
-          "intermediateFrames": 157,
+          "intermediateFrames": 181,
           "startKm": 14450.000000000007,
           "endKm": 0.29000000000000004,
-          "ms": 6265,
-          "maxFrameGapMs": 891
+          "ms": 6271,
+          "maxFrameGapMs": 855
         },
         {
           "style": "B",
-          "intermediateFrames": 215,
+          "intermediateFrames": 210,
           "startKm": 14450.000000000007,
           "endKm": 0.29000000000000004,
-          "ms": 6200,
-          "maxFrameGapMs": 795
+          "ms": 6152,
+          "maxFrameGapMs": 760
         }
       ],
       "metrics": [
@@ -341,14 +345,14 @@
           "tilt": 75,
           "bearing": -27,
           "flying": false,
-          "fps": 15.334063526834612,
-          "frames": 461,
+          "fps": 17.075773745997864,
+          "frames": 476,
           "pixelRatio": 0.75,
           "tiles": 166,
           "localReady": true,
           "localVisible": true,
           "draws": 59,
-          "triangles": 219740,
+          "triangles": 173660,
           "geometries": 108,
           "textures": 6
         },
@@ -367,15 +371,15 @@
           "tilt": 75,
           "bearing": -27,
           "flying": false,
-          "fps": 23.504273504273506,
-          "frames": 994,
+          "fps": 25.396825396825395,
+          "frames": 997,
           "pixelRatio": 0.75,
           "tiles": 166,
           "localReady": true,
           "localVisible": true,
           "draws": 59,
-          "triangles": 84530,
-          "geometries": 108,
+          "triangles": 73970,
+          "geometries": 109,
           "textures": 7
         },
         {
@@ -388,13 +392,13 @@
           "mode": "globe",
           "style": "A",
           "lat": 18,
-          "lon": 18.99999999999997,
+          "lon": 18.999999999999996,
           "d": 14450.000000000007,
           "tilt": 0,
-          "bearing": 3.907985046680551e-14,
+          "bearing": -5.417888360170764e-14,
           "flying": false,
-          "fps": 26.881720430107528,
-          "frames": 1436,
+          "fps": 37.77777777777778,
+          "frames": 1386,
           "pixelRatio": 0.75,
           "tiles": 32,
           "localReady": true,
@@ -420,19 +424,19 @@
           "tilt": 75,
           "bearing": -27,
           "flying": false,
-          "fps": 17.929910350448246,
+          "fps": 17.78496362166532,
           "frames": 24,
           "pixelRatio": 1,
           "tiles": 162,
           "localReady": true,
           "localVisible": true,
           "draws": 54,
-          "triangles": 213020,
+          "triangles": 171548,
           "geometries": 80,
           "textures": 5
         }
       ],
-      "firstRenderMs": 2543,
+      "firstRenderMs": 2840,
       "renderer": "Apple GPU"
     }
   ]
