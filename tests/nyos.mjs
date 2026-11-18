@@ -818,6 +818,10 @@ async function checkProtection(p, run, snap) {
     await p.locator("#sidebar").innerText(),
     /nach 1986|später|2001/i,
   );
+  assert.equal(await p.locator("#nyos-dissolved").isChecked(),false);
+  assert.equal(n.dissolvedVisible,false);
+  await still(p);
+  run.pipeOverlay=await overlayCycle(p,"#nyos-dissolved","dissolvedVisible");
   await p.locator("#nyos-dissolved").check();
   await painted(p);
   const resting = await raster(p);

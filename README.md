@@ -1,6 +1,8 @@
 # GeoRisiko 3D · Erdobservatorium
 
-GeoRisiko 3D zeigt den Erdaufbau im Geographieunterricht der Jahrgangsstufe 9. G2.1 öffnet einen drehbaren Globus im Grafikstil **Scientific Stylized Realism (A)**. **Schalenschnitt** gibt den Blick auf vier zunächst anonyme Schalen frei. Unter **Plattentektonik** lassen sich PB2002-Grenzen auf demselben Globus einblenden. Drei regional verankerte Schnittmodelle zeigen Divergenz bei Reykjanes, Subduktion am Japangraben und seitlichen Versatz bei Parkfield. Der gemeinsame Ortskatalog enthält außerdem die Hanswarft auf Hallig Hooge und Helgoland.
+GeoRisiko 3D zeigt den Erdaufbau im Geographieunterricht der Jahrgangsstufe 9. Die Anwendung öffnet einen drehbaren Globus im Grafikstil **Scientific Stylized Realism (A)**. **Schalenschnitt** gibt den Blick auf vier zunächst anonyme Schalen frei. Unter **Plattentektonik** lassen sich PB2002-Grenzen auf demselben Globus einblenden. Drei regional verankerte Schnittmodelle zeigen Divergenz bei Reykjanes, Subduktion am Japangraben und seitlichen Versatz bei Parkfield. Der gemeinsame Ortskatalog verbindet diese Regionen mit Hallig Hooge, Helgoland und dem Nyos-See in Kamerun.
+
+**Nyos-See** führt vom Globus zu einer Landschaft aus Höhenraster und Satellitenbild. Seequerschnitt, historisch orientierte Erklärung der limnischen Gasfreisetzung von 1986 und spätere Risikominderung sind getrennt anwählbar. [Nyos im Unterricht](docs/nyos-unterrichtsverwendung.md) · [Fachliche Grundlagen](docs/nyos-geowissenschaften.md)
 
 ## Im Unterricht
 
@@ -16,6 +18,7 @@ Das Unterrichts-ZIP vollständig entpacken und mit installiertem Python 3 `START
 | Plattengrenzen zeigen | In der Plattenansicht Grenzverläufe, Namen und Typen zuschalten. Eine Linie antippen oder eine Platte hervorheben. |
 | Region erkunden | Der Flug führt zum lokalen Erklärschnitt. „Region“ zeigt den größeren geografischen Zusammenhang. |
 | Abspielen | Die Bewegung läuft bis zur Endlage. Pause, Zeitlupe, Wiederholen und Rücksetzen stehen neben dem Modell. |
+| Nyos-See | Die Landschaft betrachten. Über „Im See“ Schichtung und gelöstes CO₂ erkunden. „CO₂-Freisetzung“ und „Schutz“ öffnen die zeitlich getrennten Erklärungen. |
 | Präsentieren | Vergrößert die Bedienelemente und nutzt Vollbild, soweit der Browser dies erlaubt. |
 | Rücksetzpfeil oder Pos1 | Zum anonymen Globus und zur ursprünglichen Kamera zurückkehren. |
 
@@ -44,10 +47,12 @@ node tests/packages.mjs
 
 ## Pakete und Nachweise
 
-Im erfolgreichen GitHub-Actions-Lauf stehen die drei G2.1-ZIPs einzeln unter **Artifacts** zum Download. Sie liegen beim lokalen Build unter `artifacts/`.
+Im erfolgreichen GitHub-Actions-Lauf stehen die drei G4-Nyos-ZIPs einzeln unter **Artifacts** zum Download. Sie liegen beim lokalen Build unter `artifacts/`.
 
 - **Unterricht** enthält die ausführbare Offline-Anwendung, den lokalen Starter und die Unterrichtsanleitung.
 - **SCORM-1.2** wird als ZIP in das LMS importiert. Das Paket meldet Sitzungsstart und -ende.
-- **Sichtpruefung** enthält die ausführbare Anwendung, zwanzig Bildschirmaufnahmen, zwei Bedienvideos und die Prüfberichte.
+- **Sichtpruefung** enthält die ausführbare Anwendung, 32 Bildschirmaufnahmen, drei Bedienvideos und die Prüfberichte.
 
 Der gesicherte Ausgangsstand G1.3.1 liegt bei `c806a1b`. Der Abschlussbericht ordnet Daten, Erklärmodelle und Messergebnisse ein. [Abnahmebericht G2.1](docs/g2.1-bericht.md) · [Originalpakete G1.3.1](https://github.com/Feerson1617/Erdmodell/tree/096e7fc278307d128cdc46fa934ba5d495c5cc05/sicherung) · [Roadmap](docs/roadmap.md)
+
+G4 basiert auf dem geprüften G2.1-Commit `3eb1487`. [Abnahme Nyos](docs/nyos-abnahme.md) · [Geodaten](docs/nyos-geodaten.md) · [Architektur](docs/nyos-technik.md) · [Gestaltung](docs/nyos-design.md)

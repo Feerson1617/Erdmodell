@@ -2,6 +2,8 @@ import * as T from "three";
 import { basis, clamp, position, RAD, smooth } from "../geo";
 import { nyosBlendGLSL } from "./blend";
 import { NyosSection } from "./section";
+import { NyosProtection } from "./protection";
+import type { NyosMeasure } from "./state";
 import { splitNyosSurface } from "./surface-lod";
 
 export type NyosBounds = [
@@ -73,6 +75,7 @@ export class NyosTerrain {
   private cutWindow = { value: new T.Vector4() };
   private dissolved = false;
   section: NyosSection | null = null;
+  private protection: NyosProtection | null = null;
   private sun = { value: new T.Vector3(-1.2, 0.91, -1.05).normalize() };
 
   constructor(private globalHeight: (lat: number, lon: number) => number) {
@@ -242,6 +245,7 @@ export class NyosTerrain {
       1 - xf / (m.width - 1),
       1 - yf / (m.height - 1),
     );
+    if (edge >= .05) return height;
     return T.MathUtils.lerp(
       this.globalHeight(lat, lon) + 0.002,
       height,
@@ -510,6 +514,19 @@ export class NyosTerrain {
     this.section?.showDissolved(enabled);
   }
 
+  setProtection(active: boolean, measure: NyosMeasure, progress: number) {
+    if (active && this.ready && !this.protection) {
+      this.protection = new NyosProtection(this);
+      this.group.add(this.protection.group);
+    }
+    this.protection?.update(active, measure, progress);
+    this.section?.showInventory(
+      active && measure === "pipe" && this.protection
+        ? this.protection.dissolvedFraction
+        : null,
+    );
+  }
+
   update(distanceKm: number, active: boolean) {
     this.reveal.value =
       active && this.ready ? 1 - smooth((distanceKm - 16) / 26) : 0;
@@ -517,6 +534,17 @@ export class NyosTerrain {
   }
   diagnostics() {
     return {
+      ...(this.protection?.diagnostics() ?? {
+        protectionVisible: false,
+        pipeVisible: false,
+        monitorVisible: false,
+        settlementVisible: false,
+        settlementComparisonVisible: false,
+        pipeFlowVisible: false,
+        controlledVentVisible: false,
+        remainingDissolved: null,
+        reliefMarkers: [],
+      }),
       ready: this.ready,
       error: this.error,
       localWeight: this.localWeight,
@@ -526,7 +554,9 @@ export class NyosTerrain {
       dissolvedVisible:
         this.group.visible && !!this.section?.group.visible && this.dissolved,
       supplyVisible:
-        this.group.visible && !!this.section?.group.visible && this.dissolved,
+        this.group.visible &&
+        !!this.section?.group.visible &&
+        this.section.geologicalSupplyVisible,
       depthM: this.section ? this.section.maxDepth * 1000 : null,
       profileSpanKm: this.section
         ? this.section.end - this.section.start

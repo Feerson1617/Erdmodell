@@ -10,7 +10,8 @@ import { RenderResolution } from "./resolution";
 import { NyosTerrain } from "./nyos/terrain";
 import { NyosCoverage } from "./nyos/coverage";
 import { NyosEvent } from "./nyos/event";
-import { NyosLessonState, type NyosView } from "./nyos/state";
+import { NyosLessonState, type NyosView, type NyosMeasure } from "./nyos/state";
+import { reliefSites } from "./nyos/protection";
 import { loadAtlas, center, typeOf, names, type BoundaryKind, type Step } from "./tectonics/atlas";
 import { regionalImagery } from "./tectonics/imagery";
 import { ProcessModel, processView, PROCESS_FOCUS_HEIGHT } from "./tectonics/process";
@@ -461,8 +462,12 @@ export class World {
   showNyos(view: NyosView) {
     this.visitNyos(false, view);
   }
-  private visitNyos(overview: boolean, view: NyosView = "lake") {
+  showNyosMeasure(measure: NyosMeasure) {
+    this.visitNyos(false, "protection", measure);
+  }
+  private visitNyos(overview: boolean, view: NyosView = "lake", measure: NyosMeasure = "pipe") {
     this.nyosLesson.select(view);
+    this.nyosLesson.measure = measure;
     this.nyosInputRevision = this.nav.inputRevision;
     this.nyosAutoStarted = false;
     this.nyosAutoFlight = undefined;
@@ -480,7 +485,13 @@ export class World {
           this.nyosCoverage = new NyosCoverage(meta, meta.heightRangeM[0] / 1000);
         this.planet.setNyosMaps(meta.bounds, meta.regional?.bounds, this.nyos.regionTexture,
           meta.vicinity?.bounds, this.nyos.vicinityTexture);
-        if (view === "section" || view === "event")
+        if (view === "protection" && measure === "settlements") {
+          const [valley, slope] = reliefSites;
+          this.nav.fly({
+            lat: (valley.lat + slope.lat) / 2, lon: (valley.lon + slope.lon) / 2,
+            d: this.nav.camera.aspect < 1.3 ? 2.75 : 2.4, tilt: 55, bearing: 3,
+          }, true);
+        } else if (this.nyosSectionActive())
           this.nav.fly({ ...target, d: this.nav.camera.aspect < 1.3 ? 2.75 : 2.2, bearing: 80, tilt: 66 }, true);
         else this.nav.fly(overview ? { ...target, ...nyosSite.overview } : target, true);
       } else {
@@ -502,6 +513,31 @@ export class World {
     if (Math.abs(p.x) > .96 || Math.abs(p.y) > .91 || Math.abs(p.z) > 1) return null;
     return { x: (p.x + 1) * this.canvas.clientWidth / 2, y: (1 - p.y) * this.canvas.clientHeight / 2 };
   }
+  nyosReliefLabels() {
+    if (this.mode !== "nyos" || this.nyosLesson.view !== "protection" ||
+        this.nyosLesson.measure !== "settlements" || this.nyos.localWeight < 0.98 ||
+        this.nav.pose.d > 8) return [];
+    const camera = this.nav.camera, probe = new T.Vector3();
+    return reliefSites.flatMap(site => {
+      const ground = this.nyos.ground(site.lat, site.lon);
+      if (ground === null) return [];
+      const tip = position(site.lat, site.lon, ground + 0.065);
+      const screen = tip.clone().project(camera);
+      if (Math.abs(screen.x) > .97 || Math.abs(screen.y) > .92 || Math.abs(screen.z) > 1) return [];
+      // Keep a label with its surveyed relief point when the teacher orbits behind a ridge.
+      for (let step = 1; step < 24; step++) {
+        probe.copy(camera.position).lerp(tip, step / 24);
+        const r = probe.length();
+        const elevation = this.nyos.ground(Math.asin(probe.y / r) / RAD, Math.atan2(probe.x, probe.z) / RAD);
+        if (elevation !== null && r < R + elevation) return [];
+      }
+      return [{
+        label: site.name === "Talsohle" ? "Talboden" as const : "Hang" as const,
+        x: (screen.x + 1) * this.canvas.clientWidth / 2,
+        y: (1 - screen.y) * this.canvas.clientHeight / 2,
+      }];
+    });
+  }
   private advanceNyosTime() {
     const lesson = this.nyosLesson;
     if (this.mode !== "nyos" || !this.nyos.ready || !lesson.playing) return;
@@ -518,8 +554,9 @@ export class World {
     this.nyosAutoFlight = this.nav.flight;
   }
   private nyosSectionActive() {
-    return this.mode === "nyos" && (this.nyosLesson.view === "section" ||
-      (this.nyosLesson.view === "event" && this.nyosLesson.progress < 0.68));
+    const { view, measure, progress } = this.nyosLesson;
+    return this.mode === "nyos" && (view === "section" || (view === "event" && progress < 0.68) ||
+      (view === "protection" && measure !== "settlements"));
   }
   private updateNyos(lat: number, lon: number, d: number, inside: boolean) {
     if (!this.nyos.ready) return;
@@ -531,15 +568,18 @@ export class World {
     const local = regional && offset < 0.5;
     this.nyosFarWeight = regional && this.nyos.regionTexture ? 1 - smooth((d - 490) / 1500) : 0;
     this.nyosMidWeight = regional && this.nyos.vicinityTexture ? 1 - smooth((d - 48) / 125) : 0;
+    this.nyos.update(d, local);
+    const detailed = this.nyos.localWeight > 0;
     const eventActive = this.mode === "nyos" && this.nyosLesson.view === "event";
     this.nyos.setSection(this.nyosSectionActive());
     if (eventActive && this.nyos.section && !this.nyosEvent) {
       this.nyosEvent = new NyosEvent(this.nyos, this.nyos.section);
       this.nyos.group.add(this.nyosEvent.group);
     }
-    this.nyosEvent?.update(this.nyosLesson.progress, this.nyosLesson.air, eventActive && local);
+    this.nyosEvent?.update(this.nyosLesson.progress, this.nyosLesson.air, eventActive && detailed);
+    const protection = this.mode === "nyos" && this.nyosLesson.view === "protection";
     this.nyos.setDissolved(this.nyosLesson.dissolved && this.mode === "nyos");
-    this.nyos.update(d, local);
+    this.nyos.setProtection(protection && detailed, this.nyosLesson.measure, this.nyosLesson.progress);
     this.planet.setNyosWeights(this.nyosFarWeight, this.nyosMidWeight, this.nyos.localWeight);
     this.nyosStage = d > 6200 ? "Afrika" : d > 1500 ? "Kamerun" : d > 260 ? "Kamerun-Vulkanlinie" :
       d > 45 ? "Vulkanisches Hochland" : d > 6 ? "Umgebung des Nyos-Sees" : "Nyos-See";
@@ -762,7 +802,9 @@ export class World {
     if (d >= 3500 || !this.nav.flight) this.waitingForAscent = false;
     const inside = this.mode === "inside" && !this.waitingForAscent,
       zoom = 1 - smooth((d - 2) / 58);
-    this.globeOccluded = this.nyosLesson.view === "lake" && this.nyos.localWeight === 1 && !!this.nyosCoverage?.containsView(this.nav.camera);
+    const intactLandscape = this.nyosLesson.view === "lake" ||
+      (this.nyosLesson.view === "protection" && this.nyosLesson.measure === "settlements");
+    this.globeOccluded = intactLandscape && this.nyos.localWeight === 1 && !!this.nyosCoverage?.containsView(this.nav.camera);
     this.planet.group.visible = !inside && !this.globeOccluded;
     this.shell.group.visible = inside;
     this.air.visible = !inside && d > 2200;

@@ -18,6 +18,9 @@ export class NyosSection {
   readonly window: T.Vector4;
   readonly dissolved = { value: 0 };
   private source = new T.Group();
+  private analysisRequested = false;
+  // A separate display scale for the explicit long-term degassing comparison.
+  private stock: number | null = null;
 
   constructor(
     shore: T.Vector3[],
@@ -275,7 +278,18 @@ export class NyosSection {
       "Geologische Zufuhr von CO₂-haltigem Wasser · schematische Wege";
   }
   showDissolved(on: boolean) {
-    this.dissolved.value = Number(on);
-    this.source.visible = on;
+    this.analysisRequested = on;
+    this.updateAnalysis();
+  }
+  showInventory(fraction: number | null) {
+    this.stock = fraction;
+    this.updateAnalysis();
+  }
+  private updateAnalysis() {
+    this.dissolved.value = this.analysisRequested ? (this.stock ?? 1) : 0;
+    this.source.visible = this.stock === null && this.analysisRequested;
+  }
+  get geologicalSupplyVisible() {
+    return this.source.visible;
   }
 }

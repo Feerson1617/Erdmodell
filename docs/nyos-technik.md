@@ -57,3 +57,9 @@ Die Ereignisansicht beginnt im Schnitt mit angehaltener Modellzeit. Das Zustands
 Die Wiedergabe benutzt sichtbare Framezeit mit begrenztem Zeitschritt. Im Hintergrund verstreicht keine Lehrzeit. Während des automatischen Talflugs haben Kamerafahrt und Modell denselben maximalen Fortschritt je Bild, damit auch bei niedriger Bildrate die räumliche Ansicht vor dem Ende der Phase erreicht wird. Der Fortschritt markiert die Reihenfolge der Modellphasen mit einer didaktisch gewählten Spieldauer.
 
 Eine ergänzende Chromium-Probe stoppte den Talflug bei 2,317 km Kameraabstand und 74,95° Blickrichtung. Nach 750 ms waren Modellfortschritt und Kamerapose unverändert. Bei rund 82 Prozent Modellfortschritt war das Ziel bei 6,447° N und 10,297° O erreicht. Zurücksetzen öffnete wieder den Schnitt am See bei 2,2 km Kameraabstand und 80° Blickrichtung.
+
+## Schutzmaßnahmen am selben Ort
+
+Die Wahl einer Schutzmaßnahme hält die Modellzeit an und richtet die Kamera neu aus. Entgasungsrohr und Messprofil verwenden denselben Nord-Süd-Schnitt wie die Darstellung des geschichteten Sees. Beim Wechsel in das Ereignis von 1986 verschwindet die spätere Anlage. Animation und Kamera lassen sich getrennt bedienen.
+
+Die räumliche Vorsorge schließt das Modellgelände und führt ein Stück nördlich des Sees zu zwei Beispielpunkten. Ihr Abstand beträgt rund 675 m. Im verwendeten Höhenraster liegt der Talboden bei etwa 875 m und der benachbarte Hang bei rund 1017 m. Die beiden Marken vergleichen Geländeformen. Historisch betroffene Ortschaften werden gesondert anhand der Quellen erläutert. Beim Drehen oder Zoomen folgen die Beschriftungen den georeferenzierten Marken. Hinter einer Geländekante oder außerhalb des Bildes werden sie ausgeblendet.

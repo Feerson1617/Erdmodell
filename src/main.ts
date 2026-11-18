@@ -27,6 +27,7 @@ $("app").innerHTML =
   <div class="tools"><button id="orbitProcess" hidden aria-label="Prozessmodell drehen" title="Prozessmodell drehen">${icon("orbit")}</button>${button("in","Vergrößern","plus")}${button("out","Verkleinern","minus")}${button("tilt","Neigung ändern","compass")}${button("home","Zur Startansicht zurücksetzen","rotate-ccw")}</div>
   <div id="pins" aria-hidden="true">${layers.map((l,i)=>`<span style="--rock:#${l.color.toString(16)}" hidden>${i+1}</span>`).join("")}</div>
   <span id="nyosPin" hidden aria-hidden="true">Nyos-See</span><div id="platePins" aria-hidden="true"></div>
+  <div id="nyosRelief" hidden aria-hidden="true"><span id="nyos-Talboden" hidden>Talboden</span><span id="nyos-Hang" hidden>Hang</span></div>
   <div id="modelnote" hidden></div><div class="hint">Ziehen zum Drehen · Mit zwei Fingern oder Mausrad zoomen</div></section></main>
   <div id="status" role="status">Erdmodell wird geladen …</div>
   <dialog id="dialog" aria-labelledby="dialogTitle">${button("closeDialog","Schließen","x")}<div id="content"></div></dialog>`;
@@ -96,6 +97,7 @@ function renderSide() {
     bindPlateControls(side, world, renderSide);
   }
   $("nyosPin").hidden = true;
+  $("nyosRelief").hidden = true;
   if (mode === "nyos") {
     side.dataset.nyosError = String(!!world.nyos.error);
     side.innerHTML = nyosControls(world);
