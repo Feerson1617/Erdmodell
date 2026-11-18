@@ -24,8 +24,10 @@ with TemporaryDirectory(dir=out.parent) as tmp:
                     z.write(f, prefix + f.relative_to(base).as_posix())
         for name in ["START.command", "start_lokal.py"]:
             z.write(root/"scripts"/name, name)
-        z.write(root/"docs/g2a-platten.md", "Plattentektonik.md")
         z.write(root/"docs/abschluss-g1.3-g2a.md", "Abschlussbericht.md")
+        for doc in ("g2a-platten.md", "unterricht-20-11.md", "geoscience-validation.md",
+                    "g1.3-pruefbericht.md", "evidence/g13/aufloesungsprobe-webkit.json"):
+            z.write(root/"docs"/doc, doc)
         z.writestr("Pruefstand.txt", f"GeoRisiko G2a · eigenständige Vorschau\nGit-Commit {commit}\n")
     with ZipFile(archive) as z:
         assert z.testzip() is None
