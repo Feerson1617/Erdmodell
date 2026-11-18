@@ -1,5 +1,7 @@
 # G1 · Prüf- und Übergabebericht
 
+Historischer Prüfstand G1. Die unabhängige Überarbeitung ist im [Prüfbericht G1.1](g1.1-pruefbericht.md) dokumentiert.
+
 **Der Sockel läuft in Chromium und WebKit.** Die Browser haben den Produktionsbuild unter `/Erdmodell/` geöffnet, Renderbilder ausgewertet, Eingaben ausgelöst und beide Entfernungsrichtungen durchlaufen. Für die schulische Freigabe fehlen Praxismessungen am Zielgerät und der Import in den itslearning-Mandanten.
 
 ![Sechs gerenderte Ansichten aus den identischen Vergleichsperspektiven](evidence/designvergleich.jpg)
