@@ -54,3 +54,8 @@ Bildränder für GeoRisiko 3D. Für Bildungs- und Informationszwecke
 gemäß den NASA-Medienrichtlinien.
 https://www.earthdata.nasa.gov/data/tools/gibs
 https://www.nasa.gov/nasa-brand-center/images-and-media/
+
+Nyos-See · Kamerun
+Die Herkunft der lokalen Gelände-, Ufer- und Bilddaten, der Höhenbezug, die
+Bearbeitung und die vorgeschriebenen Rechtevermerke sind im mitgelieferten
+Datenverzeichnis dokumentiert: data/nyos/NOTICE.txt.

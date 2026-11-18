@@ -9,6 +9,7 @@ export class CameraController {
   pose = { ...HOME };
   goal = { ...HOME };
   orbit = false;
+  orbitMinimum = 38;
   flight?: { from: Pose; to: Pose; start: number; ms: number; cruise: number; paced: boolean; elapsed: number; last: number };
   private pointers = new Map<number, { x: number; y: number }>();
   private drag = 0;
@@ -68,7 +69,7 @@ export class CameraController {
   }
   zoom(f: number) {
     this.stop();
-    this.goal.d = clamp(this.goal.d * f, this.orbit ? 38 : 0.06, 35000);
+    this.goal.d = clamp(this.goal.d * f, this.orbit ? this.orbitMinimum : 0.06, 35000);
   }
   pan(dx: number, dy: number) {
     this.stop();
@@ -109,7 +110,10 @@ export class CameraController {
         : clamp(Math.max(Math.abs(Math.log(from.d / to.d)) * 590, cruise * 0.55), 950, 6400),
     };
   }
-  update(now: number, dt: number, heightAt: (pose: Pose) => number) {
+  update(
+    now: number, dt: number, heightAt: (pose: Pose) => number,
+    terrainBelowEye?: (lat: number, lon: number) => number | null,
+  ) {
     if (this.flight) {
       const { from: a, to: b, start, ms, cruise } = this.flight;
       // Do not skip an entire regional LOD when the first GPU upload takes a long frame.
@@ -163,6 +167,13 @@ export class CameraController {
       .copy(target)
       .addScaledVector(b.up, d * Math.cos(a))
       .addScaledVector(back, d * Math.sin(a));
+    if (terrainBelowEye) {
+      const eye = this.camera.position, radius = eye.length();
+      const surface = terrainBelowEye(Math.asin(eye.y / radius) / RAD, Math.atan2(eye.x, eye.z) / RAD);
+      if (surface !== null && radius < R + surface + 0.045) {
+        eye.multiplyScalar((R + surface + 0.045) / radius);
+      }
+    }
     this.camera.up
       .copy(b.up)
       .multiplyScalar(Math.sin(a))

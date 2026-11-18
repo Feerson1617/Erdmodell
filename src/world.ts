@@ -1,12 +1,14 @@
 import * as T from "three";
 import { CameraController, HOME, type Pose } from "./camera";
-import { R, position, basis, smooth, clamp } from "./geo";
+import { R, RAD, position, basis, smooth, clamp } from "./geo";
 import { TerrainLODManager } from "./planet";
-import { regions, firstRegion, tectonicSites, type Region, type TectonicSiteId } from "./regions";
+import { regions, firstRegion, nyosSite, tectonicSites, type Region, type TectonicSiteId } from "./regions";
 import { LocalTerrain } from "./local";
 import { Shells, shellRadii } from "./shells";
 import { type Style, styles } from "./model";
 import { RenderResolution } from "./resolution";
+import { NyosTerrain } from "./nyos/terrain";
+import { NyosCoverage } from "./nyos/coverage";
 import { loadAtlas, center, typeOf, names, type BoundaryKind, type Step } from "./tectonics/atlas";
 import { regionalImagery } from "./tectonics/imagery";
 import { ProcessModel, processView, PROCESS_FOCUS_HEIGHT } from "./tectonics/process";
@@ -24,6 +26,15 @@ export class World {
   gl: T.WebGLRenderer;
   nav: CameraController;
   planet: TerrainLODManager;
+  nyos: NyosTerrain;
+  nyosDetail = true;
+  private nyosVisitToken = 0;
+  private nyosStage = "Globus";
+  private nyosFarWeight = 0;
+  private nyosMidWeight = 0;
+  private nyosGround = 0;
+  private nyosCoverage?: NyosCoverage;
+  private globeOccluded = false;
   private terrains = new Map<string, LocalTerrain>();
   region: Region = firstRegion;
   get local() {
@@ -33,7 +44,7 @@ export class World {
   private terrainMs = 0;
 
   shell = new Shells();
-  mode: "globe" | "inside" | "place" | "plates" = "globe";
+  mode: "globe" | "inside" | "place" | "plates" | "nyos" = "globe";
   style: Style = "A";
   ready = false;
   fps = 0;
@@ -94,6 +105,8 @@ export class World {
     this.gl.setClearColor(0, 0);
     this.nav = new CameraController(canvas);
     this.planet = new TerrainLODManager(warn);
+    this.nyos = new NyosTerrain((lat, lon) => this.planet.elevation(lat, lon));
+    this.scene.add(this.nyos.group);
     for (const region of regions.values()) {
       const terrain = new LocalTerrain(region);
       this.terrains.set(region.id, terrain);
@@ -287,7 +300,7 @@ export class World {
       this.plateOverview();
       return;
     }
-    if (this.mode === "place" || this.mode === "inside") this.nav.fly(this.atlasReturn);
+    if (this.mode === "place" || this.mode === "inside" || this.mode === "nyos") this.nav.fly(this.atlasReturn, this.mode === "nyos");
     this.mode = "plates";
     this.updatePlateLayers();
     void this.loadPlates();
@@ -427,7 +440,80 @@ export class World {
       model.setProgress(this.processProgress);
     }
   }
+  private visitNyos(overview: boolean) {
+    this.leaveProcess();
+    this.mode = "nyos";
+    this.updatePlateLayers();
+    this.nyosDetail = !overview;
+    const token = ++this.nyosVisitToken;
+    const arrive = () => {
+      if (this.mode !== "nyos" || this.nyosVisitToken !== token) return;
+      const meta = this.nyos.meta;
+      const target = { ...nyosSite.target, ...(meta?.anchor ?? {}) };
+      if (meta && this.nyos.ready) {
+        if (!this.nyosCoverage && meta.heightRangeM)
+          this.nyosCoverage = new NyosCoverage(meta, meta.heightRangeM[0] / 1000);
+        this.planet.setNyosMaps(meta.bounds, meta.regional?.bounds, this.nyos.regionTexture,
+          meta.vicinity?.bounds, this.nyos.vicinityTexture);
+        this.nav.fly(overview ? { ...target, ...nyosSite.overview } : target, true);
+      } else {
+        this.nyosDetail = false;
+        this.nav.fly({ ...target, d: 110, tilt: 12, bearing: 0 }, true);
+        this.warn("Nyos-Geländedaten fehlen · regionale Ersatzansicht");
+      }
+    };
+    if (this.nyos.ready) arrive();
+    else void this.nyos.load().then(arrive);
+  }
+  nyosPin() {
+    if (this.mode !== "nyos" || this.nav.pose.d < 22) return null;
+    const {lat, lon} = this.nyos.meta?.anchor ?? nyosSite.target;
+    const p = position(lat, lon, this.nyos.meta ? this.nyos.meta.waterLevelM / 1000 : this.planet.elevation(lat, lon));
+    const camera = this.nav.camera;
+    if (p.dot(camera.position) <= p.lengthSq()) return null;
+    p.project(camera);
+    if (Math.abs(p.x) > .96 || Math.abs(p.y) > .91 || Math.abs(p.z) > 1) return null;
+    return { x: (p.x + 1) * this.canvas.clientWidth / 2, y: (1 - p.y) * this.canvas.clientHeight / 2 };
+  }
+  private updateNyos(lat: number, lon: number, d: number, inside: boolean) {
+    if (!this.nyos.ready) return;
+    const target = this.nyos.meta!.anchor;
+    const offset = Math.hypot(lat - target.lat, (((lon - target.lon + 540) % 360) - 180) * Math.cos(lat * RAD));
+    // Keep the georeferenced geography under the camera as it ascends or passes
+    // into another site. Overlays belonging to a lesson are limited to Nyos mode.
+    const regional = !inside && offset < 28;
+    const local = regional && offset < 0.5;
+    this.nyosFarWeight = regional && this.nyos.regionTexture ? 1 - smooth((d - 490) / 1500) : 0;
+    this.nyosMidWeight = regional && this.nyos.vicinityTexture ? 1 - smooth((d - 48) / 125) : 0;
+    this.nyos.update(d, local);
+    this.planet.setNyosWeights(this.nyosFarWeight, this.nyosMidWeight, this.nyos.localWeight);
+    this.nyosStage = d > 6200 ? "Afrika" : d > 1500 ? "Kamerun" : d > 260 ? "Kamerun-Vulkanlinie" :
+      d > 45 ? "Vulkanisches Hochland" : d > 6 ? "Umgebung des Nyos-Sees" : "Nyos-See";
+    if (this.mode === "nyos") {
+      this.nav.orbit = local && d < 20;
+      this.nav.orbitMinimum = 0.58;
+    } else this.nav.orbitMinimum = 38;
+  }
+  private nyosDiagnostics() {
+    const eye = this.nav.camera.position, radius = eye.length();
+    const floor = radius && this.nyos.ready
+      ? this.nyos.ground(Math.asin(eye.y / radius) / RAD, Math.atan2(eye.x, eye.z) / RAD) : null;
+    return {
+      ...this.nyos.diagnostics(), ready: this.nyos.ready, error: this.nyos.error,
+      detail: this.mode === "nyos" && this.nyosDetail, stage: this.nyosStage, distance: this.nav.pose.d,
+      regionalWeight: this.nyosFarWeight, vicinityWeight: this.nyosMidWeight, localWeight: this.nyos.localWeight,
+      globeOccluded: this.globeOccluded,
+      terrainVisible: this.nyos.ready && this.nyos.localWeight > 0, groundKm: this.nyosGround,
+      cameraClearanceKm: floor === null ? null : radius - R - floor,
+      nearKm: this.nav.camera.near, farKm: this.nav.camera.far,
+      anchor: this.nyos.meta?.anchor ?? {lat: nyosSite.target.lat, lon: nyosSite.target.lon},
+    };
+  }
   visit(id = firstRegion.id, overview = false) {
+    if (id === nyosSite.id) {
+      this.visitNyos(overview);
+      return;
+    }
     if (Object.hasOwn(tectonicSites, id)) {
       this.visitBoundary(id as TectonicSiteId, overview);
       return;
@@ -454,13 +540,14 @@ export class World {
     });
   }
   globe(forceHome = false) {
+    const wasNyos = this.mode === "nyos";
     const wasAtlas = this.mode === "plates";
     const wasLocal = this.processSite !== null;
     this.leaveProcess();
     this.mode = "globe";
     this.updatePlateLayers();
     if (forceHome) { this.processSlow = false; this.processLoop = false; }
-    if (forceHome || !wasAtlas) this.nav.fly(HOME, wasLocal);
+    if (forceHome || !wasAtlas) this.nav.fly(HOME, wasLocal || wasNyos);
     else if (wasLocal) this.nav.fly(this.atlasReturn, true);
   }
   inside() {
@@ -533,7 +620,8 @@ export class World {
       tiles: this.planet.tileCount,
       uploadedTiles: this.planet.uploadedTiles.size,
       cachedTiles: this.planet.cachedTileCount,
-      region: this.processSite ?? this.region.id,
+      region: this.mode === "nyos" ? nyosSite.id : this.processSite ?? this.region.id,
+      nyos: this.nyosDiagnostics(),
       renderMs: this.renderMs,
       terrainMs: this.terrainMs,
       programs: this.gl.info.programs?.length,
@@ -588,11 +676,18 @@ export class World {
       this.frameCount = 0;
       this.fpsStart = now;
     }
-    this.nav.update(now, dt, ({ lat, lon }) => {
-      const ground = this.mode === "inside" ? 0 : Math.max(
+    this.nav.update(now, dt, ({ lat, lon, d }) => {
+      const insideNow = this.mode === "inside" && (!this.waitingForAscent || d >= 3500);
+      this.updateNyos(lat, lon, d, insideNow);
+      let ground = insideNow ? 0 : Math.max(
         ...Array.from(this.terrains.values(), terrain => terrain.ground(lat, lon)),
         this.planet.elevation(lat, lon),
       );
+      if (this.nyos.localWeight > 0) {
+        const localGround = this.nyos.ground(lat, lon);
+        if (localGround !== null) ground += (localGround - ground) * this.nyos.localWeight;
+      }
+      this.nyosGround = ground;
       // Play the geological timeline in wall time, but never leap over a whole
       // phase after a suspended tab or an unusually long upload.
       this.updateTectonics(Math.min(this.frameMs / 1000, 0.45));
@@ -600,17 +695,18 @@ export class World {
       // Reduced-motion journeys also arrive correctly framed on their first frame.
       this.focusOffset = this.focusReveal * Math.max(0, PROCESS_FOCUS_HEIGHT - ground);
       return ground + this.focusOffset;
-    });
+    }, this.mode === "nyos" && this.nyos.ready ? (lat, lon) => this.nyos.ground(lat, lon) : undefined);
     const { lat, lon, d } = this.nav.pose;
     if (d >= 3500 || !this.nav.flight) this.waitingForAscent = false;
     const inside = this.mode === "inside" && !this.waitingForAscent,
       zoom = 1 - smooth((d - 2) / 58);
-    this.planet.group.visible = !inside;
+    this.globeOccluded = this.nyos.localWeight === 1 && !!this.nyosCoverage?.containsView(this.nav.camera);
+    this.planet.group.visible = !inside && !this.globeOccluded;
     this.shell.group.visible = inside;
     this.air.visible = !inside && d > 2200;
     this.grid.visible = !inside && d > 2400;
     const before = performance.now();
-    if (!inside) this.planet.update(lat, lon, d);
+    if (this.planet.group.visible) this.planet.update(lat, lon, d);
     this.terrainMs = performance.now() - before;
     for (const terrain of this.terrains.values()) {
       if (terrain === this.local || terrain.ready)
@@ -626,6 +722,7 @@ export class World {
         .addScaledVector(b.east, -1.2)
         .normalize();
     this.planet.lightDirection(dir);
+    this.nyos.lightDirection(dir);
     const shadow = this.local.group.visible && d < 2.3;
     this.sun.castShadow = shadow;
     this.sun.target.position.copy(target);

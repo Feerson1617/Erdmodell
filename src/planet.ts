@@ -2,6 +2,7 @@ import * as T from "three";
 import { R, RAD, position, clamp, smooth } from "./geo";
 import { flattening } from "./regions";
 import { type Style, styles } from "./model";
+import type { Bounds } from "./regions";
 export const dataUrl = (file: string) =>
   import.meta.env.BASE_URL + "data/" + file;
 export async function texture(file: string) {
@@ -23,6 +24,25 @@ export class TerrainLODManager {
   material = new T.MeshBasicMaterial({ vertexColors: true });
   private light = { value: new T.Vector3(0, 1, 1).normalize() };
   private mapWeights = { value: new T.Vector3() };
+  private nyos = {
+    far: { value: null as T.Texture | null },
+    mid: { value: null as T.Texture | null },
+    farBounds: { value: new T.Vector4(0, 0, 1, 1) },
+    midBounds: { value: new T.Vector4(0, 0, 1, 1) },
+    bounds: { value: new T.Vector4(0, 0, 1, 1) },
+    weights: { value: new T.Vector3() },
+  };
+  setNyosMaps(bounds: Bounds, farBounds?: Bounds, far?: T.Texture | null, midBounds?: Bounds, mid?: T.Texture | null) {
+    const setRect = (v: T.Vector4, b: Bounds) => v.set(b[0], b[1], b[2] - b[0], b[3] - b[1]);
+    setRect(this.nyos.bounds.value, bounds);
+    if (farBounds) setRect(this.nyos.farBounds.value, farBounds);
+    if (midBounds) setRect(this.nyos.midBounds.value, midBounds);
+    this.nyos.far.value = far ?? this.baseline ?? null;
+    this.nyos.mid.value = mid ?? this.baseline ?? null;
+  }
+  setNyosWeights(far: number, mid: number, local: number) {
+    this.nyos.weights.value.set(far, mid, local);
+  }
   private midMaps: (T.Texture | undefined)[] = [];
   private regionalAtlas?: T.Texture;
   private regionalSampler: { value: T.Texture | undefined } = {
@@ -67,19 +87,36 @@ export class TerrainLODManager {
     this.material.onBeforeCompile = (shader) => {
       shader.uniforms.sunUnit = this.light;
       shader.uniforms.weights = this.mapWeights;
+      Object.assign(shader.uniforms, {
+        nyosFar: this.nyos.far, nyosMid: this.nyos.mid,
+        nyosFarBounds: this.nyos.farBounds, nyosMidBounds: this.nyos.midBounds,
+        nyosBounds: this.nyos.bounds, nyosWeights: this.nyos.weights,
+      });
       this.midMaps.forEach(
         (map, i) =>
           (shader.uniforms["layer" + i] = { value: map ?? this.baseline }),
       );
       shader.uniforms.layer0 = this.regionalSampler;
       shader.vertexShader =
-        "uniform vec3 sunUnit;varying float earthLight;\n" +
+        "uniform vec3 sunUnit;varying float earthLight;uniform vec3 nyosWeights;uniform vec4 nyosBounds;\n" +
         shader.vertexShader.replace(
           "#include <begin_vertex>",
           "#include <begin_vertex>\n earthLight=.36+1.05*max(0.,dot(normalize(normal),sunUnit))+.10*normal.y;",
-        );
+        ).replace("#include <project_vertex>", `
+          #include <project_vertex>
+          if(nyosWeights.z>0.0) {
+            vec2 p=(uv*vec2(360.,180.)-vec2(180.,90.)-nyosBounds.xy)/nyosBounds.zw;
+            float margin=min(min(p.x,1.-p.x),min(p.y,1.-p.y));
+            float footprint=smoothstep(-0.7,-0.15,margin);
+            // Keep a continuous, opaque map beneath the DEM, including its feathered rim.
+            // Change depth alone, preserving the geographic position of every background pixel.
+            gl_Position.z += max(0.,gl_Position.w-gl_Position.z)*.96*nyosWeights.z*footprint;
+          }`);
       shader.fragmentShader =
-        `varying float earthLight;uniform vec3 weights;uniform sampler2D layer0,layer1,layer2;
+        `
+        varying float earthLight;uniform vec3 weights;uniform sampler2D layer0,layer1,layer2;
+        uniform vec3 nyosWeights;uniform vec4 nyosFarBounds,nyosMidBounds,nyosBounds;
+        uniform sampler2D nyosFar,nyosMid;
         vec4 sampleLayer(sampler2D img,vec2 ll,vec4 rect,float weight){
           vec2 uv=(ll-rect.xy)/rect.zw;float edge=min(min(uv.x,uv.y),min(1.-uv.x,1.-uv.y));
           if(edge<=0.||weight<=0.)return vec4(0.);
@@ -97,6 +134,14 @@ export class TerrainLODManager {
             earth=region.rgb;
             if(region.a<.9999)earth=mix(texture2D(map,vMapUv).rgb,region.rgb,region.a);
             earth=mix(earth,cover.rgb,cover.a);
+          }
+          if(nyosWeights.x>0.0) {
+            vec4 farRegion=sampleLayer(nyosFar,ll,nyosFarBounds,nyosWeights.x);
+            earth=mix(earth,farRegion.rgb,farRegion.a);
+          }
+          if(nyosWeights.y>0.0) {
+            vec4 nearRegion=sampleLayer(nyosMid,ll,nyosMidBounds,nyosWeights.y);
+            earth=mix(earth,nearRegion.rgb,nearRegion.a);
           }
           diffuseColor.rgb*=mix(earth,local.rgb,local.a);
           diffuseColor.rgb*=earthLight;`,

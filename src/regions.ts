@@ -46,7 +46,13 @@ export const tectonicSites = {
   san: { id: "san", name: "Kalifornien · San Andreas", stepId: 2877, regionalDistance: 950 },
 } as const;
 export type TectonicSiteId = keyof typeof tectonicSites;
+export const nyosSite = {
+  id: "nyos", name: "Nyos-See · Kamerun",
+  target: { lat: 6.4384, lon: 10.2986, d: 3.35, tilt: 48, bearing: 26 },
+  overview: { d: 15, tilt: 34, bearing: 4 },
+} as const;
 export const siteCatalog = [
+  nyosSite,
   ...Array.from(regions.values(), ({ id, name }) => ({ id, name })),
   ...Object.values(tectonicSites),
 ];
