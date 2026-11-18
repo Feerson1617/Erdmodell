@@ -1,7 +1,12 @@
 import * as T from "three";
 import { clamp, smooth } from "../geo";
 
-export type SectionSample = { height: number; u: number; v: number };
+export type SectionSample = {
+  height: number;
+  u: number;
+  v: number;
+  water: number;
+};
 type Sample = (x: number, z: number) => SectionSample;
 
 /** The real north–south shoreline chord brackets a deliberately schematic basin profile. */
@@ -95,7 +100,13 @@ export class NyosSection {
           p = this.excavation(x, z);
         positions.push(x, p.y, z);
         uv.push(p.u, p.v);
-        exposure.push(smooth(p.opening / 0.64));
+        // Excavated cells beneath the original lake cannot retain its green optical signature.
+        exposure.push(
+          Math.max(
+            smooth(p.opening / 0.64),
+            p.water * smooth(p.opening / 0.075),
+          ),
+        );
         if (row && col) {
           const d = row * (width + 1) + col,
             a = d - width - 2;
@@ -179,7 +190,7 @@ export class NyosSection {
     const n = 86;
     for (let i = 0; i <= n; i++) {
       const z = T.MathUtils.lerp(this.start, this.end, i / n);
-      xyz.push(0.0004, 0, z, 0.0004, -this.depthAt(z), z);
+      xyz.push(0, 0, z, 0, -this.depthAt(z), z);
       if (i) {
         const a = 2 * i - 2;
         idx.push(a, a + 1, a + 2, a + 2, a + 1, a + 3);

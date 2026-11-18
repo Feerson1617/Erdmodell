@@ -9,6 +9,7 @@ import { type Style, styles } from "./model";
 import { RenderResolution } from "./resolution";
 import { NyosTerrain } from "./nyos/terrain";
 import { NyosCoverage } from "./nyos/coverage";
+import { NyosEvent } from "./nyos/event";
 import { NyosLessonState, type NyosView } from "./nyos/state";
 import { loadAtlas, center, typeOf, names, type BoundaryKind, type Step } from "./tectonics/atlas";
 import { regionalImagery } from "./tectonics/imagery";
@@ -31,6 +32,10 @@ export class World {
   nyosDetail = true;
   readonly nyosLesson = new NyosLessonState();
   private nyosFocusOffset = 0;
+  private nyosEvent?: NyosEvent;
+  private nyosInputRevision = 0;
+  private nyosAutoStarted = false;
+  private nyosAutoFlight?: CameraController["flight"];
   private nyosVisitToken = 0;
   private nyosStage = "Globus";
   private nyosFarWeight = 0;
@@ -190,6 +195,10 @@ export class World {
       if (hit) this.onLayer?.(hit.object.userData.layer);
     };
     new ResizeObserver(() => this.resize()).observe(canvas);
+    document.addEventListener("visibilitychange", () => {
+      this.last = 0;
+      if (this.nav.flight?.paced) this.nav.flight.last = performance.now();
+    });
     this.resize();
     canvas.addEventListener("webglcontextlost", (e) => {
       e.preventDefault();
@@ -299,6 +308,7 @@ export class World {
     return this.atlas.labels(this.nav.camera, this.canvas.clientWidth, this.canvas.clientHeight, this.nav.pose.d, this.processSite ?? undefined);
   }
   plates() {
+    this.nyosLesson.playing = false;
     if (this.mode === "plates" && this.processSite) {
       this.plateOverview();
       return;
@@ -309,6 +319,7 @@ export class World {
     void this.loadPlates();
   }
   private leaveProcess(keepFilters = false) {
+    this.nyosLesson.playing = false;
     if (this.atlasFilters && !keepFilters) {
       this.setPlateOptions(this.atlasFilters);
       this.atlasFilters = undefined;
@@ -452,6 +463,9 @@ export class World {
   }
   private visitNyos(overview: boolean, view: NyosView = "lake") {
     this.nyosLesson.select(view);
+    this.nyosInputRevision = this.nav.inputRevision;
+    this.nyosAutoStarted = false;
+    this.nyosAutoFlight = undefined;
     this.leaveProcess();
     this.mode = "nyos";
     this.updatePlateLayers();
@@ -466,7 +480,7 @@ export class World {
           this.nyosCoverage = new NyosCoverage(meta, meta.heightRangeM[0] / 1000);
         this.planet.setNyosMaps(meta.bounds, meta.regional?.bounds, this.nyos.regionTexture,
           meta.vicinity?.bounds, this.nyos.vicinityTexture);
-        if (view === "section")
+        if (view === "section" || view === "event")
           this.nav.fly({ ...target, d: this.nav.camera.aspect < 1.3 ? 2.75 : 2.2, bearing: 80, tilt: 66 }, true);
         else this.nav.fly(overview ? { ...target, ...nyosSite.overview } : target, true);
       } else {
@@ -488,6 +502,25 @@ export class World {
     if (Math.abs(p.x) > .96 || Math.abs(p.y) > .91 || Math.abs(p.z) > 1) return null;
     return { x: (p.x + 1) * this.canvas.clientWidth / 2, y: (1 - p.y) * this.canvas.clientHeight / 2 };
   }
+  private advanceNyosTime() {
+    const lesson = this.nyosLesson;
+    if (this.mode !== "nyos" || !this.nyos.ready || !lesson.playing) return;
+    if (this.nav.flight && this.nav.flight !== this.nyosAutoFlight) return;
+    if (this.nyos.localWeight <= 0) return;
+    // Normalized explanatory time. Ignore suspended tabs and cap extreme stalls.
+    const travelling = !!this.nav.flight && this.nav.flight === this.nyosAutoFlight;
+    // While entering the valley, camera and explanation use the same visual clock.
+    lesson.advance(Math.min(travelling ? 0.125 : 0.5, this.frameMs / 1000));
+    if (lesson.view !== "event" || lesson.progress < 0.64 || this.nyosAutoStarted) return;
+    this.nyosAutoStarted = true;
+    if (this.nav.inputRevision !== this.nyosInputRevision) return;
+    this.nav.fly({lat: 6.447, lon: 10.297, d: 4.25, tilt: 41, bearing: 16}, true, 2900);
+    this.nyosAutoFlight = this.nav.flight;
+  }
+  private nyosSectionActive() {
+    return this.mode === "nyos" && (this.nyosLesson.view === "section" ||
+      (this.nyosLesson.view === "event" && this.nyosLesson.progress < 0.68));
+  }
   private updateNyos(lat: number, lon: number, d: number, inside: boolean) {
     if (!this.nyos.ready) return;
     const target = this.nyos.meta!.anchor;
@@ -498,7 +531,13 @@ export class World {
     const local = regional && offset < 0.5;
     this.nyosFarWeight = regional && this.nyos.regionTexture ? 1 - smooth((d - 490) / 1500) : 0;
     this.nyosMidWeight = regional && this.nyos.vicinityTexture ? 1 - smooth((d - 48) / 125) : 0;
-    this.nyos.setSection(this.mode === "nyos" && this.nyosLesson.view === "section");
+    const eventActive = this.mode === "nyos" && this.nyosLesson.view === "event";
+    this.nyos.setSection(this.nyosSectionActive());
+    if (eventActive && this.nyos.section && !this.nyosEvent) {
+      this.nyosEvent = new NyosEvent(this.nyos, this.nyos.section);
+      this.nyos.group.add(this.nyosEvent.group);
+    }
+    this.nyosEvent?.update(this.nyosLesson.progress, this.nyosLesson.air, eventActive && local);
     this.nyos.setDissolved(this.nyosLesson.dissolved && this.mode === "nyos");
     this.nyos.update(d, local);
     this.planet.setNyosWeights(this.nyosFarWeight, this.nyosMidWeight, this.nyos.localWeight);
@@ -514,7 +553,9 @@ export class World {
     const floor = radius && this.nyos.ready
       ? this.nyos.ground(Math.asin(eye.y / radius) / RAD, Math.atan2(eye.x, eye.z) / RAD) : null;
     return {
-      ...this.nyos.diagnostics(), ...this.nyosLesson, ready: this.nyos.ready, error: this.nyos.error,
+      ...this.nyos.diagnostics(), ...this.nyosLesson,
+      eventVisual: this.nyosEvent?.diagnostics() ?? { risingWater: false, freeBubbles: 0, surfaceRelease: false, reliefAnalysis: false },
+      ready: this.nyos.ready, error: this.nyos.error,
       detail: this.mode === "nyos" && this.nyosDetail, stage: this.nyosStage, distance: this.nav.pose.d,
       regionalWeight: this.nyosFarWeight, vicinityWeight: this.nyosMidWeight, localWeight: this.nyos.localWeight,
       globeOccluded: this.globeOccluded,
@@ -691,6 +732,9 @@ export class World {
       this.frameCount = 0;
       this.fpsStart = now;
     }
+    this.advanceNyosTime();
+    const holdEventFlight = !!this.nyosAutoFlight && this.nav.flight === this.nyosAutoFlight &&
+      !this.nyosLesson.playing && this.nyosLesson.progress < 1;
     this.nav.update(now, dt, ({ lat, lon, d }) => {
       const insideNow = this.mode === "inside" && (!this.waitingForAscent || d >= 3500);
       this.updateNyos(lat, lon, d, insideNow);
@@ -709,10 +753,11 @@ export class World {
       // Sample the target height at the SAME pose as the imagery and process.
       // Reduced-motion journeys also arrive correctly framed on their first frame.
       this.focusOffset = this.focusReveal * Math.max(0, PROCESS_FOCUS_HEIGHT - ground);
-      const sectionHeight = this.mode === "nyos" && this.nyosLesson.view === "section" ? -0.07 * this.nyos.localWeight : 0;
-      this.nyosFocusOffset += (sectionHeight - this.nyosFocusOffset) * (1 - Math.exp(-6 * dt));
+      const sectionHeight = this.nyosSectionActive() ? -0.07 * this.nyos.localWeight : 0;
+      if (!holdEventFlight)
+        this.nyosFocusOffset += (sectionHeight - this.nyosFocusOffset) * (1 - Math.exp(-6 * dt));
       return ground + this.focusOffset + this.nyosFocusOffset;
-    }, this.mode === "nyos" && this.nyos.ready ? (lat, lon) => this.nyos.ground(lat, lon) : undefined);
+    }, this.mode === "nyos" && this.nyos.ready ? (lat, lon) => this.nyos.ground(lat, lon) : undefined, holdEventFlight);
     const { lat, lon, d } = this.nav.pose;
     if (d >= 3500 || !this.nav.flight) this.waitingForAscent = false;
     const inside = this.mode === "inside" && !this.waitingForAscent,

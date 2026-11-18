@@ -72,6 +72,8 @@ Für die Schnittansicht sind drei Unterscheidungen sichtbar zu erhalten: Wasser 
 
 Bei der Prüfung der Gate-A-Bilder vom 18. November 2026 waren asymmetrische Wasserlinie, umliegendes Relief und natürliche Trockenzeitfarben erkennbar. Helle Ufersäume und kantige Uferabschnitte begrenzten die Nahansicht. Das Rendering gleicht Uferknoten an die optische Wasserlinie an und überblendet den äußeren Geländerand zum globalen Modell; diese Anpassungen sind keine zusätzlichen Messungen. Diese fachliche Sichtprüfung der Landschaft ersetzt keine Abnahme der späteren Schnitt- oder Ereignisansichten.
 
+**Unabhängige Fachprüfung Gate B, 18. November 2026:** Die tatsächlich erzeugten Bilder `test-results/nyos-gates/B/05-seequerschnitt.jpg`, `06-wasserschichtung.jpg` und `07-geloestes-co2.jpg` wurden angesehen und mit `src/nyos/section.ts` abgeglichen. Der Schnitt bleibt in der Landschaft verankert; das Verhältnis von Tiefe und Breite ist plausibel. Wasser und fester Untergrund sind klar unterscheidbar. Ohne Analyseüberlagerung erscheinen weder Blasen noch eine freie Gasansammlung. Die zugeschaltete Tiefenfarbe ist als „Analysefarbe“ bezeichnet; ruhige Pfeile erläutern die Zufuhr aus dem Untergrund. Die Bezeichnung „Beckenform schematisch“ bleibt in den geprüften Perspektiven sichtbar. Aus fachlicher und vermittelnder Sicht ergab sich kein entscheidender Mangel. Kleine Punkte an der Schnittoberkante sind ein Darstellungsartefakt. Kamerafunktion, Zustandswechsel und technische Laufzeitprüfungen werden separat im QA-Protokoll nachgewiesen; dieser Befund ist noch keine Prüfung der Ereignis- oder Schutzansichten.
+
 ## Risikominderung und Zeitbezug
 
 **1986:** In der historischen Ansicht ist keine später eingebaute Entgasungsanlage vorhanden. Das Ereignis und seine menschlichen Folgen werden sachlich dargestellt.
@@ -117,4 +119,4 @@ Die Originaltexte werden hier verlinkt und in eigenen Worten ausgewertet; frei z
 - Kein exaktes Krateralter, kein bewiesener Trigger, keine vermeintlich vermessene Magmakammer und kein Gefahrenstatus für 2026.
 - Historische Orte sind durch eine zeitnahe Fachquelle belegt. Exakte historische Orts-/Gebäudegeometrien bleiben ungeprüft; ungefähre Marker müssen als solche erkennbar sein.
 - Der vorgegebene USGS-Bericht 87-97 ist nur bibliographisch bestätigt. Sein direkter Volltextabruf blieb in dieser Umgebung gesperrt; wissenschaftliche Kernaussagen sind durch die zugänglichen Originalarbeiten abgesichert.
-- Fachanforderungen, schulinternes Curriculum und Leisen-Originaldokumente waren Gegenstand dieser geowissenschaftlichen Recherche nicht vorhanden. Daraus werden keine angeblich geprüften Kompetenzcodes abgeleitet.
+- Die Unterrichtsanleitung belegt die Kompetenzcodes anhand der veröffentlichten Fachanforderungen Geographie Schleswig-Holstein und ordnet sie dem Unterrichtsbesuch zu. Das schulinterne Curriculum lag nicht vor. [Unterrichtsverwendung und didaktische Quellen](nyos-unterrichtsverwendung.md)

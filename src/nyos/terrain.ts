@@ -57,6 +57,9 @@ export class NyosTerrain {
   vicinityTexture: T.Texture | null = null;
   waterMesh: T.Mesh<T.ShapeGeometry, T.MeshStandardMaterial> | null = null;
   terrainMesh: T.Mesh<T.BufferGeometry, T.MeshBasicMaterial> | null = null;
+  private fullWater?: T.ShapeGeometry;
+  private cutWater?: T.ShapeGeometry;
+  private shoreChord = { value: new T.Vector2() };
   private pending?: Promise<boolean>;
   private heights?: Int16Array;
   private shoreCells: Uint8ClampedArray | null = null;
@@ -335,22 +338,27 @@ export class NyosTerrain {
       shader.uniforms.uNyosSun = this.sun;
       shader.uniforms.nyosCut = this.cut;
       shader.uniforms.nyosCutWindow = this.cutWindow;
+      shader.uniforms.nyosShoreChord = this.shoreChord;
       shader.vertexShader =
-        "uniform vec3 uNyosSun; varying vec2 nyosLandPoint;\n" +
+        "uniform vec3 uNyosSun; varying vec3 nyosLandPoint;\n" +
         shader.vertexShader.replace(
           "#include <color_vertex>",
           `#include <color_vertex>
-         nyosLandPoint=position.xz;
+         nyosLandPoint=position.xzy;
          float sunlight=max(dot(normalize(normal),uNyosSun),0.0);
          vColor.rgb *= vec3(.57,.61,.59) + vec3(.68,.62,.53)*sunlight;`,
         );
       shader.fragmentShader =
-        `uniform float uNyosWeight, nyosCut; uniform vec4 nyosCutWindow; varying vec2 nyosLandPoint;
+        `uniform float uNyosWeight, nyosCut; uniform vec4 nyosCutWindow; uniform vec2 nyosShoreChord; varying vec3 nyosLandPoint;
         ${nyosBlendGLSL}\n` +
         shader.fragmentShader.replace(
           "#include <map_fragment>",
           `
-          if(nyosCut>.5 && nyosLandPoint.x>=nyosCutWindow.x && nyosLandPoint.x<nyosCutWindow.y &&
+          // Set the submerged DEM backing back from the optical cut edge. Drawing a
+          // second shallow surface on that viewing line produces a stippled seam.
+          float startX = nyosLandPoint.z<-.001 && nyosLandPoint.y>nyosShoreChord.x &&
+                         nyosLandPoint.y<nyosShoreChord.y ? -.026 : nyosCutWindow.x;
+          if(nyosCut>.5 && nyosLandPoint.x>=startX && nyosLandPoint.x<nyosCutWindow.y &&
               nyosLandPoint.y>nyosCutWindow.z && nyosLandPoint.y<nyosCutWindow.w) discard;
           float coverage=nyosCoverage(vMapUv,uNyosWeight);
           if (coverage<.002) discard;
@@ -365,18 +373,36 @@ export class NyosTerrain {
   }
 
   private makeWater() {
-    const m = this.meta!,
-      shape = new T.Shape();
-    const localShore = m.shoreline.map(([lon, lat]) =>
+    const m = this.meta!;
+    const shore = m.shoreline.map(([lon, lat]) =>
       this.toLocal(lon, lat, m.waterLevelM / 1000),
     );
-    localShore.forEach((p, i) => {
-      if (i) shape.lineTo(p.x, -p.z);
-      else shape.moveTo(p.x, -p.z);
-    });
-    shape.closePath();
-    const geom = new T.ShapeGeometry(shape);
-    geom.rotateX(-Math.PI / 2);
+    const makeGeometry = (ring: T.Vector3[]) => {
+      const outline = new T.Shape();
+      ring.forEach((p, i) => {
+        if (i) outline.lineTo(p.x, -p.z);
+        else outline.moveTo(p.x, -p.z);
+      });
+      outline.closePath();
+      const geometry = new T.ShapeGeometry(outline);
+      geometry.rotateX(-Math.PI / 2);
+      return geometry;
+    };
+    // Clip the polygon before triangulation. Both section faces now share the same
+    // exact chord in space, including under multisampling at shallow viewing angles.
+    const west: T.Vector3[] = [];
+    for (let i = 0; i < shore.length; i++) {
+      const a = shore[i],
+        b = shore[(i + 1) % shore.length];
+      if (a.x > 0 !== b.x > 0)
+        west.push(
+          new T.Vector3(0, 0, T.MathUtils.lerp(a.z, b.z, -a.x / (b.x - a.x))),
+        );
+      if (b.x <= 0) west.push(b);
+    }
+    this.fullWater = makeGeometry(shore);
+    this.cutWater = makeGeometry(west);
+    const geom = this.fullWater;
     const mat = new T.MeshStandardMaterial({
       color: "#31593e",
       transparent: true,
@@ -402,7 +428,7 @@ export class NyosTerrain {
         shader.fragmentShader
           .replace(
             "#include <alphatest_fragment>",
-            "#include <alphatest_fragment>\n if(nyosCut>.5 && nyosSurface.x>=0.) discard; diffuseColor.a *= uNyosWeight;",
+            "#include <alphatest_fragment>\n diffuseColor.a *= uNyosWeight;",
           )
           .replace(
             "#include <opaque_fragment>",
@@ -450,18 +476,30 @@ export class NyosTerrain {
         (x, z) => {
           const { lon, lat } = this.fromLocal(x, z);
           const elevation = this.ground(lat, lon) ?? meta.waterLevelM / 1000;
+          const u = (lon - w) / (e - w),
+            v = (lat - s) / (n - s);
+          const i = clamp(Math.round(u * (meta.width - 1)), 0, meta.width - 1);
+          const j = clamp(
+            Math.round((1 - v) * (meta.height - 1)),
+            0,
+            meta.height - 1,
+          );
           return {
             height: this.toLocal(lon, lat, elevation).y,
-            u: (lon - w) / (e - w),
-            v: (lat - s) / (n - s),
+            u,
+            v,
+            water: this.shoreCells![4 * (i + j * meta.width)] / 255,
           };
         },
         photo,
         this.sun,
       );
       this.cutWindow.value.copy(this.section.window);
+      this.shoreChord.value.set(this.section.start, this.section.end);
       this.group.add(this.section.group);
     }
+    if (this.waterMesh && this.fullWater && this.cutWater)
+      this.waterMesh.geometry = enabled ? this.cutWater : this.fullWater;
     if (this.section) {
       this.section.group.visible = enabled;
       this.section.showDissolved(this.dissolved);
