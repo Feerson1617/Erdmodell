@@ -5,6 +5,7 @@ import { createIcons, Globe2, Layers3, MapPin, Maximize, Minimize, Info, Plus, M
 import { World } from "./world";
 import { layers } from "./model";
 import { waveModel } from "./knowledge";
+import { nyosContext } from "./nyos/context";
 import { nyosControls, bindNyosControls, syncNyos } from "./nyos/controls";
 import { plateControls, bindPlateControls, syncPlayback } from "./tectonics/controls";
 
@@ -44,7 +45,7 @@ function warn(s: string) {
 }
 function infoPage() {
   if (world?.mode === "nyos") {
-    content.innerHTML = `<h2 id="dialogTitle">Zum Nyos-See</h2><p>Der See liegt in einem Vulkankrater der Kamerun-Vulkanlinie. Neuere Untersuchungen sprechen dafür, dass Magma und Wasser bei der Entstehung des Kraters zusammentrafen. Später füllte sich der Krater mit Wasser.</p><p>1986 trat zuvor im Tiefenwasser gelöstes CO₂ aus. Was den ersten Wasseraufstieg auslöste, ist offen.</p><p><a href="${import.meta.env.BASE_URL}licenses/Geodaten.txt" target="_blank" rel="noopener">Datenquellen und Nutzungsrechte</a></p>`;
+    content.innerHTML = nyosContext;
     openDialog();
     return;
   }
@@ -96,6 +97,7 @@ function renderSide() {
   }
   $("nyosPin").hidden = true;
   if (mode === "nyos") {
+    side.dataset.nyosError = String(!!world.nyos.error);
     side.innerHTML = nyosControls(world);
     bindNyosControls(side, world, renderSide);
   }
@@ -357,8 +359,11 @@ async function boot() {
       `rotate(${world.nav.pose.bearing}deg)`;
     if (labels && world.mode === "inside") updatePins();
     if (world.mode === "plates") { syncPlatePins(); syncPlayback(world); }
-    if (world.mode === "nyos") syncNyos(world);
-    const message = (world.mode === "place" && world.local.warning) || alertText || "";
+    if (world.mode === "nyos") {
+      if (side.dataset.nyosError !== String(!!world.nyos.error)) renderSide();
+      syncNyos(world);
+    }
+    const message = world.nyosWarning || (world.mode === "place" && world.local.warning) || alertText || "";
     if (status.textContent !== message) status.textContent = message;
   };
   await world.init();

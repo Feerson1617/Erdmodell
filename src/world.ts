@@ -9,6 +9,7 @@ import { type Style, styles } from "./model";
 import { RenderResolution } from "./resolution";
 import { NyosTerrain } from "./nyos/terrain";
 import { NyosCoverage } from "./nyos/coverage";
+import { NyosLessonState, type NyosView } from "./nyos/state";
 import { loadAtlas, center, typeOf, names, type BoundaryKind, type Step } from "./tectonics/atlas";
 import { regionalImagery } from "./tectonics/imagery";
 import { ProcessModel, processView, PROCESS_FOCUS_HEIGHT } from "./tectonics/process";
@@ -28,6 +29,8 @@ export class World {
   planet: TerrainLODManager;
   nyos: NyosTerrain;
   nyosDetail = true;
+  readonly nyosLesson = new NyosLessonState();
+  private nyosFocusOffset = 0;
   private nyosVisitToken = 0;
   private nyosStage = "Globus";
   private nyosFarWeight = 0;
@@ -440,7 +443,15 @@ export class World {
       model.setProgress(this.processProgress);
     }
   }
-  private visitNyos(overview: boolean) {
+  get nyosWarning() {
+    return this.mode === "nyos" && this.nyos.error && !this.nyos.ready
+      ? "Nyos-Geländedaten fehlen · regionale Ersatzansicht" : "";
+  }
+  showNyos(view: NyosView) {
+    this.visitNyos(false, view);
+  }
+  private visitNyos(overview: boolean, view: NyosView = "lake") {
+    this.nyosLesson.select(view);
     this.leaveProcess();
     this.mode = "nyos";
     this.updatePlateLayers();
@@ -455,11 +466,13 @@ export class World {
           this.nyosCoverage = new NyosCoverage(meta, meta.heightRangeM[0] / 1000);
         this.planet.setNyosMaps(meta.bounds, meta.regional?.bounds, this.nyos.regionTexture,
           meta.vicinity?.bounds, this.nyos.vicinityTexture);
-        this.nav.fly(overview ? { ...target, ...nyosSite.overview } : target, true);
+        if (view === "section")
+          this.nav.fly({ ...target, d: this.nav.camera.aspect < 1.3 ? 2.75 : 2.2, bearing: 80, tilt: 66 }, true);
+        else this.nav.fly(overview ? { ...target, ...nyosSite.overview } : target, true);
       } else {
         this.nyosDetail = false;
-        this.nav.fly({ ...target, d: 110, tilt: 12, bearing: 0 }, true);
-        this.warn("Nyos-Geländedaten fehlen · regionale Ersatzansicht");
+        this.nyosLesson.select("lake");
+        this.nav.fly({ ...target, d: 1950, tilt: 3, bearing: 0 }, true);
       }
     };
     if (this.nyos.ready) arrive();
@@ -485,6 +498,8 @@ export class World {
     const local = regional && offset < 0.5;
     this.nyosFarWeight = regional && this.nyos.regionTexture ? 1 - smooth((d - 490) / 1500) : 0;
     this.nyosMidWeight = regional && this.nyos.vicinityTexture ? 1 - smooth((d - 48) / 125) : 0;
+    this.nyos.setSection(this.mode === "nyos" && this.nyosLesson.view === "section");
+    this.nyos.setDissolved(this.nyosLesson.dissolved && this.mode === "nyos");
     this.nyos.update(d, local);
     this.planet.setNyosWeights(this.nyosFarWeight, this.nyosMidWeight, this.nyos.localWeight);
     this.nyosStage = d > 6200 ? "Afrika" : d > 1500 ? "Kamerun" : d > 260 ? "Kamerun-Vulkanlinie" :
@@ -499,7 +514,7 @@ export class World {
     const floor = radius && this.nyos.ready
       ? this.nyos.ground(Math.asin(eye.y / radius) / RAD, Math.atan2(eye.x, eye.z) / RAD) : null;
     return {
-      ...this.nyos.diagnostics(), ready: this.nyos.ready, error: this.nyos.error,
+      ...this.nyos.diagnostics(), ...this.nyosLesson, ready: this.nyos.ready, error: this.nyos.error,
       detail: this.mode === "nyos" && this.nyosDetail, stage: this.nyosStage, distance: this.nav.pose.d,
       regionalWeight: this.nyosFarWeight, vicinityWeight: this.nyosMidWeight, localWeight: this.nyos.localWeight,
       globeOccluded: this.globeOccluded,
@@ -694,13 +709,15 @@ export class World {
       // Sample the target height at the SAME pose as the imagery and process.
       // Reduced-motion journeys also arrive correctly framed on their first frame.
       this.focusOffset = this.focusReveal * Math.max(0, PROCESS_FOCUS_HEIGHT - ground);
-      return ground + this.focusOffset;
+      const sectionHeight = this.mode === "nyos" && this.nyosLesson.view === "section" ? -0.07 * this.nyos.localWeight : 0;
+      this.nyosFocusOffset += (sectionHeight - this.nyosFocusOffset) * (1 - Math.exp(-6 * dt));
+      return ground + this.focusOffset + this.nyosFocusOffset;
     }, this.mode === "nyos" && this.nyos.ready ? (lat, lon) => this.nyos.ground(lat, lon) : undefined);
     const { lat, lon, d } = this.nav.pose;
     if (d >= 3500 || !this.nav.flight) this.waitingForAscent = false;
     const inside = this.mode === "inside" && !this.waitingForAscent,
       zoom = 1 - smooth((d - 2) / 58);
-    this.globeOccluded = this.nyos.localWeight === 1 && !!this.nyosCoverage?.containsView(this.nav.camera);
+    this.globeOccluded = this.nyosLesson.view === "lake" && this.nyos.localWeight === 1 && !!this.nyosCoverage?.containsView(this.nav.camera);
     this.planet.group.visible = !inside && !this.globeOccluded;
     this.shell.group.visible = inside;
     this.air.visible = !inside && d > 2200;

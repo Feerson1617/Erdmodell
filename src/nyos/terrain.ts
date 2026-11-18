@@ -1,6 +1,8 @@
 import * as T from "three";
 import { basis, clamp, position, RAD, smooth } from "../geo";
 import { nyosBlendGLSL } from "./blend";
+import { NyosSection } from "./section";
+import { splitNyosSurface } from "./surface-lod";
 
 export type NyosBounds = [
   west: number,
@@ -63,6 +65,11 @@ export class NyosTerrain {
   private up = vector();
   private south = vector();
   private reveal = { value: 0 };
+  private terrainLod?: T.LOD;
+  private cut = { value: 0 };
+  private cutWindow = { value: new T.Vector4() };
+  private dissolved = false;
+  section: NyosSection | null = null;
   private sun = { value: new T.Vector3(-1.2, 0.91, -1.05).normalize() };
 
   constructor(private globalHeight: (lat: number, lon: number) => number) {
@@ -137,9 +144,11 @@ export class NyosTerrain {
       const water = this.makeWater();
       this.terrainMesh = surface;
       this.waterMesh = water;
-      this.group.add(surface, water);
+      this.terrainLod = splitNyosSurface(surface);
+      this.group.add(this.terrainLod, water);
       this.error = "";
       this.ready = true;
+      if (this.cut.value) this.setSection(true);
       return true;
     } catch (e) {
       this.error = e instanceof Error ? e.message : "Landschaftsdaten";
@@ -310,6 +319,7 @@ export class NyosTerrain {
     geo.setAttribute("position", new T.Float32BufferAttribute(pos, 3));
     geo.setAttribute("uv", new T.Float32BufferAttribute(tex, 2));
     geo.setAttribute("color", new T.Float32BufferAttribute(colors, 3));
+    geo.userData = { columns: x.length, rows: y.length };
     geo.setIndex(faces);
     geo.computeVertexNormals();
     // Satellite colour already includes ground texture. The matte terrain uses
@@ -323,20 +333,25 @@ export class NyosTerrain {
     mat.onBeforeCompile = (shader) => {
       shader.uniforms.uNyosWeight = this.reveal;
       shader.uniforms.uNyosSun = this.sun;
+      shader.uniforms.nyosCut = this.cut;
+      shader.uniforms.nyosCutWindow = this.cutWindow;
       shader.vertexShader =
-        "uniform vec3 uNyosSun;\n" +
+        "uniform vec3 uNyosSun; varying vec2 nyosLandPoint;\n" +
         shader.vertexShader.replace(
           "#include <color_vertex>",
           `#include <color_vertex>
+         nyosLandPoint=position.xz;
          float sunlight=max(dot(normalize(normal),uNyosSun),0.0);
          vColor.rgb *= vec3(.57,.61,.59) + vec3(.68,.62,.53)*sunlight;`,
         );
       shader.fragmentShader =
-        `uniform float uNyosWeight;
+        `uniform float uNyosWeight, nyosCut; uniform vec4 nyosCutWindow; varying vec2 nyosLandPoint;
         ${nyosBlendGLSL}\n` +
         shader.fragmentShader.replace(
           "#include <map_fragment>",
           `
+          if(nyosCut>.5 && nyosLandPoint.x>=nyosCutWindow.x && nyosLandPoint.x<nyosCutWindow.y &&
+              nyosLandPoint.y>nyosCutWindow.z && nyosLandPoint.y<nyosCutWindow.w) discard;
           float coverage=nyosCoverage(vMapUv,uNyosWeight);
           if (coverage<.002) discard;
           diffuseColor.a *= coverage;
@@ -375,6 +390,7 @@ export class NyosTerrain {
     const t = this.reveal;
     mat.onBeforeCompile = (shader) => {
       shader.uniforms.uNyosWeight = t;
+      shader.uniforms.nyosCut = this.cut;
       shader.vertexShader =
         "varying vec2 nyosSurface;\n" +
         shader.vertexShader.replace(
@@ -382,11 +398,11 @@ export class NyosTerrain {
           "#include <begin_vertex>\n nyosSurface = position.xz;",
         );
       shader.fragmentShader =
-        `varying vec2 nyosSurface; uniform float uNyosWeight;\n${nyosBlendGLSL}\n` +
+        `varying vec2 nyosSurface; uniform float uNyosWeight,nyosCut;\n${nyosBlendGLSL}\n` +
         shader.fragmentShader
           .replace(
             "#include <alphatest_fragment>",
-            "#include <alphatest_fragment>\n diffuseColor.a *= uNyosWeight;",
+            "#include <alphatest_fragment>\n if(nyosCut>.5 && nyosSurface.x>=0.) discard; diffuseColor.a *= uNyosWeight;",
           )
           .replace(
             "#include <opaque_fragment>",
@@ -409,6 +425,53 @@ export class NyosTerrain {
     return water;
   }
 
+  fromLocal(x: number, z: number) {
+    const point = this.origin
+      .clone()
+      .addScaledVector(this.east, x)
+      .addScaledVector(this.south, z);
+    return {
+      lon: Math.atan2(point.x, point.z) / RAD,
+      lat: Math.asin(point.y / point.length()) / RAD,
+    };
+  }
+
+  setSection(enabled: boolean) {
+    this.cut.value = Number(enabled);
+    const meta = this.meta,
+      photo = this.terrainMesh?.material.map;
+    if (enabled && this.ready && meta && photo && !this.section) {
+      const [w, s, e, n] = meta.bounds;
+      const shore = meta.shoreline.map(([lon, lat]) =>
+        this.toLocal(lon, lat, meta.waterLevelM / 1000),
+      );
+      this.section = new NyosSection(
+        shore,
+        (x, z) => {
+          const { lon, lat } = this.fromLocal(x, z);
+          const elevation = this.ground(lat, lon) ?? meta.waterLevelM / 1000;
+          return {
+            height: this.toLocal(lon, lat, elevation).y,
+            u: (lon - w) / (e - w),
+            v: (lat - s) / (n - s),
+          };
+        },
+        photo,
+        this.sun,
+      );
+      this.cutWindow.value.copy(this.section.window);
+      this.group.add(this.section.group);
+    }
+    if (this.section) {
+      this.section.group.visible = enabled;
+      this.section.showDissolved(this.dissolved);
+    }
+  }
+  setDissolved(enabled: boolean) {
+    this.dissolved = enabled;
+    this.section?.showDissolved(enabled);
+  }
+
   update(distanceKm: number, active: boolean) {
     this.reveal.value =
       active && this.ready ? 1 - smooth((distanceKm - 16) / 26) : 0;
@@ -419,7 +482,17 @@ export class NyosTerrain {
       ready: this.ready,
       error: this.error,
       localWeight: this.localWeight,
-      surfaceVisible: this.group.visible && !!this.terrainMesh?.visible,
+      surfaceVisible: this.group.visible && !!this.terrainMesh,
+      surfaceLod: this.terrainLod?.userData.surfaceStats,
+      sectionVisible: this.group.visible && !!this.section?.group.visible,
+      dissolvedVisible:
+        this.group.visible && !!this.section?.group.visible && this.dissolved,
+      supplyVisible:
+        this.group.visible && !!this.section?.group.visible && this.dissolved,
+      depthM: this.section ? this.section.maxDepth * 1000 : null,
+      profileSpanKm: this.section
+        ? this.section.end - this.section.start
+        : null,
       waterVisible: this.group.visible && !!this.waterMesh?.visible,
       triangles: (this.terrainMesh?.geometry.index?.count ?? 0) / 3,
       shorelineVertices: this.meta?.shoreline.length ?? 0,

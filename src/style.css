@@ -212,3 +212,10 @@ figcaption { margin-top: 6px; font-size: .9em; color: var(--muted); }
   .headTools { grid-column: 2; grid-row: 1; }
   #desk .view { flex-basis: 50%; }
 }
+.nyosViews { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 5px; }
+.nyosViews button { padding-inline: .35em; overflow-wrap: anywhere; }
+.nyosDetail { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+.nyosCaption { line-height: 1.4; margin-bottom: 8px; }
+.nyosCheck { display: flex; align-items: center; gap: 8px; min-height: var(--hit); cursor: pointer; }
+.nyosCheck input { width: 1.2em; height: 1.2em; flex: none; }
+.nyosKey { padding-left: 10px; margin: 6px 0 0; border-left: 3px solid #75cfc0; color: #d3e3dd; font-size: .93em; line-height: 1.4; }
