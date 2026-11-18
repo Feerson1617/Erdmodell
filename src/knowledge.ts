@@ -1,13 +1,22 @@
-export const modelLimits =
-  "Die Kruste ist im Referenzmodell überall 35 km dick. Unter Ozeanen sind häufig 5–10 km, unter Kontinenten etwa 30–70 km typisch. Die Grenzflächen sind hier glatt und kugelförmig. In der Erde variieren Tiefe und Form. Die Farben kennzeichnen Modellbereiche. Sie sind keine Fotografien aus großer Tiefe.";
-export const waveText =
-  "Messstationen registrieren Bodenbewegungen. Aus Ankunftszeiten vieler Erdbeben erschließen Forschende Geschwindigkeiten und Wege der Wellen. An Materialgrenzen können Wellen gebrochen, reflektiert und in andere Wellentypen umgewandelt werden. Auch innerhalb der Erde können sich Wellenwege krümmen.";
-export function evidence(named: boolean) {
-  return `<span class="caption">MESSUNG UND MODELL</span><h2>Woher wissen wir das?</h2><p class="conclusion">Das tiefe Erdinnere ist direkter Beobachtung unzugänglich. Forschende prüfen ihre Modelle anhand von Messungen.</p>
-  <figure class="waveFigure"><svg role="img" aria-labelledby="waveTitle waveDesc" viewBox="0 0 660 187"><title id="waveTitle">Zwei Wellentypen an einer idealisierten Materialgrenze</title><desc id="waveDesc">Eine P-Welle ändert beim Übergang in ein langsameres flüssiges Material ihre Richtung. Die direkte S-Welle endet an der Grenze.</desc>
-  <rect width="660" height="89" rx="5" fill="#293b3d"/><rect y="90" width="660" height="97" fill="#172e3a"/><path d="M0 90H660" stroke="#abc4be" stroke-dasharray="5 5"/><g font-family="sans-serif" fill="#ecf2e9" font-size="20"><text x="15" y="29">fest</text><text x="15" y="128">flüssig</text><text x="128" y="35">P</text><text x="410" y="35">S</text></g>
-  <path d="M160 25L240 90L267 159" fill="none" stroke="#e6b879" stroke-width="5"/><path d="M254 149l13 13 1-19" fill="none" stroke="#e6b879" stroke-width="5"/><path d="M438 25L518 90" fill="none" stroke="#93dad1" stroke-width="5"/><path d="M508 90h20" stroke="#93dad1" stroke-width="5"/><text x="413" y="138" fill="#d2e4e5" font-size="17">keine direkte S-Welle</text></svg>
-  <figcaption>Vereinfachtes Erklärungsschema einer Grenze. Im gezeigten Beispiel läuft die P-Welle im flüssigen Material langsamer. Reflexion und Umwandlung sind ausgelassen.</figcaption></figure>
-  <p>Erdbeben erzeugen verschiedene Wellentypen. <b>P-Wellen</b> durchlaufen feste und flüssige Stoffe. <b>S-Wellen</b> brauchen Material, das Scherkräfte trägt. In Flüssigkeiten breiten sich diese Scherwellen nicht aus.</p><details><summary>Von der Messung zur Erklärung</summary><p>${waveText} ${named ? "Das Fehlen direkter S-Wellen durch den äußeren Kern und die Laufzeiten gebrochener P-Wellen sprechen für einen flüssigen äußeren Kern." : "Aus vielen solchen Beobachtungen prüfen Forschende, welche Modellvorstellung zu den Signalen passt."}</p></details>
-  `;
+/** Normal incidence keeps the paths comparable. Arrows denote propagation, not particle trajectories. */
+export function waveModel(named: boolean) {
+  return `<h2 id="dialogTitle">P- und S-Wellen</h2>
+  <figure class="waveFigure">
+    <svg viewBox="0 0 640 216" role="img" aria-labelledby="waveTitle waveDesc">
+      <title id="waveTitle">Vereinfachtes Modell einer Materialgrenze</title>
+      <desc id="waveDesc">Die P-Welle läuft vom festen Material in die Flüssigkeit weiter. Die direkte S-Welle reicht nur bis zur Grenze.</desc>
+      <rect x="0" y="0" width="320" height="216" fill="#35413c"/><rect x="320" width="320" height="216" fill="#193845"/>
+      <path d="M320 0v216" stroke="#dae6dd" stroke-dasharray="5 6"/>
+      <g fill="#f0f3e9" font-size="24"><text x="24" y="38">Festes Material</text><text x="345" y="38">Flüssigkeit</text></g>
+      <g fill="#efc485" font-size="27" font-weight="600"><text x="24" y="95">P</text></g>
+      <g fill="#a1ddd5" font-size="27" font-weight="600"><text x="24" y="165">S</text></g>
+      <g fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="6">
+        <path d="M78 86H567m-14 -12 14 12-14 12" stroke="#efc485"/>
+        <path d="M78 156H315m0 -12v24" stroke="#a1ddd5"/>
+      </g>
+    </svg><figcaption>Vereinfachtes Modell der Ausbreitung</figcaption>
+  </figure>
+  <p><strong>P-Wellen</strong> drücken Material zusammen und dehnen es wieder aus. Sie laufen durch feste Stoffe und Flüssigkeiten.</p>
+  <p><strong>S-Wellen</strong> bewegen Material quer zur Ausbreitungsrichtung. Sie laufen durch feste Stoffe. In Flüssigkeiten breiten sie sich nicht aus.</p>
+  ${named ? "<p class='inference'>Dass der äußere Erdkern flüssig ist, erschließen Forschende aus dem Muster der P- und S-Wellen vieler Erdbeben.</p>" : ""}`;
 }

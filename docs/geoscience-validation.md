@@ -11,7 +11,7 @@ Die Orientierung folgt einem radialen Referenzmodell der Erde. Erdbebenwellen, m
 | Äußerer Kern | Radius 3.481–1.221 km | Flüssige, eisenreiche Legierung. Bewegungen elektrisch leitfähigen Materials tragen zum Geodynamo bei. |
 | Innerer Kern | Radius 1.221–0 km | Überwiegend Eisen, aufgrund des hohen Drucks fest. |
 
-Im überhöhten Modus entspricht die sichtbare Kruste 6,5 % des Radius (rund 414 km). Dazu verkleinert sich die sichtbare Mantelmächtigkeit. Kerngrenzen und Außenradius bleiben fest. Die Infofelder geben weiterhin die realen Referenzwerte an. Farbverläufe und Facetten sind Gestaltung. Mechanische Gliederung ist eine eigene Betrachtung: Die Lithosphäre umfasst Kruste und starren obersten Mantel. Der Keil zeigt tiefe Schichten auf gedachten Schnittflächen.
+Im überhöhten Modus entspricht die sichtbare Kruste 6,5 % des Radius (rund 414 km). Dazu verkleinert sich die sichtbare Mantelmächtigkeit. Kerngrenzen und Außenradius bleiben fest. Die Tabelle oben nennt die Referenzwerte. Farbverläufe und Facetten sind Gestaltung. Mechanische Gliederung ist eine eigene Betrachtung: Die Lithosphäre umfasst Kruste und starren obersten Mantel. Der Keil zeigt tiefe Schichten auf gedachten Schnittflächen.
 
 ## Hallig Hooge
 
@@ -21,7 +21,7 @@ Warften sind aufgeschüttete Siedlungshügel. Sie sind weder Deiche noch das Erg
 
 ## Jahrgang 9 · Basiskonzept Struktur
 
-Einstieg und Vorstellungen: Im Globus eine vermutete Schichtfolge sammeln. Material untersuchen: Die Lehrkraft öffnet den Keil; Lernende beschreiben **Lage**, **Dicke**, **Material** und **Zustand** mit Grundtexten oder Fachvertiefung. Diskutieren: Zwei Erklärungen am gleichen Ausschnitt vergleichen. Sichern: Zur maßstäblichen Ansicht zurückkehren und erklären, weshalb die Kruste schwer sichtbar ist. Transfer: An der Hallig natürliche Geländeform und von Menschen angelegte Erhebung unterscheiden.
+Einstieg und Vorstellungen: Im Globus eine vermutete Schichtfolge sammeln. Material untersuchen: Die Lehrkraft öffnet den Keil; Lernende beschreiben **Lage**, **Dicke**, **Material** und **Zustand** anhand der Anschauung und der nach Freigabe sichtbaren Schalentexte. Diskutieren: Zwei Erklärungen am gleichen Ausschnitt vergleichen. Sichern: Zur maßstäblichen Ansicht zurückkehren und erklären, weshalb die Kruste schwer sichtbar ist. Transfer: An der Hallig natürliche Geländeform und von Menschen angelegte Erhebung unterscheiden.
 
 So unterstützt G1 räumliche Orientierung, Erkenntnisgewinnung, Fachwissen und Kommunikation im Sinne der Fachanforderungen Geographie SH Sek. I und des Leitfadens 2016. Die sechs Phasen nach Leisen sind mögliche Unterrichtshandlungen. Aufgaben, Sicherung und Bewertung liegen bei der Lehrkraft. Das schulinterne Curriculum lag nicht als Dokument vor; übernommen wurde der im Auftrag genannte Schwerpunkt Naturrisiken. [Fachportal Schleswig-Holstein](https://fachportal.lernnetz.de/) · [Josef Leisen – Lehr-Lern-Modell](https://www.lehr-lern-modell.de/)
 

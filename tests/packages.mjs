@@ -17,7 +17,7 @@ try {
       "-m",
       "zipfile",
       "-e",
-      "artifacts/GeoRisiko-G1.3-" + name + ".zip",
+      "artifacts/GeoRisiko-G1.3.1-" + name + ".zip",
       path,
     ]);
     const server = createServer(async (req, res) => {
@@ -66,20 +66,21 @@ try {
         () => window.geoObservatory().mode === "inside",
       );
       await frame.click("#present");
-      assert.ok(await frame.locator("#boardBar").isVisible());
+      assert.equal(await frame.locator("#present").getAttribute("aria-pressed"), "true");
       assert.equal(
         await frame.evaluate(() => !!document.fullscreenElement),
         false,
       );
       await frame.click("#labels");
       await frame.click("[data-layer='2']");
-      await frame.click("#layerInfo");
+      assert.match(await frame.locator("#layerText").innerText(), /flüssiges Metall/);
+      await frame.click("#evidence");
       assert.match(
         await frame.locator("#content").innerText(),
-        /flüssige Schicht/,
+        /vieler Erdbeben/,
       );
       await frame.click("#closeDialog");
-      await frame.click("#exitPresent");
+      await frame.click("#present");
       assert.equal(
         await frame.evaluate(() => localStorage.length + sessionStorage.length),
         0,

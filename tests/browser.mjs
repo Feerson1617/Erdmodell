@@ -60,31 +60,7 @@ const settled = (p) =>
     {},
     { timeout: 45000 },
   );
-const comparisonNames = {
-  "01-globus-a": ["Globus", "A"],
-  "02-globus-b": ["Globus", "B"],
-  "03-erdinneres-a": ["Schnitt", "A"],
-  "04-erdinneres-b": ["Schnitt", "B"],
-  "05-hooge-a": ["Hanswarft", "A"],
-  "06-hooge-b": ["Hanswarft", "B"],
-  "12-helgoland-A": ["Helgoland", "A"],
-  "12-helgoland-B": ["Helgoland", "B"],
-};
-const comparisons = new WeakMap();
 async function visual(p, name, save) {
-  if (comparisonNames[name]) {
-    const [location, style] = comparisonNames[name],
-      pairs = comparisons.get(p);
-    const { lat, lon, d, tilt, bearing } = await diag(p);
-    (pairs[location] ??= {})[style] = { lat, lon, d, tilt, bearing };
-    if (style === "B")
-      assert.ok(
-        Object.keys(pairs[location].A).every(
-          (k) => Math.abs(pairs[location].A[k] - pairs[location].B[k]) < 1e-9,
-        ),
-        "Abweichende Vergleichsperspektive in " + location,
-      );
-  }
   const canvas = p.locator("#earth"),
     buf = await canvas.screenshot({ timeout: 30000 }),
     pic = PNG.sync.read(buf);
@@ -149,8 +125,6 @@ async function run(engine) {
       deviceScaleFactor: 1,
     });
     const p = await context.newPage();
-    run.comparisonPoses = {};
-    comparisons.set(p, run.comparisonPoses);
     p.setDefaultTimeout(20000);
     p.on("pageerror", (e) => run.errors.push(e.message));
     p.on("console", (m) => {
@@ -173,15 +147,9 @@ async function run(engine) {
         ? gl.getParameter(e.UNMASKED_RENDERER_WEBGL)
         : gl.getParameter(gl.RENDERER);
     });
-    const a = await visual(p, "01-globus-a", isChrome);
+    await visual(p, "01-globus-a", isChrome);
     pass("Produktionsstart unter /Erdmodell/ und gerenderte Erdoberfläche");
-    await p.click("#designB");
-    const b = await visual(p, "02-globus-b", isChrome);
-    assert.ok(difference(a, b) > 0.012);
-    const styleB = await diag(p);
-    assert.equal(styleB.lat, initial.lat);
-    assert.equal(styleB.d, initial.d);
-    pass("A/B verändert das Renderbild bei identischer Kamera");
+    assert.equal(initial.style, "A");
     const box = await p.locator("#earth").boundingBox();
     const cx = box.x + box.width / 2,
       cy = box.y + box.height / 2;
@@ -202,14 +170,10 @@ async function run(engine) {
     await settled(p);
     assert.ok(Math.abs((await diag(p)).d - initial.d) < 0.001);
     pass("Mausrotation, Radzoom und Zurücksetzen");
-    await p.click("#designA");
     await p.click("#nav-inside");
     await settled(p);
-    const shellA = await visual(p, "03-erdinneres-a", isChrome);
-    await p.click("#designB");
-    assert.ok(
-      difference(shellA, await visual(p, "04-erdinneres-b", isChrome)) > 0.008,
-    );
+    await visual(p, "03-erdinneres-a", isChrome);
+    await p.click('[data-layer="1"]');
     await p.click('[data-eye="1"]');
     const absent = await visual(p, "hidden", false);
     await p.click('[data-eye="1"]');
@@ -240,9 +204,8 @@ async function run(engine) {
     );
     await p.click("#labels");
     await p.click('[data-layer="2"]');
-    await p.click("#layerInfo");
-    assert.match(await p.locator("#content").innerText(), /flüssige/);
-    await p.locator("#content summary").click();
+    assert.match(await p.locator("#layerText").innerText(), /flüssiges Metall/);
+    await p.click("#evidence");
     if (isChrome) {
       await p.setViewportSize({ width: 1920, height: 1080 });
       await p.screenshot({
@@ -252,70 +215,64 @@ async function run(engine) {
     }
     await p.keyboard.press("Escape");
     await p.setViewportSize({ width: 1366, height: 768 });
-    for (const s of ["A", "B"]) {
-      await p.click("#home");
-      await settled(p);
-      await p.click("#design" + s);
-      await p.evaluate(() => {
-        window.flightLog = [];
-        function record(t) {
-          const w = window.geoObservatory();
-          window.flightLog.push({
-            t,
-            d: w.d,
-            lat: w.lat,
-            lon: w.lon,
-            tiles: w.tiles,
-          });
-          if (
-            window.flightLog.length < 900 &&
-            (!window.flightLog.some((x) => x.d < 10000) || w.flying)
-          )
-            requestAnimationFrame(record);
-        }
-        requestAnimationFrame(record);
-      });
-      await p.click("#visit");
-      await p.waitForFunction(() => window.geoObservatory().d < 4000);
-      if (s === "A" && isChrome)
-        await p.screenshot({ path: out + "/07-kameraflug.jpg", quality: 88 });
-      await settled(p);
-      await p.waitForFunction(
-        () =>
-          window.geoObservatory().localReady &&
-          window.geoObservatory().localVisible,
-      );
-      const samples = await p.evaluate(() => window.flightLog);
-      assert.ok(samples.filter((v) => v.d > 1 && v.d < 13000).length >= 3);
-      assert.ok(
-        samples.every((v, i) => i === 0 || v.d <= samples[i - 1].d + 0.00001),
-      );
-      const local = await diag(p);
-      assert.ok(local.d < 1 && Math.abs(local.lat - 54.566) < 0.0001);
-      run.flights.push({ style: s, samples });
-      await visual(p, s === "A" ? "05-hooge-a" : "06-hooge-b", isChrome);
-      run.metrics.push({
-        view: "Hooge " + s,
-        viewport: p.viewportSize(),
-        ...local,
-      });
-      await p.click("#return");
-      await settled(p);
-      assert.ok(Math.abs((await diag(p)).d - initial.d) < 0.001);
-      pass(
-        "Vollständiger Hin- und Rückflug " +
-          s +
-          " mit kontinuierlichen Distanzproben",
-      );
-    }
-    await p.click("#visit");
+    await p.click("#home");
+    await settled(p);
+    await p.evaluate(() => {
+      window.flightLog = [];
+      function record(t) {
+        const w = window.geoObservatory();
+        window.flightLog.push({
+          t,
+          d: w.d,
+          lat: w.lat,
+          lon: w.lon,
+          tiles: w.tiles,
+        });
+        if (
+          window.flightLog.length < 900 &&
+          (!window.flightLog.some((x) => x.d < 10000) || w.flying)
+        )
+          requestAnimationFrame(record);
+      }
+      requestAnimationFrame(record);
+    });
+    await p.click("#nav-place");
+    await p.waitForFunction(() => window.geoObservatory().d < 4000);
+    if (isChrome)
+      await p.screenshot({ path: out + "/07-kameraflug.jpg", quality: 88 });
+    await settled(p);
+    await p.waitForFunction(
+      () =>
+        window.geoObservatory().localReady &&
+        window.geoObservatory().localVisible,
+    );
+    const samples = await p.evaluate(() => window.flightLog);
+    assert.ok(samples.filter((v) => v.d > 1 && v.d < 13000).length >= 3);
+    assert.ok(
+      samples.every((v, i) => i === 0 || v.d <= samples[i - 1].d + 0.00001),
+    );
+    const local = await diag(p);
+    assert.ok(local.d < 1 && Math.abs(local.lat - 54.566) < 0.0001);
+    run.flights.push({ style: local.style, samples });
+    await visual(p, "05-hooge-a", isChrome);
+    run.metrics.push({
+      view: "Hooge A",
+      viewport: p.viewportSize(),
+      ...local,
+    });
+    await p.click("#return");
+    await settled(p);
+    assert.ok(Math.abs((await diag(p)).d - initial.d) < 0.001);
+    pass(
+      "Vollständiger Hin- und Rückflug mit kontinuierlichen Distanzproben",
+    );
+    await p.click("#nav-place");
     await p.waitForFunction(() => window.geoObservatory().d < 8000);
     await p.click("#in");
     assert.equal((await diag(p)).flying, false);
     pass("Unterbrechbarer Flug");
     await p.click("#home");
     await settled(p);
-    for (let i = 0; i < 4; i++) await p.click(i % 2 ? "#designA" : "#designB");
     await visual(p, "wiederholung", false);
     run.metrics.push({
       view: "Globus",
@@ -323,9 +280,9 @@ async function run(engine) {
       ...(await diag(p)),
     });
     await p.click("#present");
-    assert.ok(await p.locator("#exitPresent").isVisible());
-    await p.click("#exitPresent");
-    pass("Präsentationsansicht und wiederholter Designwechsel");
+    assert.equal(await p.locator("#present").getAttribute("aria-pressed"), "true");
+    await p.click("#present");
+    pass("Präsentationsansicht ein- und ausgeschaltet");
     await p.emulateMedia({ reducedMotion: "reduce" });
     await p.click("#nav-inside");
     await settled(p);
@@ -333,23 +290,21 @@ async function run(engine) {
     await p.setViewportSize({ width: 1920, height: 1080 });
     await p.click("#present");
     await p.click("#labels");
-    await p.click("#layerInfo");
-    assert.ok(await p.locator("#dialog").isVisible());
-    const first = await p.locator("#content h2").innerText();
-    await p.click("#nextLayer");
-    assert.notEqual(await p.locator("#content h2").innerText(), first);
-    await p.click("#closeDialog");
+    await p.click('[data-layer="2"]');
+    assert.match(await p.locator("#layerText").innerText(), /flüssiges Metall/);
+    await p.click('[data-layer="3"]');
+    assert.match(await p.locator("#layerText").innerText(), /Druck/);
     assert.match(
       await p.locator("#modelnote").innerText(),
       /didaktisch überhöht/i,
     );
-    for (const selector of ["#layerInfo", "#labels", "#exitPresent"]) {
+    for (const selector of ["#evidence", "#labels", "#present"]) {
       const box = await p.locator(selector).boundingBox();
       assert.ok(box.height >= 60 && box.width >= 60);
     }
     if (isChrome)
       await p.screenshot({ path: out + "/11-unterricht.jpg", quality: 88 });
-    await p.click("#exitPresent");
+    await p.click("#present");
     await p.click("#scale");
     pass(
       "Unterrichtsansicht 1920 × 1080: Lerntext, Schichtwechsel, Touchziele und Überhöhung",
@@ -369,17 +324,10 @@ async function run(engine) {
         }, id);
         if (id === "helgoland")
           assert.ok(Math.abs((await diag(p)).lon - 7.879) < 0.0001);
-        for (const style of ["A", "B"]) {
-          await p.click("#design" + style);
-          await p.evaluate(
-            () =>
-              new Promise((resolve) =>
-                requestAnimationFrame(() => requestAnimationFrame(resolve)),
-              ),
-          );
-          if (cycle === 0 && id === "helgoland")
-            await visual(p, "12-helgoland-" + style, isChrome);
-        }
+        assert.equal((await diag(p)).style, "A");
+        await p.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+        if (cycle === 0 && id === "helgoland")
+          await visual(p, "12-helgoland-A", isChrome);
       }
       const w = await diag(p);
       run.soak.push({
@@ -406,9 +354,7 @@ async function run(engine) {
     pass(
       "Zwei eigenständige Standortmodelle; " +
         cycle * 2 +
-        " Ortswechsel, " +
-        cycle * 4 +
-        " Stilaufrufe und " +
+        " Ortswechsel und " +
         Math.round((Date.now() - started) / 1000) +
         " s Ressourcenbeobachtung",
     );
@@ -484,7 +430,7 @@ async function run(engine) {
     await visual(f, "ersatz", false);
     await f.emulateMedia({ reducedMotion: "reduce" });
     await f.route("**/hooge.json", (r) => r.abort());
-    await f.click("#visit");
+    await f.click("#nav-place");
     await settled(f);
     await f.waitForFunction(() =>
       document
@@ -500,7 +446,7 @@ async function run(engine) {
     pass(
       "Ausfall der Halligdaten wird gemeldet und der Rückweg bleibt bedienbar",
     );
-    await f.click("#visit");
+    await f.click("#nav-place");
     await settled(f);
     await f.route("**/helgoland-air.webp", (r) => r.abort());
     await f.selectOption("#siteSelect", "helgoland");
@@ -517,7 +463,7 @@ async function run(engine) {
     );
     await f.reload();
     await settled(f);
-    await f.click("#visit");
+    await f.click("#nav-place");
     await f.waitForFunction(
       () =>
         !window.geoObservatory().flying &&

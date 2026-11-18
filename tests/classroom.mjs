@@ -7,7 +7,7 @@ import { preview } from "vite";
 import { chromium, webkit } from "playwright";
 import { PNG } from "pngjs";
 
-const dest = "test-results/unterricht";
+const dest = "test-results/unterricht-g131";
 await mkdir(dest, { recursive: true });
 const server = await preview({
   configFile: false,
@@ -83,11 +83,21 @@ async function exercise(browser, engine) {
     await p.goto(url);
     await wait(p);
     assert.equal((await read(p)).style, "A");
+    const area = async () => {
+      const box = await p.locator("#earth").boundingBox();
+      return box.width * box.height / (1920 * 1080);
+    };
+    run.globeArea = await area();
+    assert.ok(run.globeArea >= 0.91 && await p.locator("#sidebar").isHidden());
     await snap("01-globus-a");
     await p.tap("#present");
-    await p.tap("#boardInside");
+    await p.tap("#nav-inside");
     await wait(p);
     await anonymous(p);
+    run.smartboardArea = await area();
+    assert.ok(run.smartboardArea >= 0.74);
+    assert.ok(await p.locator("#isolate").isDisabled());
+    assert.equal(await p.locator("#pins span:visible").count(), 0);
     await snap("02-anonym");
     await p.tap("[data-layer='2']");
     await p.tap("#isolate");
@@ -98,7 +108,12 @@ async function exercise(browser, engine) {
       true,
       false,
     ]);
-    await p.tap("#layerInfo");
+    await p.tap("#evidence");
+    await anonymous(p);
+    assert.ok(await p.locator("#content svg").isVisible());
+    assert.equal(await p.locator(".inference").count(), 0);
+    await p.tap("#closeDialog");
+    await p.tap("#info");
     await anonymous(p);
     await p.tap("#closeDialog");
     await p.tap("#scale");
@@ -106,7 +121,7 @@ async function exercise(browser, engine) {
     await p.tap("#scale");
     await p.tap("#restoreLayers");
     pass(
-      "Geschlossener A-Globus und anonyme Entdeckung einschließlich Auswahl, Impuls, Isolation und Überhöhung",
+      "Geschlossener A-Globus und anonyme Entdeckung einschließlich Auswahl, Wellenbild, Modellhinweisen, Isolation und Überhöhung",
     );
     await p.tap("#labels");
     for (const [i, n] of names.entries())
@@ -114,6 +129,7 @@ async function exercise(browser, engine) {
         await p.locator("[data-layer='" + i + "']").innerText(),
         new RegExp(n),
       );
+    assert.ok(await p.locator("#pins span:visible").count() > 0);
     await snap("03-beschriftung");
     const ref = await read(p);
     assert.deepEqual(ref.shell.radii, [6371, 6336, 3481, 1221, 0]);
@@ -131,6 +147,9 @@ async function exercise(browser, engine) {
     );
     for (let i = 0; i < 4; i++) {
       await p.tap("[data-layer='" + i + "']");
+      const text = await p.locator("#layerText").innerText();
+      assert.match(text, [/festem Gestein/, /festes Gestein/, /flüssiges Metall/, /hohe Druck/][i]);
+      assert.ok(text.length < 155);
       await p.tap("#isolate");
       assert.deepEqual(
         (await read(p)).shell.visible,
@@ -173,14 +192,12 @@ async function exercise(browser, engine) {
       side = await p.locator("#sidebar").boundingBox();
     assert.ok(side.x + side.width <= view.x + 1);
     for (const sel of [
-      "#boardGlobe",
-      "#boardInside",
+      "#nav-globe",
+      "#nav-inside",
       "#labels",
       "[data-layer='1']",
-      "#exitPresent",
-      "#layerInfo",
+      "#present",
       "#evidence",
-      "#investigate",
       "#restoreLayers",
     ]) {
       const b = await p.locator(sel).boundingBox();
@@ -193,71 +210,26 @@ async function exercise(browser, engine) {
     await snap("07-smartboard");
     await p.tap("#cut");
     await p.tap("[data-layer='1']");
-    await p.tap("#layerInfo");
-    assert.match(await p.locator("#content").innerText(), /festem Gestein/);
-    await snap("08-grundwissen");
-    await p.tap("#content summary");
-    assert.match(
-      await p.locator("#content").innerText(),
-      /Lithosphäre umfasst die Kruste und den starren obersten Mantel/,
-    );
-    await snap("11-vertiefung");
-    await p.tap("#nextLayer");
-    assert.match(await p.locator("#content").innerText(), /flüssige Schicht/);
-    await p.tap("#nextLayer");
-    assert.match(await p.locator("#content").innerText(), /Druck.*fest/);
-    await p.tap("#closeDialog");
+    await snap("08-schalentext");
     await p.tap("#evidence");
+    const wave = await p.locator("#content").innerText();
+    for (const re of [/Vereinfachtes Modell/, /Flüssigkeiten breiten sie sich nicht aus/, /Muster.*vieler Erdbeben/])
+      assert.match(wave, re);
+    assert.doesNotMatch(wave, /UTC|Station|Messwert/);
+    assert.equal(await p.locator("#content table,#content input,#content details").count(), 0);
     await snap("09-wellen");
-    await p.tap("#content summary");
-    let text = await p.locator("#content").innerText();
-    assert.match(text, /gebrochen/);
-    assert.match(text, /flüssigen äußeren Kern/);
-    assert.match(text, /direkter Beobachtung unzugänglich/);
     await p.tap("#closeDialog");
-    await p.tap("#investigate");
-    assert.doesNotMatch(await p.locator(".invest").innerText(), /NC.NHC|Schlussfolgerung|Kern/);
-    await p.tap('[data-aid="starter"]');
-    assert.match(await p.locator(".invest").innerText(), /Ich vermute/);
-    await p.tap("#investNext");
-    assert.equal(await p.locator("tbody tr").count(), 3);
-    assert.doesNotMatch(await p.locator(".invest").innerText(), /flüssigen äußeren Erdkern/);
-    await p.tap("#markEvidence");
-    assert.ok(await p.locator(".investCard.marked").isVisible());
-    await snap("12-seismische-untersuchung");
-    await p.tap("#pauseInvest");
-    await p.tap("#investigate");
-    assert.match(await p.locator("#investTitle").innerText(), /Beobachtungen/);
-    await p.tap("#investNext");
-    await p.tap('[data-aid="depth"]');
-    assert.match(await p.locator(".invest").innerText(), /Messrauschen/);
-    await p.tap("#investNext");
-    await p.tap("#conclusion");
-    assert.match(await p.locator(".invest").innerText(), /flüssigen äußeren Erdkern/);
-    await p.tap("#conclusion");
-    assert.doesNotMatch(await p.locator(".invest").innerText(), /flüssigen äußeren Erdkern/);
-    await p.tap("#investNext");
-    assert.equal(await p.locator("#investNext").isDisabled(), true);
-    await p.tap("#investPrev");
-    assert.equal(await p.locator("#conclusion").getAttribute("aria-expanded"), "false");
-    await p.tap("#pauseInvest");
-    await p.tap("#limits");
-    text = await p.locator("#content").innerText();
-    for (const re of [
-      /5–10 km/,
-      /30–70 km/,
-      /35 km/,
-      /keine Fotografien/,
-      /glatt/,
-    ])
-      assert.match(text, re);
+    await p.tap("#info");
+    assert.match(await p.locator("#content").innerText(), /35 km/);
     await p.tap("#closeDialog");
-    pass(
-      "Grundwissen, Vertiefung, Wellenbelege und Modellkritik; Unterrichtssteuerung neben dem Modell bei 1920 × 1080",
-    );
-    await p.tap("#boardGlobe");
+    await p.tap("#labels");
+    await anonymous(p);
+    assert.equal(await p.locator("#layerText,#pins span:visible").count(), 0);
+    await p.tap("#labels");
+    pass("Modellhinweise, knappe Schalentexte, Wellenmodell mit Schluss aus vielen Erdbeben und erneutes Verbergen");
+    await p.tap("#nav-globe");
     await wait(p);
-    await p.tap("#boardInside");
+    await p.tap("#nav-inside");
     await wait(p);
     for (let cycle = 0; cycle < 14; cycle++) {
       const begin = performance.now();
@@ -320,17 +292,19 @@ async function exercise(browser, engine) {
       assert.equal(w.shell.selected, null);
       assert.ok(!w.shell.expanded && !w.shell.subdued && w.shell.cut);
       assert.deepEqual(w.shell.opacity, [1, 1, 1, 1]);
-      await p.tap("#boardInside");
+      await p.tap("#nav-inside");
       await wait(p);
       await anonymous(p);
     }
     pass(
       "Schalenrotation, wiederholtes Rücksetzen und stabile warme Ressourcen bei Schnitt- und Maßstabswechseln",
     );
-    await p.tap("#exitPresent");
+    await p.tap("#present");
     await p.setViewportSize({ width: 768, height: 1024 });
     await p.tap("#labels");
     await p.evaluate(() => window.scrollTo(0, 0));
+    const tabletView = await p.locator("#earth").boundingBox();
+    assert.ok(tabletView.height >= 440);
     await snap("10-tablet");
     assert.ok(
       await p.evaluate(
@@ -369,18 +343,19 @@ async function video(browser) {
     const video = p.video();
     await p.goto(url);
     await wait(p);
-    for (const id of [
-      "present",
-      "boardInside",
-      "labels",
-      "scale",
-      "isolate",
-      "restoreLayers",
-      "evidence",
-      "closeDialog",
-      "home",
+    for (const selector of [
+      "#present",
+      "#nav-inside",
+      "#labels",
+      "[data-layer='0']",
+      "#scale",
+      "#isolate",
+      "#restoreLayers",
+      "#evidence",
+      "#closeDialog",
+      "#home",
     ]) {
-      await p.click("#" + id);
+      await p.click(selector);
       await p.waitForTimeout(800);
     }
     await c.close();
