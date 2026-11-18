@@ -25,7 +25,10 @@ ET.register_namespace('',ns);ET.register_namespace('adlcp',adl)
 def tag(s):return '{'+ns+'}'+s
 def add(el,name,value=None,**attrs):
     child=ET.SubElement(el,tag(name),attrs);child.text=value;return child
+xsi='http://www.w3.org/2001/XMLSchema-instance'
+ET.register_namespace('xsi',xsi)
 m=ET.Element(tag('manifest'),identifier='GEORISIKO-G1',version='1.0')
+m.set('{'+xsi+'}schemaLocation',ns+' imscp_rootv1p1p2.xsd '+adl+' adlcp_rootv1p2.xsd')
 meta=add(m,'metadata');add(meta,'schema','ADL SCORM');add(meta,'schemaversion','1.2')
 os=add(m,'organizations',default='ATLAS');org=add(os,'organization',identifier='ATLAS')
 add(org,'title','GeoRisiko 3D');item=add(org,'item',identifier='OBSERVATORIUM',identifierref='SCO');add(item,'title','Erdobservatorium')
@@ -33,6 +36,7 @@ rs=add(m,'resources');r=add(rs,'resource',identifier='SCO',type='webcontent',hre
 for name in sorted(sco):add(r,'file',href=name)
 ET.indent(m);sco['imsmanifest.xml']=ET.tostring(m,encoding='utf-8',xml_declaration=True)
 assert all(f.attrib['href'] in sco for f in ET.fromstring(sco['imsmanifest.xml']).iter(tag('file')))
+sco.update(files(root/'scripts/scorm12'))
 archive('SCORM-1.2',sco)
 checks=files(root/'test-results');result=json.loads(checks['results.json'])
 assert not result.get('failure') and len(result['runs'])==2 and all(len(r['checks'])>=10 for r in result['runs'])
