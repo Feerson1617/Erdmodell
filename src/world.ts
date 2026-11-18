@@ -68,6 +68,7 @@ export class World {
   private models = new Map<TectonicSiteId, ProcessModel>();
   private selectedStep: Step | null = null;
   private atlasReturn: Pose = { ...HOME };
+  private atlasFilters?: Pick<PlateOptions, "category" | "plate">;
   private anchor: { lat: number; lon: number } | null = null;
   private departure: { id: TectonicSiteId; lat: number; lon: number; showModel: boolean } | null = null;
   private patchOpacity = 0;
@@ -291,7 +292,11 @@ export class World {
     this.updatePlateLayers();
     void this.loadPlates();
   }
-  private leaveProcess() {
+  private leaveProcess(keepFilters = false) {
+    if (this.atlasFilters && !keepFilters) {
+      this.setPlateOptions(this.atlasFilters);
+      this.atlasFilters = undefined;
+    }
     const id = this.processSite;
     if (id && this.anchor && (this.processReveal > 0 || this.patchOpacity > 0)) {
       if (this.departure && this.departure.id !== id) {
@@ -320,12 +325,14 @@ export class World {
     if (!this.processSite) {
       if (this.mode === "globe" || this.mode === "plates") this.atlasReturn = { ...this.nav.pose };
       else this.atlasReturn = { ...HOME };
+      this.atlasFilters = { category: this.plateOptions.category, plate: this.plateOptions.plate };
     }
-    this.leaveProcess();
+    this.leaveProcess(true);
     this.mode = "plates";
     this.processSite = id;
     this.processDetail = !overview;
-    this.setPlateOptions({ boundaries: true });
+    // A global filter such as divergence must not hide the Japan trench.
+    this.setPlateOptions({ boundaries: true, category: "all", plate: "" });
     const arrive = () => {
       if (!this.atlas || this.mode !== "plates" || this.processSite !== id || this.processDetail === overview) return;
       const site = tectonicSites[id];
@@ -452,7 +459,8 @@ export class World {
     this.leaveProcess();
     this.mode = "globe";
     this.updatePlateLayers();
-    if (forceHome || !wasAtlas) this.nav.fly(HOME);
+    if (forceHome) { this.processSlow = false; this.processLoop = false; }
+    if (forceHome || !wasAtlas) this.nav.fly(HOME, wasLocal);
     else if (wasLocal) this.nav.fly(this.atlasReturn, true);
   }
   inside() {
