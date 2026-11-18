@@ -396,10 +396,10 @@ async function run(engine) {
       cycle++;
     } while (cycle < 6 || Date.now() - started < 120000);
     const warm = run.soak.slice(2),
-      start = warm[0];
+      firstWarm = warm[0];
     assert.ok(
-      warm.every(s => s.textures <= start.textures + 2 && s.programs <= start.programs + 2 &&
-        s.fixedGeometries >= 0 && s.fixedGeometries <= start.fixedGeometries + 12 &&
+      warm.every(s => s.textures <= firstWarm.textures + 2 && s.programs <= firstWarm.programs + 2 &&
+        s.fixedGeometries >= 0 && s.fixedGeometries <= firstWarm.fixedGeometries + 12 &&
         s.uploadedTiles <= s.cachedTiles && s.cachedTiles <= 2 * (260 + 64)),
       "Ressourcen wachsen nach wiederholten Rundreisen",
     );
