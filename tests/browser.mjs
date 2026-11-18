@@ -56,7 +56,31 @@ const settled = (p) =>
     {},
     { timeout: 45000 },
   );
+const comparisonNames = {
+  "01-globus-a": ["Globus", "A"],
+  "02-globus-b": ["Globus", "B"],
+  "03-erdinneres-a": ["Schnitt", "A"],
+  "04-erdinneres-b": ["Schnitt", "B"],
+  "05-hooge-a": ["Hanswarft", "A"],
+  "06-hooge-b": ["Hanswarft", "B"],
+  "12-helgoland-A": ["Helgoland", "A"],
+  "12-helgoland-B": ["Helgoland", "B"],
+};
+const comparisons = new WeakMap();
 async function visual(p, name, save) {
+  if (comparisonNames[name]) {
+    const [location, style] = comparisonNames[name],
+      pairs = comparisons.get(p);
+    const { lat, lon, d, tilt, bearing } = await diag(p);
+    (pairs[location] ??= {})[style] = { lat, lon, d, tilt, bearing };
+    if (style === "B")
+      assert.ok(
+        Object.keys(pairs[location].A).every(
+          (k) => Math.abs(pairs[location].A[k] - pairs[location].B[k]) < 1e-9,
+        ),
+        "Abweichende Vergleichsperspektive in " + location,
+      );
+  }
   const canvas = p.locator("#earth"),
     buf = await canvas.screenshot({ timeout: 30000 }),
     pic = PNG.sync.read(buf);
@@ -121,6 +145,8 @@ async function run(engine) {
       deviceScaleFactor: 1,
     });
     const p = await context.newPage();
+    run.comparisonPoses = {};
+    comparisons.set(p, run.comparisonPoses);
     p.setDefaultTimeout(20000);
     p.on("pageerror", (e) => run.errors.push(e.message));
     p.on("console", (m) => {
@@ -189,6 +215,15 @@ async function run(engine) {
     const trans = await visual(p, "transparent", false);
     assert.ok(difference(trans, visible) > 0.004);
     await p.locator("#opacity").fill("100");
+    assert.ok(
+      difference(trans, absent) > 0.004,
+      "Teiltransparenz hat denselben Effekt wie Ausblenden",
+    );
+    const restored = await visual(p, "restored", false);
+    assert.ok(
+      difference(restored, visible) < difference(absent, visible) * 0.35,
+      "Nach 100 % fehlt Schichtfläche",
+    );
     await p.click("#scale");
     assert.match(await p.locator("#modelnote").innerText(), /überhöht/);
     await p.click("#cut");
@@ -286,6 +321,91 @@ async function run(engine) {
     assert.ok(await p.locator("#exitPresent").isVisible());
     await p.click("#exitPresent");
     pass("Präsentationsansicht und wiederholter Designwechsel");
+    await p.emulateMedia({ reducedMotion: "reduce" });
+    await p.click("#nav-inside");
+    await settled(p);
+    await p.click("#scale");
+    await p.setViewportSize({ width: 1920, height: 1080 });
+    await p.click("#present");
+    await p.click("#teach");
+    assert.ok(await p.locator("#teachingCard").isVisible());
+    const first = await p.locator("#teachingCard h2").innerText();
+    await p.click("#nextLayer");
+    assert.notEqual(await p.locator("#teachingCard h2").innerText(), first);
+    assert.match(
+      await p.locator("#modelnote").innerText(),
+      /didaktisch überhöht/,
+    );
+    for (const selector of ["#prevLayer", "#teach", "#exitPresent"]) {
+      const box = await p.locator(selector).boundingBox();
+      assert.ok(box.height >= 44 && box.width >= 44);
+    }
+    if (isChrome)
+      await p.screenshot({ path: out + "/11-unterricht.jpg", quality: 88 });
+    await p.click("#teach");
+    assert.equal(await p.locator("#teachingCard").isVisible(), false);
+    assert.ok(await p.locator("#modelnote").isVisible());
+    await p.click("#exitPresent");
+    await p.click("#scale");
+    pass(
+      "Unterrichtsansicht 1920 × 1080: Lerntext, Schichtwechsel, Touchziele und Überhöhung",
+    );
+    await p.setViewportSize({ width: 1366, height: 768 });
+    await p.click("#nav-place");
+    await settled(p);
+    run.soak = [];
+    const started = Date.now();
+    let cycle = 0;
+    do {
+      for (const id of ["helgoland", "hooge"]) {
+        await p.selectOption("#siteSelect", id);
+        await p.waitForFunction((id) => {
+          const w = window.geoObservatory();
+          return w.region === id && !w.flying && w.localReady && w.localVisible;
+        }, id);
+        if (id === "helgoland")
+          assert.ok(Math.abs((await diag(p)).lon - 7.879) < 0.0001);
+        for (const style of ["A", "B"]) {
+          await p.click("#design" + style);
+          await p.evaluate(
+            () =>
+              new Promise((resolve) =>
+                requestAnimationFrame(() => requestAnimationFrame(resolve)),
+              ),
+          );
+          if (cycle === 0 && id === "helgoland")
+            await visual(p, "12-helgoland-" + style, isChrome);
+        }
+      }
+      const w = await diag(p);
+      run.soak.push({
+        ms: Date.now() - started,
+        geometries: w.geometries,
+        textures: w.textures,
+        programs: w.programs,
+        heap: await p.evaluate(
+          () => performance.memory?.usedJSHeapSize ?? null,
+        ),
+      });
+      cycle++;
+    } while (cycle < 6 || Date.now() - started < 120000);
+    const warm = run.soak.slice(2),
+      ends = warm.at(-1);
+    assert.ok(
+      ends.textures <= warm[0].textures + 2 &&
+        ends.geometries <= warm[0].geometries + 12 &&
+        ends.programs <= warm[0].programs + 2,
+      "Ressourcen wachsen nach wiederholten Rundreisen",
+    );
+    pass(
+      "Zwei eigenständige Standortmodelle; " +
+        cycle * 2 +
+        " Ortswechsel, " +
+        cycle * 4 +
+        " Stilaufrufe und " +
+        Math.round((Date.now() - started) / 1000) +
+        " s Ressourcenbeobachtung",
+    );
     assert.deepEqual(run.errors, []);
     assert.ok(!run.console.some((m) => m.startsWith("error:")));
     assert.ok(run.loads.every((r) => r.status < 400));
@@ -373,6 +493,33 @@ async function run(engine) {
     await settled(f);
     pass(
       "Ausfall der Halligdaten wird gemeldet und der Rückweg bleibt bedienbar",
+    );
+    await f.click("#visit");
+    await settled(f);
+    await f.route("**/helgoland-air.webp", (r) => r.abort());
+    await f.selectOption("#siteSelect", "helgoland");
+    await settled(f);
+    await f.waitForFunction(() => window.geoObservatory().localVisible);
+    assert.match(
+      await f.locator("#status").innerText(),
+      /Luftbild unvollständig/,
+    );
+    await visual(f, "helgoland-ersatz", false);
+    await f.unroute("**/hooge.json");
+    await f.route("**/hooge-surface.bin", (r) =>
+      r.fulfill({ body: Buffer.alloc(16) }),
+    );
+    await f.reload();
+    await settled(f);
+    await f.click("#visit");
+    await f.waitForFunction(
+      () =>
+        !window.geoObservatory().flying &&
+        Math.abs(window.geoObservatory().d - 140) < 0.001,
+    );
+    assert.equal((await diag(f)).localReady, false);
+    pass(
+      "Fehlendes Standortfoto mit Ersatztextur, beschädigtes Geländenetz mit regionalem Rückfall",
     );
     await f.close();
     pass("Ausfall des Detailbilds mit gerenderter lokaler Ersatzkarte");

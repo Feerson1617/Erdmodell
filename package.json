@@ -8,8 +8,9 @@
     "check": "tsc --noEmit",
     "build": "npm run check && vite build",
     "preview": "vite preview",
-    "test": "node tests/browser.mjs",
-    "package": "python3 scripts/package.py"
+    "test": "node tests/site-data.mjs && node tests/browser.mjs",
+    "package": "python3 scripts/package.py",
+    "audit": "node tests/flight-audit.mjs && python3 scripts/analyse_flight.py test-results/audit"
   },
   "dependencies": {
     "three": "0.180.0",

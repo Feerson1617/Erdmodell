@@ -18,6 +18,7 @@ def archive(name,entries):
     print(dest.name, dest.stat().st_size)
 web=files(dist);assert 'index.html' in web
 source=(root/'docs/data-sources-and-licenses.md').read_bytes();web['Quellen.md']=source
+web['g1.1-data.md']=(root/'docs/g1.1-data.md').read_bytes();web['data-sources-and-licenses.md']=source
 sco=dict(web);sco['scorm.js']=(root/'scripts/scorm.js').read_bytes()
 sco['index.html']=sco['index.html'].replace(b'</head>',b'<script src="./scorm.js"></script></head>')
 ns='http://www.imsproject.org/xsd/imscp_rootv1p1p2';adl='http://www.adlnet.org/xsd/adlcp_rootv1p2'
@@ -41,9 +42,14 @@ archive('SCORM-1.2',sco)
 checks=files(root/'test-results');result=json.loads(checks['results.json'])
 assert not result.get('failure') and len(result['runs'])==2 and all(len(r['checks'])>=10 for r in result['runs'])
 assert len([p for p in checks if p.endswith('.jpg')])>=9
+assert 'vergleich.jpg' in checks
+for style in ('A','B'):
+    for pattern in ('flug-{}.mp4','bildzeiten-{}.json','bilder-{}.json','filmstreifen-{}.jpg'):
+        assert 'audit/'+pattern.format(style) in checks
 review=dict(web);review.update({'Pruefung/'+k:v for k,v in checks.items()})
-for name in ('quality-report','geoscience-validation','design-system','architecture-decision'):
+for name in ('quality-report','geoscience-validation','design-system','architecture-decision','g1.1-pruefbericht','g1.1-data','data-sources-and-licenses'):
     review['Pruefung/'+name+'.md']=(root/('docs/'+name+'.md')).read_bytes()
+review.update({'Pruefung/evidence/'+k:v for k,v in files(root/'docs/evidence').items()})
 review['START-macOS.txt']='''GeoRisiko 3D · Lokale Sichtprüfung
 ZIP in einen eigenen Ordner entpacken. Im Terminal „cd “ eingeben, den
 entpackten Ordner ins Terminal ziehen und die Eingabetaste drücken.

@@ -22,7 +22,13 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npx playwright install --with-deps chromium webkit
+      - run: node tests/gate.mjs
       - run: npm test
+      - name: Kamerafahrt aufnehmen und Bildfolge auswerten
+        run: |
+          if ! command -v ffmpeg >/dev/null; then sudo apt-get update && sudo apt-get install -y ffmpeg; fi
+          npm run audit
+          python3 scripts/compare_views.py
       - uses: actions/upload-artifact@v4
         if: always()
         with:

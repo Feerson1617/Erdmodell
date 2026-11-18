@@ -26,7 +26,7 @@ try {
         if (f === "/host") {
           res.setHeader("Content-Type", "text/html");
           res.end(
-            '<script>window.calls=[];window.API={LMSInitialize(){calls.push("initialize");return "true"},LMSFinish(){calls.push("finish");return "true"}}</script><iframe src="/index.html" width="1024" height="768"></iframe>',
+            '<script>window.calls=[];window.API={LMSInitialize(){calls.push("initialize");return "true"},LMSFinish(){calls.push("finish");return "true"}}</script><iframe src="/lms/kurse/erde/index.html" width="1024" height="768"></iframe>',
           );
           return;
         }
@@ -39,7 +39,9 @@ try {
             ".webp": "image/webp",
           }[extname(f)] ?? "application/octet-stream",
         );
-        res.end(await readFile(join(path, f)));
+        if (!f.startsWith("/lms/kurse/erde/") || f.includes(".."))
+          throw Error();
+        res.end(await readFile(join(path, f.slice("/lms/kurse/erde/".length))));
       } catch {
         res.writeHead(404);
         res.end();
@@ -47,7 +49,11 @@ try {
     });
     await new Promise((r) => server.listen(0, "127.0.0.1", r));
     try {
-      const page = await browser.newPage();
+      const page = await browser.newPage({ reducedMotion: "reduce" });
+      const failures = [];
+      page.on("response", (r) => {
+        if (r.status() >= 400) failures.push(r.url());
+      });
       await page.goto("http://127.0.0.1:" + server.address().port + "/host");
       const frame = page.frames()[1];
       await frame.waitForFunction(() => window.geoObservatory?.().draws > 0);
@@ -55,6 +61,19 @@ try {
       await frame.waitForFunction(
         () => window.geoObservatory().mode === "inside",
       );
+      await frame.click("#nav-place");
+      await frame.waitForFunction(() => window.geoObservatory().localVisible);
+      await frame.selectOption("#siteSelect", "helgoland");
+      await frame.waitForFunction(() => {
+        const w = window.geoObservatory();
+        return (
+          w.region === "helgoland" &&
+          w.localVisible &&
+          w.localReady &&
+          !w.flying
+        );
+      });
+      assert.deepEqual(failures, []);
       await frame.goto("about:blank");
       assert.deepEqual(
         await page.evaluate(() => window.calls),
