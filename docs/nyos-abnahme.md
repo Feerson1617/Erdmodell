@@ -51,7 +51,7 @@ Die Fachgrundlage für Ereignis und Schutz erläutert der Fachanhang. Datenbesch
 
 Der Standardlauf `node tests/nyos.mjs` verwendet Chromium und WebKit. Mit `NYOS_GATE=A`, `B`, `C` oder `D` lässt sich ein begrenzter Zwischenstand separat prüfen. Solche Teilläufe erzeugen eigene Protokolle und ersetzen den vollständigen Abnahmenachweis nicht. Geodatenfehler, fehlende Renderbilder, unerwartete externe Anfragen und Browserfehler führen im regulären Pfad zum Fehlschlag.
 
-Vor dem Prüflauf müssen der Produktionsbuild und die Playwright-Browser vorliegen. Das Sichtprüfungs-ZIP enthält die ursprünglichen JPGs, die Bedienaufzeichnung sowie die Rohmessungen in `pruefung.json`. Jeder Bildnachweis trägt im Protokoll seinen SHA-256-Prüfwert. Die tabellarischen Bildzeiten stehen im beigefügten Messbericht.
+Vor dem Prüflauf müssen der Produktionsbuild und die Playwright-Browser vorliegen. Die Videoabnahme dekodiert das fertig geschriebene WebM im Browser und vergleicht seine letzten Bilder mit der tatsächlichen Globusansicht. In der ersten Aufzeichnung war die Rückfahrt am Ende abgeschnitten. Die Aufnahme wartet jetzt auf die dargestellte globale Erde und weitere gezeichnete Bilder vor dem Schließen. Das Sichtprüfungs-ZIP enthält die ursprünglichen JPGs, die Bedienaufzeichnung sowie die Rohmessungen in `pruefung.json`. Jeder Bildnachweis trägt im Protokoll seinen SHA-256-Prüfwert. Die tabellarischen Bildzeiten stehen im beigefügten Messbericht.
 
 ## Grenzen der Abnahme
 

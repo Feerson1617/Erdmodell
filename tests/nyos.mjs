@@ -504,7 +504,11 @@ function reportText() {
       );
     if (r.video)
       rows.push(
-        "Die zusammenhängende Bedienaufzeichnung liegt in `bedienung.webm`.",
+        "Die zusammenhängende Bedienaufzeichnung in `bedienung.webm` dauert " +
+          r.video.seconds.toFixed(1) +
+          " s. Der mittlere Farbkanalabstand zwischen dem dekodierten Schlussbild und der aufgenommenen Globusreferenz beträgt " +
+          r.video.lastFrameMeanChannelError.toFixed(2) +
+          " auf einer Skala bis 255.",
         "",
       );
     if (report.failure) {
@@ -1172,10 +1176,7 @@ async function missingDem(browser, run) {
     });
     const fallback = await diag(p);
     assert.ok(!fallback.nyos.ready && !fallback.nyos.terrainVisible);
-    assert.match(
-      await p.locator("#status").innerText(),
-      /Nyos.*fehl|Nyos.*Ersatz/i,
-    );
+    await p.locator("#status").filter({ hasText: /Nyos.*fehl|Nyos.*Ersatz/i }).waitFor({ state: "visible" });
     await painted(p);
     pictureStats(await raster(p));
     await p.unroute("**/nyos/elevation.i16");
@@ -1247,11 +1248,28 @@ async function recordDemo(browser) {
     await settled(p);
     await p.waitForTimeout(900);
     await p.selectOption("#nyos-measure", "settlements");
-    await settled(p);
-    await p.waitForTimeout(900);
+    await p.waitForFunction(
+      () =>
+        window.geoObservatory().nyos.settlementVisible &&
+        !window.geoObservatory().flying,
+    );
+    await painted(p);
+    await p.waitForTimeout(1200);
     await p.tap("#nav-globe");
-    await settled(p);
-    await p.waitForTimeout(1000);
+    await p.waitForFunction(() => {
+      const view = window.geoObservatory();
+      return view.mode === "globe" && view.d > 8000 && !view.flying;
+    });
+    // Let Chromium present the final globe to both the compositor and video encoder.
+    const finalFrame = await p.screenshot({ type: "png" });
+    await p.evaluate(async () => {
+      const started = performance.now();
+      let count = 0;
+      while (performance.now() - started < 4000 || count < 12) {
+        await new Promise(requestAnimationFrame);
+        count++;
+      }
+    });
     await ctx.close();
     await video.saveAs(join(dest, "bedienung.webm"));
     const videoBytes = await readFile(join(dest, "bedienung.webm"));
@@ -1260,7 +1278,63 @@ async function recordDemo(browser) {
         videoBytes.subarray(0, 4).equals(Buffer.from([26, 69, 223, 163])),
       "Eigenständige WebM-Bedienaufzeichnung",
     );
+    const viewer = await browser.newPage();
+    let comparison;
+    try {
+      comparison = await viewer.evaluate(
+        async ({ film, reference }) => {
+          const photo = new Image();
+          photo.src = "data:image/png;base64," + reference;
+          await photo.decode();
+          const video = document.createElement("video");
+          video.src = "data:video/webm;base64," + film;
+          await new Promise((resolve, reject) => {
+            video.onloadedmetadata = resolve;
+            video.onerror = () =>
+              reject(Error("WebM enthält keine lesbaren Videometadaten"));
+          });
+          const duration = video.duration;
+          if (!Number.isFinite(duration) || duration < 2)
+            throw Error("Ungültige Filmdauer " + duration);
+          const sought = new Promise((resolve, reject) => {
+            video.onseeked = resolve;
+            video.onerror = reject;
+          });
+          video.currentTime = duration - 0.16;
+          await sought;
+          const canvas = document.createElement("canvas");
+          canvas.width = 160;
+          canvas.height = 100;
+          const ctx = canvas.getContext("2d", { willReadFrequently: true });
+          const pixels = (source) => {
+            ctx.drawImage(source, 0, 0, 160, 100);
+            return ctx.getImageData(0, 0, 160, 100).data;
+          };
+          const first = pixels(photo),
+            last = pixels(video);
+          let error = 0;
+          for (let i = 0; i < last.length; i++)
+            if (i % 4 !== 3) error += Math.abs(first[i] - last[i]);
+          return {
+            seconds: duration,
+            lastFrameMeanChannelError: error / (160 * 100 * 3),
+          };
+        },
+        {
+          film: videoBytes.toString("base64"),
+          reference: finalFrame.toString("base64"),
+        },
+      );
+      assert.ok(
+        comparison.lastFrameMeanChannelError < 12,
+        "Das letzte Videobild zeigt die zurückgekehrte Erde nicht: " +
+          JSON.stringify(comparison),
+      );
+    } finally {
+      await viewer.close();
+    }
     return {
+      ...comparison,
       bytes: videoBytes.length,
       sha256: createHash("sha256").update(videoBytes).digest("hex"),
     };
