@@ -180,6 +180,7 @@ async function exercise(browser, engine) {
       "#exitPresent",
       "#layerInfo",
       "#evidence",
+      "#investigate",
       "#restoreLayers",
     ]) {
       const b = await p.locator(sel).boundingBox();
@@ -188,7 +189,9 @@ async function exercise(browser, engine) {
         sel + " Smartboard-Touchziel",
       );
     }
+    await p.tap("#cut");
     await snap("07-smartboard");
+    await p.tap("#cut");
     await p.tap("[data-layer='1']");
     await p.tap("#layerInfo");
     assert.match(await p.locator("#content").innerText(), /festem Gestein/);

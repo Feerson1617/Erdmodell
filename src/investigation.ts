@@ -51,7 +51,7 @@ export class Investigation {
 
   render(named: boolean) {
     const step = this.step;
-    const target = named ? "äußeren Erdkern" : "tiefen, flüssigen Bereich";
+    const target = named ? "flüssigen äußeren Erdkern" : "tiefen, flüssigen Bereich";
     const card = (label: string, body: string) => `<section class="investCard"><h3>${label}</h3><p>${body}</p></section>`;
     const details = [
       "",
@@ -66,9 +66,9 @@ export class Investigation {
         card("Weiter untersuchen", "Welche weiteren Signale würdet ihr suchen, um die Grenze oder den Zustand eines noch tieferen Bereichs zu bestimmen?"),
     ];
     const aids = [["starter","Satzanfang",starters[step]],["terms","Fachbegriff",terms[step]],["depth","Vertiefung",deeper[step]]];
-    return `<div class="invest"><div class="eyebrow">HINWEISE AUS DEM ERDINNEREN · ${step + 1}/5</div><h2 tabindex="-1" id="investTitle">${titles[step]}</h2><p class="investQuestion">${prompts[step]}</p>${details[step]}
+    return `<div class="invest"><div class="eyebrow">HINWEISE AUS DEM ERDINNEREN · ${step + 1}/5</div><h2 tabindex="-1" id="investTitle">${titles[step]}</h2><div class="investBody"><p class="investQuestion">${prompts[step]}</p>${details[step]}
     <div class="investAids">${aids.map(([id,label]) => `<button data-aid="${id}" aria-expanded="${this.help.has(id)}">${label}</button>`).join("")}</div>${aids.filter(([id]) => this.help.has(id)).map(([,label,body]) => card(label,body)).join("")}
-    <div class="investNav"><button id="investPrev" ${step === 0 ? "disabled" : ""}>Zurück</button><button id="investNext" ${step === 4 ? "disabled" : ""}>Weiter</button></div><button id="pauseInvest">Zurück zum Schalenmodell</button></div>`;
+    </div><div class="investFooter"><div class="investNav"><button id="investPrev" ${step === 0 ? "disabled" : ""}>Zurück</button><button id="investNext" ${step === 4 ? "disabled" : ""}>Weiter</button></div><button id="pauseInvest">Zurück zum Schalenmodell</button></div></div>`;
   }
 
   bind(panel: HTMLElement, refresh: () => void) {

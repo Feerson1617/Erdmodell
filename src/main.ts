@@ -162,7 +162,7 @@ function renderShellControls() {
   <div class="shellActions"><button id="isolate">${icon("focus")} Isolieren</button><button id="subdue" aria-pressed="${shell.subdued}" ${shell.selected === null ? "disabled" : ""}>Umfeld dämpfen</button><button id="restoreLayers">${icon("rotate-ccw")} Alle zeigen</button></div>
   <div class="range"><label for="opacity">Deckkraft · ${layerName(choice)}</label><input id="opacity" type="range" min="15" max="100" value="${shell.opacity[choice] * 100}"></div>
   <div class="options"><label><input id="cut" type="checkbox" ${shell.cut ? "checked" : ""}> Keilschnitt</label><label><input id="scale" type="checkbox" ${shell.expanded ? "checked" : ""}> ${labels ? "Kruste" : "Außenschale"} verbreitern</label></div>
-  <div class="readingActions"><button class="action primary" id="layerInfo">${icon("info")}${labels ? "Grundwissen" : "Impulsfrage"}</button><button class="action secondary" id="evidence">Woher wissen wir das?</button><button id="investigate">Hinweise aus dem Erdinneren</button><button id="limits">Modellgrenzen</button></div>`;
+  <div class="readingActions"><button class="action primary" id="layerInfo">${icon("info")}${labels ? "Grundwissen" : "Impulsfrage"}</button><button class="action secondary" id="evidence">Woher wissen wir das?</button><button id="investigate" class="action secondary">Hinweise aus dem Erdinneren</button><button id="limits">Modellgrenzen</button></div>`;
 }
 function siteInfo() {
   const r = world.region;

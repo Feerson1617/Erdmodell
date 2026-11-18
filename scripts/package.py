@@ -1,6 +1,7 @@
 """Build reproducible ZIPs from the production build and the current browser run."""
 
 import json, zipfile, subprocess
+from statistics import median
 from pathlib import Path
 from xml.etree import ElementTree as ET
 
@@ -102,6 +103,8 @@ assert (
     len([k for k in lesson_checks if k.endswith(".jpg")]) == 12
     and "unterricht/bedienung.webm" in lesson_checks
 )
+shots = [v for k, v in lesson_checks.items() if k.endswith(".jpg")]
+assert len(shots) == len(set(shots)), "Unterrichtsbilder müssen unterschiedliche Zustände zeigen"
 version = ("GeoRisiko 3D · G1.3\nGeprüfter Git-Commit: " + commit + "\n").encode()
 # The SCO contains only the application and the files declared in its manifest.
 archive("SCORM-1.2", sco)
@@ -139,4 +142,20 @@ for key in ("results.json", "architecture-gate.json"):
     review["Pruefung/" + key] = checks[key]
 for name in ("g1.3-pruefbericht", "unterricht-20-11", "geoscience-validation"):
     review["Pruefung/" + name + ".md"] = (root / f"docs/{name}.md").read_bytes()
+measured = ["# Messbericht G1.3", "", f"Produktionsbuild `{commit}`", "",
+            "14 Bedienfolgen pro Engine. Bildzeiten stammen aus einer separaten ruhenden Schalenansicht bei 1920 × 1080. Die Auflösung gilt für das Modell neben der Bedienleiste.", ""]
+for run in json.loads(checks["unterricht/pruefung.json"])["runs"]:
+    cadence = run["cadence"]
+    res = cadence["resolution"]
+    cycles = run["resources"]
+    warm = cycles[3:]
+    heap = [c["heapBytes"] for c in warm if c["heapBytes"] is not None]
+    measured += [f"## {run['engine']} {run['version']}", "",
+                 cadence["renderer"], "",
+                 f"- {cadence['fps']:.1f} FPS. Median {median(cadence['gaps']):.1f} ms, P95 {cadence['p95Ms']:.1f} ms, Maximum {cadence['maxMs']:.1f} ms.",
+                 f"- Puffer {res['width']} × {res['height']}. Faktor {cadence['ratio']:.2f}, Start {res['initial']:.2f}, Minimum {res['minimum']:.2f}, Maximum {res['maximum']:.2f}. Absenkungen {res['reductions']}, Anhebungen {res['recoveries']}.",
+                 f"- Warme Geometrien, Texturen und Programme zu Beginn → Ende: {warm[0]['geometries']} → {warm[-1]['geometries']}, {warm[0]['textures']} → {warm[-1]['textures']}, {warm[0]['programs']} → {warm[-1]['programs']}.",
+                 f"- Bedienfolge bis zur Bildausgabe im Median {median(c['interactionMs'] for c in cycles):.0f} ms, maximal {max(c['interactionMs'] for c in cycles)} ms.",
+                 f"- JS-Heap in den warmen Zyklen: {min(heap)/1048576:.1f}–{max(heap)/1048576:.1f} MiB." if heap else "- JS-Heap vom Browser nicht ausgewiesen.", ""]
+review["Pruefung/Messbericht.md"] = "\n".join(measured).encode()
 archive("Sichtpruefung", review)

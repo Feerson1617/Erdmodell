@@ -1471,6 +1471,14 @@ dialog summary {
 .invest button { min-height: 44px; padding: .35em .7em; font-size: .93em; }
 .present .invest button, .present .readingActions #investigate { min-height: 60px; }
 .investNav button { flex: 1; }
+.invest button { border: 1px solid #61776f; border-radius: 7px; }
+.invest button[aria-expanded="true"], .invest button[aria-pressed="true"] { color: var(--lime); background: #293c31; }
 #investNext { background: #c1dda7; color: #18251d; }
 .invest button:disabled { opacity: .48; }
 #pauseInvest { width: 100%; }
+@media (min-width: 721px) and (orientation: landscape) {
+  .present .invest { display: flex; flex-direction: column; height: 100%; }
+  .present .investBody { flex: 1; min-height: 0; overflow-y: auto; padding-right: 5px; }
+  .present .investFooter { flex: none; border-top: 1px solid var(--line); }
+  .present .investNav { margin: 6px 0; }
+}
