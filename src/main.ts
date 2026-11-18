@@ -33,6 +33,7 @@ import {
   Navigation2,
   ChevronDown,
 } from "lucide";
+import { Investigation } from "./investigation";
 import { World } from "./world";
 
 import { layers, type Style } from "./model";
@@ -101,6 +102,7 @@ const desk = $("desk"),
   dialog = $<HTMLDialogElement>("dialog"),
   content = $("content"),
   status = $("status");
+const investigation = new Investigation();
 let world: World,
   choice = 1,
   alertText = "",
@@ -160,7 +162,7 @@ function renderShellControls() {
   <div class="shellActions"><button id="isolate">${icon("focus")} Isolieren</button><button id="subdue" aria-pressed="${shell.subdued}" ${shell.selected === null ? "disabled" : ""}>Umfeld dämpfen</button><button id="restoreLayers">${icon("rotate-ccw")} Alle zeigen</button></div>
   <div class="range"><label for="opacity">Deckkraft · ${layerName(choice)}</label><input id="opacity" type="range" min="15" max="100" value="${shell.opacity[choice] * 100}"></div>
   <div class="options"><label><input id="cut" type="checkbox" ${shell.cut ? "checked" : ""}> Keilschnitt</label><label><input id="scale" type="checkbox" ${shell.expanded ? "checked" : ""}> ${labels ? "Kruste" : "Außenschale"} verbreitern</label></div>
-  <div class="readingActions"><button class="action primary" id="layerInfo">${icon("info")}${labels ? "Grundwissen" : "Impulsfrage"}</button><button class="action secondary" id="evidence">Woher wissen wir das?</button><button id="limits">Modellgrenzen</button></div>`;
+  <div class="readingActions"><button class="action primary" id="layerInfo">${icon("info")}${labels ? "Grundwissen" : "Impulsfrage"}</button><button class="action secondary" id="evidence">Woher wissen wir das?</button><button id="investigate">Hinweise aus dem Erdinneren</button><button id="limits">Modellgrenzen</button></div>`;
 }
 function siteInfo() {
   const r = world.region;
@@ -192,13 +194,22 @@ function renderSide() {
     $("overview").onclick = () => world.visit(r.id, true);
     $("nearby").onclick = () => world.visit(r.id);
   }
-  if (mode === "inside") side.innerHTML = renderShellControls();
+  if (mode === "inside") {
+    side.innerHTML = investigation.active ? investigation.render(labels) : renderShellControls();
+    if (investigation.active) investigation.bind(side, renderSide);
+  }
+  $("investigate")?.addEventListener("click", () => {
+    investigation.active = true;
+    renderSide();
+    $("investTitle").focus();
+  });
   if (mode === "globe" && present)
     side.innerHTML = `<div class="eyebrow"><i></i> ENTDECKEN UND VERMUTEN</div><h1>Planet Erde<span>.</span></h1><p class="intro">Wie könnte unsere Erde im Inneren aufgebaut sein?</p><button class="action primary" id="openInside">${icon("layers-3")} Schnitt öffnen</button>`;
   $("boardGlobe").setAttribute("aria-pressed", String(mode === "globe"));
   $("boardInside").setAttribute("aria-pressed", String(mode === "inside"));
   $("labels")?.addEventListener("click", () => {
     labels = !labels;
+    if (!labels) investigation.reset();
     renderSide();
     $("labels").focus();
   });
@@ -283,10 +294,10 @@ function updateNote() {
   note.textContent =
     world.mode === "inside"
       ? world.shell.expanded
-        ? `Didaktisch überhöht · ${labels ? "Kruste" : "äußere Schale"} verbreitert`
+        ? `Didaktisch überhöht – ${labels ? "Erdkruste" : "äußere Schale"} zur Veranschaulichung verbreitert`
         : labels
-          ? "Maßstabsgetreu · Referenzkruste 35 km"
-          : "Maßstabsgetreues Erklärungsmodell"
+          ? "Maßstabsgetreues Referenzmodell – vereinfachte Krustendicke"
+          : "Maßstabsgetreues Referenzmodell – vereinfachte Dicke der Außenschale"
       : world.region.label;
 }
 function navigate(mode: World["mode"]) {
@@ -296,6 +307,7 @@ function navigate(mode: World["mode"]) {
   renderSide();
 }
 function reset() {
+  investigation.reset();
   choice = 1;
   labels = false;
   world.region = firstRegion;

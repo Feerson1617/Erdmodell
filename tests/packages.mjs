@@ -17,7 +17,7 @@ try {
       "-m",
       "zipfile",
       "-e",
-      "artifacts/GeoRisiko-G1.2-" + name + ".zip",
+      "artifacts/GeoRisiko-G1.3-" + name + ".zip",
       path,
     ]);
     const server = createServer(async (req, res) => {

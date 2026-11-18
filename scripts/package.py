@@ -19,7 +19,7 @@ def files(folder):
 
 
 def archive(name, entries):
-    dest = out / ("GeoRisiko-G1.2-" + name + ".zip")
+    dest = out / ("GeoRisiko-G1.3-" + name + ".zip")
     with zipfile.ZipFile(dest, "w") as z:
         for key, value in sorted(entries.items()):
             entry = zipfile.ZipInfo(key, date_time=(2026, 1, 1, 0, 0, 0))
@@ -61,7 +61,7 @@ def add(el, name, value=None, **attrs):
 
 xsi = "http://www.w3.org/2001/XMLSchema-instance"
 ET.register_namespace("xsi", xsi)
-m = ET.Element(tag("manifest"), identifier="GEORISIKO-G12", version="1.2")
+m = ET.Element(tag("manifest"), identifier="GEORISIKO-G13", version="1.2")
 m.set(
     "{" + xsi + "}schemaLocation",
     ns + " imscp_rootv1p1p2.xsd " + adl + " adlcp_rootv1p2.xsd",
@@ -99,10 +99,10 @@ for name in ("results.json", "unterricht/pruefung.json"):
     }
 lesson_checks = {k: v for k, v in checks.items() if k.startswith("unterricht/")}
 assert (
-    len([k for k in lesson_checks if k.endswith(".jpg")]) == 10
+    len([k for k in lesson_checks if k.endswith(".jpg")]) == 12
     and "unterricht/bedienung.webm" in lesson_checks
 )
-version = ("GeoRisiko 3D · G1.2\nGeprüfter Git-Commit: " + commit + "\n").encode()
+version = ("GeoRisiko 3D · G1.3\nGeprüfter Git-Commit: " + commit + "\n").encode()
 # The SCO contains only the application and the files declared in its manifest.
 archive("SCORM-1.2", sco)
 lesson = dict(web)
@@ -137,6 +137,6 @@ review = dict(lesson)
 review.update({"Pruefung/" + k: v for k, v in lesson_checks.items()})
 for key in ("results.json", "architecture-gate.json"):
     review["Pruefung/" + key] = checks[key]
-for name in ("g1.2-pruefbericht", "unterricht-20-11", "geoscience-validation"):
+for name in ("g1.3-pruefbericht", "unterricht-20-11", "geoscience-validation"):
     review["Pruefung/" + name + ".md"] = (root / f"docs/{name}.md").read_bytes()
 archive("Sichtpruefung", review)

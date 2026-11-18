@@ -44,6 +44,9 @@ async function anonymous(p) {
     await p.locator("body").innerText(),
     /Erdkruste|Erdmantel|Erdkern|Lithosphäre/i,
   );
+  const hints = await p.locator("[title]:visible,[aria-label]:visible").evaluateAll(nodes =>
+    nodes.map(el => [el.title, el.getAttribute("aria-label")].join(" ")).join(" "));
+  assert.doesNotMatch(hints, /kruste|mantel|erdkern|lithosphäre/i);
   assert.doesNotMatch(
     await p.locator("#sidebar").ariaSnapshot(),
     /Erdkruste|Erdmantel|Erdkern|Lithosphäre/i,
@@ -114,6 +117,7 @@ async function exercise(browser, engine) {
     await snap("03-beschriftung");
     const ref = await read(p);
     assert.deepEqual(ref.shell.radii, [6371, 6336, 3481, 1221, 0]);
+    await p.tap("[data-layer='0']");
     await snap("04-massstab");
     await p.tap("#scale");
     const wide = await read(p);
@@ -194,6 +198,7 @@ async function exercise(browser, engine) {
       await p.locator("#content").innerText(),
       /Lithosphäre umfasst die Kruste und den starren obersten Mantel/,
     );
+    await snap("11-vertiefung");
     await p.tap("#nextLayer");
     assert.match(await p.locator("#content").innerText(), /flüssige Schicht/);
     await p.tap("#nextLayer");
@@ -207,6 +212,32 @@ async function exercise(browser, engine) {
     assert.match(text, /flüssigen äußeren Kern/);
     assert.match(text, /direkter Beobachtung unzugänglich/);
     await p.tap("#closeDialog");
+    await p.tap("#investigate");
+    assert.doesNotMatch(await p.locator(".invest").innerText(), /NC.NHC|Schlussfolgerung|Kern/);
+    await p.tap('[data-aid="starter"]');
+    assert.match(await p.locator(".invest").innerText(), /Ich vermute/);
+    await p.tap("#investNext");
+    assert.equal(await p.locator("tbody tr").count(), 3);
+    assert.doesNotMatch(await p.locator(".invest").innerText(), /flüssigen äußeren Erdkern/);
+    await p.tap("#markEvidence");
+    assert.ok(await p.locator(".investCard.marked").isVisible());
+    await snap("12-seismische-untersuchung");
+    await p.tap("#pauseInvest");
+    await p.tap("#investigate");
+    assert.match(await p.locator("#investTitle").innerText(), /Beobachtungen/);
+    await p.tap("#investNext");
+    await p.tap('[data-aid="depth"]');
+    assert.match(await p.locator(".invest").innerText(), /Messrauschen/);
+    await p.tap("#investNext");
+    await p.tap("#conclusion");
+    assert.match(await p.locator(".invest").innerText(), /flüssigen äußeren Erdkern/);
+    await p.tap("#conclusion");
+    assert.doesNotMatch(await p.locator(".invest").innerText(), /flüssigen äußeren Erdkern/);
+    await p.tap("#investNext");
+    assert.equal(await p.locator("#investNext").isDisabled(), true);
+    await p.tap("#investPrev");
+    assert.equal(await p.locator("#conclusion").getAttribute("aria-expanded"), "false");
+    await p.tap("#pauseInvest");
     await p.tap("#limits");
     text = await p.locator("#content").innerText();
     for (const re of [
@@ -236,10 +267,11 @@ async function exercise(browser, engine) {
       });
       await painted(p);
       const { shell, geometries, textures, programs } = await read(p);
+      const heapBytes = await p.evaluate(() => performance.memory?.usedJSHeapSize ?? null);
       run.resources.push({
         cycle,
         interactionMs: Math.round(performance.now() - begin),
-        builds: shell.builds,
+        heapBytes, builds: shell.builds,
         geometries,
         textures,
         programs,
@@ -251,6 +283,24 @@ async function exercise(browser, engine) {
     assert.equal(end.geometries, start.geometries);
     assert.equal(end.textures, start.textures);
     assert.equal(end.programs, start.programs);
+    run.cadence = await p.evaluate(async () => {
+      const gaps = [];
+      const start = performance.now();
+      let last = start;
+      while (performance.now() - start < 4500) {
+        const now = await new Promise(requestAnimationFrame);
+        if (now > last) gaps.push(now - last);
+        last = now;
+      }
+      const w = window.geoObservatory();
+      const sorted = [...gaps].sort((a, b) => a - b);
+      const gl = document.querySelector("#earth").getContext("webgl2");
+      const ext = gl.getExtension("WEBGL_debug_renderer_info");
+      return { fps: 1000 * gaps.length / gaps.reduce((a,b) => a+b,0), gaps,
+        p95Ms: sorted[Math.floor(sorted.length * 0.95)], maxMs: sorted.at(-1),
+        renderer: ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER),
+        ratio: w.pixelRatio, resolution: w.resolution };
+    });
     const rotate = await read(p);
     await p.locator("#earth").focus();
     await p.keyboard.press("ArrowRight");

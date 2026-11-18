@@ -1,4 +1,4 @@
-name: GeoRisiko G1.2
+name: GeoRisiko G1.3
 on:
   pull_request:
   workflow_dispatch:
@@ -39,8 +39,8 @@ jobs:
       - run: npm run package && node tests/packages.mjs
       - uses: actions/upload-artifact@v4
         with:
-          name: GeoRisiko-G1.2-Pakete
-          path: artifacts/GeoRisiko-G1.2-*.zip
+          name: GeoRisiko-G1.3-Pakete
+          path: artifacts/GeoRisiko-G1.3-*.zip
       - uses: actions/upload-pages-artifact@v3
         if: github.event_name == 'workflow_dispatch' && inputs.publish_pages && github.ref == 'refs/heads/main'
         with:
