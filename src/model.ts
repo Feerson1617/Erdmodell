@@ -10,28 +10,28 @@ export const layers = [
     outer: 6371,
     inner: 6336,
     color: 0x8c9f86,
-    text: "Die äußerste Schale besteht aus festem Gestein. Unter den Ozeanen ist sie meist dünner als unter den Kontinenten.",
+    text: "Die dünne Außenschicht der Erde. Sie besteht aus festem Gestein.",
   },
   {
     name: "Erdmantel",
     outer: 6336,
     inner: 3481,
     color: 0xbe7650,
-    text: "Unter der Kruste liegt überwiegend festes Gestein. Über Millionen Jahre kann es sich langsam verformen.",
+    text: "Er besteht überwiegend aus festem Gestein. Dieses kann sich über sehr lange Zeit langsam verformen.",
   },
   {
     name: "Äußerer Erdkern",
     outer: 3481,
     inner: 1221,
     color: 0xe9ae65,
-    text: "Zwischen Mantel und innerem Kern liegt flüssiges Metall. Es besteht vor allem aus Eisen.",
+    text: "Er besteht hauptsächlich aus flüssigem Metall.",
   },
   {
     name: "Innerer Erdkern",
     outer: 1221,
     inner: 0,
     color: 0xffdb97,
-    text: "Im Zentrum der Erde ist das Metall fest. Der hohe Druck hält es trotz der Hitze fest.",
+    text: "Er besteht hauptsächlich aus festem Metall.",
   },
 ];
 export interface SimulationParameterSet {

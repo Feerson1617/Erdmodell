@@ -1,4 +1,8 @@
 import * as T from "three";
+import { SectionOccluder } from "./occlusion";
+import { project, type Annotation } from "../annotations";
+import type { Elevation } from "./surface";
+import { landscapeEdge, type LandscapeImage } from "./landscape-edge";
 import { basis, position, RAD, smooth } from "../geo";
 import {
   hill,
@@ -11,7 +15,7 @@ import {
 } from "./process-geometry";
 
 export type ProcessSiteId = "island" | "japan" | "san";
-export const PROCESS_FOCUS_HEIGHT = 21;
+export const PROCESS_FOCUS_HEIGHT = 2.5;
 
 // PB2002 relative azimuths at the selected steps: EU/NA 103°, PA/OK 295°, NA/PA 144°.
 // Local +x spans the displayed block; local +z faces the viewer, to the right of +x on the map.
@@ -66,6 +70,37 @@ export class ProcessModel {
   private readonly tangent: ReturnType<typeof basis>;
   private readonly arrows: { plate: string; arrow: T.Group }[] = [];
   private progress = 0;
+  private anchors: {
+    id: string;
+    name: string;
+    text: string;
+    point: T.Vector3;
+    parent: T.Object3D;
+  }[] = [];
+  private occluders: SectionOccluder[] = [];
+  private mark(
+    id: string,
+    name: string,
+    text: string,
+    point: T.Vector3,
+    parent: T.Object3D = this.group,
+  ) {
+    this.anchors.push({ id, name, text, point, parent });
+  }
+  labels(camera: T.Camera, width: number, height: number) {
+    const result: Annotation[] = [];
+    for (const mesh of this.occluders) mesh.prepare(camera.position);
+    for (const a of this.anchors) {
+      const point = a.parent.localToWorld(a.point.clone());
+      const xy = project(point, camera, width, height);
+      if (!xy) continue;
+      const direction = point.clone().sub(camera.position);
+      const end = point.addScaledVector(direction.normalize(), -0.16);
+      if (this.occluders.some((mesh) => mesh.blocks(end))) continue;
+      result.push({ id: a.id, name: a.name, text: a.text, ...xy });
+    }
+    return result;
+  }
   private readonly rockMap = rockTexture();
   private readonly reveal = { value: 1 };
   private readonly materials: T.Material[] = [];
@@ -95,7 +130,12 @@ export class ProcessModel {
     roughness: 0.97,
   });
 
-  constructor(id: ProcessSiteId, target: { lat: number; lon: number }) {
+  constructor(
+    id: ProcessSiteId,
+    target: { lat: number; lon: number },
+    elevation: Elevation,
+    image?: LandscapeImage,
+  ) {
     this.tangent = basis(target.lat, target.lon);
     const { up, east, north } = this.tangent;
     const az = across[id] * RAD;
@@ -107,11 +147,52 @@ export class ProcessModel {
     this.group.quaternion.setFromRotationMatrix(
       new T.Matrix4().makeBasis(x, up, x.clone().cross(up)),
     );
-    this.group.position.copy(position(target.lat, target.lon, 12));
+    this.group.position.copy(
+      position(target.lat, target.lon, elevation(target.lat, target.lon) - 6.8),
+    );
     this.group.name = "Tektonisches Erklärmodell · " + id;
     if (id === "island") this.ridge();
     if (id === "japan") this.subduction();
     if (id === "san") this.transform();
+    const blockers: T.Mesh<T.BufferGeometry, T.Material>[] = [];
+    this.group.traverse((obj) => {
+      if (obj instanceof T.Mesh && obj.material === this.rock)
+        blockers.push(obj);
+    });
+    this.group.updateMatrixWorld(true);
+    const edge = landscapeEdge(this.group, blockers, elevation, image);
+    const tones = { island: "#657356", japan: "#466567", san: "#a09869" };
+    const join = this.material({
+      map: image?.map ?? null,
+      transparent: true,
+      depthWrite: false,
+      vertexColors: true,
+      side: T.DoubleSide,
+    });
+    join.forceSinglePass = true;
+    const applyReveal = join.onBeforeCompile.bind(join);
+    const tone = new T.Color(tones[id]);
+    join.onBeforeCompile = (shader, renderer) => {
+      applyReveal(shader, renderer);
+      shader.uniforms.edgeTone = { value: tone };
+      shader.vertexShader =
+        "attribute float edgeBlend; varying float vEdgeBlend;\n" +
+        shader.vertexShader.replace(
+          "#include <begin_vertex>",
+          "#include <begin_vertex>\nvEdgeBlend = edgeBlend;",
+        );
+      shader.fragmentShader =
+        "varying float vEdgeBlend; uniform vec3 edgeTone;\n" +
+        shader.fragmentShader.replace(
+          "#include <map_fragment>",
+          "#include <map_fragment>\ndiffuseColor.rgb = mix(edgeTone, diffuseColor.rgb, vEdgeBlend);",
+        );
+    };
+    const slope = new T.Mesh(edge, join);
+    slope.renderOrder = 2;
+    this.group.add(slope);
+    blockers.push(slope);
+    this.occluders = blockers.map((mesh) => new SectionOccluder(mesh));
     this.setProgress(0);
   }
 
@@ -174,6 +255,20 @@ export class ProcessModel {
     );
     parent.add(arrow);
     this.arrows.push({ plate, arrow });
+    const label = {
+      NA: "Nordamerikanische Platte",
+      EU: "Eurasische Platte",
+      PA: "Pazifische Platte",
+      OK: "Ochotskplatte",
+    }[plate];
+    if (label)
+      this.mark(
+        "plate-" + plate,
+        label,
+        "Der Pfeil zeigt, in welche Richtung sich diese Platte gegenüber der anderen bewegt.",
+        v(0, 0.2, 0),
+        arrow,
+      );
     return arrow;
   }
 
@@ -192,6 +287,24 @@ export class ProcessModel {
         mantleTop(x, z) + 0.12,
         crest(x, z) - 1.8 - 0.13 * wave(x * 0.6, z),
       );
+    this.mark(
+      "ridge",
+      "Rücken",
+      "Hier bewegen sich die Platten auseinander. Gestein aus abgekühlter Schmelze bildet neuen Boden.",
+      v(0, crest(0, -2) + 0.1, -2),
+    );
+    this.mark(
+      "mantle",
+      "Festes Mantelgestein",
+      "Unter dem Rücken steigt festes Gestein langsam auf.",
+      v(-8, 4.4, 9.15),
+    );
+    this.mark(
+      "melt",
+      "Magma",
+      "Beim Aufsteigen sinkt der Druck. Ein kleiner Teil des Gesteins schmilzt.",
+      v(0.62, 9.2, 9.23),
+    );
     const mantle = new T.Group();
     this.group.add(mantle);
     rockBody(
@@ -535,6 +648,36 @@ export class ProcessModel {
         patch.scale.set(0.2 + 0.27 * pulse, 0.11 + 0.18 * pulse, 0.12);
       });
     }
+    this.mark(
+      "trench",
+      "Tiefseegraben",
+      "Wo die ozeanische Platte abbiegt, entsteht eine tiefe Rinne am Meeresboden.",
+      v(trench, slabTop(trench, 3) + 0.12, 3),
+    );
+    this.mark(
+      "volcano",
+      "Vulkan",
+      "Unter dem Vulkan kann Magma aufsteigen. An der Oberfläche kann es als Lava austreten.",
+      v(-11, arcSurface(-11, 1) + 0.3, 1),
+    );
+    this.mark(
+      "wedge",
+      "Magma",
+      "Wasser aus der abtauchenden Platte begünstigt das Schmelzen im Mantel darüber.",
+      v(-11.7, 4.25, 9.28),
+    );
+    this.mark(
+      "slab",
+      "Abtauchende Platte",
+      "Die ozeanische Platte biegt sich am Graben und taucht unter die andere Platte ab.",
+      v(-7, slabTop(-7, 9) - 0.8, 9.19),
+    );
+    this.mark(
+      "quake",
+      "Erdbeben",
+      "An der Kontaktfläche kann sich Spannung aufbauen. Beim plötzlichen Gleiten bebt die Erde.",
+      v(-2, slabTop(-2, 9), 9.3),
+    );
     const upperArrow = this.addArrow(
       this.group,
       "OK",
@@ -588,6 +731,18 @@ export class ProcessModel {
       mantleTop,
       level(0),
       stone.mantle,
+    );
+    this.mark(
+      "fault",
+      "Störung",
+      "Hier gleiten die Platten seitlich aneinander vorbei.",
+      v(axis(5), surface(axis(5), 5) + 0.2, 5),
+    );
+    this.mark(
+      "locked",
+      "Verhakter Abschnitt",
+      "Die Seiten können sich verhaken. Löst sich die Spannung plötzlich, entsteht ein Erdbeben.",
+      v(axis(9), 8.9, 9.16),
     );
     const gravel = this.material({ color: "#b5aa8e", roughness: 1 });
     for (const sign of [-1, 1]) {
@@ -647,6 +802,14 @@ export class ProcessModel {
           0.12,
         ),
       );
+      if (sign > 0)
+        this.mark(
+          "stream",
+          "Versetzter Bachlauf",
+          "Die beiden Abschnitte des Bachlaufs verschieben sich seitlich gegeneinander.",
+          v(6, surface(6, channel(6)) + 0.21, channel(6)),
+          plate,
+        );
       const strain = rocks.map((mesh) =>
         displacement(mesh, (x, _y, z) =>
           v(0, 0, sign * 3.2 * hill(x - axis(z), 4.9)),

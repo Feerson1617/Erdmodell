@@ -26,6 +26,27 @@ export class Shells {
   map?: T.Texture;
   private variants = new Map<Style, { map?: T.Texture; parts: Part[] }>();
   builds = 0;
+  lithosphere = false;
+  private comparison = new T.Group();
+  constructor() {
+    // Separate hatching crosses the compositional boundary on a short section of each cut face.
+    // The variable lower envelope illustrates mechanical behaviour, rather than another global shell.
+    const material = new T.LineBasicMaterial({color: 0xd5f4e5, toneMapped: false});
+    for (const face of [-25, 65]) for (const expanded of [false,true]) {
+      const vertices: T.Vector3[] = [];
+      const base = shellRadii(expanded)[1];
+      const point = (lat: number, depth: number) => position(lat, face + (face < 0 ? .12 : -.12), depth - R);
+      const lower = (lat: number) => base - 120 - 42 * Math.sin(lat*.095);
+      for (let lat = 8; lat < 59; lat++) {
+        vertices.push(point(lat,lower(lat)),point(lat+1,lower(lat+1)));
+        if ((lat-8)%4===0) vertices.push(point(lat,R),point(lat+2,lower(lat+2)));
+      }
+      const hatch = new T.LineSegments(new T.BufferGeometry().setFromPoints(vertices),material);
+      hatch.userData.expanded = expanded;
+      this.comparison.add(hatch);
+    }
+    this.group.add(this.comparison);
+  }
   get parts() {
     return this.variants.get(this.style)?.parts ?? [];
   }
@@ -48,6 +69,8 @@ export class Shells {
       this.variants.set(this.style, variant);
       this.builds++;
     }
+    this.comparison.visible = this.lithosphere && this.cut && this.visible[0] && this.visible[1];
+    for (const hatch of this.comparison.children) hatch.visible = hatch.userData.expanded === this.expanded;
     const radii = shellRadii(this.expanded);
     for (const [style, { parts }] of this.variants)
       for (const part of parts) {
@@ -107,7 +130,7 @@ export class Shells {
           color: base,
           map: skin ? this.map : null,
           vertexColors: kind === "section",
-          roughness: 0.93,
+          roughness: skin ? 0.93 : [0.9, 0.94, 0.62, 0.76][i],
           flatShading: this.style === "B",
           side: T.DoubleSide,
         });
@@ -170,9 +193,9 @@ export class Shells {
             pos.push(v.x * rad, v.y * rad, v.z * rad);
             target.push(v.x * ex, v.y * ex, v.z * ex);
             const grain =
-              0.89 +
+              (lon === 65 ? .96 : .84) - .14 * Math.exp(-20 * (1-t)) - .08 * Math.exp(-24*t) +
               0.052 * Math.sin(lat * 0.11 + t * 8) +
-              0.027 * Math.cos(lat * 0.23 - t * 17);
+              0.027 * Math.cos(lat * 0.23 - t * 17) + .025 * Math.sin(lat*.28 + t*26 + Math.sin(lat*.13));
             const c = new T.Color(pigment).multiplyScalar(grain);
             colors.push(c.r, c.g, c.b);
           }

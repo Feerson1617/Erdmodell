@@ -3,6 +3,7 @@ import { LineSegments2 } from "three/addons/lines/LineSegments2.js";
 import { LineSegmentsGeometry } from "three/addons/lines/LineSegmentsGeometry.js";
 import { LineMaterial } from "three/addons/lines/LineMaterial.js";
 import { position, R, RAD, basis } from "../geo";
+import { project } from "../annotations";
 import stepsUrl from "./steps.json?url";
 import areasUrl from "./plates.png";
 import sites from "./labels.json";
@@ -119,7 +120,7 @@ export function arrowPoints(step: Step) {
 
 
 type Site = "island" | "japan" | "san";
-const major = ["PA", "EU", "NA", "SA", "AF", "AN", "AU", "IN", "NZ", "AR", "SO", "PS", "CA", "CO", "OK"];
+const major = ["PA", "EU", "NA", "SA", "AF", "AN", "AU", "IN"];
 const plateCodes = Object.keys(sites).sort();
 const regionalLabels: Record<Site, Record<string, T.Vector3>> = {
   island: { EU: position(63.88, -18.65, 2), NA: position(64.55, -24.7, 2) },
@@ -132,24 +133,17 @@ const labels = [...major, ...plateCodes.filter(code => !major.includes(code))].m
 });
 
 type Label = { code: string; name: string; x: number; y: number };
-function projectLabels(camera: T.Camera, width: number, height: number, distance: number, site?: Site) {
+function projectLabels(camera: T.Camera, width: number, height: number, distance: number, site?: Site, selected = "", picked?: T.Vector3, single = false) {
   const visible: Label[] = [];
-  const boxes: { x: number; y: number; halfWidth: number }[] = [];
   const regional = site && distance < 4000 ? regionalLabels[site] : undefined;
-  const projected = new T.Vector3();
-  for (const {code, name, point} of labels) {
-    if (distance >= 5000 && !major.includes(code)) continue;
-    const anchor = regional?.[code] ?? point;
+  const ordered = selected ? [...labels.filter(l => l.code === selected), ...labels.filter(l => l.code !== selected)] : labels;
+  for (const {code,name,point} of ordered) {
+    if (single && code !== selected) continue;
+    if (code !== selected && distance >= 5000 && !major.includes(code)) continue;
+    const anchor = code === selected && picked ? picked : regional?.[code] ?? point;
     if (anchor.dot(camera.position) <= anchor.lengthSq()) continue;
-    projected.copy(anchor).project(camera);
-    if (Math.abs(projected.z) > 1) continue;
-    const x = (projected.x + 1) * width / 2;
-    const y = (1 - projected.y) * height / 2;
-    const halfWidth = name.length * 5.9 + 14;
-    if (x < halfWidth || x > width - halfWidth || y < 46 || y > height - 80) continue;
-    if (boxes.some(box => Math.abs(box.y - y) < 36 && Math.abs(box.x - x) < box.halfWidth + halfWidth)) continue;
-    visible.push({ code, name, x, y });
-    boxes.push({ x, y, halfWidth });
+    const xy = project(anchor,camera,width,height);
+    if (xy) visible.push({code,name,...xy});
   }
   return visible;
 }
@@ -264,6 +258,24 @@ export async function loadAtlas(elevation: Elevation = () => 0) {
     selectStep(active);
   }
 
+  // Sample the same categorical raster and orientation as the selected fill.
+  // Allocate the readable image only for a geographical area pick.
+  let platePixels: CanvasRenderingContext2D | null = null;
+  function plateAt(point: T.Vector3) {
+    if (!platePixels) {
+      const canvas = document.createElement("canvas");
+      canvas.width = texture.image.width;
+      canvas.height = texture.image.height;
+      platePixels = canvas.getContext("2d",{willReadFrequently:true});
+      if (!platePixels) return "";
+      platePixels.drawImage(texture.image,0,0);
+    }
+    const {width,height} = platePixels.canvas;
+    const u = (Math.atan2(point.x,point.z)/RAD + 180)/360;
+    const v = (90-Math.asin(point.y)/RAD)/180;
+    const x = Math.floor(u*width)%width, y = Math.min(height-1,Math.max(0,Math.floor(v*height)));
+    return plateCodes[platePixels.getImageData(x,y,1,1).data[0]-1] ?? "";
+  }
   function setOpacity(fraction: number) {
     const value = Math.max(0, Math.min(1, fraction));
     if (opacity === value) return;
@@ -291,5 +303,5 @@ export async function loadAtlas(elevation: Elevation = () => 0) {
     }
     return hit;
   }
-  return { group, steps, setLayers, setOpacity, selectStep, pick, labels: projectLabels };
+  return { group, steps, setLayers, setOpacity, selectStep, pick, plateAt, labels: projectLabels };
 }

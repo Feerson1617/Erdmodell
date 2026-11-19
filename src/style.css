@@ -62,9 +62,7 @@ nav button { background: transparent; border-color: transparent; }
 #desk:not([data-mode="globe"]) .hint, .present .hint { display: none; }
 #modelnote { top: 16px; left: 16px; max-width: calc(100% - 86px); padding: 8px 12px; border-radius: 6px; background: #111f1eed; color: #d8e4da; font-size: .95em; }
 #modelnote.exaggerated { color: #ffe3aa; border-left: 3px solid #ebbd75; }
-#pins { position: absolute; inset: 0; pointer-events: none; }
-#pins span, .swatch { display: inline-grid; place-items: center; background: var(--rock); color: #1c251e; font-weight: 750; }
-#pins span { position: absolute; transform: translate(-50%,-50%); width: 26px; height: 26px; border-radius: 50%; border: 2px solid #17251f; box-shadow: 0 1px 5px #000a; }
+.swatch { display: inline-grid; place-items: center; background: var(--rock); color: #1c251e; font-weight: 750; }
 #sidebar { min-height: 0; overflow-y: auto; padding: clamp(10px,1.3vw,24px); background: var(--panel); border-right: 1px solid var(--line); }
 .panelHead, .layer, .shellActions, .options, .siteActions { display: grid; gap: 5px; }
 .panelHead { grid-template-columns: minmax(0,1fr) auto; align-items: center; margin-bottom: 14px; }
@@ -133,12 +131,6 @@ figcaption { margin-top: 6px; font-size: .9em; color: var(--muted); }
   .headTools { grid-column: 2; grid-row: 1; }
 }
 
-#platePins { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
-#platePins span {
-  position: absolute; transform: translate(-50%, -50%); white-space: nowrap;
-  color: #f7fbf4; background: #15261ee0; border: 1px solid #abc3ad88;
-  border-radius: 5px; padding: .18em .48em; font-size: .85em; font-weight: 600;
-}
 #desk:is([data-mode="plates"],[data-mode="nyos"]) { --sidebar-width: clamp(250px,20vw,305px); position: relative; }
 #desk:is([data-mode="plates"],[data-mode="nyos"]) .view { grid-column: 1/-1; grid-row: 1; }
 #desk:is([data-mode="plates"],[data-mode="nyos"]) #sidebar {
@@ -228,3 +220,12 @@ figcaption { margin-top: 6px; font-size: .9em; color: var(--muted); }
   background: #16251ef2; color: #f1f4e9; border: 1px solid #a4b399; border-radius: 5px; font-weight: 600;
 }
 #nyosRelief span::after { content: ""; position: absolute; left: 50%; top: 100%; height: 9px; border-left: 2px solid #f2f1d6; }
+
+.annotations { position:absolute; inset:0; pointer-events:none; overflow:hidden; }
+.annotations button { position:absolute; top:0; left:0; z-index:1; pointer-events:auto; min-height:var(--hit); white-space:nowrap; padding:4px 10px; color:#fcfff6; background:#172a24f5; border:1px solid #b6d2bd; border-radius:7px; font-family:inherit; font-weight:600; font-size:clamp(15px,1.35vw,21px); box-shadow:0 2px 6px #101b1855; }
+.annotations i { position:absolute; top:0; left:0; height:2px; background:#d6eadc; transform-origin:left center; box-shadow:0 1px 1px #17251f; }
+.annotations i::before { content:""; position:absolute; left:-3px; top:-2px; border-radius:50%; width:6px; height:6px; background:#e9f6e7; box-shadow:0 0 0 1px #344a3c; }
+.present .annotations button { min-height:60px; font-size:22px; }
+#definition { margin-top:12px; border-left:3px solid #adca9a; padding:6px 10px; }
+#definition #layerText { border:0; padding:0; margin:4px 0 8px; }
+#explainLayer,#revealOne { margin-top:4px; }

@@ -204,7 +204,8 @@ async function run(engine) {
     );
     await p.click("#labels");
     await p.click('[data-layer="2"]');
-    assert.match(await p.locator("#layerText").innerText(), /flüssiges Metall/);
+    await p.click("#explainLayer");
+    assert.match(await p.locator("#layerText").innerText(), /flüssigem Metall/);
     await p.click("#evidence");
     if (isChrome) {
       await p.setViewportSize({ width: 1920, height: 1080 });
@@ -291,9 +292,11 @@ async function run(engine) {
     await p.click("#present");
     await p.click("#labels");
     await p.click('[data-layer="2"]');
-    assert.match(await p.locator("#layerText").innerText(), /flüssiges Metall/);
+    await p.click("#explainLayer");
+    assert.match(await p.locator("#layerText").innerText(), /flüssigem Metall/);
     await p.click('[data-layer="3"]');
-    assert.match(await p.locator("#layerText").innerText(), /Druck/);
+    await p.click("#explainLayer");
+    assert.match(await p.locator("#layerText").innerText(), /festem Metall/);
     assert.match(
       await p.locator("#modelnote").innerText(),
       /didaktisch überhöht/i,
