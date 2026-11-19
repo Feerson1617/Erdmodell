@@ -1,4 +1,5 @@
 import * as T from "three";
+import { SectionOccluder } from "./occlusion";
 import { project, type Annotation } from "../annotations";
 import type { Elevation } from "./surface";
 import { landscapeEdge, type LandscapeImage } from "./landscape-edge";
@@ -76,8 +77,7 @@ export class ProcessModel {
     point: T.Vector3;
     parent: T.Object3D;
   }[] = [];
-  private blockers: T.Mesh[] = [];
-  private ray = new T.Raycaster();
+  private occluders: SectionOccluder[] = [];
   private mark(
     id: string,
     name: string,
@@ -89,19 +89,14 @@ export class ProcessModel {
   }
   labels(camera: T.Camera, width: number, height: number) {
     const result: Annotation[] = [];
+    for (const mesh of this.occluders) mesh.prepare(camera.position);
     for (const a of this.anchors) {
       const point = a.parent.localToWorld(a.point.clone());
       const xy = project(point, camera, width, height);
       if (!xy) continue;
       const direction = point.clone().sub(camera.position);
-      this.ray.far = direction.length() - 0.16;
-      this.ray.set(camera.position, direction.normalize());
-      if (
-        this.blockers.some(
-          (mesh) => this.ray.intersectObject(mesh, false).length,
-        )
-      )
-        continue;
+      const end = point.addScaledVector(direction.normalize(), -0.16);
+      if (this.occluders.some((mesh) => mesh.blocks(end))) continue;
       result.push({ id: a.id, name: a.name, text: a.text, ...xy });
     }
     return result;
@@ -153,22 +148,19 @@ export class ProcessModel {
       new T.Matrix4().makeBasis(x, up, x.clone().cross(up)),
     );
     this.group.position.copy(
-      position(
-        target.lat,
-        target.lon,
-        elevation(target.lat, target.lon) - 6.8,
-      ),
+      position(target.lat, target.lon, elevation(target.lat, target.lon) - 6.8),
     );
     this.group.name = "Tektonisches Erklärmodell · " + id;
     if (id === "island") this.ridge();
     if (id === "japan") this.subduction();
     if (id === "san") this.transform();
+    const blockers: T.Mesh<T.BufferGeometry, T.Material>[] = [];
     this.group.traverse((obj) => {
       if (obj instanceof T.Mesh && obj.material === this.rock)
-        this.blockers.push(obj);
+        blockers.push(obj);
     });
     this.group.updateMatrixWorld(true);
-    const edge = landscapeEdge(this.group, this.blockers, elevation, image);
+    const edge = landscapeEdge(this.group, blockers, elevation, image);
     const tones = { island: "#657356", japan: "#466567", san: "#a09869" };
     const join = this.material({
       map: image?.map ?? null,
@@ -196,7 +188,8 @@ export class ProcessModel {
     };
     const slope = new T.Mesh(edge, join);
     this.group.add(slope);
-    this.blockers.push(slope);
+    blockers.push(slope);
+    this.occluders = blockers.map((mesh) => new SectionOccluder(mesh));
     this.setProgress(0);
   }
 

@@ -31,6 +31,8 @@ export class AnnotationLayer {
     string,
     { button: HTMLButtonElement; line: HTMLElement }
   >();
+  private sizes = new Map<string, { width: number; height: number }>();
+  private layout = "";
   constructor(
     private host: HTMLElement,
     private explain: (label: Annotation) => void,
@@ -39,6 +41,16 @@ export class AnnotationLayer {
   draw(labels: Annotation[], obstacles: HTMLElement[]) {
     if (!labels.length && !this.nodes.size) return;
     const frame = this.host.getBoundingClientRect();
+    const layout = [
+      frame.width,
+      innerWidth,
+      document.body.classList.contains("present"),
+      document.fonts.status,
+    ].join("/");
+    if (layout !== this.layout) {
+      this.sizes.clear();
+      this.layout = layout;
+    }
     const boxes: Box[] = obstacles
       .filter((el) => el && el.offsetWidth)
       .map((el) => {
@@ -65,9 +77,14 @@ export class AnnotationLayer {
         this.nodes.set(label.id, (node = { button, line }));
       }
       const { button, line } = node;
-      const w = button.offsetWidth,
-        h = button.offsetHeight;
-      const dx = w / 2 + 12,
+      let size = this.sizes.get(label.name);
+      if (!size) {
+        size = { width: button.offsetWidth, height: button.offsetHeight };
+        this.sizes.set(label.name, size);
+      }
+      const w = size.width,
+        h = size.height,
+        dx = w / 2 + 12,
         dy = h / 2 + 10;
       const placements = [
         [0, -dy],
