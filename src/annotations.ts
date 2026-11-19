@@ -27,58 +27,78 @@ const intersects = (a: Box, b: Box) =>
 
 /** The DOM contains only released and visible object names. Leaders terminate at the projected surface. */
 export class AnnotationLayer {
+  readonly work = { draws: 0, layouts: 0, measures: 0, creates: 0, writes: 0 };
   private nodes = new Map<
     string,
-    { button: HTMLButtonElement; line: HTMLElement }
+    {
+      anchor: HTMLSpanElement;
+      button: HTMLButtonElement;
+      line: HTMLElement;
+      label: Annotation;
+      anchorPose?: string;
+      buttonPose?: string;
+      linePose?: string;
+      length?: string;
+    }
   >();
   private sizes = new Map<string, { width: number; height: number }>();
-  private layout = "";
+  private frame?: DOMRect;
+  private obstacles: Box[] = [];
+  private revision = -1;
   constructor(
     private host: HTMLElement,
     private explain: (label: Annotation) => void,
   ) {}
 
-  draw(labels: Annotation[], obstacles: HTMLElement[]) {
-    if (!labels.length && !this.nodes.size) return;
-    const frame = this.host.getBoundingClientRect();
-    const layout = [
-      frame.width,
-      innerWidth,
-      document.body.classList.contains("present"),
-      document.fonts.status,
-    ].join("/");
-    if (layout !== this.layout) {
-      this.sizes.clear();
-      this.layout = layout;
+  draw(labels: Annotation[], obstacles: HTMLElement[], revision: number) {
+    if (!labels.length) {
+      if (this.host.childElementCount) this.host.replaceChildren();
+      return;
     }
-    const boxes: Box[] = obstacles
-      .filter((el) => el && el.offsetWidth)
-      .map((el) => {
-        const b = el.getBoundingClientRect();
-        return {
-          left: b.left - frame.left,
-          top: b.top - frame.top,
-          right: b.right - frame.left,
-          bottom: b.bottom - frame.top,
-        };
-      });
+    this.work.draws++;
+    if (!this.frame || revision !== this.revision) {
+      this.revision = revision;
+      const frame = (this.frame = this.host.getBoundingClientRect());
+      this.obstacles = obstacles
+        .filter((el) => el && el.offsetWidth)
+        .map((el) => {
+          const b = el.getBoundingClientRect();
+          return {
+            left: b.left - frame.left,
+            right: b.right - frame.left,
+            top: b.top - frame.top,
+            bottom: b.bottom - frame.top,
+          };
+        });
+      this.sizes.clear();
+      this.work.layouts++;
+    }
+    const frame = this.frame,
+      boxes = [...this.obstacles];
     const active = new Set<string>();
     for (const label of labels) {
       let node = this.nodes.get(label.id);
       if (!node) {
         const button = document.createElement("button"),
           line = document.createElement("i");
+        const anchor = document.createElement("span");
+        anchor.className = "annotation-anchor";
+        anchor.append(line, button);
         const name = document.createElement("span");
         name.textContent = label.name;
         button.append(name);
         button.dataset.object = label.id;
-        button.onclick = () => this.explain(label);
-        this.host.append(line, button);
-        this.nodes.set(label.id, (node = { button, line }));
+        const entry = { anchor, button, line, label };
+        button.onclick = () => this.explain(entry.label);
+        this.work.creates++;
+        this.nodes.set(label.id, (node = entry));
       }
-      const { button, line } = node;
+      const { anchor, button, line } = node;
+      node.label = label;
       let size = this.sizes.get(label.name);
       if (!size) {
+        if (!button.isConnected) this.host.append(anchor);
+        this.work.measures++;
         size = { width: button.offsetWidth, height: button.offsetHeight };
         this.sizes.set(label.name, size);
       }
@@ -117,21 +137,41 @@ export class AnnotationLayer {
           boxes.some((b) => intersects(box, b))
         )
           continue;
+        if (!button.isConnected) this.host.append(anchor);
         active.add(label.id);
         boxes.push(box);
-        button.style.transform = `translate(${box.left.toFixed(1)}px,${box.top.toFixed(1)}px)`;
-        const endX = Math.min(box.right, Math.max(box.left, label.x));
-        const endY = Math.min(box.bottom, Math.max(box.top, label.y));
-        line.style.transform = `translate(${label.x.toFixed(1)}px,${label.y.toFixed(1)}px) rotate(${Math.atan2(endY - label.y, endX - label.x)}rad)`;
-        line.style.width = Math.hypot(endX - label.x, endY - label.y) + "px";
+        // Translate the whole sign with the material. Its chosen placement
+        // and leader angle stay local and usually remain unchanged for many frames.
+        const anchorPose = `translate(${Math.round(label.x * 2) / 2}px, ${Math.round(label.y * 2) / 2}px)`;
+        const left = ox - w / 2,
+          top = oy - h / 2;
+        const target = `translate(${left}px, ${top}px)`;
+        const endX = Math.min(left + w, Math.max(left, 0));
+        const endY = Math.min(top + h, Math.max(top, 0));
+        const connector = `rotate(${Math.atan2(endY, endX).toFixed(5)}rad)`;
+        const length = Math.hypot(endX, endY).toFixed(1) + "px";
+        if (node.anchorPose !== anchorPose) {
+          anchor.style.transform = node.anchorPose = anchorPose;
+          this.work.writes++;
+        }
+        if (node.buttonPose !== target) {
+          button.style.transform = node.buttonPose = target;
+          this.work.writes++;
+        }
+        if (node.linePose !== connector) {
+          line.style.transform = node.linePose = connector;
+          this.work.writes++;
+        }
+        if (node.length !== length) {
+          line.style.width = node.length = length;
+          this.work.writes++;
+        }
         break;
       }
     }
     for (const [id, node] of this.nodes)
-      if (!active.has(id)) {
-        node.button.remove();
-        node.line.remove();
-        this.nodes.delete(id);
+      if (node.button.isConnected && !active.has(id)) {
+        node.anchor.remove();
       }
   }
 }

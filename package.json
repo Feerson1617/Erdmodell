@@ -15,7 +15,8 @@
     "test:nyos": "node tests/nyos.mjs",
     "package": "python3 scripts/package.py",
     "audit": "node tests/flight-audit.mjs && python3 scripts/analyse_flight.py test-results/audit",
-    "test:grundlagen": "node tests/grundlagen.mjs"
+    "test:grundlagen": "node tests/grundlagen.mjs",
+    "test:vergleich": "node tests/vergleich.mjs"
   },
   "dependencies": {
     "three": "0.180.0",

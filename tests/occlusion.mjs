@@ -49,6 +49,8 @@ try {
               expected,
               JSON.stringify({ t, side, x, y, z }),
             );
+            assert.equal(indexed.blocks(point, "probe"), expected);
+            assert.equal(indexed.blocks(point, "probe"), expected);
             if (expected) hits++;
             else misses++;
           }

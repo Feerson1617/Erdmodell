@@ -133,13 +133,13 @@ const labels = [...major, ...plateCodes.filter(code => !major.includes(code))].m
 });
 
 type Label = { code: string; name: string; x: number; y: number };
-function projectLabels(camera: T.Camera, width: number, height: number, distance: number, site?: Site, selected = "", picked?: T.Vector3, single = false) {
+function projectLabels(camera: T.Camera, width: number, height: number, distance: number, site?: Site, selected = "", picked?: T.Vector3, single = false, small = false) {
   const visible: Label[] = [];
   const regional = site && distance < 4000 ? regionalLabels[site] : undefined;
   const ordered = selected ? [...labels.filter(l => l.code === selected), ...labels.filter(l => l.code !== selected)] : labels;
   for (const {code,name,point} of ordered) {
     if (single && code !== selected) continue;
-    if (code !== selected && distance >= 5000 && !major.includes(code)) continue;
+    if (!small && code !== selected && distance >= 5000 && !major.includes(code)) continue;
     const anchor = code === selected && picked ? picked : regional?.[code] ?? point;
     if (anchor.dot(camera.position) <= anchor.lengthSq()) continue;
     const xy = project(anchor,camera,width,height);

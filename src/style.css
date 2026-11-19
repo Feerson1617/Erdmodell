@@ -222,10 +222,14 @@ figcaption { margin-top: 6px; font-size: .9em; color: var(--muted); }
 #nyosRelief span::after { content: ""; position: absolute; left: 50%; top: 100%; height: 9px; border-left: 2px solid #f2f1d6; }
 
 .annotations { position:absolute; inset:0; pointer-events:none; overflow:hidden; }
+.annotation-anchor { position:absolute; top:0; left:0; }
 .annotations button { position:absolute; top:0; left:0; z-index:1; pointer-events:auto; min-height:var(--hit); white-space:nowrap; padding:4px 10px; color:#fcfff6; background:#172a24f5; border:1px solid #b6d2bd; border-radius:7px; font-family:inherit; font-weight:600; font-size:clamp(15px,1.35vw,21px); box-shadow:0 2px 6px #101b1855; }
 .annotations i { position:absolute; top:0; left:0; height:2px; background:#d6eadc; transform-origin:left center; box-shadow:0 1px 1px #17251f; }
 .annotations i::before { content:""; position:absolute; left:-3px; top:-2px; border-radius:50%; width:6px; height:6px; background:#e9f6e7; box-shadow:0 0 0 1px #344a3c; }
-.present .annotations button { min-height:60px; font-size:22px; }
+.present .annotations button { min-height:60px; font-size:28px; }
 #definition { margin-top:12px; border-left:3px solid #adca9a; padding:6px 10px; }
 #definition #layerText { border:0; padding:0; margin:4px 0 8px; }
 #explainLayer,#revealOne { margin-top:4px; }
+
+#plateSettings { margin-top:12px; border-top:1px solid var(--line); }
+#plateSettings summary { cursor:pointer; min-height:var(--hit); padding:10px 0; align-content:center; }

@@ -8,6 +8,21 @@ type Cell = { bounds: T.Box3; triangles: number[] };
  */
 export class SectionOccluder {
   private readonly cells: Cell[] = [];
+  readonly work = {
+    rays: 0,
+    triangles: 0,
+    reused: 0,
+    inversions: 0,
+    morphChanges: 0,
+  };
+  private revision = 0;
+  private matrix = new T.Matrix4();
+  private eye = new T.Vector3(Infinity, Infinity, Infinity);
+  private morph = NaN;
+  private memo = new Map<
+    string,
+    { revision: number; end: T.Vector3; blocked: boolean }
+  >();
   private inverse = new T.Matrix4();
   private ray = new T.Ray();
   private end = new T.Vector3();
@@ -67,11 +82,36 @@ export class SectionOccluder {
   }
 
   prepare(camera: T.Vector3) {
-    this.inverse.copy(this.mesh.matrixWorld).invert();
-    this.ray.origin.copy(camera).applyMatrix4(this.inverse);
+    const moved = !this.revision || !this.matrix.equals(this.mesh.matrixWorld);
+    const morph = this.mesh.morphTargetInfluences?.[0] ?? 0;
+    if (!moved && morph === this.morph && this.eye.equals(camera)) return;
+    if (moved) {
+      this.inverse.copy(this.matrix.copy(this.mesh.matrixWorld)).invert();
+      this.work.inversions++;
+    }
+    if (morph !== this.morph) this.work.morphChanges++;
+    this.morph = morph;
+    this.ray.origin.copy(this.eye.copy(camera)).applyMatrix4(this.inverse);
+    this.revision++;
   }
 
-  blocks(worldEnd: T.Vector3) {
+  blocks(worldEnd: T.Vector3, id?: string) {
+    if (!id) return this.trace(worldEnd);
+    let cached = this.memo.get(id);
+    if (cached?.revision === this.revision && cached.end.equals(worldEnd)) {
+      this.work.reused++;
+      return cached.blocked;
+    }
+    if (!cached) {
+      cached = { revision: 0, end: new T.Vector3(), blocked: false };
+      this.memo.set(id, cached);
+    }
+    cached.end.copy(worldEnd);
+    cached.revision = this.revision;
+    return (cached.blocked = this.trace(worldEnd));
+  }
+  private trace(worldEnd: T.Vector3) {
+    this.work.rays++;
     this.end.copy(worldEnd).applyMatrix4(this.inverse);
     this.ray.direction.subVectors(this.end, this.ray.origin);
     const lengthSq = this.ray.direction.lengthSq();
@@ -85,6 +125,7 @@ export class SectionOccluder {
       )
         continue;
       for (const offset of cell.triangles) {
+        this.work.triangles++;
         this.mesh.getVertexPosition(
           index ? index.getX(offset) : offset,
           this.a,

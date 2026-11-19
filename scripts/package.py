@@ -21,7 +21,7 @@ def files(folder):
 
 
 def archive(folder, name, entries):
-    dest = folder / ("GeoRisiko-G4.2-" + name + ".zip")
+    dest = folder / ("GeoRisiko-G4.2.1-" + name + ".zip")
     with zipfile.ZipFile(dest, "w") as z:
         for key, value in sorted(entries.items()):
             entry = zipfile.ZipInfo(key, date_time=(2026, 1, 1, 0, 0, 0))
@@ -46,13 +46,13 @@ nyos_docs = (
     "nyos-abnahme.md",
 )
 web = files(dist)
-web["Pruefstand.txt"] = f"GeoRisiko 3D · G4.2 Grundlagen\nGeprüfter Git-Commit: {commit}\n".encode()
+web["Pruefstand.txt"] = f"GeoRisiko 3D · G4.2.1 Grundlagen\nGeprüfter Git-Commit: {commit}\n".encode()
 assert "index.html" in web
 source = (root / "docs/data-sources-and-licenses.md").read_bytes()
 web["Quellen.md"] = source
 web["g1.1-data.md"] = (root / "docs/g1.1-data.md").read_bytes()
 web["data-sources-and-licenses.md"] = source
-for name in (*nyos_docs, "g2.1-daten.md", "g2.1-prozessmodelle.md", "grundlagen-g4.2.md"):
+for name in (*nyos_docs, "g2.1-daten.md", "g2.1-prozessmodelle.md", "grundlagen-g4.2.md", "qualitaet-g4.2.1.md"):
     web[name] = (root / "docs" / name).read_bytes()
 sco = dict(web)
 sco["scorm.js"] = (root / "scripts/scorm.js").read_bytes()
@@ -77,7 +77,7 @@ def add(el, name, value=None, **attrs):
 
 xsi = "http://www.w3.org/2001/XMLSchema-instance"
 ET.register_namespace("xsi", xsi)
-m = ET.Element(tag("manifest"), identifier="GEORISIKO-G4-2", version="1.2")
+m = ET.Element(tag("manifest"), identifier="GEORISIKO-G4-2-1", version="1.2")
 m.set(
     "{" + xsi + "}schemaLocation",
     ns + " imscp_rootv1p1p2.xsd " + adl + " adlcp_rootv1p2.xsd",
@@ -109,7 +109,7 @@ suites = (
     ("unterricht", "unterricht-g131", 10),
     ("tektonik", "g2.1", 10),
     ("nyos", "nyos", 12),
-    ("grundlagen", "g4.2", 12),
+    ("grundlagen", "g4.2.1", 12),
 )
 for section, directory, expected_count in suites:
     assets = files(results_dir / directory)
@@ -137,6 +137,22 @@ for name in reports:
         actual = {key: hashlib.sha256(content).hexdigest() for key, content in checks.items()
                   if key.startswith(suite + "/") and key.endswith(".jpg")}
         assert actual == expected, f"Die Bilder der Suite {suite} müssen exakt zum Browserprotokoll gehören"
+comparison = files(results_dir / "vergleich")
+baseline = "441f1480b6fc1d65faf5ef5b06882ccdc6775656"
+timings = json.loads(comparison["leistung.json"])
+assert timings["baseline"] == baseline and timings["candidate"] == commit
+assert {(r["engine"],r["version"]) for r in timings["runs"]} == {
+    (e,v) for e in ("chromium","webkit") for v in ("G4.2","G4.2.1")}
+assert all(len(r["samples"]) == 7 and all(s["fps"] > 0 for s in r["samples"]) for r in timings["runs"])
+assert comparison["Leistungsvergleich.md"]
+before = json.loads(comparison["g4.2/pruefung.json"])
+assert before["commit"] == baseline and not before.get("failure")
+images = before["runs"][0]["images"]
+after_names = {key.split("/")[-1] for key in checks if key.startswith("grundlagen/") and key.endswith(".jpg")}
+assert {img["name"]+".jpg" for img in images} == after_names
+for img in images:
+    assert hashlib.sha256(comparison["g4.2/"+img["name"]+".jpg"]).hexdigest() == img["hash"]
+checks.update({"vergleich/"+name:content for name,content in comparison.items()})
 lesson = dict(web)
 lesson.update(
     {
@@ -168,7 +184,7 @@ bereitstellen oder das SCORM-Paket ins LMS importieren.
 Für die erste Stunde Schalenschnitt öffnen. Namen lassen sich einzeln oder gemeinsam zeigen.
 Ein Antippen des Namens öffnet die kurze Erklärung neben dem Modell.
 Die Schraffur im optionalen Vergleich überbrückt zwei stoffliche Schalen.
-Weitere Unterrichts- und Modellhinweise stehen in grundlagen-g4.2.md.
+Weitere Unterrichts- und Modellhinweise stehen in qualitaet-g4.2.1.md.
 
 Die Ansicht „Nyos-See“ führt zur Landschaft und zum Seeschnitt.
 Die Anleitung für den Unterricht steht in nyos-unterrichtsverwendung.md.
@@ -182,9 +198,9 @@ review["START.txt"] += (
 ).encode()
 review["Pruefung/geraeteprobe.html"] = (root / "scripts/nyos-geraeteprobe.html").read_bytes()
 review.update({"Pruefung/" + name: content for name, content in checks.items()})
-for name in ("grundlagen-g4.2", "g2.1-bericht", "g2.1-daten", "g2.1-prozessmodelle", "unterricht-15-12", "geoscience-validation", "roadmap"):
+for name in ("qualitaet-g4.2.1", "grundlagen-g4.2", "g2.1-bericht", "g2.1-daten", "g2.1-prozessmodelle", "unterricht-15-12", "geoscience-validation", "roadmap"):
     review["Pruefung/" + name + ".md"] = (root / f"docs/{name}.md").read_bytes()
-measured = ["# Messbericht zum Schalenmodell im G4.2-Build", "", f"Produktionsbuild `{commit}`", "",
+measured = ["# Messbericht zum Schalenmodell im G4.2.1-Build", "", f"Produktionsbuild `{commit}`", "",
             "14 Bedienfolgen pro Engine. Bildzeiten stammen aus einer separaten ruhenden Schalenansicht bei 1920 × 1080. Die Auflösung gilt für das Modell neben der Bedienleiste.", ""]
 for run in json.loads(checks["unterricht/pruefung.json"])["runs"]:
     cadence = run["cadence"]

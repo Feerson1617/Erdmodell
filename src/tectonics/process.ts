@@ -77,6 +77,14 @@ export class ProcessModel {
     point: T.Vector3;
     parent: T.Object3D;
   }[] = [];
+  private projection = new T.Matrix4();
+  private viewSize = new T.Vector2();
+  private screen = new Map<
+    string,
+    { point: T.Vector3; xy: ReturnType<typeof project> }
+  >();
+  private view = new T.Matrix4();
+  private labelWork = { updates: 0, projections: 0, reusedProjections: 0 };
   private occluders: SectionOccluder[] = [];
   private mark(
     id: string,
@@ -87,17 +95,49 @@ export class ProcessModel {
   ) {
     this.anchors.push({ id, name, text, point, parent });
   }
-  labels(camera: T.Camera, width: number, height: number) {
+  objects() {
+    return this.anchors.map(({ id, name }) => ({ id, name }));
+  }
+
+  labels(camera: T.Camera, width: number, height: number, choice: string) {
+    const primary = {
+      island: ["ridge", "mantle", "melt", "plate-NA"],
+      japan: ["trench", "slab", "wedge", "plate-PA"],
+      san: ["fault", "stream", "locked", "plate-PA"],
+    }[this.id];
+    const order = choice
+      ? [choice, ...primary.filter((id) => id !== choice)]
+      : primary;
     const result: Annotation[] = [];
+    const changed =
+      !this.projection.equals(camera.projectionMatrix) ||
+      !this.view.equals(camera.matrixWorldInverse) ||
+      this.viewSize.x !== width ||
+      this.viewSize.y !== height;
+    if (changed) {
+      this.screen.clear();
+      this.projection.copy(camera.projectionMatrix);
+      this.view.copy(camera.matrixWorldInverse);
+      this.viewSize.set(width, height);
+    }
+    this.labelWork.updates++;
     for (const mesh of this.occluders) mesh.prepare(camera.position);
-    for (const a of this.anchors) {
-      const point = a.parent.localToWorld(a.point.clone());
-      const xy = project(point, camera, width, height);
-      if (!xy) continue;
-      const direction = point.clone().sub(camera.position);
-      const end = point.addScaledVector(direction.normalize(), -0.16);
-      if (this.occluders.some((mesh) => mesh.blocks(end))) continue;
-      result.push({ id: a.id, name: a.name, text: a.text, ...xy });
+    for (const id of order) {
+      const a = this.anchors.find((a) => a.id === id);
+      if (!a) continue;
+      const point = a.point.clone().applyMatrix4(a.parent.matrixWorld);
+      let cached = this.screen.get(id);
+      if (!cached || !cached.point.equals(point)) {
+        cached = { point, xy: project(point, camera, width, height) };
+        this.screen.set(id, cached);
+        this.labelWork.projections++;
+      } else this.labelWork.reusedProjections++;
+      if (!cached.xy) continue;
+      const end = point
+        .clone()
+        .addScaledVector(point.clone().sub(camera.position).normalize(), -0.16);
+      if (this.occluders.some((mesh) => mesh.blocks(end, id))) continue;
+      result.push({ id, name: a.name, text: a.text, ...cached.xy });
     }
     return result;
   }
@@ -131,7 +171,7 @@ export class ProcessModel {
   });
 
   constructor(
-    id: ProcessSiteId,
+    private readonly id: ProcessSiteId,
     target: { lat: number; lon: number },
     elevation: Elevation,
     image?: LandscapeImage,
@@ -299,12 +339,6 @@ export class ProcessModel {
       "Unter dem Rücken steigt festes Gestein langsam auf.",
       v(-8, 4.4, 9.15),
     );
-    this.mark(
-      "melt",
-      "Magma",
-      "Beim Aufsteigen sinkt der Druck. Ein kleiner Teil des Gesteins schmilzt.",
-      v(0.62, 9.2, 9.23),
-    );
     const mantle = new T.Group();
     this.group.add(mantle);
     rockBody(
@@ -346,6 +380,14 @@ export class ProcessModel {
         w * 1.8,
         x * 0.46,
       );
+      if (x === 0.62)
+        this.mark(
+          "melt",
+          "Magma",
+          "Beim Aufsteigen sinkt der Druck. Ein kleiner Teil des Gesteins schmilzt.",
+          v(0, 0, 1),
+          lens,
+        );
       this.advance.push((t) => {
         lens.scale.y = w * (1.15 + t * 0.9);
         lens.position.y = y + t * 0.52;
@@ -580,6 +622,14 @@ export class ProcessModel {
         0.67,
         0.13,
       );
+      if (x === -4)
+        this.mark(
+          "slab",
+          "Abtauchende Platte",
+          "Die ozeanische Platte biegt sich am Graben und taucht unter die andere Platte ab.",
+          v(0, 0, 1),
+          nodule,
+        );
       this.advance.push((t) => {
         const cx = x - 2.3 * t;
         nodule.position.set(cx, slabTop(cx, 9) - 1.12, 9.065);
@@ -665,12 +715,6 @@ export class ProcessModel {
       "Magma",
       "Wasser aus der abtauchenden Platte begünstigt das Schmelzen im Mantel darüber.",
       v(-11.7, 4.25, 9.28),
-    );
-    this.mark(
-      "slab",
-      "Abtauchende Platte",
-      "Die ozeanische Platte biegt sich am Graben und taucht unter die andere Platte ab.",
-      v(-7, slabTop(-7, 9) - 0.8, 9.19),
     );
     this.mark(
       "quake",
@@ -802,12 +846,13 @@ export class ProcessModel {
           0.12,
         ),
       );
+      const streamPoint = v(6, surface(6, channel(6)) + 0.21, channel(6));
       if (sign > 0)
         this.mark(
           "stream",
           "Versetzter Bachlauf",
           "Die beiden Abschnitte des Bachlaufs verschieben sich seitlich gegeneinander.",
-          v(6, surface(6, channel(6)) + 0.21, channel(6)),
+          streamPoint,
           plate,
         );
       const strain = rocks.map((mesh) =>
@@ -827,6 +872,9 @@ export class ProcessModel {
       this.advance.push((t) => {
         const slip = 0.69 * smooth((t - 0.54) / 0.15) + Math.max(0, t - 0.69);
         plate.position.z = sign * 3.2 * t;
+        if (sign > 0)
+          streamPoint.z =
+            channel(6) + 3.2 * hill(6 - axis(channel(6)), 4.9) * (slip - t);
         // Initially the far field moves, while the two sides of the locked contact remain together.
         for (const deform of strain) deform(slip - t);
       });
@@ -838,7 +886,7 @@ export class ProcessModel {
     this.progress = t;
     for (const move of this.advance) move(t);
   }
-  diagnostics() {
+  diagnostics(camera: T.Camera, width: number, height: number) {
     const arrows = this.arrows.map(({ plate, arrow }) => {
       arrow.updateWorldMatrix(true, false);
       const direction = new T.Vector3(1, 0, 0).transformDirection(
@@ -851,7 +899,29 @@ export class ProcessModel {
         ) / RAD;
       return { plate, azimuth: (azimuth + 360) % 360 };
     });
-    return { arrows, progress: this.progress };
+    const work = {
+      ...this.labelWork,
+      rays: 0,
+      triangles: 0,
+      reused: 0,
+      inversions: 0,
+      morphChanges: 0,
+    };
+    for (const mesh of this.occluders)
+      for (const key of Object.keys(mesh.work) as (keyof typeof mesh.work)[])
+        work[key] += mesh.work[key];
+    const anchors = Object.fromEntries(
+      this.anchors.map((a) => [
+        a.id,
+        project(
+          a.point.clone().applyMatrix4(a.parent.matrixWorld),
+          camera,
+          width,
+          height,
+        ),
+      ]),
+    );
+    return { arrows, progress: this.progress, work, anchors };
   }
   setReveal(fraction: number) {
     this.reveal.value = T.MathUtils.clamp(fraction, 0, 1);

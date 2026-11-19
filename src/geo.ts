@@ -26,6 +26,10 @@ export function position(lat: number, lon: number, height = 0) {
 }
 export const clamp = (n: number, lo: number, hi: number) =>
   Math.max(lo, Math.min(hi, n));
+/** Signed shortest distance in degrees, including longitudes after repeated world tours. */
+export function angularDistance(from: number, to: number) {
+  return ((to - from) % 360 + 540) % 360 - 180;
+}
 export function smooth(x: number) {
   const t = clamp(x, 0, 1);
   return t * t * (3 - 2 * t);
