@@ -10,7 +10,7 @@ Für den Vergleich mit der mechanischen Gliederung „Lithosphäre vergleichen�
 
 ## Platten und ihre Bewegung
 
-Die Grenzlinien und die regionalen Bewegungsrichtungen folgen den PB2002-Daten. Im Fernblick werden nur große Platten benannt. Beim Heranzoomen und nach Auswahl können weitere Namen sichtbar werden. Geographische Position und verfügbare Bildfläche bestimmen, welches Schild erscheint. Tippen Sie eine Linie an, um ihre Bewegungsart zu besprechen. Bei „Aufeinander zu“ sind auch Kollisionen zwischen Kontinenten möglich. [Peter Bird · PB2002](https://doi.org/10.1029/2001GC000252)
+Die Grenzlinien und die regionalen Bewegungsrichtungen folgen den PB2002-Daten. Im Fernblick werden nur große Platten benannt. Beim Heranzoomen und nach Auswahl können weitere Namen sichtbar werden. Geographische Position und verfügbare Bildfläche bestimmen, welches Schild erscheint. Tippen Sie auf eine Fläche, um sie im anonymen Modus hervorzuheben und bei Bedarf nur ihren Namen freizugeben. Ein Tipp auf eine Linie zeigt die Bewegungsart. Bei „Aufeinander zu“ sind auch Kollisionen zwischen Kontinenten möglich. [Peter Bird · PB2002](https://doi.org/10.1029/2001GC000252)
 
 | Region | Im Schnitt beobachten | Fachliche Einordnung |
 |---|---|---|
@@ -26,7 +26,7 @@ Die Fachanforderungen Geographie Schleswig-Holstein für die Sekundarstufe I (20
 
 ## Prüfbericht und Grenzen der Abnahme
 
-1. **Schnittflächen.** Unterschiedliche Rauheit, gerichtete Helligkeit an den beiden Schnittseiten und dunklere Kontaktzonen machen die Materialgrenzen ablesbar. Die regionalen Schnitte liegen höhenbezogen auf dem regionalen Bild. An den Flanken und an der Rückseite verbindet ein geneigter Geländestreifen das Profil mit dem geographisch passenden Ausschnitt des Satellitenbilds. Der vordere Anschnitt bleibt offen.
+1. **Schnittflächen.** Unterschiedliche Rauheit, gerichtete Helligkeit an den beiden Schnittseiten und dunklere Kontaktzonen machen die Materialgrenzen ablesbar. Ein lokales Fenster im Gelände legt die Profile unter der regionalen Oberfläche frei. An den Flanken und an der Rückseite verbindet ein geneigter Geländestreifen das Profil mit dem geographisch passenden Ausschnitt des Satellitenbilds. Der vordere Anschnitt bleibt offen.
 2. **Gestaltung.** Alle Ansichten nutzen die bestehende Beleuchtung des Globus und dieselben ruhigen Beschriftungen. Die regionalen Profile behalten ihre erklärende Schnittform.
 3. **Bedienung.** Ortsfeste beziehungsweise mitbewegte Anker werden mit der Szenenkamera projiziert. Eine kurze Linie verbindet Objekt und Name. Überdeckte oder räumlich nicht unterzubringende Namen verschwinden. Kurze Erklärungen öffnen im Bedienfeld.
 4. **Definitionen.** Die vier Schalen folgen den oben dokumentierten Materialeigenschaften. Die regionalen Definitionen beschreiben relative Bewegung, Druckentlastung, Teilschmelze oder seitlichen Versatz am jeweils zugehörigen Element.

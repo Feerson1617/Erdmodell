@@ -14,7 +14,7 @@ import {
 } from "./process-geometry";
 
 export type ProcessSiteId = "island" | "japan" | "san";
-export const PROCESS_FOCUS_HEIGHT = 9.5;
+export const PROCESS_FOCUS_HEIGHT = 2.5;
 
 // PB2002 relative azimuths at the selected steps: EU/NA 103°, PA/OK 295°, NA/PA 144°.
 // Local +x spans the displayed block; local +z faces the viewer, to the right of +x on the map.
@@ -156,7 +156,7 @@ export class ProcessModel {
       position(
         target.lat,
         target.lon,
-        elevation(target.lat, target.lon) + 1.05,
+        elevation(target.lat, target.lon) - 6.8,
       ),
     );
     this.group.name = "Tektonisches Erklärmodell · " + id;
@@ -171,7 +171,8 @@ export class ProcessModel {
     const edge = landscapeEdge(this.group, this.blockers, elevation, image);
     const tones = { island: "#657356", japan: "#466567", san: "#a09869" };
     const join = this.material({
-      map: image?.map,
+      map: image?.map ?? null,
+      alphaHash: true,
       vertexColors: true,
       side: T.DoubleSide,
     });

@@ -218,6 +218,16 @@ async function exercise(browser, engine) {
     await click("boundaries");
     assert.doesNotMatch(await texts(), /Pazifische Platte|Eurasische Platte/);
     await shot("06-grenzen");
+    const surface = await p.locator("#earth").boundingBox();
+    await p.touchscreen.tap(
+      surface.x + surface.width * 0.5,
+      surface.y + surface.height * 0.5,
+    );
+    await p.check("#onePlateName");
+    await p.waitForSelector("#platePins button");
+    assert.equal(await pins("#platePins").count(), 1);
+    await p.uncheck("#onePlateName");
+    assert.doesNotMatch(await texts(), /Afrikanische Platte|Eurasische Platte/);
     await click("plateNames");
     await p.waitForSelector("#platePins button");
     await p.selectOption("#plateSelect", "AF");
@@ -259,9 +269,15 @@ async function exercise(browser, engine) {
       assert.ok((await p.locator("#layerText").innerText()).length < 180);
       await p.tap("#definition button");
       if (id === "japan") {
+        await p.check("#loopProcess");
+        await click("playProcess");
         run.regionWithLabels = await cadence(p);
+        await click("resetProcess");
         await click("plateNames");
+        await click("playProcess");
         run.regionWithoutLabels = await cadence(p);
+        await click("resetProcess");
+        await p.uncheck("#loopProcess");
         assert.doesNotMatch(await texts(), /Ochotskplatte|Tiefseegraben|Magma/);
         await click("plateNames");
       }
@@ -285,14 +301,12 @@ async function exercise(browser, engine) {
     await click("present");
     await click("labels");
     await p.waitForSelector('[data-object="shell-0"]');
-    run.board = await p
-      .locator('[data-object="shell-0"]')
-      .evaluate((b) => ({
-        width: innerWidth,
-        height: innerHeight,
-        fontPx: parseFloat(getComputedStyle(b).fontSize),
-        hitPx: b.offsetHeight,
-      }));
+    run.board = await p.locator('[data-object="shell-0"]').evaluate((b) => ({
+      width: innerWidth,
+      height: innerHeight,
+      fontPx: parseFloat(getComputedStyle(b).fontSize),
+      hitPx: b.offsetHeight,
+    }));
     assert.equal(run.board.width, 1920);
     assert.equal(run.board.height, 1080);
     assert.ok(run.board.fontPx >= 20 && run.board.hitPx >= 60);
@@ -355,6 +369,7 @@ async function recordDemo(browser) {
       () => window.geoObservatory().tectonics.progress > 0.14,
     );
     await p.tap("#playProcess");
+    await p.tap("#resetProcess");
     await p.tap('[data-object="trench"]');
     await p.waitForTimeout(750);
   } finally {
@@ -395,7 +410,7 @@ try {
     "",
     "Geprüfter Commit `" + report.commit + "`.",
     "",
-    "Je 24 aufeinanderfolgende Browser-Bildintervalle am ruhenden Schalenschnitt und am Japangraben. Die Testfolge verwendet Touch-Eingaben. Unterschiede zwischen den kurzen Stichproben erlauben keine isolierte Aussage über GPU-Kosten.",
+    "Je 24 aufeinanderfolgende Browser-Bildintervalle am ruhenden Schalenschnitt und während der Bewegung am Japangraben. Die Testfolge verwendet Touch-Eingaben. Unterschiede zwischen den kurzen Stichproben erlauben keine isolierte Aussage über GPU-Kosten.",
   ];
   for (const r of report.runs) {
     rows.push(

@@ -282,13 +282,13 @@ function updatePins() {
   const p = world.nav.pose, s = world.shell, o = world.plateOptions;
   const dimensions = $("earth");
   const key = [world.mode,p.lat,p.lon,p.d,p.tilt,p.bearing,dimensions.clientWidth,dimensions.clientHeight,
-    labels,released.size,s.cut,s.expanded,s.lithosphere,s.group.visible,s.visible.join(),o.boundaries,o.names,o.plate,
+    labels,released.size,s.cut,s.expanded,s.lithosphere,s.group.visible,s.visible.join(),o.boundaries,o.names,o.plate,world.singlePlateName,
     world.processDetail,world.processSite,world.processProgress,world.annotationTransition,present,side.offsetHeight].join("/");
   if (annotationKey === key) return;
   annotationKey = key;
   const obstacles = [document.querySelector<HTMLElement>(".tools")!, $("modelnote"),document.querySelector<HTMLElement>(".orientation")!];
   shellPins.draw(world.mode === "inside" && (labels || released.size) ? world.layerMarkers(released,labels) : [],obstacles);
-  const plates = world.mode === "plates" && o.names
+  const plates = world.mode === "plates" && (o.names || world.singlePlateName)
     ? world.processDetail ? world.processLabels() : world.plateLabels().map(p => ({
       ...p,id:p.code,text:"Zu dieser Platte gehören die Erdkruste und der starre oberste Erdmantel. Sie bewegt sich langsam gegenüber anderen Platten."
     })) : [];

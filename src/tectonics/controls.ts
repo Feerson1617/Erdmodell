@@ -44,8 +44,9 @@ export function plateControls(world: World) {
     ${options.boundaries ? check("plateNames","Plattennamen zeigen",options.names) + check("boundaryTypes","Grenztypen unterscheiden",options.types) : ""}</div>
     ${options.boundaries && options.types ? filter : ""}
     ${options.boundaries && options.names ? `<label class="siteSelect">Platte hervorheben<select id="plateSelect"><option value="">Keine</option>${sortedPlates.map(([code,name]) => `<option value="${code}" ${code === options.plate ? "selected" : ""}>${name}</option>`).join("")}</select></label>` : ""}
+    ${options.boundaries && !options.names && options.plate ? check("onePlateName","Gewählten Namen zeigen",world.singlePlateName) : ""}
     ${picker}
-    ${options.boundaries ? `<p class="boundaryHint" aria-live="polite">${boundary ? `<strong>${swatches[boundary.kind]}</strong><br>${movement[boundary.kind]}${options.names ? "<br>"+boundary.plates.join(" · ") : ""}` : "Eine Grenze auf dem Globus antippen."}</p>` : ""}`;
+    ${options.boundaries ? `<p class="boundaryHint" aria-live="polite">${boundary ? `<strong>${swatches[boundary.kind]}</strong><br>${movement[boundary.kind]}${options.names ? "<br>"+boundary.plates.join(" · ") : ""}` : "Eine Fläche oder Grenze auf dem Globus antippen."}</p>` : ""}`;
 }
 
 export function bindPlateControls(side: HTMLElement, world: World, render: () => void) {
@@ -56,6 +57,7 @@ export function bindPlateControls(side: HTMLElement, world: World, render: () =>
   };
   for (const [id, key] of [["boundaries","boundaries"],["plateNames","names"],["boundaryTypes","types"]] as const)
     bindCheck(id, on => { world.setPlateOptions({[key]:on}); refresh(id); });
+  bindCheck("onePlateName",on => { world.singlePlateName=on; refresh("onePlateName"); });
   for (const radio of side.querySelectorAll<HTMLInputElement>("#kindFilter input"))
     radio.onchange = () => {
       const selected = world.selectedBoundary;

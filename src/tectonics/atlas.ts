@@ -133,13 +133,14 @@ const labels = [...major, ...plateCodes.filter(code => !major.includes(code))].m
 });
 
 type Label = { code: string; name: string; x: number; y: number };
-function projectLabels(camera: T.Camera, width: number, height: number, distance: number, site?: Site, selected = "") {
+function projectLabels(camera: T.Camera, width: number, height: number, distance: number, site?: Site, selected = "", picked?: T.Vector3, single = false) {
   const visible: Label[] = [];
   const regional = site && distance < 4000 ? regionalLabels[site] : undefined;
   const ordered = selected ? [...labels.filter(l => l.code === selected), ...labels.filter(l => l.code !== selected)] : labels;
   for (const {code,name,point} of ordered) {
+    if (single && code !== selected) continue;
     if (code !== selected && distance >= 5000 && !major.includes(code)) continue;
-    const anchor = regional?.[code] ?? point;
+    const anchor = code === selected && picked ? picked : regional?.[code] ?? point;
     if (anchor.dot(camera.position) <= anchor.lengthSq()) continue;
     const xy = project(anchor,camera,width,height);
     if (xy) visible.push({code,name,...xy});
@@ -257,6 +258,24 @@ export async function loadAtlas(elevation: Elevation = () => 0) {
     selectStep(active);
   }
 
+  // Sample the same categorical raster and orientation as the selected fill.
+  // Allocate the readable image only for a geographical area pick.
+  let platePixels: CanvasRenderingContext2D | null = null;
+  function plateAt(point: T.Vector3) {
+    if (!platePixels) {
+      const canvas = document.createElement("canvas");
+      canvas.width = texture.image.width;
+      canvas.height = texture.image.height;
+      platePixels = canvas.getContext("2d",{willReadFrequently:true});
+      if (!platePixels) return "";
+      platePixels.drawImage(texture.image,0,0);
+    }
+    const {width,height} = platePixels.canvas;
+    const u = (Math.atan2(point.x,point.z)/RAD + 180)/360;
+    const v = (90-Math.asin(point.y)/RAD)/180;
+    const x = Math.floor(u*width)%width, y = Math.min(height-1,Math.max(0,Math.floor(v*height)));
+    return plateCodes[platePixels.getImageData(x,y,1,1).data[0]-1] ?? "";
+  }
   function setOpacity(fraction: number) {
     const value = Math.max(0, Math.min(1, fraction));
     if (opacity === value) return;
@@ -284,5 +303,5 @@ export async function loadAtlas(elevation: Elevation = () => 0) {
     }
     return hit;
   }
-  return { group, steps, setLayers, setOpacity, selectStep, pick, labels: projectLabels };
+  return { group, steps, setLayers, setOpacity, selectStep, pick, plateAt, labels: projectLabels };
 }

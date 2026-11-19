@@ -14,6 +14,7 @@ import { NyosEvent } from "./nyos/event";
 import { NyosLessonState, type NyosView, type NyosMeasure } from "./nyos/state";
 import { reliefSites } from "./nyos/protection";
 import { loadAtlas, center, typeOf, names, type BoundaryKind, type Step } from "./tectonics/atlas";
+import { SectionWindow } from "./tectonics/section-window";
 import { regionalImagery } from "./tectonics/imagery";
 import { ProcessModel, processView, PROCESS_FOCUS_HEIGHT } from "./tectonics/process";
 
@@ -76,6 +77,8 @@ export class World {
   onLayer?: (i: number) => void;
   onBoundary?: () => void;
   plateOptions: PlateOptions = { boundaries: false, names: false, types: false, category: "all", plate: "" };
+  singlePlateName = false;
+  private pickedPlatePoint?: T.Vector3;
   processSite: TectonicSiteId | null = null;
   processDetail = false;
   processProgress = 0;
@@ -86,6 +89,7 @@ export class World {
   private atlasLoading?: Promise<void>;
   private images?: T.Group;
   private imagesLoading?: Promise<void>;
+  private sectionWindow = new SectionWindow();
   private models = new Map<TectonicSiteId, ProcessModel>();
   private selectedStep: Step | null = null;
   private atlasReturn: Pose = { ...HOME };
@@ -186,7 +190,13 @@ export class World {
         const point = ray.ray.intersectSphere(new T.Sphere(new T.Vector3(), R), new T.Vector3());
         if (point) {
           const tolerance = (this.nav.pose.d * 2 * Math.tan(T.MathUtils.degToRad(this.nav.camera.fov / 2)) * 16) / (b.height * R);
-          this.selectBoundary(this.atlas!.pick(point.normalize(), tolerance));
+          const direction = point.normalize();
+          const boundary = this.atlas!.pick(direction,tolerance);
+          this.selectBoundary(boundary);
+          if (!boundary && !this.processSite) {
+            this.setPlateOptions({plate:this.atlas!.plateAt(direction)});
+            this.pickedPlatePoint = direction.multiplyScalar(R+2);
+          }
           this.onBoundary?.();
         }
         return;
@@ -298,6 +308,8 @@ export class World {
     this.atlas.setLayers(this.mode === "plates" && boundaries, types, types && category !== "all" ? category : null, plate || null);
   }
   setPlateOptions(options: Partial<PlateOptions>) {
+    if (options.plate !== undefined || options.names !== undefined || options.boundaries === false) this.singlePlateName = false;
+    if (options.plate !== undefined) this.pickedPlatePoint = undefined;
     Object.assign(this.plateOptions, options);
     const { types, category, boundaries } = this.plateOptions;
     if (this.selectedStep && (!boundaries || (types && category !== "all" && typeOf(this.selectedStep[2]) !== category))) {
@@ -307,8 +319,8 @@ export class World {
   }
   get annotationTransition() { return this.processReveal; }
   plateLabels() {
-    if (!this.atlas || this.mode !== "plates" || !this.plateOptions.names || !this.plateOptions.boundaries || this.processReveal > 0.5) return [];
-    return this.atlas.labels(this.nav.camera, this.canvas.clientWidth, this.canvas.clientHeight, this.nav.pose.d, this.processSite ?? undefined,this.plateOptions.plate);
+    if (!this.atlas || this.mode !== "plates" || !(this.plateOptions.names || this.singlePlateName) || !this.plateOptions.boundaries || this.processReveal > 0.5) return [];
+    return this.atlas.labels(this.nav.camera, this.canvas.clientWidth, this.canvas.clientHeight, this.nav.pose.d, this.processSite ?? undefined,this.plateOptions.plate,this.pickedPlatePoint,this.singlePlateName && !this.plateOptions.names);
   }
   plates() {
     this.nyosLesson.playing = false;
@@ -375,6 +387,9 @@ export class World {
           model = new ProcessModel(id, this.anchor,(lat,lon) => this.planet.elevation(lat,lon),this.images?.getObjectByName(id)?.userData.image);
           model.group.visible = false;
           this.models.set(id, model);
+          this.sectionWindow.attach(this.planet.material);
+          const regionalMap = this.images?.getObjectByName(id) as T.Mesh<T.BufferGeometry,T.Material> | undefined;
+          if (regionalMap) this.sectionWindow.attach(regionalMap.material);
           this.scene.add(model.group);
         }
         model.setProgress(0);
@@ -402,7 +417,10 @@ export class World {
   }
   private updateTectonics(dt: number) {
     const id = this.processSite;
-    if (!id && !this.departure) return;
+    if (!id && !this.departure) {
+      this.sectionWindow.show(undefined,0);
+      return;
+    }
     const { d, lat, lon } = this.nav.pose;
     const visibleAt = (anchor: { lat: number; lon: number }, near: number, span: number) => {
       const deltaLon = ((lon - anchor.lon + 540) % 360) - 180;
@@ -432,6 +450,8 @@ export class World {
       }
     }
     this.focusReveal = Math.max(this.processReveal, departingModel);
+    const cutSite = this.processReveal >= departingModel ? id : old?.id;
+    this.sectionWindow.show(cutSite ? this.models.get(cutSite)?.group : undefined,this.focusReveal);
     this.atlas?.setOpacity(1 - this.focusReveal);
     if (this.images) {
       this.images.visible = this.patchOpacity > 0 || departingPatch > 0;
