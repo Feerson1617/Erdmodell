@@ -2,7 +2,7 @@
 <html lang="de">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Nyos-See · Geräteprobe</title>
+<title>GeoRisiko 3D · Geräteprobe</title>
 <style>
   * { box-sizing:border-box }
   body { margin:0; display:flex; flex-direction:column; height:100svh; color:#ecf2ea; background:#14211c; font:16px/1.45 system-ui,sans-serif }
@@ -13,13 +13,15 @@
   iframe { flex:1; width:100%; min-height:0; border:0; background:#112018 }
 </style>
 <header>
-  <strong>Nyos-Geräteprobe</strong><button id="sample" disabled>Ansicht 8 Sekunden messen</button>
-  <a id="save" download="Nyos-Geraeteprobe.json" hidden>Messprotokoll speichern</a>
+  <strong>Geräteprobe</strong><button id="sample" disabled>Ansicht 8 Sekunden messen</button>
+  <a id="save" download="GeoRisiko-Schalenbau-Geraeteprobe.json" hidden>Messprotokoll speichern</a>
   <output id="status" aria-live="polite">Modell wird geladen.</output>
 </header>
-<iframe title="GeoRisiko 3D am Testplatz" src="../index.html" allow="fullscreen"></iframe>
+<iframe title="GeoRisiko 3D am Testplatz"  allow="fullscreen"></iframe>
 <script>
   const frame=document.querySelector('iframe'), sample=document.querySelector('#sample'), save=document.querySelector('#save'), status=document.querySelector('#status');
+  const shellMode = new URLSearchParams(location.search).get('ansicht') !== 'nyos';
+  if (!shellMode) save.download = 'Nyos-Geraeteprobe.json';
   const runs=[];
   let downloadUrl, build;
   frame.addEventListener('load',async()=>{
@@ -31,14 +33,20 @@
       const version=await fetch('../Pruefstand.txt');
       if(version.ok) build=(await version.text()).trim();
     } catch { /* Die lokale Bildzeitmessung ist auch ohne Paketkennung möglich. */ }
-    status.textContent='Im Modell eine Ansicht wählen. Während der Messung wie im Unterricht bedienen.';
+    status.textContent=shellMode ? 'Schalenschnitt öffnen, Namen zeigen und die Messung starten. Das Modell während der acht Sekunden drehen.' : 'Im Modell eine Ansicht wählen. Während der Messung wie im Unterricht bedienen.';
     sample.disabled=false;
   });
+  frame.src = shellMode ? '../index.html?unterricht=schalenbau' : '../index.html';
+  function snapshot(w) {
+    const doc=frame.contentDocument;
+    return {mode:w.mode, ...(shellMode ? {namen:doc.querySelectorAll('#pins button').length, schalen:w.shell, kamera:[w.lat,w.lon,w.d,w.tilt,w.bearing]} : {nyos:w.nyos}),
+      renderpuffer:w.resolution,geometrien:w.geometries,texturen:w.textures,programme:w.programs};
+  }
   sample.onclick=async()=>{
     sample.disabled=true;
     const browser=frame.contentWindow, start=browser.performance.now(), gaps=[];
     let last=start;
-    const first=browser.geoObservatory();
+    const first=browser.geoObservatory(), firstView=snapshot(first);
     status.textContent='Messung läuft …';
     while(last-start<8000){
       const t=await new Promise(done=>browser.requestAnimationFrame(done));
@@ -50,11 +58,11 @@
     runs.push({pruefstand:build,system:navigator.platform,browser:navigator.userAgent,zeitpunkt:new Date().toISOString(),
       viewport:[browser.innerWidth,browser.innerHeight],dauerMs:last-start,bilder,bildabstaendeMs:gaps,fps,
       medianMs:sorted[Math.floor(sorted.length/2)],p95Ms:sorted[Math.min(sorted.length-1,Math.floor(.95*sorted.length))],maxMs:sorted.at(-1),
-      start:{mode:first.mode,nyos:first.nyos},ende:{mode:end.mode,nyos:end.nyos,renderpuffer:end.resolution,geometrien:end.geometries,texturen:end.textures,programme:end.programs}});
+      pausenUeber250ms:gaps.filter(ms=>ms>250).length,start:firstView,ende:snapshot(end)});
     if(downloadUrl) URL.revokeObjectURL(downloadUrl);
     downloadUrl=URL.createObjectURL(new Blob([JSON.stringify(runs,null,2)],{type:'application/json'}));
     save.href=downloadUrl; save.hidden=false; sample.disabled=false;
-    status.textContent='Messung '+runs.length+' · '+fps.toFixed(1)+' Bilder/s. Weitere Ansicht wählen oder Protokoll speichern.';
+    status.textContent='Messung '+runs.length+' · '+fps.toFixed(1)+' Bilder/s · längste Bildpause '+Math.round(sorted.at(-1))+' ms. JSON bei Bedarf speichern.';
   };
 </script>
 </html>

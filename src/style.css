@@ -233,3 +233,8 @@ figcaption { margin-top: 6px; font-size: .9em; color: var(--muted); }
 
 #plateSettings { margin-top:12px; border-top:1px solid var(--line); }
 #plateSettings summary { cursor:pointer; min-height:var(--hit); padding:10px 0; align-content:center; }
+
+.nameActions { display:flex; flex-wrap:wrap; gap:4px; }
+#shellOptions summary { display:flex; align-items:center; min-height:var(--hit); cursor:pointer; text-decoration:underline; text-underline-offset:3px; }
+#shellOptions summary::before { content:"▸"; margin-right:.5em; }
+#shellOptions[open] summary::before { content:"▾"; }

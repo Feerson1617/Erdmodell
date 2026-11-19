@@ -9,7 +9,7 @@ import { preview } from "vite";
 
 const reference = process.env.REFERENCE_BUILD;
 const baseline = "441f1480b6fc1d65faf5ef5b06882ccdc6775656";
-const dest = reference ? "test-results/vergleich/g4.2" : "test-results/g4.2.1";
+const dest = reference ? "test-results/vergleich/g4.2" : "test-results/g4.2.2";
 await mkdir(dest, { recursive: true });
 const server = await preview({
   configFile: false,
@@ -532,7 +532,7 @@ try {
   await rm(temp, { recursive: true, force: true });
   await writeFile(join(dest, "pruefung.json"), JSON.stringify(report, null, 2));
   const rows = [
-    reference ? "# Vergleichsbilder G4.2" : "# G4.2.1 · Browserprüfung",
+    reference ? "# Vergleichsbilder G4.2" : "# G4.2.2 · Browserprüfung",
     "",
     "Geprüfter Commit `" + report.commit + "`.",
     "",

@@ -16,6 +16,7 @@ const paint = () => createIcons({ icons, attrs: { "stroke-width": 1.65 } });
 const button = (id: string, label: string, glyph: string) =>
   `<button type="button" id="${id}" aria-label="${label}" title="${label}">${icon(glyph)}</button>`;
 const brand = `<svg class="brandmark" width="40" height="40" viewBox="0 0 40 40" fill="none" aria-hidden="true"><defs><clipPath id="disc"><circle cx="20" cy="20" r="16"/></clipPath></defs><circle cx="20" cy="20" r="16" fill="currentColor"/><g clip-path="url(#disc)" stroke="#17251f" stroke-width="2.4"><path d="M-5 19Q6 30 18 12T45 5M-5 26Q7 37 22 17T46 13M-4 33Q10 44 26 23T48 20M0 39Q13 50 30 29T49 28"/></g></svg>`;
+const friday = new URLSearchParams(location.search).get("unterricht") === "schalenbau";
 const $ = <T extends HTMLElement = HTMLElement>(id: string) =>
   document.getElementById(id) as T;
 $("app").innerHTML =
@@ -32,6 +33,9 @@ $("app").innerHTML =
   <div id="modelnote" hidden></div><div class="hint">Ziehen zum Drehen · Mit zwei Fingern oder Mausrad zoomen</div></section></main>
   <div id="status" role="status">Erdmodell wird geladen …</div>
   <dialog id="dialog" aria-labelledby="dialogTitle">${button("closeDialog","Schließen","x")}<div id="content"></div></dialog>`;
+if (friday) {
+  for (const id of ["plates", "nyos", "place"]) $("nav-" + id).hidden = true;
+}
 const desk = $("desk"),
   side = $("sidebar"),
   dialog = $<HTMLDialogElement>("dialog"),
@@ -77,7 +81,7 @@ function infoPage() {
     openDialog();
     return;
   }
-  content.innerHTML = `<h2 id="dialogTitle">Über das Modell</h2><p>Farben unterscheiden die Schalen. Der Keil macht ihr Inneres sichtbar.</p><p>${labels ? "Die Kruste ist im Referenzmodell überall 35 km dick. In der Natur variiert ihre Dicke." : "Die äußerste Schale hat im Referenzmodell überall dieselbe Dicke. In der Natur ist sie unterschiedlich dick."} Beim Verbreitern der Außenschale bleiben der Erdradius und die tieferen Grenzen gleich.</p><p><a href="${import.meta.env.BASE_URL}licenses/Geodaten.txt" target="_blank" rel="noopener">Geodaten und Bildquellen</a></p>`;
+  content.innerHTML = `<h2 id="dialogTitle">Über das Modell</h2><p>Die Farben sind Modellfarben. Der Keil macht die Schalen im Inneren sichtbar.</p><p>${labels ? "Die Kruste ist im Referenzmodell überall 35 km dick. In der Natur variiert ihre Dicke." : "Die äußerste Schale hat im Referenzmodell überall dieselbe Dicke. In der Natur ist sie unterschiedlich dick."} Beim Verbreitern der Außenschale bleiben der Erdradius und die tieferen Grenzen gleich.</p><p><a href="${import.meta.env.BASE_URL}licenses/Geodaten.txt" target="_blank" rel="noopener">Geodaten und Bildquellen</a></p>${friday ? '<p><a href="./index.html">Gesamtanwendung öffnen</a></p>' : ""}`;
   openDialog();
 }
 function openDialog() {
@@ -92,14 +96,17 @@ function renderShellControls() {
   const selected = shell.selected;
   const disabled = selected === null ? "disabled" : "";
   const anyNames = labels || released.size>0;
+  const actions = `<div class="shellActions"><button id="isolate" ${disabled}>Einzeln zeigen</button><button id="subdue" aria-pressed="${shell.subdued}" ${disabled}>Umfeld dimmen</button><button id="restoreLayers">${icon("rotate-ccw")} Alle zeigen</button></div>
+  <label class="range" for="opacity">Deckkraft<input id="opacity" type="range" min="15" max="100" ${disabled} value="${selected === null ? 100 : shell.opacity[selected]*100}" aria-label="Deckkraft der gewählten Schale"></label>`;
+  const cut = `<label><input id="cut" type="checkbox" ${shell.cut ? "checked" : ""}> Keilschnitt</label>`, scale = `<label><input id="scale" type="checkbox" ${shell.expanded ? "checked" : ""}> ${labels ? "Kruste" : "Außenschale"} verbreitern</label>`, lithosphere = `<label><input id="lithosphere" type="checkbox" ${shell.lithosphere ? "checked" : ""} ${shell.cut && shell.visible[0] && shell.visible[1] ? "" : "disabled"}> ${labels ? "Lithosphäre vergleichen" : "Starren Außenbereich vergleichen"}</label>`;
+  const waves = `<button id="evidence">${icon("waves")} P- und S-Wellen</button>`;
   return `<div class="panelHead"><h1>Schalen</h1><button id="labels" title="Beschriftungen durch die Lehrkraft umschalten" aria-pressed="${labels ? "true" : anyNames ? "mixed" : "false"}">${icon(anyNames ? "eye-off" : "eye")}${anyNames ? "Namen verbergen" : "Namen zeigen"}</button></div>
   <div class="layerlist">${layers.map((l,i) => `<div class="layer ${selected === i ? "chosen" : ""}" style="--rock:#${l.color.toString(16)}"><button data-layer="${i}" aria-pressed="${selected === i}"><span class="swatch" aria-hidden="true">${labels ? i+1 : ""}</span>${layerName(i)}</button><button class="eye" data-eye="${i}" aria-label="${layerName(i)} ${shell.visible[i] ? "ausblenden" : "einblenden"}" aria-pressed="${shell.visible[i]}">${icon(shell.visible[i] ? "eye" : "eye-off")}</button></div>`).join("")}</div>
-  ${selected === null ? "" : labels || released.has(selected) ? '<button id="explainLayer">Erklärung öffnen</button>' : '<button id="revealOne">Einzelnen Namen zeigen</button>'}
+  ${selected === null ? "" : labels || released.has(selected) ? '<div class="nameActions"><button id="explainLayer">Erklärung öffnen</button><button id="hideOne">Diesen Namen verbergen</button></div>' : '<button id="revealOne">Einzelnen Namen zeigen</button>'}
   ${!labels && released.size ? '<button id="allNames">Alle Namen zeigen</button>' : ""}
-  <div class="shellActions"><button id="isolate" ${disabled}>Einzeln zeigen</button><button id="subdue" aria-pressed="${shell.subdued}" ${disabled}>Umfeld dimmen</button><button id="restoreLayers">${icon("rotate-ccw")} Alle zeigen</button></div>
-  <label class="range" for="opacity">Deckkraft<input id="opacity" type="range" min="15" max="100" ${disabled} value="${selected === null ? 100 : shell.opacity[selected]*100}" aria-label="Deckkraft der gewählten Schale"></label>
-  <div class="options"><label><input id="cut" type="checkbox" ${shell.cut ? "checked" : ""}> Keilschnitt</label><label><input id="scale" type="checkbox" ${shell.expanded ? "checked" : ""}> ${labels ? "Kruste" : "Außenschale"} verbreitern</label><label><input id="lithosphere" type="checkbox" ${shell.lithosphere ? "checked" : ""} ${shell.cut && shell.visible[0] && shell.visible[1] ? "" : "disabled"}> ${labels ? "Lithosphäre vergleichen" : "Starren Außenbereich vergleichen"}</label></div>
-  <button id="evidence">${icon("waves")} P- und S-Wellen</button>`;
+  ${friday
+    ? `<div class="options">${scale}</div><details id="shellOptions"><summary>Weitere Modelloptionen</summary>${actions}<div class="options">${cut}${lithosphere}</div>${waves}</details>`
+    : `${actions}<div class="options">${cut}${scale}${lithosphere}</div>${waves}`}`;
 }
 function siteInfo() {
   const r = world.region;
@@ -142,14 +149,28 @@ function renderSide() {
     $("overview").onclick = () => world.visit(r.id, true);
     $("nearby").onclick = () => world.visit(r.id);
   }
-  if (mode === "inside") side.innerHTML = renderShellControls();
+  if (mode === "inside") {
+    const optionsOpen = !!side.querySelector("#shellOptions[open]");
+    side.innerHTML = renderShellControls();
+    if (optionsOpen) $<HTMLDetailsElement>("shellOptions").open = true;
+  }
   if (mode === "inside" || mode === "plates") {
     const area = document.createElement("section");
     area.id = "definition"; area.hidden = true; area.setAttribute("aria-live","polite");
     (side.querySelector(".panelHead") ?? side.querySelector("h1"))?.after(area);
   }
   $("explainLayer")?.addEventListener("click", () => showDefinition(layers[world.shell.selected!]));
-  $("revealOne")?.addEventListener("click", () => { released.add(world.shell.selected!); renderSide(); $("explainLayer")?.focus(); });
+  $("revealOne")?.addEventListener("click", () => { released.add(world.shell.selected!);
+    if (released.size === layers.length) { labels = true; released.clear(); }
+    renderSide(); $("explainLayer")?.focus(); });
+  $("hideOne")?.addEventListener("click", () => {
+    const selected = world.shell.selected!;
+    if (labels) layers.forEach((_, i) => released.add(i));
+    labels = false;
+    released.delete(selected);
+    renderSide();
+    $("revealOne").focus({preventScroll:true});
+  });
   $("lithosphere")?.addEventListener("change", () => {
     world.shell.setComparison($<HTMLInputElement>("lithosphere").checked ? "lithosphere" : "reference");
     updateShell("lithosphere");
@@ -390,13 +411,16 @@ async function boot() {
     e.preventDefault();
   });
   let lastHud = 0;
+  let lastBearing = NaN;
   world.onFrame = () => {
     if ((world.mode==="inside" && (labels || released.size)) || (world.mode==="plates" && (world.plateOptions.names || world.singlePlateName))) updatePins();
     const now = performance.now();
     if (now - lastHud < 55) return;
     lastHud = now;
-    document.querySelector<SVGElement>(".orientation svg")!.style.transform =
-      `rotate(${world.nav.pose.bearing}deg)`;
+    if (lastBearing !== world.nav.pose.bearing) {
+      lastBearing = world.nav.pose.bearing;
+      document.querySelector<SVGElement>(".orientation svg")!.style.transform = `rotate(${lastBearing}deg)`;
+    }
 
     if (world.mode === "plates") { syncPlayback(world); }
     if (world.mode === "nyos") {
@@ -408,7 +432,7 @@ async function boot() {
   };
   await world.init();
   Object.defineProperty(window, "geoObservatory", {
-    value: () => ({...world.diagnostics(), annotationDom:{...tectonicPins.work}}),
+    value: () => ({...world.diagnostics(), annotationDom:{...tectonicPins.work}, shellAnnotationDom:{...shellPins.work}}),
   });
 }
 void boot().catch(() =>

@@ -21,7 +21,7 @@ def files(folder):
 
 
 def archive(folder, name, entries):
-    dest = folder / ("GeoRisiko-G4.2.1-" + name + ".zip")
+    dest = folder / ("GeoRisiko-G4.2.2-" + name + ".zip")
     with zipfile.ZipFile(dest, "w") as z:
         for key, value in sorted(entries.items()):
             entry = zipfile.ZipInfo(key, date_time=(2026, 1, 1, 0, 0, 0))
@@ -46,13 +46,13 @@ nyos_docs = (
     "nyos-abnahme.md",
 )
 web = files(dist)
-web["Pruefstand.txt"] = f"GeoRisiko 3D · G4.2.1 Grundlagen\nGeprüfter Git-Commit: {commit}\n".encode()
+web["Pruefstand.txt"] = f"GeoRisiko 3D · G4.2.2 · Freitag, 20. November 2026\nGeprüfter Git-Commit: {commit}\n".encode()
 assert "index.html" in web
 source = (root / "docs/data-sources-and-licenses.md").read_bytes()
 web["Quellen.md"] = source
 web["g1.1-data.md"] = (root / "docs/g1.1-data.md").read_bytes()
 web["data-sources-and-licenses.md"] = source
-for name in (*nyos_docs, "g2.1-daten.md", "g2.1-prozessmodelle.md", "grundlagen-g4.2.md", "qualitaet-g4.2.1.md"):
+for name in (*nyos_docs, "g2.1-daten.md", "g2.1-prozessmodelle.md", "grundlagen-g4.2.md", "qualitaet-g4.2.1.md", "freitag-20-11-2026.md"):
     web[name] = (root / "docs" / name).read_bytes()
 sco = dict(web)
 sco["scorm.js"] = (root / "scripts/scorm.js").read_bytes()
@@ -77,7 +77,7 @@ def add(el, name, value=None, **attrs):
 
 xsi = "http://www.w3.org/2001/XMLSchema-instance"
 ET.register_namespace("xsi", xsi)
-m = ET.Element(tag("manifest"), identifier="GEORISIKO-G4-2-1", version="1.2")
+m = ET.Element(tag("manifest"), identifier="GEORISIKO-G4-2-2", version="1.2")
 m.set(
     "{" + xsi + "}schemaLocation",
     ns + " imscp_rootv1p1p2.xsd " + adl + " adlcp_rootv1p2.xsd",
@@ -88,8 +88,8 @@ add(meta, "schemaversion", "1.2")
 os = add(m, "organizations", default="ATLAS")
 org = add(os, "organization", identifier="ATLAS")
 add(org, "title", "GeoRisiko 3D · Erdaufbau und Plattentektonik")
-item = add(org, "item", identifier="OBSERVATORIUM", identifierref="SCO")
-add(item, "title", "Das Erdobservatorium erkunden")
+item = add(org, "item", identifier="OBSERVATORIUM", identifierref="SCO", parameters="?unterricht=schalenbau")
+add(item, "title", "Der Schalenbau der Erde")
 rs = add(m, "resources")
 r = add(rs, "resource", identifier="SCO", type="webcontent", href="index.html")
 r.set("{" + adl + "}scormtype", "sco")
@@ -109,7 +109,8 @@ suites = (
     ("unterricht", "unterricht-g131", 10),
     ("tektonik", "g2.1", 10),
     ("nyos", "nyos", 12),
-    ("grundlagen", "g4.2.1", 12),
+    ("grundlagen", "g4.2.2", 12),
+    ("freitag", "freitag", 8),
 )
 for section, directory, expected_count in suites:
     assets = files(results_dir / directory)
@@ -130,7 +131,7 @@ for name in reports:
         "chromium",
         "webkit",
     }, f"{name}: erfolgreiche Prüfungen in beiden Browsern erforderlich"
-    if name in {"nyos/pruefung.json", "grundlagen/pruefung.json"}:
+    if name in {"nyos/pruefung.json", "grundlagen/pruefung.json", "freitag/pruefung.json"}:
         suite = name.split("/")[0]
         images = next(r["images"] for r in result["runs"] if r["engine"] == "chromium")
         expected = {f"{suite}/{image['name']}.jpg": image["hash"] for image in images}
@@ -142,7 +143,7 @@ baseline = "441f1480b6fc1d65faf5ef5b06882ccdc6775656"
 timings = json.loads(comparison["leistung.json"])
 assert timings["baseline"] == baseline and timings["candidate"] == commit
 assert {(r["engine"],r["version"]) for r in timings["runs"]} == {
-    (e,v) for e in ("chromium","webkit") for v in ("G4.2","G4.2.1")}
+    (e,v) for e in ("chromium","webkit") for v in ("G4.2","G4.2.2")}
 assert all(len(r["samples"]) == 7 and all(s["fps"] > 0 for s in r["samples"]) for r in timings["runs"])
 assert comparison["Leistungsvergleich.md"]
 before = json.loads(comparison["g4.2/pruefung.json"])
@@ -162,33 +163,27 @@ lesson.update(
 )
 for name in ("unterricht-15-12.md", "unterricht-20-11.md", "geoscience-validation.md", "roadmap.md"):
     lesson[name] = (root / "docs" / name).read_bytes()
-lesson["START.txt"] = """GeoRisiko 3D · Erdaufbau und Plattentektonik
+friday = json.loads(checks["freitag/pruefung.json"])
+assert all(len(run["steps"]) == 15 and len(run["performance"]) == 10 and len(run["viewports"]) == 4
+           and not run["externalRequests"] and not run["errors"] for run in friday["runs"])
+visual = json.loads(checks["freitag/bildvergleich/vergleich.json"])
+assert visual["candidate"] == commit and visual["baseline"] == "1caab5e3578cff1c92814ccb781f3069f9be3dbd"
+assert len(visual["results"]) == 7 and all(row["fraction"] < .001 for row in visual["results"])
+for image in ("01-globus", "02-anonym", "04-namen"):
+    lesson["Offline-Bilder/" + image + ".jpg"] = checks["freitag/" + image + ".jpg"]
+lesson["START.txt"] = """Schalenbau der Erde · Freitag, 20. November 2026
 
-1. Das ZIP vollständig in einen eigenen Ordner entpacken.
-2. Auf dem Mac mit installiertem Python 3 START.command doppelklicken.
-   Der Browser öffnet das Modell. Falls macOS den Start über den Finder
-   einschränkt, Terminal öffnen, „cd “ tippen, den entpackten Ordner
-   hineinziehen und die Eingabetaste drücken. Dann ausführen:
-     python3 start_lokal.py
-   Unter Windows in diesem Ordner ein Terminal öffnen:
-     py -3 start_lokal.py
-3. Falls kein Browser aufgeht, die im Terminal angezeigte lokale Adresse
-   mit 127.0.0.1 in den Browser kopieren. Das Terminal während der Stunde
-   offen lassen. Ctrl+C beendet den Server.
+Das ZIP vollständig entpacken und auf dem Mac START.command öffnen.
+Python 3 und ein Browser mit WebGL 2 werden für das interaktive Modell benötigt.
+Die vollständige lokale Adresse im Terminal führt zur Freitagsstunde.
+Bei gesperrtem Finder-Start im Terminal aus dem entpackten Ordner python3 start_lokal.py aufrufen.
+Die Stunde beginnt am anonymen Globus. Präsentieren wählen und anschließend Schalenschnitt öffnen.
+Der Kreispfeil unten rechts stellt den anonymen Globus wieder her.
+Das Terminal offen lassen. Ctrl+C beendet den Server.
 
-Der Server lauscht ausschließlich auf dem eigenen Rechner und wählt
-automatisch einen freien Port. Für die Darstellung ist WebGL 2 erforderlich.
-Alternativ kann die Schule den Ordner auf einem statischen Webserver
-bereitstellen oder das SCORM-Paket ins LMS importieren.
-
-Für die erste Stunde Schalenschnitt öffnen. Namen lassen sich einzeln oder gemeinsam zeigen.
-Ein Antippen des Namens öffnet die kurze Erklärung neben dem Modell.
-Die Schraffur im optionalen Vergleich überbrückt zwei stoffliche Schalen.
-Weitere Unterrichts- und Modellhinweise stehen in qualitaet-g4.2.1.md.
-
-Die Ansicht „Nyos-See“ führt zur Landschaft und zum Seeschnitt.
-Die Anleitung für den Unterricht steht in nyos-unterrichtsverwendung.md.
-nyos-geowissenschaften.md und nyos-geodaten.md erläutern Quellen und Modellgrenzen.
+Unterrichtsfolge, Geräteprobe und Rückfall sind in freitag-20-11-2026.md beschrieben.
+Rückfallversion: GeoRisiko-G1.3.1-Unterricht.zip. Vor der Stunde lokal bereitlegen.
+Bei fehlendem Python oder WebGL die drei Bilder im Ordner Offline-Bilder öffnen.
 """.encode()
 review = dict(lesson)
 review["START.txt"] += (
@@ -200,7 +195,7 @@ review["Pruefung/geraeteprobe.html"] = (root / "scripts/nyos-geraeteprobe.html")
 review.update({"Pruefung/" + name: content for name, content in checks.items()})
 for name in ("qualitaet-g4.2.1", "grundlagen-g4.2", "g2.1-bericht", "g2.1-daten", "g2.1-prozessmodelle", "unterricht-15-12", "geoscience-validation", "roadmap"):
     review["Pruefung/" + name + ".md"] = (root / f"docs/{name}.md").read_bytes()
-measured = ["# Messbericht zum Schalenmodell im G4.2.1-Build", "", f"Produktionsbuild `{commit}`", "",
+measured = ["# Messbericht zum Schalenmodell im G4.2.2-Build", "", f"Produktionsbuild `{commit}`", "",
             "14 Bedienfolgen pro Engine. Bildzeiten stammen aus einer separaten ruhenden Schalenansicht bei 1920 × 1080. Die Auflösung gilt für das Modell neben der Bedienleiste.", ""]
 for run in json.loads(checks["unterricht/pruefung.json"])["runs"]:
     cadence = run["cadence"]
@@ -218,7 +213,7 @@ for run in json.loads(checks["unterricht/pruefung.json"])["runs"]:
                  f"- JS-Heap in den warmen Zyklen: {min(heap)/1048576:.1f}–{max(heap)/1048576:.1f} MiB." if heap else "- JS-Heap vom Browser nicht ausgewiesen.", ""]
 review["Pruefung/Messbericht.md"] = "\n".join(measured).encode()
 with TemporaryDirectory(dir=out) as temporary:
-    packages = (("SCORM-1.2", sco), ("Unterricht", lesson), ("Sichtpruefung", review))
+    packages = (("SCORM-1.2", sco), ("Freitag-Unterricht", lesson), ("Sichtpruefung", review))
     verified = [archive(Path(temporary), name, entries) for name, entries in packages]
     for package in verified:
         destination = package.replace(out / package.name)

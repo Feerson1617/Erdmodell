@@ -767,6 +767,8 @@ export class World {
         opacity: [...this.shell.opacity],
         subdued: this.shell.subdued,
         builds: this.shell.builds,
+        shadowPass: this.sun.castShadow,
+        transparentParts: this.shell.group.children.filter(part => part.visible && part instanceof T.Mesh && part.material.transparent).length,
       },
       localReady: this.local.ready,
       localVisible: this.local.group.visible,

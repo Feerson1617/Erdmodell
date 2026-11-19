@@ -16,6 +16,7 @@
     "package": "python3 scripts/package.py",
     "audit": "node tests/flight-audit.mjs && python3 scripts/analyse_flight.py test-results/audit",
     "test:grundlagen": "node tests/grundlagen.mjs",
+    "test:freitag": "node tests/freitag.mjs && node tests/schalen-bildvergleich.mjs",
     "test:vergleich": "node tests/vergleich.mjs"
   },
   "dependencies": {
