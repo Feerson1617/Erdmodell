@@ -1,5 +1,5 @@
 import * as T from "three";
-import { R, RAD, position, clamp, smooth } from "./geo";
+import { angularDistance, R, RAD, position, clamp, smooth } from "./geo";
 import { flattening } from "./regions";
 import { type Style, styles } from "./model";
 import type { Bounds } from "./regions";
@@ -285,7 +285,7 @@ export class TerrainLODManager {
       cl = Math.cos(lat * RAD);
     const visit = (z: number, x: number, y: number) => {
       const s = 45 / 2 ** z,
-        dx = Math.abs(((lon - (-180 + (x + 0.5) * s) + 540) % 360) - 180),
+        dx = Math.abs(angularDistance(-180 + (x + 0.5) * s, lon)),
         dy = Math.abs(lat - (-90 + (y + 0.5) * s));
       const limit = horizon + s * RAD,
         centerLat = (-90 + (y + 0.5) * s) * RAD;

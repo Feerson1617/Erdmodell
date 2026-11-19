@@ -17,7 +17,10 @@ export function shellRadii(expanded: boolean) {
 export class Shells {
   group = new T.Group();
   cut = true;
-  expanded = false;
+  private comparisonMode: "reference" | "expanded" | "lithosphere" = "reference";
+  get expanded() { return this.comparisonMode === "expanded"; }
+  get lithosphere() { return this.comparisonMode === "lithosphere"; }
+  setComparison(mode: typeof this.comparisonMode) { this.comparisonMode = mode; }
   visible = [true, true, true, true];
   opacity = [1, 1, 1, 1];
   selected: number | null = null;
@@ -26,15 +29,14 @@ export class Shells {
   map?: T.Texture;
   private variants = new Map<Style, { map?: T.Texture; parts: Part[] }>();
   builds = 0;
-  lithosphere = false;
   private comparison = new T.Group();
   constructor() {
     // Separate hatching crosses the compositional boundary on a short section of each cut face.
     // The variable lower envelope illustrates mechanical behaviour, rather than another global shell.
     const material = new T.LineBasicMaterial({color: 0xd5f4e5, toneMapped: false});
-    for (const face of [-25, 65]) for (const expanded of [false,true]) {
+    for (const face of [-25, 65]) {
       const vertices: T.Vector3[] = [];
-      const base = shellRadii(expanded)[1];
+      const base = shellRadii(false)[1];
       const point = (lat: number, depth: number) => position(lat, face + (face < 0 ? .12 : -.12), depth - R);
       const lower = (lat: number) => base - 120 - 42 * Math.sin(lat*.095);
       for (let lat = 8; lat < 59; lat++) {
@@ -42,7 +44,6 @@ export class Shells {
         if ((lat-8)%4===0) vertices.push(point(lat,R),point(lat+2,lower(lat+2)));
       }
       const hatch = new T.LineSegments(new T.BufferGeometry().setFromPoints(vertices),material);
-      hatch.userData.expanded = expanded;
       this.comparison.add(hatch);
     }
     this.group.add(this.comparison);
@@ -70,7 +71,6 @@ export class Shells {
       this.builds++;
     }
     this.comparison.visible = this.lithosphere && this.cut && this.visible[0] && this.visible[1];
-    for (const hatch of this.comparison.children) hatch.visible = hatch.userData.expanded === this.expanded;
     const radii = shellRadii(this.expanded);
     for (const [style, { parts }] of this.variants)
       for (const part of parts) {

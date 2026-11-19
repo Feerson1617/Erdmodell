@@ -1,6 +1,6 @@
 import * as T from "three";
 import { CameraController, HOME, type Pose } from "./camera";
-import { R, RAD, position, basis, smooth, clamp } from "./geo";
+import { angularDistance, R, RAD, position, basis, smooth, clamp } from "./geo";
 import { TerrainLODManager } from "./planet";
 import { regions, firstRegion, nyosSite, tectonicSites, type Region, type TectonicSiteId } from "./regions";
 import { LocalTerrain } from "./local";
@@ -78,6 +78,8 @@ export class World {
   onBoundary?: () => void;
   plateOptions: PlateOptions = { boundaries: false, names: false, types: false, category: "all", plate: "" };
   singlePlateName = false;
+  smallPlateNames = false;
+  processChoice = "";
   private pickedPlatePoint?: T.Vector3;
   processSite: TectonicSiteId | null = null;
   processDetail = false;
@@ -310,6 +312,7 @@ export class World {
   setPlateOptions(options: Partial<PlateOptions>) {
     if (options.plate !== undefined || options.names !== undefined || options.boundaries === false) this.singlePlateName = false;
     if (options.plate !== undefined) this.pickedPlatePoint = undefined;
+    if (options.names === false) this.processChoice = "";
     Object.assign(this.plateOptions, options);
     const { types, category, boundaries } = this.plateOptions;
     if (this.selectedStep && (!boundaries || (types && category !== "all" && typeOf(this.selectedStep[2]) !== category))) {
@@ -317,10 +320,11 @@ export class World {
     }
     this.updatePlateLayers();
   }
+  get atlasReady() { return !!this.atlas; }
   get annotationTransition() { return this.processReveal; }
   plateLabels() {
-    if (!this.atlas || this.mode !== "plates" || !(this.plateOptions.names || this.singlePlateName) || !this.plateOptions.boundaries || this.processReveal > 0.5) return [];
-    return this.atlas.labels(this.nav.camera, this.canvas.clientWidth, this.canvas.clientHeight, this.nav.pose.d, this.processSite ?? undefined,this.plateOptions.plate,this.pickedPlatePoint,this.singlePlateName && !this.plateOptions.names);
+    if (!this.atlas || this.mode !== "plates" || !(this.plateOptions.names || this.singlePlateName) || this.processReveal > 0.5) return [];
+    return this.atlas.labels(this.nav.camera, this.canvas.clientWidth, this.canvas.clientHeight, this.nav.pose.d, this.processSite ?? undefined,this.plateOptions.plate,this.pickedPlatePoint,this.singlePlateName && !this.plateOptions.names,this.smallPlateNames);
   }
   plates() {
     this.nyosLesson.playing = false;
@@ -347,6 +351,7 @@ export class World {
       }
       this.departure = { id, ...this.anchor, showModel: this.processReveal > 0 };
     }
+    this.processChoice = "";
     this.processSite = null;
     this.processDetail = false;
     this.anchor = null;
@@ -423,7 +428,7 @@ export class World {
     }
     const { d, lat, lon } = this.nav.pose;
     const visibleAt = (anchor: { lat: number; lon: number }, near: number, span: number) => {
-      const deltaLon = ((lon - anchor.lon + 540) % 360) - 180;
+      const deltaLon = angularDistance(anchor.lon, lon);
       const offset = Math.hypot(lat - anchor.lat, deltaLon * Math.cos(lat * Math.PI / 180));
       return 1 - smooth((offset - near) / span);
     };
@@ -583,7 +588,7 @@ export class World {
   private updateNyos(lat: number, lon: number, d: number, inside: boolean) {
     if (!this.nyos.ready) return;
     const target = this.nyos.meta!.anchor;
-    const offset = Math.hypot(lat - target.lat, (((lon - target.lon + 540) % 360) - 180) * Math.cos(lat * RAD));
+    const offset = Math.hypot(lat - target.lat, angularDistance(target.lon, lon) * Math.cos(lat * RAD));
     // Keep the georeferenced geography under the camera as it ascends or passes
     // into another site. Overlays belonging to a lesson are limited to Nyos mode.
     const regional = !inside && offset < 28;
@@ -695,9 +700,12 @@ export class World {
       mark("lithosphere","Lithosphäre","Die Erdkruste und der starre oberste Erdmantel bilden zusammen die Lithosphäre. Ihre Dicke ist örtlich verschieden.",29,radii[1]-60);
     return markers;
   }
+  processObjects() {
+    return this.processSite ? this.models.get(this.processSite)?.objects() ?? [] : [];
+  }
   processLabels() {
     if (!this.processSite || !this.processDetail || this.processReveal < .95) return [];
-    return this.models.get(this.processSite)?.labels(this.nav.camera,this.canvas.clientWidth,this.canvas.clientHeight) ?? [];
+    return this.models.get(this.processSite)?.labels(this.nav.camera,this.canvas.clientWidth,this.canvas.clientHeight,this.processChoice) ?? [];
   }
   markerPosition() {
     const c = this.nav.camera;
@@ -745,7 +753,7 @@ export class World {
         reveal: this.processReveal, detail: this.processDetail, progress: this.processProgress,
         playing: this.processPlaying, loop: this.processLoop, slow: this.processSlow,
         models: this.models.size, focusHeight: this.focusOffset,
-        model: this.processSite ? this.models.get(this.processSite)?.diagnostics() ?? null : null,
+        model: this.processSite ? this.models.get(this.processSite)?.diagnostics(this.nav.camera,this.canvas.clientWidth,this.canvas.clientHeight) ?? null : null,
         processBearing: this.processSite ? processView(this.processSite).bearing : null,
         processDistance: this.processSite ? processView(this.processSite).d : null,
       },

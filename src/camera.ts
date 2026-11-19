@@ -1,9 +1,8 @@
 import { PerspectiveCamera, Vector3 } from "three";
-import { R, RAD, basis, clamp, smooth } from "./geo";
+import { angularDistance, R, RAD, basis, clamp, smooth } from "./geo";
 export const HOME = { lat: 18, lon: 19, d: 14450, tilt: 0, bearing: 0 };
 export type Pose = typeof HOME;
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
-const angle = (a: number, b: number) => ((b - a + 540) % 360) - 180;
 export class CameraController {
   readonly camera = new PerspectiveCamera(39, 1, 0.01, 60000);
   readonly reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
@@ -133,10 +132,10 @@ export class CameraController {
           : smooth(clamp((p - 0.56) / 0.44, 0, 1));
       this.pose = {
         lat: lerp(a.lat, b.lat, geo),
-        lon: a.lon + angle(a.lon, b.lon) * geo,
+        lon: a.lon + angularDistance(a.lon, b.lon) * geo,
         d: Math.exp(lerp(Math.log(a.d), Math.log(b.d), t)),
         tilt: lerp(a.tilt, b.tilt, t),
-        bearing: a.bearing + angle(a.bearing, b.bearing) * t,
+        bearing: a.bearing + angularDistance(a.bearing, b.bearing) * t,
       };
       if (cruise) {
         this.pose.d =
@@ -147,7 +146,7 @@ export class CameraController {
               );
         const horizontal = smooth(clamp((p - 0.16) / 0.68, 0, 1));
         this.pose.lat = lerp(a.lat, b.lat, horizontal);
-        this.pose.lon = a.lon + angle(a.lon, b.lon) * horizontal;
+        this.pose.lon = a.lon + angularDistance(a.lon, b.lon) * horizontal;
       }
       this.goal = { ...this.pose };
       if (p === 1) this.flight = undefined;

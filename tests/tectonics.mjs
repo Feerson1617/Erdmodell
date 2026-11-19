@@ -236,6 +236,7 @@ async function exercise(browser, engine) {
     assert.equal((await diagnostics(page)).tectonics.count, 5819);
     await assertNoDataConsole(page);
     await snap("02-plattengrenzen");
+    await page.tap("#plateSettings summary");
     await page.tap("#boundaryTypes");
     await painted(page);
     assert.ok(changed(on, await canvasImage(page)) > 0.0005, "Typfarben fehlen");
@@ -400,6 +401,7 @@ async function recordDemo(browser) {
     await p.goto(url); await settled(p);
     await p.tap("#nav-plates");
     await p.tap("#boundaries");
+    await p.tap("#plateSettings summary");
     await p.tap("#boundaryTypes");
     await p.tap("#plateNames");
     await p.waitForTimeout(700);

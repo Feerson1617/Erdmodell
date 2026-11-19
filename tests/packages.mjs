@@ -91,7 +91,7 @@ with zipfile.ZipFile(sys.argv[1]) as archive:
     assert archive.testzip() is None
     names = set(archive.namelist())
     assert ("Pruefung/geraeteprobe.html" in names) == sys.argv[1].endswith("-Sichtpruefung.zip")
-    for document in ("grundlagen-g4.2", "nyos-geodaten", "nyos-geowissenschaften", "nyos-design", "nyos-technik", "nyos-unterrichtsverwendung", "nyos-abnahme"):
+    for document in ("qualitaet-g4.2.1", "grundlagen-g4.2", "nyos-geodaten", "nyos-geowissenschaften", "nyos-design", "nyos-technik", "nyos-unterrichtsverwendung", "nyos-abnahme"):
         assert document + ".md" in names, document
     if sys.argv[1].endswith("-SCORM-1.2.zip"):
         assert "imsmanifest.xml" in names
@@ -117,7 +117,7 @@ with zipfile.ZipFile(sys.argv[1]) as archive:
         mode = archive.getinfo("START.command").external_attr >> 16
         assert mode & 0o111
         (Path(sys.argv[2]) / "START.command").chmod(mode & 0o777)
-`, "artifacts/GeoRisiko-G4.2-" + name + ".zip", path], { stdio: "inherit" });
+`, "artifacts/GeoRisiko-G4.2.1-" + name + ".zip", path], { stdio: "inherit" });
     if (name === "Unterricht") {
       await checkFileHint(path);
       await checkLocalStart(path);
@@ -181,7 +181,9 @@ with zipfile.ZipFile(sys.argv[1]) as archive:
       await frame.click("[data-layer='2']");
       await frame.click('[data-object="shell-2"]');
       assert.match(await frame.locator("#layerText").innerText(), /flüssigem Metall/);
+      await frame.check("#scale");
       await frame.click("#lithosphere");
+      assert.equal(await frame.locator("#scale").isChecked(),false);
       assert.equal(await frame.evaluate(() => window.geoObservatory().shell.lithosphere), true);
       await frame.click("#evidence");
       assert.match(
@@ -203,6 +205,7 @@ with zipfile.ZipFile(sys.argv[1]) as archive:
         );
       });
       await frame.click("#nav-plates");
+      assert.equal(await frame.locator("#plateSettings").getAttribute("open"),null);
       await frame.selectOption("#tectonicSite", "japan");
       await frame.waitForFunction(() => {
         const w = window.geoObservatory();
