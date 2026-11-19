@@ -31,8 +31,11 @@ export class AnnotationLayer {
   private nodes = new Map<
     string,
     {
+      anchor: HTMLSpanElement;
       button: HTMLButtonElement;
       line: HTMLElement;
+      label: Annotation;
+      anchorPose?: string;
       buttonPose?: string;
       linePose?: string;
       length?: string;
@@ -78,18 +81,23 @@ export class AnnotationLayer {
       if (!node) {
         const button = document.createElement("button"),
           line = document.createElement("i");
+        const anchor = document.createElement("span");
+        anchor.className = "annotation-anchor";
+        anchor.append(line, button);
         const name = document.createElement("span");
         name.textContent = label.name;
         button.append(name);
         button.dataset.object = label.id;
-        button.onclick = () => this.explain(label);
+        const entry = { anchor, button, line, label };
+        button.onclick = () => this.explain(entry.label);
         this.work.creates++;
-        this.nodes.set(label.id, (node = { button, line }));
+        this.nodes.set(label.id, (node = entry));
       }
-      const { button, line } = node;
+      const { anchor, button, line } = node;
+      node.label = label;
       let size = this.sizes.get(label.name);
       if (!size) {
-        if (!button.isConnected) this.host.append(line, button);
+        if (!button.isConnected) this.host.append(anchor);
         this.work.measures++;
         size = { width: button.offsetWidth, height: button.offsetHeight };
         this.sizes.set(label.name, size);
@@ -129,15 +137,23 @@ export class AnnotationLayer {
           boxes.some((b) => intersects(box, b))
         )
           continue;
-        if (!button.isConnected) this.host.append(line, button);
+        if (!button.isConnected) this.host.append(anchor);
         active.add(label.id);
         boxes.push(box);
-        const target = `translate(${box.left.toFixed(1)}px, ${box.top.toFixed(1)}px)`;
-        const endX = Math.min(box.right, Math.max(box.left, label.x));
-        const endY = Math.min(box.bottom, Math.max(box.top, label.y));
-        const connector = `translate(${label.x.toFixed(1)}px, ${label.y.toFixed(1)}px) rotate(${Math.atan2(endY - label.y, endX - label.x).toFixed(5)}rad)`;
-        const length =
-          Math.hypot(endX - label.x, endY - label.y).toFixed(1) + "px";
+        // Translate the whole sign with the material. Its chosen placement
+        // and leader angle stay local and usually remain unchanged for many frames.
+        const anchorPose = `translate(${Math.round(label.x * 2) / 2}px, ${Math.round(label.y * 2) / 2}px)`;
+        const left = ox - w / 2,
+          top = oy - h / 2;
+        const target = `translate(${left}px, ${top}px)`;
+        const endX = Math.min(left + w, Math.max(left, 0));
+        const endY = Math.min(top + h, Math.max(top, 0));
+        const connector = `rotate(${Math.atan2(endY, endX).toFixed(5)}rad)`;
+        const length = Math.hypot(endX, endY).toFixed(1) + "px";
+        if (node.anchorPose !== anchorPose) {
+          anchor.style.transform = node.anchorPose = anchorPose;
+          this.work.writes++;
+        }
         if (node.buttonPose !== target) {
           button.style.transform = node.buttonPose = target;
           this.work.writes++;
@@ -155,8 +171,7 @@ export class AnnotationLayer {
     }
     for (const [id, node] of this.nodes)
       if (node.button.isConnected && !active.has(id)) {
-        node.button.remove();
-        node.line.remove();
+        node.anchor.remove();
       }
   }
 }

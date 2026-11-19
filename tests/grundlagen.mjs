@@ -79,10 +79,12 @@ async function checkLeaders(p, run, id) {
       );
       if (!button) continue;
       const a = anchors[button.dataset.object];
-      const m = new DOMMatrix(
-        getComputedStyle(button.previousElementSibling).transform,
-      );
-      maxError = Math.max(maxError, Math.hypot(a.x - m.e, a.y - m.f));
+      const sign = button.parentElement.getBoundingClientRect();
+      const area = document.querySelector("#platePins").getBoundingClientRect();
+      const line = button.previousElementSibling;
+      const originX = sign.x - area.x + line.offsetLeft;
+      const originY = sign.y - area.y + line.offsetTop;
+      maxError = Math.max(maxError, Math.hypot(originX - a.x, originY - a.y));
       if (first)
         travel = Math.max(travel, Math.hypot(first.x - a.x, first.y - a.y));
       else first = a;
