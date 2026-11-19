@@ -164,10 +164,12 @@ export class ProcessModel {
     const tones = { island: "#657356", japan: "#466567", san: "#a09869" };
     const join = this.material({
       map: image?.map ?? null,
-      alphaHash: true,
+      transparent: true,
+      depthWrite: false,
       vertexColors: true,
       side: T.DoubleSide,
     });
+    join.forceSinglePass = true;
     const applyReveal = join.onBeforeCompile.bind(join);
     const tone = new T.Color(tones[id]);
     join.onBeforeCompile = (shader, renderer) => {
@@ -187,6 +189,7 @@ export class ProcessModel {
         );
     };
     const slope = new T.Mesh(edge, join);
+    slope.renderOrder = 2;
     this.group.add(slope);
     blockers.push(slope);
     this.occluders = blockers.map((mesh) => new SectionOccluder(mesh));

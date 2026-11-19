@@ -57,7 +57,9 @@ export function landscapeEdge(
       const site = group.localToWorld(new T.Vector3(px, 0, pz));
       const lat = Math.asin(site.y / site.length()) / RAD,
         lon = Math.atan2(site.x, site.z) / RAD;
-      site.setLength(R + elevation(lat, lon) + 0.81);
+      // In the overlapping margin the source mosaic uses a coarser curved grid.
+      // Separate its depth gently, then blend into its opaque geographic pixels.
+      site.setLength(R + elevation(lat, lon) + .81 + .48*smooth((t-.63)/.19));
       const ground = group.worldToLocal(site).y;
       const y =
         T.MathUtils.lerp(inner, ground, smooth(t / 0.72)) +
