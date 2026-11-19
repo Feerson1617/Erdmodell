@@ -1,4 +1,4 @@
-name: GeoRisiko G4.2.1 Qualitätsprüfung
+name: GeoRisiko G4.2.2 Unterrichtsfreigabe
 on:
   pull_request:
   workflow_dispatch:
@@ -37,7 +37,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        suite: [g1, g2, nyos, grundlagen, vergleich]
+        suite: [g1, g2, nyos, grundlagen, vergleich, freitag]
     runs-on: ubuntu-24.04
     container: mcr.microsoft.com/playwright:v1.56.1-noble@sha256:f1e7e01021efd65dd1a2c56064be399f3e4de00fd021ac561325f2bfbb2b837a
     timeout-minutes: 45
@@ -66,6 +66,18 @@ jobs:
       - name: Referenz mit identischen Abhängigkeiten bauen
         if: matrix.suite == 'vergleich'
         run: npm --prefix .scratch/g421-reference run build
+      - name: Gesicherten G4.2.1-Build für den Schalenvergleich vorbereiten
+        if: matrix.suite == 'freitag'
+        uses: actions/checkout@v4
+        with:
+          ref: 1caab5e3578cff1c92814ccb781f3069f9be3dbd
+          path: .scratch/g422-reference
+      - if: matrix.suite == 'freitag'
+        run: npm --prefix .scratch/g422-reference run build
+      - name: Videodecoder für die Kontrolle des Bildausschnitts vorbereiten
+        if: matrix.suite == 'freitag'
+        run: |
+          if ! command -v ffmpeg >/dev/null; then apt-get update && apt-get install -y ffmpeg; fi
       - run: npm run test:${{ matrix.suite }}
       - name: Vergleichsansichten am unveränderten G4.2-Build aufnehmen
         if: matrix.suite == 'vergleich'
@@ -118,21 +130,21 @@ jobs:
       - name: Unterricht-ZIP zum direkten Download bereitstellen
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
-          path: artifacts/GeoRisiko-G4.2.1-Unterricht.zip
+          path: artifacts/GeoRisiko-G4.2.2-Freitag-Unterricht.zip
           archive: false
           overwrite: true
           if-no-files-found: error
       - name: SCORM-1.2-ZIP zum direkten Download bereitstellen
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
-          path: artifacts/GeoRisiko-G4.2.1-SCORM-1.2.zip
+          path: artifacts/GeoRisiko-G4.2.2-SCORM-1.2.zip
           archive: false
           overwrite: true
           if-no-files-found: error
       - name: Sichtpruefung-ZIP zum direkten Download bereitstellen
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
-          path: artifacts/GeoRisiko-G4.2.1-Sichtpruefung.zip
+          path: artifacts/GeoRisiko-G4.2.2-Sichtpruefung.zip
           archive: false
           overwrite: true
           if-no-files-found: error

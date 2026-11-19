@@ -1,4 +1,7 @@
-# GeoRisiko 3D · Erdobservatorium
+# GeoRisiko 3D · Unterricht am 20. November 2026
+
+Das Freitags-Paket startet am geschlossenen Globus. „Schalenschnitt“ öffnet die vier anonymen Schalen. [Unterrichtseinstieg, Geräteprobe und Rückfall](docs/freitag-20-11-2026.md)
+
 
 GeoRisiko 3D zeigt den Erdaufbau im Geographieunterricht der Jahrgangsstufe 9. Die Anwendung öffnet einen drehbaren Globus im Grafikstil **Scientific Stylized Realism (A)**. **Schalenschnitt** gibt den Blick auf vier zunächst anonyme Schalen frei. Unter **Plattentektonik** lassen sich PB2002-Grenzen auf demselben Globus einblenden. Drei regional verankerte Schnittmodelle zeigen Divergenz bei Reykjanes, Subduktion am Japangraben und seitlichen Versatz bei Parkfield. Der gemeinsame Ortskatalog verbindet diese Regionen mit Hallig Hooge, Helgoland und dem Nyos-See in Kamerun.
 
@@ -46,6 +49,10 @@ git archive 441f1480b6fc1d65faf5ef5b06882ccdc6775656 | tar -x -C .scratch/g421-r
 npm --prefix .scratch/g421-reference run build
 npm run test:vergleich
 REFERENCE_BUILD=.scratch/g421-reference/dist TEST_ENGINES=chromium npm run test:grundlagen
+mkdir -p .scratch/g422-reference
+git archive 1caab5e3578cff1c92814ccb781f3069f9be3dbd | tar -x -C .scratch/g422-reference
+npm --prefix .scratch/g422-reference run build
+npm run test:freitag
 npm run package
 node tests/packages.mjs
 ```
@@ -54,11 +61,11 @@ node tests/packages.mjs
 
 ## Pakete und Nachweise
 
-Im erfolgreichen GitHub-Actions-Lauf stehen die drei G4.2.1-ZIPs einzeln unter **Artifacts** zum Download. Sie liegen beim lokalen Build unter `artifacts/`.
+Im erfolgreichen GitHub-Actions-Lauf stehen die drei G4.2.2-ZIPs einzeln unter **Artifacts** zum Download. Sie liegen beim lokalen Build unter `artifacts/`.
 
 - **Unterricht** enthält die ausführbare Offline-Anwendung, den lokalen Starter und die Unterrichtsanleitung.
 - **SCORM-1.2** wird als ZIP in das LMS importiert. Das Paket meldet Sitzungsstart und -ende.
-- **Sichtpruefung** enthält die ausführbare Anwendung, 44 aktuelle Bildschirmaufnahmen, zwölf Vergleichsbilder aus G4.2, vier Bedienvideos und die Prüfberichte.
+- **Sichtpruefung** enthält die ausführbare Anwendung, 52 aktuelle Bildschirmaufnahmen, zwölf Vergleichsbilder aus G4.2, sieben Bildpaare des Schalenvergleichs mit G4.2.1, fünf Bedienvideos und die Prüfberichte.
 
 Der gesicherte Ausgangsstand G1.3.1 liegt bei `c806a1b`. Der Abschlussbericht ordnet Daten, Erklärmodelle und Messergebnisse ein. [Abnahmebericht G2.1](docs/g2.1-bericht.md) · [Originalpakete G1.3.1](https://github.com/Feerson1617/Erdmodell/tree/096e7fc278307d128cdc46fa934ba5d495c5cc05/sicherung) · [Roadmap](docs/roadmap.md)
 

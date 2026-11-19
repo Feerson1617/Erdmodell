@@ -75,9 +75,18 @@ export class Shells {
     for (const [style, { parts }] of this.variants)
       for (const part of parts) {
         const { layer, kind, inner, base } = part.userData;
+        const buried = style === "A" && !inner && kind !== "section" && layer >= 2 && this.visible[layer - 1]
+          && this.opacity[layer - 1] === 1 && this.opacity[layer] === 1;
+        const edgeCount = part.userData.edgeCount ?? 0;
+        if (edgeCount) {
+          // The opaque neighbour hides the curved interior. Keep the exact rim
+          // triangles where the curved mesh and the planar section meet.
+          part.geometry.setDrawRange(buried ? 0 : edgeCount, buried ? edgeCount : Infinity);
+        }
         part.visible =
           style === this.style &&
           this.visible[layer] &&
+          !(buried && !this.cut) &&
           (kind === "section"
             ? this.cut
             : kind === "closure"
@@ -173,8 +182,17 @@ export class Shells {
           g.setAttribute("position", new T.Float32BufferAttribute(pos, 3));
           g.setAttribute("normal", new T.Float32BufferAttribute(norm, 3));
           g.setAttribute("uv", new T.Float32BufferAttribute(uv, 2));
-          g.setIndex(idx);
+          const rim: number[] = [];
+          if (this.style === "A" && !inner && i >= 2 && kind === "body") {
+            for (let row = 0; row < m; row++) {
+              const offset = row * nx * 6;
+              if (row === 0 || row === m - 1) rim.push(...idx.slice(offset, offset + nx * 6));
+              else rim.push(...idx.slice(offset, offset + 18), ...idx.slice(offset + (nx - 3) * 6, offset + nx * 6));
+            }
+          }
+          g.setIndex([...rim, ...idx]);
           add(g, kind, inner);
+          parts[parts.length - 1].userData.edgeCount = rim.length;
         }
       }
       for (const lon of [65, 335]) {

@@ -1,12 +1,22 @@
-import { createServer } from "vite";
+import { build, preview } from "vite";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { chromium } from "playwright";
-import { readFile, writeFile, mkdir } from "node:fs/promises";
+import { readFile, writeFile, mkdir, mkdtemp, rm } from "node:fs/promises";
 import assert from "node:assert/strict";
-const server = await createServer({
-  server: { host: "127.0.0.1", port: 0 },
+const outDir = await mkdtemp(join(tmpdir(), "GeoRisiko-Architektur-"));
+await build({
+  configFile: false,
+  publicDir: false,
+  build: { outDir, rollupOptions: { input: "tests/gate.html" } },
   logLevel: "error",
 });
-await server.listen();
+const server = await preview({
+  configFile: false,
+  build: { outDir },
+  preview: { host: "127.0.0.1", port: 0 },
+  logLevel: "error",
+});
 const browser = await chromium.launch({
   executablePath: process.env.CHROMIUM_PATH || undefined,
   args: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader"],
@@ -42,4 +52,5 @@ try {
 } finally {
   await browser.close();
   await server.close();
+  await rm(outDir, { recursive: true, force: true });
 }

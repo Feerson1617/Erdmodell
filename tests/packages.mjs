@@ -1,9 +1,9 @@
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm, symlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, extname } from "node:path";
 import { pathToFileURL } from "node:url";
 import { createInterface } from "node:readline";
-import { execFileSync, spawn } from "node:child_process";
+import { execFileSync, spawn, spawnSync } from "node:child_process";
 import { once } from "node:events";
 import { createServer } from "node:http";
 import { chromium, webkit } from "playwright";
@@ -25,12 +25,13 @@ async function checkLocalStart(folder) {
   const lines = createInterface({ input: child.stdout });
   try {
     const [message] = await once(lines, "line", { signal: AbortSignal.timeout(15000) });
-    const address = /http:\/\/127\.0\.0\.1:\d+\//.exec(message)?.[0];
+    const address = /http:\/\/127\.0\.0\.1:\d+\/\?unterricht=schalenbau/.exec(message)?.[0];
     assert.ok(address, "Starter gibt die lokale Adresse aus");
     const page = await browser.newPage({ reducedMotion: "reduce" });
     await page.goto(address);
     await page.waitForFunction(() => window.geoObservatory?.().draws > 0);
     assert.ok(await page.locator("#file-start").isHidden());
+    assert.deepEqual(await page.locator("nav button:visible").allTextContents(),["Globus","Schalenschnitt"]);
     await page.click("#nav-inside");
     assert.match(await page.locator("[data-layer]").first().innerText(), /Schale 1/);
     await page.close();
@@ -55,33 +56,43 @@ async function checkFileHint(folder) {
   }
 }
 
-async function checkDeviceProbe(page, folder, base) {
-  await page.goto(base + "/Pruefung/geraeteprobe.html");
+async function checkDeviceProbe(page, folder, base, shellMode) {
+  await page.goto(base + "/Pruefung/geraeteprobe.html" + (shellMode ? "" : "?ansicht=nyos"));
   const model = page.frameLocator("iframe");
-  await model.locator("#nav-nyos").click();
-  await page.waitForFunction(() => {
+  await model.locator(shellMode ? "#nav-inside" : "#nav-nyos").click();
+  await page.waitForFunction(shell => {
     const w = document.querySelector("iframe").contentWindow.geoObservatory?.();
-    return w?.nyos.ready && w.mode === "nyos" && w.nyos.terrainVisible && !w.flying;
-  });
+    return w && !w.flying && (shell ? w.mode === "inside" && w.shell.cut : w.nyos.ready && w.mode === "nyos" && w.nyos.terrainVisible);
+  },shellMode);
+  if(shellMode)await model.locator("#labels").click();
   await page.locator("#sample").click();
+  if (shellMode) {
+    await model.locator("#earth").focus();
+    await page.keyboard.press("ArrowRight");
+  }
   const fileEvent = page.waitForEvent("download", { timeout: 60000 });
   await page.locator("#save").click({ timeout: 60000 });
   const file = await fileEvent;
-  assert.equal(file.suggestedFilename(), "Nyos-Geraeteprobe.json");
+  assert.equal(file.suggestedFilename(), shellMode ? "GeoRisiko-Schalenbau-Geraeteprobe.json" : "Nyos-Geraeteprobe.json");
   const samples = JSON.parse(await readFile(await file.path(), "utf8"));
   assert.equal(samples.length, 1);
   const [sample] = samples;
   assert.equal(sample.pruefstand, (await readFile(join(folder, "Pruefstand.txt"), "utf8")).trim());
   assert.match(sample.pruefstand, /Geprüfter Git-Commit: [a-f0-9]{40}$/);
-  assert.equal(sample.start.mode, "nyos");
-  assert.equal(sample.ende.mode, "nyos");
+  assert.equal(sample.start.mode, shellMode ? "inside" : "nyos");
+  assert.equal(sample.ende.mode, shellMode ? "inside" : "nyos");
+  if (shellMode) {
+    assert.ok(sample.start.namen > 0 && sample.ende.namen > 0);
+    assert.notDeepEqual(sample.start.kamera,sample.ende.kamera);
+    assert.ok(sample.pausenUeber250ms >= 0 && sample.maxMs >= sample.medianMs);
+  }
   assert.ok(sample.dauerMs >= 8000 && sample.bilder > 0 && sample.fps > 0);
   assert.ok(sample.bildabstaendeMs.length > 0 && sample.bildabstaendeMs.every(ms => ms > 0));
   console.log("Geräteprobe im Sichtprüfungs-ZIP:", sample.bilder, "reale Bilder in", Math.round(sample.dauerMs), "ms · JSON heruntergeladen.");
 }
 
 try {
-  for (const name of ["SCORM-1.2", "Unterricht", "Sichtpruefung"]) {
+  for (const name of ["SCORM-1.2", "Freitag-Unterricht", "Sichtpruefung"]) {
     const path = join(tmp, name);
     execFileSync("python3", ["-c", `
 from pathlib import Path
@@ -91,7 +102,9 @@ with zipfile.ZipFile(sys.argv[1]) as archive:
     assert archive.testzip() is None
     names = set(archive.namelist())
     assert ("Pruefung/geraeteprobe.html" in names) == sys.argv[1].endswith("-Sichtpruefung.zip")
-    for document in ("qualitaet-g4.2.1", "grundlagen-g4.2", "nyos-geodaten", "nyos-geowissenschaften", "nyos-design", "nyos-technik", "nyos-unterrichtsverwendung", "nyos-abnahme"):
+    if "START.command" in names:
+        assert {"Offline-Bilder/01-globus.jpg", "Offline-Bilder/02-anonym.jpg", "Offline-Bilder/04-namen.jpg"} <= names
+    for document in ("freitag-20-11-2026", "qualitaet-g4.2.1", "grundlagen-g4.2", "nyos-geodaten", "nyos-geowissenschaften", "nyos-design", "nyos-technik", "nyos-unterrichtsverwendung", "nyos-abnahme"):
         assert document + ".md" in names, document
     if sys.argv[1].endswith("-SCORM-1.2.zip"):
         assert "imsmanifest.xml" in names
@@ -100,6 +113,7 @@ with zipfile.ZipFile(sys.argv[1]) as archive:
         assert manifest.findtext(".//{*}schemaversion") == "1.2"
         assert sco.get("{http://www.adlnet.org/xsd/adlcp_rootv1p2}scormtype") == "sco"
         assert sco.get("href") == "index.html"
+        assert manifest.find(".//{*}item").get("parameters") == "?unterricht=schalenbau"
         files = {f.get("href") for f in sco.findall("{*}file")}
         assert files == {name for name in names if name != "imsmanifest.xml" and not name.endswith(".xsd")}
     archive.extractall(sys.argv[2])
@@ -117,19 +131,24 @@ with zipfile.ZipFile(sys.argv[1]) as archive:
         mode = archive.getinfo("START.command").external_attr >> 16
         assert mode & 0o111
         (Path(sys.argv[2]) / "START.command").chmod(mode & 0o777)
-`, "artifacts/GeoRisiko-G4.2.1-" + name + ".zip", path], { stdio: "inherit" });
-    if (name === "Unterricht") {
+`, "artifacts/GeoRisiko-G4.2.2-" + name + ".zip", path], { stdio: "inherit" });
+    if (name === "Freitag-Unterricht") {
+      const noPython=await mkdtemp(join(tmp,"Ohne Python "));
+      await symlink("/usr/bin/dirname",join(noPython,"dirname"));
+      const missing=spawnSync(join(path,"START.command"),[],{cwd:tmp,env:{PATH:noPython},encoding:"utf8"});
+      assert.equal(missing.status,1);
+      assert.match(missing.stdout,/Python 3.*Offline-Bilder/);
       await checkFileHint(path);
       await checkLocalStart(path);
     }
     const server = createServer(async (req, res) => {
       try {
         const f = new URL(req.url, "http://localhost").pathname;
-        if (f === "/host") {
+        if (f === "/host" || f === "/freitag-host") {
           res.setHeader("Content-Type", "text/html");
           res.setHeader("Permissions-Policy", "fullscreen=()");
           res.end(
-            '<script>window.calls=[];window.API={LMSInitialize(){calls.push("initialize");return "true"},LMSFinish(){calls.push("finish");return "true"},LMSSetValue(){calls.push("write");return "true"},LMSCommit(){calls.push("commit");return "true"}}</script><iframe src="/lms/kurse/erde/index.html" width="1024" height="768"></iframe>',
+            '<script>window.calls=[];window.API={LMSInitialize(){calls.push("initialize");return "true"},LMSFinish(){calls.push("finish");return "true"},LMSSetValue(){calls.push("write");return "true"},LMSCommit(){calls.push("commit");return "true"}}</script><iframe src="/lms/kurse/erde/index.html" width="1024" height="768"></iframe>'.replace("index.html",f === "/freitag-host" ? "index.html?unterricht=schalenbau" : "index.html"),
           );
           return;
         }
@@ -163,6 +182,15 @@ with zipfile.ZipFile(sys.argv[1]) as archive:
       page.on("response", (r) => {
         if (r.status() >= 400) failures.push(r.url());
       });
+      if(name === "SCORM-1.2") {
+        await page.goto(origin+"/freitag-host");
+        const friday=page.frameLocator("iframe");
+        await friday.locator("#nav-inside").click();await friday.locator("#labels").click();
+        assert.ok(await friday.locator("#nav-plates").isHidden());
+        assert.ok(await friday.locator("#pins button").first().isVisible());
+        await page.frames()[1].goto("about:blank");
+        assert.deepEqual(await page.evaluate(()=>window.calls),["initialize","finish"]);
+      }
       await page.goto(origin + "/host");
       const frame = page.frames()[1];
       await frame.waitForFunction(() => window.geoObservatory?.().draws > 0);
@@ -260,7 +288,7 @@ with zipfile.ZipFile(sys.argv[1]) as archive:
         name === "SCORM-1.2" ? ["initialize", "finish"] : [],
       );
       if (name === "Sichtpruefung")
-        await checkDeviceProbe(page, path, origin + "/lms/kurse/erde");
+        for(const shell of [true,false])await checkDeviceProbe(page, path, origin + "/lms/kurse/erde",shell);
       assert.deepEqual(failures, []);
       await page.close();
       console.log(name, "entpackt, Schalen, Platten, Nyos-Seeschnitt, Ereignis und Schutzmodell geprüft.");
