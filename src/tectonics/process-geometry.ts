@@ -53,7 +53,7 @@ export function rockBody(
         ? 0.055 * wave(x * 1.6, z * 1.6)
         : 0.085 * Math.sin(y * 3.9 + 0.38 * Math.sin(x * 0.46 + z * 0.19)) +
           0.055 * wave(x + z, y);
-    c.multiplyScalar(1 + grain);
+    c.multiplyScalar((1 + grain) * (side === "top" ? 1 : .88 + .12 * Math.min(1,Math.max(0,y)/10)));
     colors.push(c.r, c.g, c.b);
     uv.push(
       (side === "end" ? z : x) * 0.17,

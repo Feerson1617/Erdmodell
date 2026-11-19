@@ -1,3 +1,4 @@
+import { AnnotationLayer, type Annotation } from "./annotations";
 import { siteCatalog, firstRegion } from "./regions";
 import "@fontsource-variable/dm-sans/wght.css";
 import "./style.css";
@@ -25,8 +26,8 @@ $("app").innerHTML =
   <section class="view" aria-label="Interaktive 3D-Ansicht"><canvas id="earth" tabindex="0" aria-label="Drehbares Erdmodell. Pfeiltasten drehen, Plus und Minus zoomen."></canvas>
   <div class="orientation" title="Geografischer Norden">${icon("navigation-2")} N</div>
   <div class="tools"><button id="orbitProcess" hidden aria-label="Prozessmodell drehen" title="Prozessmodell drehen">${icon("orbit")}</button>${button("in","Vergrößern","plus")}${button("out","Verkleinern","minus")}${button("tilt","Neigung ändern","compass")}${button("home","Zur Startansicht zurücksetzen","rotate-ccw")}</div>
-  <div id="pins" aria-hidden="true">${layers.map((l,i)=>`<span style="--rock:#${l.color.toString(16)}" hidden>${i+1}</span>`).join("")}</div>
-  <span id="nyosPin" hidden aria-hidden="true">Nyos-See</span><div id="platePins" aria-hidden="true"></div>
+  <div id="pins" class="annotations"></div>
+  <span id="nyosPin" hidden aria-hidden="true">Nyos-See</span><div id="platePins" class="annotations"></div>
   <div id="nyosRelief" hidden aria-hidden="true"><span id="nyos-Talboden" hidden>Talboden</span><span id="nyos-Hang" hidden>Hang</span></div>
   <div id="modelnote" hidden></div><div class="hint">Ziehen zum Drehen · Mit zwei Fingern oder Mausrad zoomen</div></section></main>
   <div id="status" role="status">Erdmodell wird geladen …</div>
@@ -40,6 +41,24 @@ let world: World,
   labels = false,
   present = false,
   alertText = "";
+const released = new Set<number>();
+let annotationKey = "";
+function showDefinition(item: Pick<Annotation,"name"|"text">) {
+  const area = $("definition");
+  if (!area) return;
+  const title = document.createElement("strong"), text = document.createElement("p"), close = document.createElement("button");
+  title.textContent = item.name;
+  text.id = "layerText";
+  text.textContent = item.text;
+  close.textContent = "Schließen";
+  close.onclick = () => { area.replaceChildren(); area.hidden = true; annotationKey = ""; };
+  area.replaceChildren(title,text,close);
+  area.hidden = false;
+  side.scrollTop = 0;
+  annotationKey = "";
+}
+const shellPins = new AnnotationLayer($("pins"),showDefinition);
+const tectonicPins = new AnnotationLayer($("platePins"),showDefinition);
 function warn(s: string) {
   alertText = s;
   status.textContent = s;
@@ -51,7 +70,7 @@ function infoPage() {
     return;
   }
   if (world?.mode === "plates") {
-    content.innerHTML = `<h2 id="dialogTitle">Über die Plattenmodelle</h2><p>Die Linien folgen dem globalen Plattenmodell PB2002. In der Natur kann sich die Verformung über eine breite Zone verteilen. Eine Platte umfasst die Kruste und den starren obersten Teil des Mantels.</p><p>Das regionale Satellitenbild zeigt die Landschaft. Der vergrößerte Schnitt darüber erklärt den Prozess schematisch. Pfeillängen, Schichtdicken und Spielzeit haben keinen gemeinsamen Maßstab.</p><p><a href="${import.meta.env.BASE_URL}licenses/Geodaten.txt" target="_blank" rel="noopener">Quellen und Nutzungsrechte</a></p>`;
+    content.innerHTML = `<h2 id="dialogTitle">Über die Plattenmodelle</h2><p>Die Linien folgen dem globalen Plattenmodell PB2002. In der Natur kann sich die Verformung über eine breite Zone verteilen. ${world.plateOptions.names ? "Eine Platte umfasst die Kruste und den starren obersten Teil des Mantels." : ""}</p><p>Das regionale Satellitenbild zeigt die Landschaft. Der vergrößerte Schnitt darüber erklärt den Prozess schematisch. Pfeillängen, Schichtdicken und Spielzeit haben keinen gemeinsamen Maßstab.</p><p><a href="${import.meta.env.BASE_URL}licenses/Geodaten.txt" target="_blank" rel="noopener">Quellen und Nutzungsrechte</a></p>`;
     openDialog();
     return;
   }
@@ -63,7 +82,7 @@ function openDialog() {
   $("closeDialog").focus();
 }
 function layerName(i: number) {
-  return labels ? layers[i].name : `Schale ${i + 1}`;
+  return labels || released.has(i) ? layers[i].name : `Schale ${i + 1}`;
 }
 function renderShellControls() {
   const shell = world.shell;
@@ -71,10 +90,10 @@ function renderShellControls() {
   const disabled = selected === null ? "disabled" : "";
   return `<div class="panelHead"><h1>Schalen</h1><button id="labels" title="Beschriftungen durch die Lehrkraft umschalten" aria-pressed="${labels}">${icon(labels ? "eye-off" : "eye")}${labels ? "Namen verbergen" : "Namen zeigen"}</button></div>
   <div class="layerlist">${layers.map((l,i) => `<div class="layer ${selected === i ? "chosen" : ""}" style="--rock:#${l.color.toString(16)}"><button data-layer="${i}" aria-pressed="${selected === i}"><span class="swatch" aria-hidden="true">${labels ? i+1 : ""}</span>${layerName(i)}</button><button class="eye" data-eye="${i}" aria-label="${layerName(i)} ${shell.visible[i] ? "ausblenden" : "einblenden"}" aria-pressed="${shell.visible[i]}">${icon(shell.visible[i] ? "eye" : "eye-off")}</button></div>`).join("")}</div>
-  ${labels && selected !== null ? `<p id="layerText" style="--rock:#${layers[selected].color.toString(16)}">${layers[selected].text}</p>` : ""}
+  ${selected === null ? "" : labels || released.has(selected) ? '<button id="explainLayer">Erklärung öffnen</button>' : '<button id="revealOne">Einzelnen Namen zeigen</button>'}
   <div class="shellActions"><button id="isolate" ${disabled}>Einzeln zeigen</button><button id="subdue" aria-pressed="${shell.subdued}" ${disabled}>Umfeld dimmen</button><button id="restoreLayers">${icon("rotate-ccw")} Alle zeigen</button></div>
   <label class="range" for="opacity">Deckkraft<input id="opacity" type="range" min="15" max="100" ${disabled} value="${selected === null ? 100 : shell.opacity[selected]*100}" aria-label="Deckkraft der gewählten Schale"></label>
-  <div class="options"><label><input id="cut" type="checkbox" ${shell.cut ? "checked" : ""}> Keilschnitt</label><label><input id="scale" type="checkbox" ${shell.expanded ? "checked" : ""}> ${labels ? "Kruste" : "Außenschale"} verbreitern</label></div>
+  <div class="options"><label><input id="cut" type="checkbox" ${shell.cut ? "checked" : ""}> Keilschnitt</label><label><input id="scale" type="checkbox" ${shell.expanded ? "checked" : ""}> ${labels ? "Kruste" : "Außenschale"} verbreitern</label><label><input id="lithosphere" type="checkbox" ${shell.lithosphere ? "checked" : ""} ${shell.cut && shell.visible[0] && shell.visible[1] ? "" : "disabled"}> ${labels ? "Lithosphäre vergleichen" : "Starren Außenbereich vergleichen"}</label></div>
   <button id="evidence">${icon("waves")} P- und S-Wellen</button>`;
 }
 function siteInfo() {
@@ -84,6 +103,7 @@ function siteInfo() {
 }
 
 function renderSide() {
+  annotationKey = "";
   const mode = world.mode;
   desk.dataset.mode = mode;
   for (const id of ["globe", "inside", "plates", "nyos", "place"]) {
@@ -103,7 +123,6 @@ function renderSide() {
     side.innerHTML = nyosControls(world);
     bindNyosControls(side, world, renderSide);
   }
-  syncPlatePins();
   if (mode === "place") {
     const r = world.region;
     side.innerHTML = `<h1>Orte</h1><label class="siteSelect">Ort wählen <select id="siteSelect">${siteCatalog.map((site) => `<option value="${site.id}" ${site.id === r.id ? "selected" : ""}>${site.name}</option>`).join("")}</select></label><div class="siteActions"><button id="overview" class="action secondary">${icon("compass")} Inselübersicht</button><button id="nearby" class="action secondary">${icon("map-pin")} Nahansicht</button></div><button id="siteInfo" class="action primary">${icon("info")} Ort und Quellen</button><button id="return" class="action secondary">${icon("globe-2")} Zur globalen Ansicht</button>`;
@@ -116,8 +135,20 @@ function renderSide() {
     $("nearby").onclick = () => world.visit(r.id);
   }
   if (mode === "inside") side.innerHTML = renderShellControls();
+  if (mode === "inside" || mode === "plates") {
+    const area = document.createElement("section");
+    area.id = "definition"; area.hidden = true; area.setAttribute("aria-live","polite");
+    (side.querySelector(".panelHead") ?? side.querySelector("h1"))?.after(area);
+  }
+  $("explainLayer")?.addEventListener("click", () => showDefinition(layers[world.shell.selected!]));
+  $("revealOne")?.addEventListener("click", () => { released.add(world.shell.selected!); renderSide(); $("explainLayer")?.focus(); });
+  $("lithosphere")?.addEventListener("change", () => {
+    world.shell.lithosphere = $<HTMLInputElement>("lithosphere").checked;
+    updateShell("lithosphere");
+  });
   $("labels")?.addEventListener("click", () => {
     labels = !labels;
+    released.clear();
     renderSide();
     $("labels").focus();
   });
@@ -165,7 +196,8 @@ function renderSide() {
     $<HTMLInputElement>("cut").onchange = (e) => {
       world.shell.cut = (e.target as HTMLInputElement).checked;
       world.shell.rebuild();
-      updatePins();
+      renderSide();
+      $("cut").focus();
     };
   if ($("scale"))
     $<HTMLInputElement>("scale").onchange = (e) => {
@@ -210,6 +242,9 @@ function updateNote() {
           ? "Schematischer Schnitt · Zeit stark überhöht"
           : "Regionale Ansicht"
         : world.region.label;
+  if (world.mode === "inside" && world.shell.cut && world.shell.lithosphere && world.shell.visible[0] && world.shell.visible[1]) {
+    note.textContent += labels ? " · Schraffur: Erdkruste + starrer oberster Erdmantel. Untergrenze schematisch." : " · Schraffur: starrer Außenbereich. Untergrenze schematisch.";
+  }
 }
 function navigate(mode: World["mode"]) {
   if (mode === "inside") world.inside();
@@ -221,6 +256,8 @@ function navigate(mode: World["mode"]) {
 }
 function reset() {
   labels = false;
+  released.clear();
+  world.shell.lithosphere = false;
   world.region = firstRegion;
   world.shell.restore();
   world.shell.cut = true;
@@ -230,6 +267,7 @@ function reset() {
   renderSide();
 }
 function setPresentation(value: boolean) {
+  annotationKey = "";
   present = value;
   document.body.classList.toggle("present", value);
   const toggle = $("present");
@@ -240,38 +278,21 @@ function setPresentation(value: boolean) {
   paint();
 }
 function updatePins() {
-  const pins = $("pins").children;
-  const points = labels && world.mode === "inside" ? world.layerMarkers() : [];
-  for (let i = 0; i < pins.length; i++) {
-    const el = pins[i] as HTMLElement,
-      p = points[i];
-    el.hidden = !p;
-    if (p) {
-      el.style.left = p.x + "%";
-      el.style.top = p.y + "%";
-    }
-  }
-}
-const platePins = new Map<string, HTMLElement>();
-function syncPlatePins() {
-  const holder = $("platePins");
-  const show = world.mode === "plates" && world.plateOptions.boundaries && world.plateOptions.names && !world.processSite;
-  holder.hidden = !show;
-  if (!show) return;
-  const projected = world.plateLabels();
-  for (const pin of platePins.values()) pin.hidden = true;
-  for (const label of projected) {
-    let pin = platePins.get(label.code);
-    if (!pin) {
-      pin = document.createElement("span");
-      pin.textContent = label.name;
-      holder.appendChild(pin);
-      platePins.set(label.code, pin);
-    }
-    pin.style.left = label.x + "px";
-    pin.style.top = label.y + "px";
-    pin.hidden = false;
-  }
+  // Stationary models need no projection, ray tests, or layout work between interactions.
+  const p = world.nav.pose, s = world.shell, o = world.plateOptions;
+  const dimensions = $("earth");
+  const key = [world.mode,p.lat,p.lon,p.d,p.tilt,p.bearing,dimensions.clientWidth,dimensions.clientHeight,
+    labels,released.size,s.cut,s.expanded,s.lithosphere,s.group.visible,s.visible.join(),o.boundaries,o.names,o.plate,
+    world.processDetail,world.processSite,world.processProgress,world.annotationTransition,present,side.offsetHeight].join("/");
+  if (annotationKey === key) return;
+  annotationKey = key;
+  const obstacles = [document.querySelector<HTMLElement>(".tools")!, $("modelnote"),document.querySelector<HTMLElement>(".orientation")!];
+  shellPins.draw(world.mode === "inside" && (labels || released.size) ? world.layerMarkers(released,labels) : [],obstacles);
+  const plates = world.mode === "plates" && o.names
+    ? world.processDetail ? world.processLabels() : world.plateLabels().map(p => ({
+      ...p,id:p.code,text:"Zu dieser Platte gehören die Erdkruste und der starre oberste Erdmantel. Sie bewegt sich langsam gegenüber anderen Platten."
+    })) : [];
+  tectonicPins.draw(plates,[...obstacles,side]);
 }
 $("info").onclick = infoPage;
 dialog.onclose = () => content.replaceChildren();
@@ -359,8 +380,8 @@ async function boot() {
     lastHud = now;
     document.querySelector<SVGElement>(".orientation svg")!.style.transform =
       `rotate(${world.nav.pose.bearing}deg)`;
-    if (labels && world.mode === "inside") updatePins();
-    if (world.mode === "plates") { syncPlatePins(); syncPlayback(world); }
+    if (world.mode === "inside" || world.mode === "plates") updatePins();
+    if (world.mode === "plates") { syncPlayback(world); }
     if (world.mode === "nyos") {
       if (side.dataset.nyosError !== String(!!world.nyos.error)) renderSide();
       syncNyos(world);

@@ -4,8 +4,9 @@ import { R, RAD, position, basis, smooth, clamp } from "./geo";
 import { TerrainLODManager } from "./planet";
 import { regions, firstRegion, nyosSite, tectonicSites, type Region, type TectonicSiteId } from "./regions";
 import { LocalTerrain } from "./local";
+import { project, type Annotation } from "./annotations";
 import { Shells, shellRadii } from "./shells";
-import { type Style, styles } from "./model";
+import { layers, type Style, styles } from "./model";
 import { RenderResolution } from "./resolution";
 import { NyosTerrain } from "./nyos/terrain";
 import { NyosCoverage } from "./nyos/coverage";
@@ -191,7 +192,7 @@ export class World {
         return;
       }
       const hit = ray
-        .intersectObjects(this.shell.group.children, true)
+        .intersectObjects(this.shell.parts, false)
         .find((entry) => entry.object.visible);
       if (hit) this.onLayer?.(hit.object.userData.layer);
     };
@@ -304,9 +305,10 @@ export class World {
     }
     this.updatePlateLayers();
   }
+  get annotationTransition() { return this.processReveal; }
   plateLabels() {
     if (!this.atlas || this.mode !== "plates" || !this.plateOptions.names || !this.plateOptions.boundaries || this.processReveal > 0.5) return [];
-    return this.atlas.labels(this.nav.camera, this.canvas.clientWidth, this.canvas.clientHeight, this.nav.pose.d, this.processSite ?? undefined);
+    return this.atlas.labels(this.nav.camera, this.canvas.clientWidth, this.canvas.clientHeight, this.nav.pose.d, this.processSite ?? undefined,this.plateOptions.plate);
   }
   plates() {
     this.nyosLesson.playing = false;
@@ -370,7 +372,7 @@ export class World {
       if (!overview) {
         let model = this.models.get(id);
         if (!model) {
-          model = new ProcessModel(id, this.anchor);
+          model = new ProcessModel(id, this.anchor,(lat,lon) => this.planet.elevation(lat,lon),this.images?.getObjectByName(id)?.userData.image);
           model.group.visible = false;
           this.models.set(id, model);
           this.scene.add(model.group);
@@ -654,34 +656,28 @@ export class World {
     this.shell.rebuild();
     this.nav.fly({ ...HOME, lon: 3, lat: 17 }, !!this.departure);
   }
-  layerMarkers() {
-    const camera = this.nav.camera,
-      eyeLongitude =
-        (Math.atan2(camera.position.x, camera.position.z) * 180) / Math.PI;
-    if (
-      !this.shell.cut ||
-      !this.shell.group.visible ||
-      eyeLongitude <= -25 ||
-      eyeLongitude >= 65
-    )
-      return [];
-    const radii = shellRadii(this.shell.expanded),
-      face = eyeLongitude < 20 ? 65 : -25;
-    return this.shell.visible.map((visible, i) => {
-      if (!visible) return null;
-      const projected = position(
-        [38, 18, -7, -48][i],
-        face,
-        (radii[i] + radii[i + 1]) / 2 - R,
-      ).project(camera);
-      if (
-        Math.abs(projected.x) > 1 ||
-        Math.abs(projected.y) > 1 ||
-        Math.abs(projected.z) > 1
-      )
-        return null;
-      return { x: (projected.x + 1) * 50, y: (1 - projected.y) * 50 };
+  layerMarkers(released: ReadonlySet<number>, all: boolean): Annotation[] {
+    const camera = this.nav.camera;
+    const lon = Math.atan2(camera.position.x, camera.position.z) * 180 / Math.PI;
+    if (!this.shell.cut || !this.shell.group.visible || lon <= -25 || lon >= 65) return [];
+    // The camera lies in the convex removed wedge. Its segment to either cut face stays in air.
+    const face = lon < 20 ? 65 : -25, radii = shellRadii(this.shell.expanded);
+    const markers: Annotation[] = [];
+    const mark = (id: string, name: string, text: string, lat: number, radius: number) => {
+      const xy = project(position(lat,face,radius-R),camera,this.canvas.clientWidth,this.canvas.clientHeight);
+      if (xy) markers.push({id,name,text,...xy});
+    };
+    layers.forEach((l,i) => {
+      if ((all || released.has(i)) && this.shell.visible[i])
+        mark("shell-"+i,l.name,l.text,[49,15,-9,-46][i],(radii[i]+radii[i+1])/2);
     });
+    if (all && this.shell.lithosphere && this.shell.visible[0] && this.shell.visible[1])
+      mark("lithosphere","Lithosphäre","Die Erdkruste und der starre oberste Erdmantel bilden zusammen die Lithosphäre. Ihre Dicke ist örtlich verschieden.",29,radii[1]-60);
+    return markers;
+  }
+  processLabels() {
+    if (!this.processSite || !this.processDetail || this.processReveal < .95) return [];
+    return this.models.get(this.processSite)?.labels(this.nav.camera,this.canvas.clientWidth,this.canvas.clientHeight) ?? [];
   }
   markerPosition() {
     const c = this.nav.camera;
@@ -737,6 +733,7 @@ export class World {
         radii: shellRadii(this.shell.expanded),
         cut: this.shell.cut,
         expanded: this.shell.expanded,
+        lithosphere: this.shell.lithosphere,
         selected: this.shell.selected,
         visible: [...this.shell.visible],
         opacity: [...this.shell.opacity],
@@ -792,7 +789,7 @@ export class World {
       this.updateTectonics(Math.min(this.frameMs / 1000, 0.45));
       // Sample the target height at the SAME pose as the imagery and process.
       // Reduced-motion journeys also arrive correctly framed on their first frame.
-      this.focusOffset = this.focusReveal * Math.max(0, PROCESS_FOCUS_HEIGHT - ground);
+      this.focusOffset = this.focusReveal * PROCESS_FOCUS_HEIGHT;
       const sectionHeight = this.nyosSectionActive() ? -0.07 * this.nyos.localWeight : 0;
       if (this.nav.reducedMotion.matches) this.nyosFocusOffset = sectionHeight;
       else if (!holdEventFlight)

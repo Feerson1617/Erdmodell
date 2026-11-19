@@ -2,15 +2,11 @@ import type { World } from "../world";
 import { siteCatalog } from "../regions";
 import { names } from "./atlas";
 
-const kinds = {
-  divergent: "Divergenz",
-  convergent: "Konvergenz",
-  transform: "Transformbewegung",
-} as const;
+
 
 const sites = {
-  island: { kind: "divergent", direction: "Auseinander", text: "Am Rücken steigt überwiegend festes Mantelgestein auf. Sinkender Druck lässt einen Teil schmelzen. Beim Abkühlen wächst neuer Ozeanboden." },
-  japan: { kind: "convergent", direction: "Aufeinander zu", text: "Am Graben taucht die Pazifische Platte ab. Bewegung an der Kontaktfläche kann Beben auslösen. Wasser aus der Platte begünstigt Schmelze im Mantel darüber." },
+  island: { kind: "divergent", direction: "Auseinander", text: "Beim Aufsteigen schmilzt ein Teil des festen Gesteins durch sinkenden Druck. Kühlt die Schmelze ab, entsteht neuer Ozeanboden." },
+  japan: { kind: "convergent", direction: "Aufeinander zu", text: "Am Graben taucht die Pazifische Platte ab. Wasser aus ihr begünstigt das Schmelzen im Mantel darüber." },
   san: { kind: "transform", direction: "Aneinander vorbei", text: "Bei Parkfield bewegen sich beide Seiten seitlich aneinander vorbei. Verhakt sich die Störung, kann sich die Spannung ruckartig in einem Erdbeben lösen." },
 } as const;
 
@@ -19,6 +15,7 @@ export function isProcessSite(id: string): id is SiteKey {
   return Object.hasOwn(sites, id);
 }
 
+const movement = { divergent:"Zwei Platten bewegen sich voneinander weg.", convergent:"Zwei Platten bewegen sich aufeinander zu. An manchen Grenzen taucht eine Platte unter die andere ab.", transform:"Zwei Platten bewegen sich seitlich aneinander vorbei." };
 const swatches = { divergent: "Auseinander", convergent: "Aufeinander zu", transform: "Aneinander vorbei" };
 const sortedPlates = Object.entries(names).sort((a, b) => a[1].localeCompare(b[1], "de"));
 const check = (id: string, label: string, on: boolean) =>
@@ -31,12 +28,12 @@ export function plateControls(world: World) {
     `<option value="${s.id}" ${s.id === site ? "selected" : ""}>${s.name}</option>`).join("")}</select></label>`;
   if (site) {
     const info = sites[site];
-    return `<h1>${kinds[info.kind]}</h1>${picker}
+    return `<h1>${info.direction}</h1>${picker}
       <div class="regionScale" role="group" aria-label="Blick auf die Region"><button id="regionalOverview" aria-pressed="${!world.processDetail}">Region</button><button id="localProcess" aria-pressed="${world.processDetail}">Prozessmodell</button></div>
-      ${world.processDetail ? `<p class="direction"><span class="swatchDot ${info.kind}"></span>${info.direction}</p>
+      ${world.processDetail ? `${check("plateNames","Objektnamen zeigen",options.names)}
         <div class="playback"><button id="playProcess" class="playButton" aria-pressed="${world.processPlaying}"></button><button id="resetProcess" aria-label="Bewegung zurücksetzen" title="Bewegung zurücksetzen"><i data-lucide="rotate-ccw" aria-hidden="true"></i></button></div>
         <div class="playSettings">${check("slowProcess","Zeitlupe",world.processSlow)}${check("loopProcess","Wiederholen",world.processLoop)}</div>
-        <details id="processText"><summary>Was geschieht?</summary><p>${info.text}</p></details>` : ""}
+        ${options.names ? `<details id="processText"><summary>Was geschieht?</summary><p>${info.text}</p></details>` : ""}` : ""}
       <button id="plateOverview" class="atlasReturn"><i data-lucide="globe-2" aria-hidden="true"></i> Zur Plattenkarte</button>`;
   }
   const filter = `<fieldset id="kindFilter"><legend>Grenztyp hervorheben</legend>
@@ -46,9 +43,9 @@ export function plateControls(world: World) {
     <div class="plateChecks">${check("boundaries","Plattengrenzen zeigen",options.boundaries)}
     ${options.boundaries ? check("plateNames","Plattennamen zeigen",options.names) + check("boundaryTypes","Grenztypen unterscheiden",options.types) : ""}</div>
     ${options.boundaries && options.types ? filter : ""}
-    ${options.boundaries ? `<label class="siteSelect">Platte hervorheben<select id="plateSelect"><option value="">Keine</option>${sortedPlates.map(([code,name]) => `<option value="${code}" ${code === options.plate ? "selected" : ""}>${name}</option>`).join("")}</select></label>` : ""}
+    ${options.boundaries && options.names ? `<label class="siteSelect">Platte hervorheben<select id="plateSelect"><option value="">Keine</option>${sortedPlates.map(([code,name]) => `<option value="${code}" ${code === options.plate ? "selected" : ""}>${name}</option>`).join("")}</select></label>` : ""}
     ${picker}
-    ${options.boundaries ? `<p class="boundaryHint" aria-live="polite">${boundary ? `<strong>${kinds[boundary.kind]}</strong><br>${boundary.plates.join(" · ")}` : "Eine Grenze auf dem Globus antippen."}</p>` : ""}`;
+    ${options.boundaries ? `<p class="boundaryHint" aria-live="polite">${boundary ? `<strong>${swatches[boundary.kind]}</strong><br>${movement[boundary.kind]}${options.names ? "<br>"+boundary.plates.join(" · ") : ""}` : "Eine Grenze auf dem Globus antippen."}</p>` : ""}`;
 }
 
 export function bindPlateControls(side: HTMLElement, world: World, render: () => void) {

@@ -39,6 +39,7 @@ export async function regionalImagery(elevation: Elevation = () => 0) {
     };
     const mesh = new T.Mesh(drape(geometry, elevation, 0.75), material);
     mesh.name = patch.id;
+    mesh.userData.image = {bounds:patch, map:texture};
     mesh.renderOrder = 0.5;
     return mesh;
   }));

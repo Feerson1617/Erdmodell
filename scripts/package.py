@@ -21,7 +21,7 @@ def files(folder):
 
 
 def archive(folder, name, entries):
-    dest = folder / ("GeoRisiko-G4-Nyos-" + name + ".zip")
+    dest = folder / ("GeoRisiko-G4.2-" + name + ".zip")
     with zipfile.ZipFile(dest, "w") as z:
         for key, value in sorted(entries.items()):
             entry = zipfile.ZipInfo(key, date_time=(2026, 1, 1, 0, 0, 0))
@@ -46,13 +46,13 @@ nyos_docs = (
     "nyos-abnahme.md",
 )
 web = files(dist)
-web["Pruefstand.txt"] = f"GeoRisiko 3D · G4 Nyos\nGeprüfter Git-Commit: {commit}\n".encode()
+web["Pruefstand.txt"] = f"GeoRisiko 3D · G4.2 Grundlagen\nGeprüfter Git-Commit: {commit}\n".encode()
 assert "index.html" in web
 source = (root / "docs/data-sources-and-licenses.md").read_bytes()
 web["Quellen.md"] = source
 web["g1.1-data.md"] = (root / "docs/g1.1-data.md").read_bytes()
 web["data-sources-and-licenses.md"] = source
-for name in (*nyos_docs, "g2.1-daten.md", "g2.1-prozessmodelle.md"):
+for name in (*nyos_docs, "g2.1-daten.md", "g2.1-prozessmodelle.md", "grundlagen-g4.2.md"):
     web[name] = (root / "docs" / name).read_bytes()
 sco = dict(web)
 sco["scorm.js"] = (root / "scripts/scorm.js").read_bytes()
@@ -77,7 +77,7 @@ def add(el, name, value=None, **attrs):
 
 xsi = "http://www.w3.org/2001/XMLSchema-instance"
 ET.register_namespace("xsi", xsi)
-m = ET.Element(tag("manifest"), identifier="GEORISIKO-G4-NYOS", version="1.2")
+m = ET.Element(tag("manifest"), identifier="GEORISIKO-G4-2", version="1.2")
 m.set(
     "{" + xsi + "}schemaLocation",
     ns + " imscp_rootv1p1p2.xsd " + adl + " adlcp_rootv1p2.xsd",
@@ -87,9 +87,9 @@ add(meta, "schema", "ADL SCORM")
 add(meta, "schemaversion", "1.2")
 os = add(m, "organizations", default="ATLAS")
 org = add(os, "organization", identifier="ATLAS")
-add(org, "title", "GeoRisiko 3D · Nyos-See")
+add(org, "title", "GeoRisiko 3D · Erdaufbau und Plattentektonik")
 item = add(org, "item", identifier="OBSERVATORIUM", identifierref="SCO")
-add(item, "title", "Nyos-See im Erdobservatorium")
+add(item, "title", "Das Erdobservatorium erkunden")
 rs = add(m, "resources")
 r = add(rs, "resource", identifier="SCO", type="webcontent", href="index.html")
 r.set("{" + adl + "}scormtype", "sco")
@@ -109,6 +109,7 @@ suites = (
     ("unterricht", "unterricht-g131", 10),
     ("tektonik", "g2.1", 10),
     ("nyos", "nyos", 12),
+    ("grundlagen", "g4.2", 12),
 )
 for section, directory, expected_count in suites:
     assets = files(results_dir / directory)
@@ -129,12 +130,13 @@ for name in reports:
         "chromium",
         "webkit",
     }, f"{name}: erfolgreiche Prüfungen in beiden Browsern erforderlich"
-    if name == "nyos/pruefung.json":
+    if name in {"nyos/pruefung.json", "grundlagen/pruefung.json"}:
+        suite = name.split("/")[0]
         images = next(r["images"] for r in result["runs"] if r["engine"] == "chromium")
-        expected = {f"nyos/{image['name']}.jpg": image["hash"] for image in images}
+        expected = {f"{suite}/{image['name']}.jpg": image["hash"] for image in images}
         actual = {key: hashlib.sha256(content).hexdigest() for key, content in checks.items()
-                  if key.startswith("nyos/") and key.endswith(".jpg")}
-        assert actual == expected, "Die Nyos-Bilder müssen exakt zum Browserprotokoll gehören"
+                  if key.startswith(suite + "/") and key.endswith(".jpg")}
+        assert actual == expected, f"Die Bilder der Suite {suite} müssen exakt zum Browserprotokoll gehören"
 lesson = dict(web)
 lesson.update(
     {
@@ -144,7 +146,7 @@ lesson.update(
 )
 for name in ("unterricht-15-12.md", "unterricht-20-11.md", "geoscience-validation.md", "roadmap.md"):
     lesson[name] = (root / "docs" / name).read_bytes()
-lesson["START.txt"] = """GeoRisiko 3D · Nyos-See
+lesson["START.txt"] = """GeoRisiko 3D · Erdaufbau und Plattentektonik
 
 1. Das ZIP vollständig in einen eigenen Ordner entpacken.
 2. Auf dem Mac mit installiertem Python 3 START.command doppelklicken.
@@ -163,6 +165,11 @@ automatisch einen freien Port. Für die Darstellung ist WebGL 2 erforderlich.
 Alternativ kann die Schule den Ordner auf einem statischen Webserver
 bereitstellen oder das SCORM-Paket ins LMS importieren.
 
+Für die erste Stunde Schalenschnitt öffnen. Namen lassen sich einzeln oder gemeinsam zeigen.
+Ein Antippen des Namens öffnet die kurze Erklärung neben dem Modell.
+Die Schraffur im optionalen Vergleich überbrückt zwei stoffliche Schalen.
+Weitere Unterrichts- und Modellhinweise stehen in grundlagen-g4.2.md.
+
 Die Ansicht „Nyos-See“ führt zur Landschaft und zum Seeschnitt.
 Die Anleitung für den Unterricht steht in nyos-unterrichtsverwendung.md.
 nyos-geowissenschaften.md und nyos-geodaten.md erläutern Quellen und Modellgrenzen.
@@ -175,9 +182,9 @@ review["START.txt"] += (
 ).encode()
 review["Pruefung/geraeteprobe.html"] = (root / "scripts/nyos-geraeteprobe.html").read_bytes()
 review.update({"Pruefung/" + name: content for name, content in checks.items()})
-for name in ("g2.1-bericht", "g2.1-daten", "g2.1-prozessmodelle", "unterricht-15-12", "geoscience-validation", "roadmap"):
+for name in ("grundlagen-g4.2", "g2.1-bericht", "g2.1-daten", "g2.1-prozessmodelle", "unterricht-15-12", "geoscience-validation", "roadmap"):
     review["Pruefung/" + name + ".md"] = (root / f"docs/{name}.md").read_bytes()
-measured = ["# Messbericht zum Schalenmodell im Nyos-Build", "", f"Produktionsbuild `{commit}`", "",
+measured = ["# Messbericht zum Schalenmodell im G4.2-Build", "", f"Produktionsbuild `{commit}`", "",
             "14 Bedienfolgen pro Engine. Bildzeiten stammen aus einer separaten ruhenden Schalenansicht bei 1920 × 1080. Die Auflösung gilt für das Modell neben der Bedienleiste.", ""]
 for run in json.loads(checks["unterricht/pruefung.json"])["runs"]:
     cadence = run["cadence"]

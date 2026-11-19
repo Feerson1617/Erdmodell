@@ -3,6 +3,7 @@ import { LineSegments2 } from "three/addons/lines/LineSegments2.js";
 import { LineSegmentsGeometry } from "three/addons/lines/LineSegmentsGeometry.js";
 import { LineMaterial } from "three/addons/lines/LineMaterial.js";
 import { position, R, RAD, basis } from "../geo";
+import { project } from "../annotations";
 import stepsUrl from "./steps.json?url";
 import areasUrl from "./plates.png";
 import sites from "./labels.json";
@@ -119,7 +120,7 @@ export function arrowPoints(step: Step) {
 
 
 type Site = "island" | "japan" | "san";
-const major = ["PA", "EU", "NA", "SA", "AF", "AN", "AU", "IN", "NZ", "AR", "SO", "PS", "CA", "CO", "OK"];
+const major = ["PA", "EU", "NA", "SA", "AF", "AN", "AU", "IN"];
 const plateCodes = Object.keys(sites).sort();
 const regionalLabels: Record<Site, Record<string, T.Vector3>> = {
   island: { EU: position(63.88, -18.65, 2), NA: position(64.55, -24.7, 2) },
@@ -132,24 +133,16 @@ const labels = [...major, ...plateCodes.filter(code => !major.includes(code))].m
 });
 
 type Label = { code: string; name: string; x: number; y: number };
-function projectLabels(camera: T.Camera, width: number, height: number, distance: number, site?: Site) {
+function projectLabels(camera: T.Camera, width: number, height: number, distance: number, site?: Site, selected = "") {
   const visible: Label[] = [];
-  const boxes: { x: number; y: number; halfWidth: number }[] = [];
   const regional = site && distance < 4000 ? regionalLabels[site] : undefined;
-  const projected = new T.Vector3();
-  for (const {code, name, point} of labels) {
-    if (distance >= 5000 && !major.includes(code)) continue;
+  const ordered = selected ? [...labels.filter(l => l.code === selected), ...labels.filter(l => l.code !== selected)] : labels;
+  for (const {code,name,point} of ordered) {
+    if (code !== selected && distance >= 5000 && !major.includes(code)) continue;
     const anchor = regional?.[code] ?? point;
     if (anchor.dot(camera.position) <= anchor.lengthSq()) continue;
-    projected.copy(anchor).project(camera);
-    if (Math.abs(projected.z) > 1) continue;
-    const x = (projected.x + 1) * width / 2;
-    const y = (1 - projected.y) * height / 2;
-    const halfWidth = name.length * 5.9 + 14;
-    if (x < halfWidth || x > width - halfWidth || y < 46 || y > height - 80) continue;
-    if (boxes.some(box => Math.abs(box.y - y) < 36 && Math.abs(box.x - x) < box.halfWidth + halfWidth)) continue;
-    visible.push({ code, name, x, y });
-    boxes.push({ x, y, halfWidth });
+    const xy = project(anchor,camera,width,height);
+    if (xy) visible.push({code,name,...xy});
   }
   return visible;
 }

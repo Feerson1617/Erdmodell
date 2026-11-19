@@ -147,8 +147,9 @@ async function exercise(browser, engine) {
     );
     for (let i = 0; i < 4; i++) {
       await p.tap("[data-layer='" + i + "']");
+      await p.tap("#explainLayer");
       const text = await p.locator("#layerText").innerText();
-      assert.match(text, [/festem Gestein/, /festes Gestein/, /flüssiges Metall/, /hohe Druck/][i]);
+      assert.match(text, [/festem Gestein/, /festem Gestein/, /flüssigem Metall/, /festem Metall/][i]);
       assert.ok(text.length < 155);
       await p.tap("#isolate");
       assert.deepEqual(
@@ -210,6 +211,7 @@ async function exercise(browser, engine) {
     await snap("07-smartboard");
     await p.tap("#cut");
     await p.tap("[data-layer='1']");
+    await p.tap("#explainLayer");
     await snap("08-schalentext");
     await p.tap("#evidence");
     const wave = await p.locator("#content").innerText();

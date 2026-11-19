@@ -8,13 +8,14 @@
     "check": "tsc --noEmit",
     "build": "npm run check && vite build",
     "preview": "vite preview",
-    "test": "npm run test:data && npm run test:g1 && npm run test:g2 && npm run test:nyos",
+    "test": "npm run test:data && npm run test:g1 && npm run test:g2 && npm run test:nyos && npm run test:grundlagen",
     "test:data": "node tests/resolution.mjs && node tests/site-data.mjs && node tests/plate-data.mjs",
     "test:g1": "node tests/classroom.mjs && node tests/browser.mjs",
     "test:g2": "node tests/tectonics.mjs",
     "test:nyos": "node tests/nyos.mjs",
     "package": "python3 scripts/package.py",
-    "audit": "node tests/flight-audit.mjs && python3 scripts/analyse_flight.py test-results/audit"
+    "audit": "node tests/flight-audit.mjs && python3 scripts/analyse_flight.py test-results/audit",
+    "test:grundlagen": "node tests/grundlagen.mjs"
   },
   "dependencies": {
     "three": "0.180.0",

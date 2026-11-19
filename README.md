@@ -12,7 +12,7 @@ Das Unterrichts-ZIP vollständig entpacken und mit installiertem Python 3 `START
 | --- | --- |
 | Ziehen oder Pfeiltasten | Modell drehen. Zwei Finger, Mausrad oder + / − verändern den Zoom. |
 | Schale im Schnitt oder in der Liste wählen | Schale hervorheben. Augen, Deckkraft und „Einzeln zeigen“ steuern ihre Sichtbarkeit. |
-| Namen zeigen | Die Lehrkraft gibt die Namen und die nummerierte Zuordnung frei. Die Auswahl einer Schale zeigt einen kurzen Text. |
+| Namen zeigen | Die Lehrkraft gibt die Namen frei. Ein Tipp auf einen Namen am Modell öffnet die Erklärung. |
 | Außenschale verbreitern | Die didaktische Überhöhung wird am Modell gekennzeichnet. Erneutes Antippen stellt die Referenzgröße wieder her. |
 | P- und S-Wellen | Eine Modellzeichnung zeigt die Ausbreitung an der Grenze zu einer Flüssigkeit. |
 | Plattengrenzen zeigen | In der Plattenansicht Grenzverläufe, Namen und Typen zuschalten. Eine Linie antippen oder eine Platte hervorheben. |
@@ -21,6 +21,8 @@ Das Unterrichts-ZIP vollständig entpacken und mit installiertem Python 3 `START
 | Nyos-See | Die Landschaft betrachten. Über „Im See“ Schichtung und gelöstes CO₂ erkunden. „CO₂-Freisetzung“ und „Schutz“ öffnen die zeitlich getrennten Erklärungen. |
 | Präsentieren | Vergrößert die Bedienelemente und nutzt Vollbild, soweit der Browser dies erlaubt. |
 | Rücksetzpfeil oder Pos1 | Zum anonymen Globus und zur ursprünglichen Kamera zurückkehren. |
+
+Die Lehrkraft kann einzelne Schalennamen nach der Auswahl freigeben. Ein Tipp auf einen freigegebenen Namen öffnet seine kurze Definition neben dem Modell. Die optionale Schraffur zeigt, wie die Lithosphäre die Grenze zwischen Erdkruste und Mantel überspannt. Die regionalen Prozessmodelle verwenden dieselben antippbaren Namen. [Prüfnotizen und Unterrichtshinweise G4.2](docs/grundlagen-g4.2.md)
 
 Unterrichtsanleitung, Modellgrenzen und fachliche Quellen stehen der Lehrkraft zur Vorbereitung zur Verfügung. [Nyos-Unterrichtsbesuch am 15. Dezember](docs/nyos-unterrichtsverwendung.md) · [Bisheriger Unterrichtsvorschlag zur Plattentektonik](docs/unterricht-15-12.md) · [Schalenmodell am 20. November](docs/unterricht-20-11.md) · [Fachanhang Plattentektonik](docs/g2.1-daten.md)
 
@@ -47,11 +49,11 @@ node tests/packages.mjs
 
 ## Pakete und Nachweise
 
-Im erfolgreichen GitHub-Actions-Lauf stehen die drei G4-Nyos-ZIPs einzeln unter **Artifacts** zum Download. Sie liegen beim lokalen Build unter `artifacts/`.
+Im erfolgreichen GitHub-Actions-Lauf stehen die drei G4.2-ZIPs einzeln unter **Artifacts** zum Download. Sie liegen beim lokalen Build unter `artifacts/`.
 
 - **Unterricht** enthält die ausführbare Offline-Anwendung, den lokalen Starter und die Unterrichtsanleitung.
 - **SCORM-1.2** wird als ZIP in das LMS importiert. Das Paket meldet Sitzungsstart und -ende.
-- **Sichtpruefung** enthält die ausführbare Anwendung, 32 Bildschirmaufnahmen, drei Bedienvideos und die Prüfberichte.
+- **Sichtpruefung** enthält die ausführbare Anwendung, 44 Bildschirmaufnahmen, vier Bedienvideos und die Prüfberichte.
 
 Der gesicherte Ausgangsstand G1.3.1 liegt bei `c806a1b`. Der Abschlussbericht ordnet Daten, Erklärmodelle und Messergebnisse ein. [Abnahmebericht G2.1](docs/g2.1-bericht.md) · [Originalpakete G1.3.1](https://github.com/Feerson1617/Erdmodell/tree/096e7fc278307d128cdc46fa934ba5d495c5cc05/sicherung) · [Roadmap](docs/roadmap.md)
 
