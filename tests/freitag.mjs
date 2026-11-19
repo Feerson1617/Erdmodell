@@ -134,6 +134,50 @@ async function sample(p, title, action) {
     { title, action },
   );
 }
+function inlinePresentation() {
+  Element.prototype.requestFullscreen = () =>
+    Promise.reject(new DOMException("Vollbild gesperrt", "NotAllowedError"));
+}
+function checkFilm(path) {
+  const width = 96,
+    height = 54,
+    stride = width * height * 3;
+  const frames = execFileSync(
+    "ffmpeg",
+    [
+      "-v",
+      "error",
+      "-i",
+      path,
+      "-vf",
+      "fps=1,scale=96:54",
+      "-pix_fmt",
+      "rgb24",
+      "-f",
+      "rawvideo",
+      "pipe:1",
+    ],
+    { maxBuffer: 8 * 1024 * 1024 },
+  );
+  assert.ok(frames.length >= 6 * stride);
+  for (let start = stride; start < frames.length - stride; start += stride) {
+    let grey = 0;
+    for (let y = 0; y < height; y++)
+      for (let x = 80; x < width; x++) {
+        const i = start + 3 * (y * width + x);
+        if (
+          [frames[i], frames[i + 1], frames[i + 2]].every(
+            (c) => Math.abs(c - 128) <= 3,
+          )
+        )
+          grey++;
+      }
+    assert.ok(
+      grey < 0.8 * height * (width - 80),
+      "Grau abgeschnittener rechter Bildrand im Bedienfilm",
+    );
+  }
+}
 async function film(browser, url) {
   const ctx = await browser.newContext({
     viewport: { width: 1366, height: 768 },
@@ -143,6 +187,7 @@ async function film(browser, url) {
   });
   const p = await ctx.newPage(),
     video = p.video();
+  await p.addInitScript(inlinePresentation);
   try {
     await p.goto(url);
     await settle(p);
@@ -181,6 +226,7 @@ async function film(browser, url) {
   } finally {
     await ctx.close();
     await video.saveAs(join(dest, "bedienung.webm"));
+    checkFilm(join(dest, "bedienung.webm"));
   }
 }
 async function run(type, engine, url) {
@@ -237,10 +283,7 @@ async function run(type, engine, url) {
     }
   };
   // Exercise the classroom layout with fullscreen denied as in an LMS.
-  await p.addInitScript(() => {
-    Element.prototype.requestFullscreen = () =>
-      Promise.reject(new DOMException("Vollbild gesperrt", "NotAllowedError"));
-  });
+  await p.addInitScript(inlinePresentation);
   const click = (id) => p.tap("#" + id);
   const sampleHere = async (title, action) =>
     r.performance.push(await sample(p, title, action));
