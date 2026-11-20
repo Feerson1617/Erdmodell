@@ -40,9 +40,9 @@ const canvasImage = async page => PNG.sync.read(await page.locator("#earth").scr
   style: "#sidebar,.view > :not(canvas){visibility:hidden!important}",
 }));
 async function boundaryCycle(page, navigation = false) {
-  // Read three consecutive rendered frames before browser compositing. Comparing this
-  // narrow window avoids DOM overlays, variable screenshot delays and changes of LOD.
-  // Retry only when the actual render-buffer dimensions changed during that triplet.
+  // Compare finished views. During the atlas reveal the cover changes independently
+  // of the boundary lines. Pixel differences from that transition cannot test them.
+  if (!navigation) await page.waitForFunction(() => window.geoObservatory().tectonics.mosaic?.opening === 1);
   for (let attempt=0; attempt<4; attempt++) {
     const frames = await page.evaluate(async navigation => {
       const surface=document.getElementById("earth"), image=document.createElement("canvas");
@@ -52,6 +52,13 @@ async function boundaryCycle(page, navigation = false) {
         if (i) {
           const control = navigation ? (i === 1 ? "nav-plates" : "nav-globe") : "boundaries";
           document.getElementById(control).click();
+          if (navigation && i === 1) {
+            const started = performance.now();
+            while (window.geoObservatory().tectonics.mosaic?.opening !== 1) {
+              if (performance.now() - started > 30000) throw Error("Plattenatlas öffnet sich nicht");
+              await new Promise(requestAnimationFrame);
+            }
+          }
         }
         const frame=await new Promise(resolve=>requestAnimationFrame(() => {
           const w=window.geoObservatory();
@@ -63,7 +70,8 @@ async function boundaryCycle(page, navigation = false) {
       }
       return captures;
     }, navigation);
-    if (!frames.every(f=>f.width===frames[0].width && f.height===frames[0].height)) continue;
+    if (!frames.every(f=>f.width===frames[0].width && f.height===frames[0].height &&
+        f.uploadedTiles===frames[0].uploadedTiles)) continue;
     const [off,on,hidden]=frames.map(f=>PNG.sync.read(Buffer.from(f.png.split(",")[1],"base64")));
     const added=changed(off,on), removed=changed(on,hidden), drift=changed(off,hidden);
     assert.deepEqual(frames.map(f=>f.boundaries),[false,true,false]);
@@ -73,7 +81,7 @@ async function boundaryCycle(page, navigation = false) {
       `Sichtbarkeit im gerenderten Bild: ein ${added}, aus ${removed}, Abweichung vom Ausgangsbild ${drift}`);
     return {added,removed,drift, frames:frames.map(({png,...metrics})=>metrics)};
   }
-  throw new Error("Innerhalb von vier Bildtripeln keine konstante Renderpuffergröße");
+  throw new Error("Innerhalb von vier Bildtripeln keine konstante Renderpuffergröße und Kachelzahl");
 }
 function changed(a, b) {
   assert.equal(a.width, b.width);

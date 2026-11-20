@@ -55,13 +55,13 @@ f"5. Dicke, Anfangsabstand und Zeit sind schematisch. Keine historische Rekonstr
 "7. Der Kameraabstand hängt von Umriss, Blickfeld und freiem Bildschirmraum ab. Die Tabelle unten zeigt die besonders geprüften Platten.",
 "8. Beide Browser trafen alle 52 Platten mit Maus oder Touch auf dem gerenderten Körper. Nach dem Zentrieren waren jeweils weitere Platten sichtbar. Anschließende Rotation und Rückkehr zur Weltansicht wurden ausgeführt.",
 "9. Alle Steckbriefe verwenden fest ausgewählte, verortete Beispiele. Die Himmelsrichtung bezieht sich auf die ausdrücklich benannte Nachbarplatte. Der Fachanhang erklärt die Auswahl.",
-"10. Die Prüfung erfasst 1920 × 1080 im Präsentationsmodus sowie 1366 × 768, 1024 × 768 und 768 × 1024. Titelumbruch, Steckbriefanfang, Modellfläche, Nachbarplatten und Schließziel sind protokolliert.",
+"10. Im Smartboard-Bild bei 1920 × 1080 sind der vollständige Plattenname, die drei kurzen Abschnitte und der Schließen-Knopf nebeneinander mit dem Globus lesbar. Im Tablet-Hochformat steht der Steckbrief unter dem Globus. Auch bei 1366 × 768 und 1024 × 768 wurde geprüft, dass der Steckbrief oben beginnt, der Titel sauber umbricht und das Schließziel mindestens 44 CSS-Pixel hoch ist. Die Lesbarkeit aus der letzten Reihe hängt vom realen Gerät und Raum ab.",
 "11. Der Schalenschnitt öffnete sich anonym. Beide Browser gaben die vier Namen frei und öffneten und schlossen alle acht Antworten. Krustenmaßstab und Lithosphärenvergleich gehören zusätzlich zur Schalenregression.",
 "12. Chromium und WebKit öffneten die Einzeldatei unter file:// bei gesperrtem HTTP(S). Es gab keine weiteren Dateianforderungen und keine Browserfehler.",
 "13. Die Browserprotokolle belegen Flächentreffer, Kamera, Auswahl, Wiedergabe, Pause, Reset, Schalen, drei Regionen und Rückkehr. Die weiteren Testjobs im Pull Request prüfen auch Nyos, Navigation, Schulstunde und das entpackte SCORM-Paket.",
 "14. Die folgenden Tabellen vergleichen dieselben Cloud-Browser, Auflösungen und Eingabefolgen. Die beiden Bewegungsansichten haben unterschiedliche Bildausschnitte. CPU-Prozent beziehen sich auf einen logischen Kern. Geometrien, Texturen und Programme sind Ressourcenindikatoren. GPU-Speicher in Bytes wurde nicht gemessen.",
 "15. Die Werte betreffen Linux-Rendering. MacBook Air M1, iPad, physisches Smartboard und der Import ins produktive itslearning wurden nicht an Originalgeräten geprüft. Ein regionaler Schnitt kann auch Biegung oder Materialtransport erklären. Der Starrheitstest bezieht sich auf die beiden Körper jedes neuen Grenzvergleichs.",
-f"16. Auslieferung: {html}, GeoRisiko-G4.3.1-SCORM-1.2.zip und {archive_name}. Die unveränderte G4.3-Datei liegt im Repository unter ausgabe/GeoRisiko-Erdmodell-G4.3.html.", "",
+f"16. Die drei fertigen Dateien stehen im Ordner ausgabe des Entwicklungsbranches und als einzelne Artefakte des erfolgreichen Prüflaufs im Pull Request. Die gesicherte G4.3-Einzeldatei steht im selben Ordner. [Einzeldatei und ZIPs](https://github.com/Feerson1617/Erdmodell/tree/feature/georisiko-g4-3-1-plattenkorrektur/ausgabe) · [Prüfläufe](https://github.com/Feerson1617/Erdmodell/pull/10/checks)", "",
 "## Kameraprüfung", "", "Stichprobe aus dem vollständigen Chromium-Flächentest. Die Spannweite ist aus einem Raster auf der frei sichtbaren Modellfläche bestimmt.", "",
 "| Platte | Kameraabstand (km) | erfasste Spannweite (px) | weitere sichtbare Platten |","|---|---:|---:|---:|"]
 plates=next(r for r in runs if r["engine"]=="chromium")["plates"]
@@ -73,7 +73,16 @@ for row in performance:
     for s in row["stages"]:
         end=s["states"][-1]
         brief.append(f"| {row['engine']} | {row['version']} | {s['stage']} | {s['fps']:.1f} | {s['p95']:.0f} / {s['max']:.0f} | {s['over150']} | {s['cpuPercent']:.0f} | {end['geometries']} / {end['textures']} / {end['programs']} |")
-brief += ["","Renderer laut Browser:",*["- "+r["engine"]+" — "+r["renderer"] for r in performance if r["version"]=="G4.3.1"],""]
+brief += ["", "### Einordnung für den Unterricht", ""]
+for engine in ("chromium", "webkit"):
+    movement = {r["version"]: next(s for s in r["stages"] if s["stage"]=="Bewegung")
+                for r in performance if r["engine"]==engine}
+    old, new = movement["G4.3"], movement["G4.3.1"]
+    name = "WebKit" if engine=="webkit" else "Chromium"
+    brief.append(f"- {name} erreichte in der Bewegung {old['fps']:.1f} Bilder/s mit G4.3 und {new['fps']:.1f} mit G4.3.1. Die längste Bildpause betrug {old['max']:.0f} bzw. {new['max']:.0f} ms.")
+brief += ["", "Am hellen Streifen lässt sich beim Anhalten erkennen, welche Seite sich wie weit verschoben hat. Die Beschriftungen ordnen beide Ausschnitte ihren Platten zu. Der globale Vergleich zeigt eine horizontale Bewegung. Für das Abtauchen eignet sich der Japan-Schnitt. Die gemessenen Bildpausen begrenzen die Flüssigkeit auf Software-Renderern.", "",
+          "Vom Browser gemeldete Renderer", "", *["- "+r["engine"]+" — "+r["renderer"] for r in performance if r["version"]=="G4.3.1"], "",
+          "Beide Browser liefen im Linux-Container. WebKit kann die verallgemeinerte WebGL-Kennung „Apple GPU“ melden. Für die Einordnung der Messwerte gilt die tatsächliche Testumgebung.", ""]
 entries["Pruefbericht.md"]="\n".join(brief).encode()
 (evidence/"Pruefbericht.md").write_bytes(entries["Pruefbericht.md"])
 with zipfile.ZipFile(out/archive_name,"w",zipfile.ZIP_DEFLATED) as z:

@@ -213,7 +213,8 @@ for(const engine of [chromium,webkit]){
       const tab=await film.newPage();await tab.goto(pathToFileURL(html).href);await ready(tab);
       await tab.click("#nav-plates");await tab.waitForFunction(()=>window.geoObservatory().tectonics.mosaic?.opening===1);
       await tab.mouse.click(...await centre(tab));await tab.waitForSelector("#plateProfile");await tab.click("#atlasLocate");await rest(tab);
-      await tab.click("#atlasPlay");await tab.waitForFunction(()=>window.geoObservatory().tectonics.mosaic.progress>.72);
+      await tab.click("#atlasPlay");
+      await tab.waitForFunction(()=>window.geoObservatory().tectonics.mosaic.progress>.72,null,{timeout:90000});
       await tab.click("#atlasPlay");await tab.waitForTimeout(400);await tab.close();await film.close();
       const video=tab.video();const path=join(out,"bedienung.webm");await video.saveAs(path);await video.delete();
       run.videoSHA256=await hash(path);

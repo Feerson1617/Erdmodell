@@ -1,5 +1,7 @@
 # GeoRisiko 3D · Unterricht am 20. November 2026
 
+**G4.3.1 per Doppelklick starten.** Die HTML-Datei herunterladen, im Finder öffnen und „Plattentektonik“ wählen. Alle Daten sind eingebettet. Die 3D-Darstellung benötigt WebGL 2. [Einzeldatei herunterladen](https://github.com/Feerson1617/Erdmodell/raw/refs/heads/feature/georisiko-g4-3-1-plattenkorrektur/ausgabe/GeoRisiko-Erdmodell-G4.3.1.html) · [Fachanhang](docs/plattenatlas-g4.3.1.md) · [Prüfbericht](docs/abnahme-g4.3.1.md)
+
 Das Freitags-Paket startet am geschlossenen Globus. „Schalenschnitt“ öffnet die vier anonymen Schalen. [Unterrichtseinstieg, Geräteprobe und Rückfall](docs/freitag-20-11-2026.md)
 
 
@@ -77,4 +79,4 @@ Die [Offline-Einzeldatei](ausgabe/GeoRisiko-Erdmodell-G4.3.html) startet nach de
 
 ## G4.3.1 · Heutige Platten und starre Grenzvergleiche
 
-Die [Einzeldatei](ausgabe/GeoRisiko-Erdmodell-G4.3.1.html) startet nach dem Herunterladen per Doppelklick. „Zentrieren“ zeigt die gewählte Platte mit ihrer Umgebung. „Grenze ansehen“ öffnet den zugehörigen Vergleich. Zwei starre Gesteinsausschnitte verdeutlichen die Relativbewegung. Der [Fachanhang](docs/plattenatlas-g4.3.1.md) erklärt die Daten und den symmetrischen Bezugsrahmen. Die Prüfdateien und das SCORM-1.2-Paket stehen beim GitHub-Lauf des Pull Requests bereit.
+„Zentrieren“ zeigt die gewählte Platte mit ihrer Umgebung. „Grenze ansehen“ öffnet den zugehörigen Vergleich. Zwei starre Gesteinsausschnitte verdeutlichen die Relativbewegung. Der Fachanhang erklärt die Daten und den symmetrischen Bezugsrahmen. Das Sichtprüfungs-ZIP enthält 18 Bildschirmaufnahmen, einen Bedienfilm und die Messprotokolle. [Sichtprüfung](ausgabe/GeoRisiko-G4.3.1-Sichtpruefung.zip) · [SCORM 1.2](ausgabe/GeoRisiko-G4.3.1-SCORM-1.2.zip)
