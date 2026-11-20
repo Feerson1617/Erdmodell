@@ -75,7 +75,7 @@ jobs:
       - if: matrix.suite == 'freitag'
         run: npm --prefix .scratch/g422-reference run build
       - name: Videodecoder für die Kontrolle des Bildausschnitts vorbereiten
-        if: matrix.suite == 'freitag'
+        if: matrix.suite == 'freitag' || matrix.suite == 'plattenatlas'
         run: |
           if ! command -v ffmpeg >/dev/null; then apt-get update && apt-get install -y ffmpeg; fi
       - run: npm run test:${{ matrix.suite }}
