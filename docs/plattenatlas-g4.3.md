@@ -8,7 +8,7 @@ Im Schalenschnitt bleiben die Namen zunächst verborgen. Die Lehrkraft kann einz
 
 „Plattentektonik“ öffnet das geografische Kartenbild. Die Abdeckung gehört zur Grafik. Eine Lithosphärenplatte umfasst die Kruste und den starren obersten Mantel. Darunter liegt überwiegend festes Mantelgestein, das sich über lange Zeit verformen kann.
 
-Eine Fläche antippen, um sie anzuheben und ihren Namen und Steckbrief zu lesen. „Auf der Karte zentrieren“ holt auch kleine Platten in den Blick. „Platten bewegen“ startet die Bewegung. Pause hält sie an, der Kreispfeil daneben stellt die Ausgangslage her. Unter „Bewegungen ansehen“ zeigen Island, Japan und Kalifornien die drei Grenzprozesse aus der Nähe.
+Eine Fläche antippen, um sie anzuheben und ihren Namen und Steckbrief zu lesen. „Zentrieren“ holt auch kleine Platten in den Blick. „Weltansicht“ führt zum ganzen Plattenmosaik zurück. „Platten bewegen“ startet die Bewegung. Pause hält sie an, der Kreispfeil daneben stellt die Ausgangslage her. Unter „Bewegungen ansehen“ zeigen Island, Japan und Kalifornien die drei Grenzprozesse aus der Nähe.
 
 ## Geometrie und Bewegungen
 
@@ -16,7 +16,7 @@ Peter Birds PB2002 enthält 52 Platten. Zu jeder Platte verbindet der originale 
 
 Das Bezugssystem ist pazifikfest. Im Atlas steht die Pazifische Platte deshalb still. Bei Kalifornien bewegen sich die beiden Platten dennoch relativ zueinander. An einem Ort liefert das Kreuzprodukt aus Winkelgeschwindigkeit und Ortsvektor die Tangentialrichtung. Der vollständige Durchlauf entspricht im Inneren großer Platten der rechnerischen Fortschreibung der heutigen Rotation über zwei Millionen Jahre. „Langsamer“ ändert nur die Abspielzeit. [Originale Rotationspole mit Herkunft je Platte](https://github.com/fraxen/tectonicplates/blob/339b0c56563c118307b1f4542703047f5f698fae/original/PB2002_poles.dat.txt)
 
-Eine langfristige Rekonstruktion müsste wandernde Plattengrenzen sowie die Bildung und den Verbrauch von Lithosphäre einbeziehen. Hier drehen sich die Plattenkörper um ihre Eulerpole. Auf dem Weg zum heutigen Rand nimmt der dargestellte Versatz ab, am gemeinsamen Saum ist er null. Dadurch bleibt die Oberfläche geschlossen. Diese grafische Anpassung betrifft kleine Platten anteilig stärker. Die Randverformung und Schichtdicke lassen sich nicht als Messwerte interpretieren. Die regionalen Modelle zeigen, wie Gestein an Grenzen entsteht, abtaucht oder seitlich versetzt wird.
+Eine langfristige Rekonstruktion müsste wandernde Plattengrenzen sowie die Bildung und den Verbrauch von Lithosphäre einbeziehen. Hier drehen sich die Plattenkörper um ihre Eulerpole. Auf dem Weg zum heutigen Rand nimmt der dargestellte Versatz ab, am gemeinsamen Saum ist er null. Dadurch bleibt die Oberfläche geschlossen. An schmalen Dreiecken begrenzt die Aufbereitung den Versatz zusätzlich, um ein Umklappen einzelner Flächen zu verhindern. Diese grafische Anpassung betrifft kleine Platten anteilig stärker. Die Randverformung und Schichtdicke lassen sich nicht als Messwerte interpretieren. Die regionalen Modelle zeigen, wie Gestein an Grenzen entsteht, abtaucht oder seitlich versetzt wird.
 
 Jeder Steckbrief beschreibt ein konkretes PB2002-Grenzsegment. Die Tabelle gibt den Azimut der linken relativ zur rechten Platte an. Für die Gegenrichtung kommen 180° hinzu. Die Oberfläche rundet auf acht Himmelsrichtungen. Der Grenztext bezieht sich auf denselben Abschnitt. Beispiele sind Parkfield (2877), Island (4209), Japan (2629) und der Ostafrikanische Graben (5502). Der Futuna-Beschriftungspunkt liegt innerhalb des überprüften Vektorumrisses. [Feldbeschreibung der Geschwindigkeiten und Grenztypen](https://github.com/fraxen/tectonicplates/blob/339b0c56563c118307b1f4542703047f5f698fae/original/PB2002_steps_desc.txt)
 
@@ -28,7 +28,7 @@ Die Trennung dichter Metallschmelzen und leichteren silikatischen Materials erkl
 
 ## Reproduktion und Betriebsformen
 
-`npm ci`, `npm run build` und `npm run standalone` erzeugen die Einzeldatei im Ordner `artifacts`. Texturen, Geodaten, Schrift und Programm stammen aus demselben Produktionsbuild wie das LMS-Paket. Das Exportskript bettet diese Ressourcen ein. Die beiden PB2002-Quelldateien lassen sich mit `python scripts/prepare_mosaic.py PB2002_plates.json PB2002_poles.dat.txt` und Shapely 2.1.2 aufbereiten. Das Skript kontrolliert die SHA-256-Prüfsummen beider Quellen. Zum normalen Bauen ist die GIS-Software entbehrlich.
+`npm ci`, `npm run build` und `npm run standalone` erzeugen die Einzeldatei im Ordner `artifacts`. Texturen, Geodaten, Schrift und Programm stammen aus demselben Produktionsbuild wie das LMS-Paket. Das Exportskript bettet diese Ressourcen ein. Die beiden PB2002-Quelldateien lassen sich mit `python scripts/prepare_mosaic.py PB2002_plates.json PB2002_poles.dat.txt` mit NumPy und Shapely 2.1.2 aufbereiten. Das Skript kontrolliert die SHA-256-Prüfsummen beider Quellen. Zum normalen Bauen ist die GIS-Software entbehrlich.
 
 `npm run test:plattenatlas` prüft die Einzeldatei und die Sicherung unter file:// in Chromium und WebKit. Das Protokoll führt pro Platte den Flächentreffer, alle drei Texte und die Verschiebung eines tatsächlich gerenderten Oberflächenpunkts auf. Es enthält auch Kamerakontrollen, Rücksetzung und warme GPU-Ressourcenzähler. Die Schaltfläche zur Gerätepräsentation lässt sich weiterhin an der Unterrichtshardware erproben.
 

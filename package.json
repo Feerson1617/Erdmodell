@@ -19,7 +19,7 @@
     "test:freitag": "node tests/freitag.mjs && node tests/schalen-bildvergleich.mjs",
     "test:vergleich": "node tests/vergleich.mjs",
     "standalone": "python3 scripts/standalone.py",
-    "test:plattenatlas": "npm run standalone && node tests/plattenatlas.mjs"
+    "test:plattenatlas": "npm run standalone && node tests/plattengeometrie.mjs && node tests/plattenatlas.mjs"
   },
   "dependencies": {
     "three": "0.180.0",

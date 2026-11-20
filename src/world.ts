@@ -363,6 +363,11 @@ export class World {
     this.pickedPlatePoint = point?.clone();
     this.selectBoundary(null);
   }
+  atlasWorld() {
+    this.inspectPlate("");
+    this.atlasReturn = {...HOME};
+    this.nav.fly(HOME);
+  }
   locatePlate() {
     const coordinates = plateCentres[this.profileCode as keyof typeof plateCentres];
     if (!coordinates) return;

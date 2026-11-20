@@ -87,9 +87,9 @@ export function plateControls(world: World) {
   const boundary = world.selectedBoundary;
   const profile = world.profiles[world.profileCode];
   const card = profile ? `<section class="scienceCard" id="plateProfile" aria-live="polite">
-    <h2>${names[world.profileCode]}</h2><dl><dt>Lage</dt><dd>${profile.place}</dd>
+    <div class="plateCardHead"><h2>${names[world.profileCode]}</h2><button id="atlasAll" title="Schließen" aria-label="Schließen">×</button></div><dl><dt>Lage</dt><dd>${profile.place}</dd>
     <dt>Bewegung</dt><dd>${profile.motion}</dd><dt>An der Grenze</dt><dd>${profile.boundary}</dd></dl>
-    <button id="atlasLocate">Auf der Karte zentrieren</button><button id="atlasAll">Schließen</button></section>` : "";
+    <button id="atlasLocate">Zentrieren</button><button id="atlasWorld">Weltansicht</button></section>` : "";
   return `<h1>Plattentektonik</h1>
     <div class="playback"><button id="atlasPlay" class="playButton" ${world.mosaic?"":"disabled"}>Platten bewegen</button>
     <button id="atlasReset" aria-label="Bewegung zurücksetzen" title="Bewegung zurücksetzen"><i data-lucide="rotate-ccw" aria-hidden="true"></i></button></div>
@@ -103,7 +103,7 @@ export function plateControls(world: World) {
     ${check("boundaryTypes", "Grenztypen unterscheiden", options.types)}
     ${options.types ? filter : ""}
     ${options.names ? check("smallPlates", "Auch kleinere Platten im Fernblick benennen", world.smallPlateNames) : ""}
-    ${`<label class="siteSelect">Platte auswählen<select id="plateSelect"><option value="">Keine</option>${sortedPlates.map(([code, name]) => `<option value="${code}" ${code === options.plate ? "selected" : ""}>${name}</option>`).join("")}</select></label>`}
+    ${`<label class="siteSelect">Platte auswählen<select id="plateSelect"><option value="">Keine</option></select></label>`}
     </details>
     ${options.boundaries ? `<p class="boundaryHint" aria-live="polite">${boundary ? `<strong>${swatches[boundary.kind]}</strong><br>${movement[boundary.kind]}${options.names ? "<br>" + boundary.plates.join(" · ") : ""}` : "Eine Fläche oder Grenze auf dem Globus antippen."}</p>` : ""}`;
 }
@@ -164,6 +164,18 @@ export function bindPlateControls(
       }
     };
   const select = side.querySelector<HTMLSelectElement>("#plateSelect");
+  const settings = side.querySelector<HTMLDetailsElement>("#plateSettings");
+  if (select && settings) {
+    const populate = () => {
+      if (!settings.open && !world.plateOptions.names) { select.length=1; return; }
+      if (select.length===1) {
+        for (const [code,name] of sortedPlates) select.add(new Option(name,code));
+        select.value=world.plateOptions.plate;
+      }
+    };
+    settings.ontoggle=populate;
+    populate();
+  }
   if (select)
     select.onchange = () => {
       world.inspectPlate(select.value);
@@ -180,6 +192,7 @@ export function bindPlateControls(
   click("atlasPlay", () => { world.mosaic?.play(); syncPlayback(world); });
   click("atlasReset", () => { world.mosaic?.reset(); syncPlayback(world); });
   click("atlasAll", () => { world.inspectPlate(""); refresh("atlasPlay"); });
+  click("atlasWorld", () => { world.atlasWorld(); refresh("atlasPlay"); });
   click("atlasLocate", () => world.locatePlate());
   bindCheck("atlasSlow", on => { if (world.mosaic) world.mosaic.slow=on; });
   click("regionalOverview", () => {

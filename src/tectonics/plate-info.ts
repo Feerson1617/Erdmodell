@@ -73,7 +73,7 @@ export function buildProfiles(steps:Step[], names:Record<string,string>) {
     const sample=({PA:2877,NA:2877,EU:4209,OK:2629,AF:5502,SO:5502} as Record<string,number>)[code];
     const best=(sample && candidates.find(s=>s[0]===sample)) || candidates.filter(s=>s[7]>=2).sort((a,b)=>length(b)-length(a))[0] || candidates[0];
     const left=best[1].slice(0,2)===code,other=left?best[1].slice(-2):best[1].slice(0,2);
-    const peer=names[other].replace(/e Platte$/,"en Platte");
+    const peer=names[other].replace(/e (Platte|Seeplatte)$/,"en $1");
     const direction=directions[Math.round((best[8]+(left?0:180))/45)%8];
     const where=best[0]===2877?"Bei Kalifornien":best[0]===2629?"Vor Japan":best[0]===4209?"Auf Island":best[0]===5502?"Im Ostafrikanischen Graben":"An einem Grenzabschnitt";
     profiles[code]={place:locations[code],motion:best[7]>=2?`${where} bewegt sie sich gegenüber der ${peer} nach ${direction}.`:`Gegenüber der ${peer} ist die Bewegung an diesem Abschnitt im Modell sehr gering.`,boundary:processes[best[2]],step:best[0]};

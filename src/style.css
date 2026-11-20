@@ -245,3 +245,7 @@ figcaption { margin-top: 6px; font-size: .9em; color: var(--muted); }
 .scienceCard dd { margin:2px 0; line-height:1.4; }
 .scienceCard button, .shellQuestions button { min-height:40px; margin:3px 4px 3px 0; }
 .shellQuestions button[aria-expanded=true] { border-color:#a4c59d; }
+
+.plateCardHead { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.plateCardHead h2 { overflow-wrap:anywhere; }
+.plateCardHead #atlasAll { flex:none; min-width:42px; min-height:42px; font-size:1.5rem; line-height:1; }

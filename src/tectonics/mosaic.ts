@@ -1,7 +1,7 @@
 import * as T from "three";
 import { position, R, RAD, clamp, smooth } from "../geo";
 
-export type SurfaceData = Record<string,{pole:number[];vertices:number[];triangles:number[];rim:number[]}>;
+export type SurfaceData = Record<string,{pole:number[];vertices:number[];weights:number[];triangles:number[];rim:number[]}>;
 const palette = [0xa8b99a,0xc5a385,0x84acb0,0xbbad83,0x899db3,0xb7959d,0x9dae85,0x96b3a8,0xb5a1b6,0xc2b18e];
 export const timeWindowMa = 2;
 /** Each body turns about its published Euler axis. The schematic edge zone
@@ -69,9 +69,8 @@ export class PlateMosaic {
       for(let i=0;i<plate.vertices.length;i+=3){
         const lon=plate.vertices[i]/1e5,lat=plate.vertices[i+1]/1e5,dist=plate.vertices[i+2]/1e4;
         v.copy(position(lat,lon)).normalize();normals.push(v.x,v.y,v.z);
-        const speed=Math.sqrt(Math.max(0,1-v.dot(axis)**2))*angle;
         // Today's rim stays closed. Only the buffer near that rim attenuates the Euler motion.
-        const fraction=speed>0?Math.min(1,.30*dist*RAD/speed):0;
+        const fraction=plate.weights[i/3]/65535;
         end.copy(v).applyAxisAngle(axis,angle*fraction);
         if(end.distanceToSquared(v)>largest){largest=end.distanceToSquared(v);probe=i/3;}
         const radius=R-4;

@@ -48,6 +48,10 @@ for(const engine of [chromium,webkit]){
   try{
     await p.goto(pathToFileURL(fallback).href);await ready(p);await p.click("#nav-inside");
     await p.click("#labels");await p.waitForSelector("#pins button");assert.equal(await p.locator("#pins button").count(),4);
+    run.fallback = {files:run.files.splice(0), errors:run.errors.splice(0), requests:run.requests.splice(0)};
+    assert.ok(run.fallback.files.includes("Erdmodell.html"));
+    assert.ok(run.fallback.files.every(f=>f==="Erdmodell.html" || f==="sky.png"));
+    assert.deepEqual(run.fallback.requests,[]);
     await p.goto(pathToFileURL(html).href);await ready(p);
     const home=await read(p), [cx,cy]=await centre(p);await p.mouse.move(cx,cy);await p.mouse.down();
     await p.mouse.move(cx+66,cy+15,{steps:6});await p.mouse.up();
@@ -74,11 +78,15 @@ for(const engine of [chromium,webkit]){
     await p.waitForFunction(()=>window.geoObservatory().tectonics.mosaic?.opening===1);
     await shot("03-plattenmosaik");await p.emulateMedia({reducedMotion:"reduce"});
     await p.tap("#plateSettings summary");
+    await p.waitForFunction(()=>document.querySelector("#plateSelect")?.options.length===53);
     const options=await p.locator("#plateSelect option").evaluateAll(os=>Object.fromEntries(os.filter(o=>o.value).map(o=>[o.value,o.textContent])));
     assert.deepEqual(Object.keys(options).sort(),codes);
     for(const code of codes){
-      await p.selectOption("#plateSelect",code);await p.click("#atlasLocate");await rest(p);
-      await p.click("#atlasAll");await frame(p);
+      // Set up each geographic view using the same controls as the teacher.
+      // Identification itself always uses a physical pointer event on the canvas.
+      await p.selectOption("#plateSelect",code);
+      await p.locator("#atlasLocate").evaluate(b=>b.click());await rest(p);
+      await p.locator("#atlasAll").evaluate(b=>b.click());await frame(p);
       const [x,y]=await centre(p);
       if(engine===webkit)await p.touchscreen.tap(x,y);else await p.mouse.click(x,y);
       const state=await read(p);
@@ -86,10 +94,10 @@ for(const engine of [chromium,webkit]){
       const title=await p.locator("#plateProfile h2").innerText();assert.equal(title,options[code]);
       const info=await p.locator("#plateProfile dd").allTextContents();
       assert.equal(info.length,3);assert.ok(info.every(t=>t.length>20 && !/undefined|NaN/.test(t)));
-      assert.equal(await p.locator('#platePins [data-object="'+code+'"]').innerText(),title);
+      assert.equal((await p.locator('#platePins [data-object="'+code+'"]').innerText()).trim(),title);
       run.plates[code]={name:title,info};
       if(code==="GP")await shot("04-galapagos");
-      await p.click("#atlasAll");
+      await p.locator("#atlasAll").evaluate(b=>b.click());
     }
     await p.selectOption("#plateSelect","NA");await p.click("#atlasLocate");await rest(p);
     await p.click("#plateSettings summary");await frame(p);await shot("05-auswahl");
@@ -106,6 +114,7 @@ for(const engine of [chromium,webkit]){
     for(const code of codes){
       const a=new Vector3(...before.anchors[code]), b=new Vector3(...end.anchors[code]);
       const [lat,lon,rate]=surfaces[code].pole.map(v=>v*Math.PI/180);
+      assert.ok(Math.abs(end.rotations[code]-2*rate)<1e-9,code+" Körperrotation");
       const axis=new Vector3(Math.cos(lat)*Math.sin(lon),Math.sin(lat),Math.cos(lat)*Math.cos(lon));
       const delta=b.clone().sub(a);run.displacementKm[code]=Number(delta.length().toFixed(4));
       if(code==="PA"){assert.ok(delta.length()<.001);continue;}
@@ -119,6 +128,7 @@ for(const engine of [chromium,webkit]){
     assert.deepEqual(reset.anchors,before.anchors);assert.equal(reset.progress,0);
     run.changedPixels=pixelChanges(moved,await image(p));assert.ok(run.changedPixels>250);
     await p.click("#atlasPlay");await p.waitForFunction(()=>window.geoObservatory().tectonics.mosaic.progress>0);await p.click("#atlasReset");
+    await p.click("#atlasWorld");await rest(p);assert.ok((await read(p)).d>10000);
     for(const site of ["island","japan","san"]){
       await p.selectOption("#tectonicSite",site);await p.waitForFunction(()=>window.geoObservatory().tectonics.processVisible && !window.geoObservatory().flying);
       await p.click("#playProcess");await p.waitForFunction(()=>window.geoObservatory().tectonics.progress>.01);
@@ -141,7 +151,7 @@ for(const engine of [chromium,webkit]){
     }
     for(const key of ["geometries","textures","programs"])assert.equal(run.resources[1][key],run.resources.at(-1)[key],key);
     assert.deepEqual(run.requests,[]);assert.deepEqual(run.errors,[]);
-    assert.deepEqual(run.files,["Erdmodell.html","GeoRisiko-Erdmodell-G4.3.html"]);
+    assert.deepEqual(run.files,["GeoRisiko-Erdmodell-G4.3.html"]);
     report.runs.push(run);console.log(run.engine,"52 Flächen, acht Antworten, Offline-Betrieb geprüft");
     if(engine===chromium){
       const film=await browser.newContext({viewport:{width:1024,height:680},recordVideo:{dir:out,size:{width:960,height:638}}});

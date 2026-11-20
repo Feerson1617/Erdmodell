@@ -27,8 +27,12 @@ for run in report["runs"]:
     if run.get("videoSHA256"):
         assert digest(evidence/"bedienung.webm")==run["videoSHA256"]
         entries["bedienung.webm"]=(evidence/"bedienung.webm").read_bytes()
+geometry=json.loads((evidence/"geometrie.json").read_text())
+assert len(geometry["plates"])==52 and geometry["phases"]==32 and len(geometry["boundaries"])==4
+entries["geometrie.json"]=(evidence/"geometrie.json").read_bytes()
+summary += ["## Geometrie und Richtung", "", f"{geometry['triangles']} gekrümmte Oberflächendreiecke in jeweils 32 Zeitständen auf Umklappen geprüft. Die gemeinsamen Randpunkte bleiben geschlossen. Für Island, Japan, Kalifornien und den Ostafrikanischen Graben wurden relative Richtung und Geschwindigkeit aus den Eulerpolen unabhängig mit den veröffentlichten Grenzdaten verglichen.", ""]
 assert "bedienung.webm" in entries and len([s for s in entries if s.endswith(".jpg")])>=7
-summary += ["## Reichweite", "", "Die Messungen stammen aus echten Cloud-Browsern mit simulierter Maus- und Touchbedienung. Displayhelligkeit, Stifteingabe an einer physischen Tafel, Safari auf dem konkreten Schul-Mac und ein Import ins produktive Schul-LMS sind gesonderte Geräteprüfungen."]
+summary += ["## Reichweite", "", "Die bytegleiche Rückfallversion öffnet das Modell, sucht aber die dekorative Himmelsgrafik sky.png neben der Datei. G4.3 bettet dieses Bild ein. Die Messungen stammen aus echten Cloud-Browsern mit simulierter Maus- und Touchbedienung. Displayhelligkeit, Stifteingabe an einer physischen Tafel, Safari auf dem konkreten Schul-Mac und ein Import ins produktive Schul-LMS sind gesonderte Geräteprüfungen."]
 entries["Pruefbericht.md"]=("\n".join(summary)+"\n").encode()
 (evidence/"Pruefbericht.md").write_bytes(entries["Pruefbericht.md"])
 with zipfile.ZipFile(out/"GeoRisiko-G4.3-Sichtpruefung.zip","w",zipfile.ZIP_DEFLATED) as archive:
