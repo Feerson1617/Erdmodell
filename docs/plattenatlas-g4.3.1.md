@@ -18,7 +18,7 @@ Beide Körper drehen sich um den Erdmittelpunkt. In jedem Körper wird derselbe 
 
 ## Auswahl der Beispiele
 
-Die 52 Steckbriefe verwenden eine redaktionell festgelegte Liste von 48 unterschiedlichen PB2002-Segmenten. Einige Platten teilen dasselbe Beispiel. Parkfield verdeutlicht seitliches Vorbeigleiten, Island das Auseinanderrücken, Japan und Chile das Abtauchen, der Himalaya die Kontinentkollision und der Ostafrikanische Graben die Dehnung kontinentaler Kruste. Auch für die Mikroplatten ist je ein namentlich verortetes Beispiel hinterlegt. Die Richtung im Steckbrief gilt für diesen Ort und die genannte Nachbarplatte. Die vollständige Zuordnung samt Prüfung steht in der Datei geometrie.json im Sichtprüfungs-ZIP. [Datengrundlage und regionale Prozessmodelle](g2.1-daten.md)
+Die 52 Steckbriefe verwenden eine redaktionell festgelegte Liste von 48 unterschiedlichen PB2002-Segmenten. Einige Platten teilen dasselbe Beispiel. Parkfield verdeutlicht seitliches Vorbeigleiten, Island das Auseinanderrücken, Japan und Chile das Abtauchen, der Himalaya die Kontinentkollision und der Ostafrikanische Graben die Dehnung kontinentaler Kruste. Auch für die Mikroplatten ist je ein namentlich verortetes Beispiel hinterlegt. Die Richtung im Steckbrief gilt für diesen Ort und die genannte Nachbarplatte. Die vollständige Zuordnung samt Prüfung steht in der Datei geometrie.json im Sichtprüfungs-ZIP. [Datengrundlage und regionale Prozessmodelle](g2.1-daten.md) · [Earle, Plate Motions and Plate Boundary Processes](https://opentextbc.ca/physicalgeology2ed/chapter/10-4-plate-plate-motions/)
 
 ## Kamera und Informationen
 

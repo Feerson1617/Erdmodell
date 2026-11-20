@@ -323,10 +323,20 @@ async function exercise(browser, engine) {
     }
     pass("Drei PB2002-Anker, regionales Bild, Start/Pause/Reset und sichtbare Änderung der Prozessgeometrie");
     const preOrbit = await diagnostics(page);
-    const box = await page.locator("#earth").boundingBox();
-    await page.mouse.move(box.x + 0.55*box.width, box.y + 0.55*box.height);
+    // A named process part can cover the centre of the canvas on a smartboard.
+    const orbitStart = await page.locator("#earth").evaluate(canvas => {
+      const rect = canvas.getBoundingClientRect();
+      for (const xFraction of [.55, .38, .7, .28])
+        for (const yFraction of [.55, .35, .7]) {
+          const x = rect.x + xFraction * rect.width, y = rect.y + yFraction * rect.height;
+          if (document.elementFromPoint(x, y) === canvas) return {x, y};
+        }
+      return null;
+    });
+    assert.ok(orbitStart, "Frei greifbare Modellfläche für die Kameradrehung");
+    await page.mouse.move(orbitStart.x, orbitStart.y);
     await page.mouse.down({button:"right"});
-    await page.mouse.move(box.x + 0.62*box.width, box.y + 0.60*box.height, {steps:6});
+    await page.mouse.move(orbitStart.x + 95, orbitStart.y + 42, {steps:6});
     await page.mouse.up({button:"right"});
     await page.waitForFunction(start => Math.abs(window.geoObservatory().bearing-start)>2, preOrbit.bearing);
     await page.tap("#slowProcess");

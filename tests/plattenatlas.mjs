@@ -49,6 +49,7 @@ for(const engine of [chromium,webkit]){
   await context.route(/^https?:/,r=>r.abort());
   const shot=async name=>{
     if(engine!==chromium)return;
+    await frame(p);
     const path=join(out,name+".jpg");await p.screenshot({path,quality:84,type:"jpeg"});
     run.images.push({name,sha256:await hash(path)});
   };
@@ -66,6 +67,11 @@ for(const engine of [chromium,webkit]){
     await p.click("#home");await rest(p);await shot("01-globus");
     await p.click("#nav-inside");await rest(p);assert.equal(await p.locator("#pins button").count(),0);
     await p.click("#labels");await shot("02-schalenschnitt");
+    assert.ok(await p.evaluate(()=>{
+      const title=document.querySelector(".panelHead h1").getBoundingClientRect();
+      const toggle=document.getElementById("labels").getBoundingClientRect();
+      return title.right<=toggle.left || title.bottom<=toggle.top;
+    }),"Schalentitel und Namensfreigabe müssen separat lesbar sein");
     for(let i=0;i<4;i++){
       const pin=p.locator('[data-object="shell-'+i+'"]');await pin.tap();
       assert.equal((await read(p)).shell.selected,i);

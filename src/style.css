@@ -66,6 +66,7 @@ nav button { background: transparent; border-color: transparent; }
 #sidebar { min-height: 0; overflow-y: auto; padding: clamp(10px,1.3vw,24px); background: var(--panel); border-right: 1px solid var(--line); }
 .panelHead, .layer, .shellActions, .options, .siteActions { display: grid; gap: 5px; }
 .panelHead { grid-template-columns: minmax(0,1fr) auto; align-items: center; margin-bottom: 14px; }
+#desk[data-mode="inside"] .panelHead { display: flex; flex-wrap: wrap; justify-content: space-between; }
 h1,h2,h3,p,figure { margin-top: 0; }
 h1 { margin-bottom: 0; letter-spacing: -.04em; font-size: 1.55em; }
 #labels { font-size: .9em; }
