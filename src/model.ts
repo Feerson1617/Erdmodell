@@ -7,6 +7,8 @@ export const styles = {
 export const layers = [
   {
     name: "Erdkruste",
+    material: "Die Erdkruste besteht aus festem Gestein. Unter Ozeanen ist es meist dichter als unter Kontinenten.",
+    origin: "Kruste entstand aus abgekühlter Gesteinsschmelze. Bis heute bildet sich neue Kruste, und ältere Kruste verändert sich.",
     outer: 6371,
     inner: 6336,
     color: 0x8c9f86,
@@ -14,6 +16,8 @@ export const layers = [
   },
   {
     name: "Erdmantel",
+    material: "Der Mantel besteht größtenteils aus heißem, festem Gestein. Über sehr lange Zeit kann es sich langsam verformen.",
+    origin: "In der jungen Erde trennten sich schweres Metall und Gestein. Das Metall sank zum Kern. Der größte Teil des Gesteins bildete den Mantel.",
     outer: 6336,
     inner: 3481,
     color: 0xbe7650,
@@ -21,6 +25,8 @@ export const layers = [
   },
   {
     name: "Äußerer Erdkern",
+    material: "Er besteht hauptsächlich aus flüssigem Eisen. Es enthält auch Nickel und leichtere Stoffe.",
+    origin: "Als die junge Erde sehr heiß war, sank schweres Metall nach innen. Der äußere Teil des Kerns ist bis heute flüssig.",
     outer: 3481,
     inner: 1221,
     color: 0xe9ae65,
@@ -28,6 +34,8 @@ export const layers = [
   },
   {
     name: "Innerer Erdkern",
+    material: "Er besteht hauptsächlich aus festem Eisen. Der hohe Druck hält es trotz der großen Hitze fest.",
+    origin: "Als die Erde langsam abkühlte, begann Metall in ihrem Zentrum zu erstarren. Daraus wuchs der innere Erdkern.",
     outer: 1221,
     inner: 0,
     color: 0xffdb97,

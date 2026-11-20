@@ -1,3 +1,4 @@
+import { localAsset } from "../assets";
 import * as T from "three";
 import { basis, clamp, position, RAD, smooth } from "../geo";
 import { nyosBlendGLSL } from "./blend";
@@ -27,11 +28,11 @@ export type NyosMeta = {
   vicinity?: ImageArea;
 };
 
-const folder = import.meta.env.BASE_URL + "data/nyos/";
+const asset = (name:string) => localAsset("data/nyos/" + name);
 const vector = () => new T.Vector3();
 
 async function readTexture(name: string) {
-  const tex = await new T.TextureLoader().loadAsync(folder + name);
+  const tex = await new T.TextureLoader().loadAsync(asset(name));
   tex.colorSpace = T.SRGBColorSpace;
   tex.anisotropy = 4;
   return tex;
@@ -95,7 +96,7 @@ export class NyosTerrain {
   private async loadData() {
     const created: T.Texture[] = [];
     try {
-      const response = await fetch(folder + "landscape.json");
+      const response = await fetch(asset("landscape.json"));
       if (!response.ok) throw Error("Gebietsbeschreibung");
       const meta: NyosMeta = await response.json();
       if (
@@ -109,7 +110,7 @@ export class NyosTerrain {
         )
       )
         throw Error("Gebietsgeometrie");
-      const height = fetch(folder + meta.heightFile).then(async (r) => {
+      const height = fetch(asset(meta.heightFile)).then(async (r) => {
         if (!r.ok) throw Error("Höhenraster");
         const data = new Int16Array(await r.arrayBuffer());
         if (data.length !== meta.width * meta.height)

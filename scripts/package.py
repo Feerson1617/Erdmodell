@@ -1,6 +1,6 @@
 """Build reproducible ZIPs from the production build and the current browser run."""
 
-import hashlib, json, zipfile, subprocess
+import hashlib, json, zipfile, subprocess, sys
 from statistics import median
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -21,7 +21,7 @@ def files(folder):
 
 
 def archive(folder, name, entries):
-    dest = folder / ("GeoRisiko-G4.2.2-" + name + ".zip")
+    dest = folder / ("GeoRisiko-G4.3-" + name + ".zip")
     with zipfile.ZipFile(dest, "w") as z:
         for key, value in sorted(entries.items()):
             entry = zipfile.ZipInfo(key, date_time=(2026, 1, 1, 0, 0, 0))
@@ -46,9 +46,10 @@ nyos_docs = (
     "nyos-abnahme.md",
 )
 web = files(dist)
-web["Pruefstand.txt"] = f"GeoRisiko 3D · G4.2.2 · Freitag, 20. November 2026\nGeprüfter Git-Commit: {commit}\n".encode()
+web["Pruefstand.txt"] = f"GeoRisiko 3D · G4.3 · Freitag, 20. November 2026\nGeprüfter Git-Commit: {commit}\n".encode()
 assert "index.html" in web
 source = (root / "docs/data-sources-and-licenses.md").read_bytes()
+web["Plattenatlas-G4.3.md"] = (root / "docs/plattenatlas-g4.3.md").read_bytes()
 web["Quellen.md"] = source
 web["g1.1-data.md"] = (root / "docs/g1.1-data.md").read_bytes()
 web["data-sources-and-licenses.md"] = source
@@ -77,7 +78,7 @@ def add(el, name, value=None, **attrs):
 
 xsi = "http://www.w3.org/2001/XMLSchema-instance"
 ET.register_namespace("xsi", xsi)
-m = ET.Element(tag("manifest"), identifier="GEORISIKO-G4-2-2", version="1.2")
+m = ET.Element(tag("manifest"), identifier="GEORISIKO-G4-3", version="1.2")
 m.set(
     "{" + xsi + "}schemaLocation",
     ns + " imscp_rootv1p1p2.xsd " + adl + " adlcp_rootv1p2.xsd",
@@ -88,8 +89,8 @@ add(meta, "schemaversion", "1.2")
 os = add(m, "organizations", default="ATLAS")
 org = add(os, "organization", identifier="ATLAS")
 add(org, "title", "GeoRisiko 3D · Erdaufbau und Plattentektonik")
-item = add(org, "item", identifier="OBSERVATORIUM", identifierref="SCO", parameters="?unterricht=schalenbau")
-add(item, "title", "Der Schalenbau der Erde")
+item = add(org, "item", identifier="OBSERVATORIUM", identifierref="SCO")
+add(item, "title", "Erdschalen und Plattenatlas")
 rs = add(m, "resources")
 r = add(rs, "resource", identifier="SCO", type="webcontent", href="index.html")
 r.set("{" + adl + "}scormtype", "sco")
@@ -102,6 +103,9 @@ assert all(
     for f in ET.fromstring(sco["imsmanifest.xml"]).iter(tag("file"))
 )
 sco.update(files(root / "scripts/scorm12"))
+if "--scorm" in sys.argv:
+    print(archive(out, "SCORM-1.2", sco))
+    raise SystemExit(0)
 results_dir = root / "test-results"
 checks = {name: (results_dir / name).read_bytes() for name in ("results.json", "architecture-gate.json")}
 # Keep each suite's media separate, including runs of the older model views.
@@ -143,7 +147,7 @@ baseline = "441f1480b6fc1d65faf5ef5b06882ccdc6775656"
 timings = json.loads(comparison["leistung.json"])
 assert timings["baseline"] == baseline and timings["candidate"] == commit
 assert {(r["engine"],r["version"]) for r in timings["runs"]} == {
-    (e,v) for e in ("chromium","webkit") for v in ("G4.2","G4.2.2")}
+    (e,v) for e in ("chromium","webkit") for v in ("G4.2","G4.3")}
 assert all(len(r["samples"]) == 7 and all(s["fps"] > 0 for s in r["samples"]) for r in timings["runs"])
 assert comparison["Leistungsvergleich.md"]
 before = json.loads(comparison["g4.2/pruefung.json"])
@@ -195,7 +199,7 @@ review["Pruefung/geraeteprobe.html"] = (root / "scripts/nyos-geraeteprobe.html")
 review.update({"Pruefung/" + name: content for name, content in checks.items()})
 for name in ("qualitaet-g4.2.1", "grundlagen-g4.2", "g2.1-bericht", "g2.1-daten", "g2.1-prozessmodelle", "unterricht-15-12", "geoscience-validation", "roadmap"):
     review["Pruefung/" + name + ".md"] = (root / f"docs/{name}.md").read_bytes()
-measured = ["# Messbericht zum Schalenmodell im G4.2.2-Build", "", f"Produktionsbuild `{commit}`", "",
+measured = ["# Messbericht zum Schalenmodell im G4.3-Build", "", f"Produktionsbuild `{commit}`", "",
             "14 Bedienfolgen pro Engine. Bildzeiten stammen aus einer separaten ruhenden Schalenansicht bei 1920 × 1080. Die Auflösung gilt für das Modell neben der Bedienleiste.", ""]
 for run in json.loads(checks["unterricht/pruefung.json"])["runs"]:
     cadence = run["cadence"]
@@ -213,7 +217,7 @@ for run in json.loads(checks["unterricht/pruefung.json"])["runs"]:
                  f"- JS-Heap in den warmen Zyklen: {min(heap)/1048576:.1f}–{max(heap)/1048576:.1f} MiB." if heap else "- JS-Heap vom Browser nicht ausgewiesen.", ""]
 review["Pruefung/Messbericht.md"] = "\n".join(measured).encode()
 with TemporaryDirectory(dir=out) as temporary:
-    packages = (("SCORM-1.2", sco), ("Freitag-Unterricht", lesson), ("Sichtpruefung", review))
+    packages = (("SCORM-1.2", sco), ("Freitag-Unterricht", lesson), ("Archiv-Sichtpruefung", review))
     verified = [archive(Path(temporary), name, entries) for name, entries in packages]
     for package in verified:
         destination = package.replace(out / package.name)

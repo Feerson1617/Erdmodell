@@ -70,3 +70,7 @@ Im erfolgreichen GitHub-Actions-Lauf stehen die drei G4.2.2-ZIPs einzeln unter *
 Der gesicherte Ausgangsstand G1.3.1 liegt bei `c806a1b`. Der Abschlussbericht ordnet Daten, Erklärmodelle und Messergebnisse ein. [Abnahmebericht G2.1](docs/g2.1-bericht.md) · [Originalpakete G1.3.1](https://github.com/Feerson1617/Erdmodell/tree/096e7fc278307d128cdc46fa934ba5d495c5cc05/sicherung) · [Roadmap](docs/roadmap.md)
 
 G4 basiert auf dem geprüften G2.1-Commit `3eb1487`. [Abnahme Nyos](docs/nyos-abnahme.md) · [Geodaten](docs/nyos-geodaten.md) · [Architektur](docs/nyos-technik.md) · [Gestaltung](docs/nyos-design.md)
+
+## G4.3 · Interaktiver Plattenatlas
+
+Die [Offline-Einzeldatei](ausgabe/GeoRisiko-Erdmodell-G4.3.html) startet nach dem Herunterladen per Doppelklick. Das [kleine Prüf-ZIP](ausgabe/GeoRisiko-G4.3-Sichtpruefung.zip) enthält sieben Browserbilder, den Bedienfilm und die Messprotokolle. Der Atlas zeigt die 52 PB2002-Platten, ihre relative Bewegung und drei regionale Prozesse. Freigegebene Erdschalen bieten kurze Antworten zu Material und Entstehung. Die Bedienung, Quellen und fachlichen Grenzen stehen im [Begleittext](docs/plattenatlas-g4.3.md). Die [hochgeladene Einzeldatei](sicherung/Erdmodell.html) ist als Rückfallversion gesichert.

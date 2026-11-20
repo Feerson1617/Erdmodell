@@ -199,7 +199,7 @@ async function film(browser, url) {
       "#revealOne",
       "#allNames",
       '[data-object="shell-1"]',
-      "#definition button",
+      "#definition > button",
       "#scale",
       "#scale",
       "#home",

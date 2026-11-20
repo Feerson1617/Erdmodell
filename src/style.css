@@ -238,3 +238,14 @@ figcaption { margin-top: 6px; font-size: .9em; color: var(--muted); }
 #shellOptions summary { display:flex; align-items:center; min-height:var(--hit); cursor:pointer; text-decoration:underline; text-underline-offset:3px; }
 #shellOptions summary::before { content:"▸"; margin-right:.5em; }
 #shellOptions[open] summary::before { content:"▾"; }
+.scienceCard { margin: 12px 0; padding: 0 0 0 12px; border-left: 3px solid #adca9a; }
+.scienceCard h2 { font-size: 1.12rem; margin:0; }
+.scienceCard dl { margin:8px 0; }
+.scienceCard dt { font-weight:700; margin-top:.45em; }
+.scienceCard dd { margin:2px 0; line-height:1.4; }
+.scienceCard button, .shellQuestions button { min-height:40px; margin:3px 4px 3px 0; }
+.shellQuestions button[aria-expanded=true] { border-color:#a4c59d; }
+
+.plateCardHead { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.plateCardHead h2 { overflow-wrap:anywhere; }
+.plateCardHead #atlasAll { flex:none; min-width:42px; min-height:42px; font-size:1.5rem; line-height:1; }

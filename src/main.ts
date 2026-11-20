@@ -1,3 +1,4 @@
+import {localAsset} from "./assets";
 import { AnnotationLayer, type Annotation } from "./annotations";
 import { siteCatalog, firstRegion } from "./regions";
 import "@fontsource-variable/dm-sans/wght.css";
@@ -49,9 +50,12 @@ const released = new Set<number>();
 let annotationKey = "";
 let layoutRevision = 0;
 function showDefinition(item: Pick<Annotation,"name"|"text">) {
+  const shellIndex = world.mode === "inside" ? layers.findIndex(l => l.name === item.name) : -1;
+  if (shellIndex >= 0 && !(labels || released.has(shellIndex))) return;
+  const opener = document.activeElement;
+  if (shellIndex >= 0 && world.shell.selected !== shellIndex) select(shellIndex);
   const area = $("definition");
   if (!area) return;
-  const opener = document.activeElement;
   const title = document.createElement("strong"), text = document.createElement("p"), close = document.createElement("button");
   title.textContent = item.name;
   text.id = "layerText";
@@ -59,13 +63,39 @@ function showDefinition(item: Pick<Annotation,"name"|"text">) {
   close.textContent = "Schließen";
   close.onclick = () => { area.replaceChildren(); area.hidden = true; annotationKey = ""; if (opener instanceof HTMLElement && opener.isConnected) opener.focus({preventScroll:true}); };
   area.replaceChildren(title,text,close);
+  if (shellIndex >= 0) {
+    const layer = layers[shellIndex], pronoun = shellIndex === 0 ? "sie" : "er";
+    const questions = document.createElement("div"), answer = document.createElement("p");
+    questions.className = "shellQuestions";
+    answer.hidden = true;
+    answer.id = "shellAnswer";
+    for (const [label, detail] of [[`Woraus besteht ${pronoun}?`,layer.material],[`Wie ist ${pronoun} entstanden?`,layer.origin]]) {
+      const question = document.createElement("button");
+      question.textContent = label;
+      question.setAttribute("aria-expanded","false");
+      question.setAttribute("aria-controls",answer.id);
+      question.onclick = () => {
+        const open = question.getAttribute("aria-expanded") === "false";
+        for (const b of questions.querySelectorAll("button")) b.setAttribute("aria-expanded","false");
+        question.setAttribute("aria-expanded",String(open));
+        answer.textContent = open ? detail : "";
+        answer.hidden = !open;
+      };
+      questions.append(question);
+    }
+    area.insertBefore(questions,close);
+    area.insertBefore(answer,close);
+  }
   area.hidden = false;
   side.scrollTop = 0;
   close.focus({preventScroll:true});
   annotationKey = "";
 }
 const shellPins = new AnnotationLayer($("pins"),showDefinition);
-const tectonicPins = new AnnotationLayer($("platePins"),showDefinition);
+const tectonicPins = new AnnotationLayer($("platePins"), item => {
+  if (world.processSite) showDefinition(item);
+  else { world.inspectPlate(item.id); renderSide(); }
+});
 function warn(s: string) {
   alertText = s;
   status.textContent = s;
@@ -77,11 +107,11 @@ function infoPage() {
     return;
   }
   if (world?.mode === "plates") {
-    content.innerHTML = `<h2 id="dialogTitle">Über die Plattenmodelle</h2><p>Die Linien folgen dem globalen Plattenmodell PB2002. In der Natur kann sich die Verformung über eine breite Zone verteilen. ${world.plateOptions.names ? "Eine Platte umfasst die Kruste und den starren obersten Teil des Mantels." : ""}</p><p>Das regionale Satellitenbild zeigt die Landschaft. Der vergrößerte Schnitt darüber erklärt den Prozess schematisch. Pfeillängen, Schichtdicken und Spielzeit haben keinen gemeinsamen Maßstab.</p><p><a href="${import.meta.env.BASE_URL}licenses/Geodaten.txt" target="_blank" rel="noopener">Quellen und Nutzungsrechte</a></p>`;
+    content.innerHTML = `<h2 id="dialogTitle">Über die Plattenmodelle</h2><p>Nur das Kartenbild öffnet sich. Jede Platte umfasst die Kruste und den starren obersten Mantel. Darunter liegt überwiegend festes, langsam verformbares Gestein. Die Farben und die überhöhte Plattendicke helfen bei der Unterscheidung.</p><p>Die Bewegung folgt den Rotationspolen des Modells PB2002. Als Bezug dient die Pazifische Platte. Das Modell beschleunigt die Zeit stark. Am heutigen Rand klingt die Bewegung aus, damit die Erdkugel geschlossen bleibt. Die Linien folgen dem globalen Plattenmodell PB2002. In der Natur kann sich die Verformung über eine breite Zone verteilen.</p><p>Das regionale Satellitenbild zeigt die Landschaft. Der vergrößerte Schnitt darüber erklärt den Prozess schematisch. Pfeillängen, Schichtdicken und Spielzeit haben keinen gemeinsamen Maßstab.</p><p><a href="${localAsset("licenses/Geodaten.txt")}" target="_blank" rel="noopener">Quellen und Nutzungsrechte</a></p>`;
     openDialog();
     return;
   }
-  content.innerHTML = `<h2 id="dialogTitle">Über das Modell</h2><p>Die Farben sind Modellfarben. Der Keil macht die Schalen im Inneren sichtbar.</p><p>${labels ? "Die Kruste ist im Referenzmodell überall 35 km dick. In der Natur variiert ihre Dicke." : "Die äußerste Schale hat im Referenzmodell überall dieselbe Dicke. In der Natur ist sie unterschiedlich dick."} Beim Verbreitern der Außenschale bleiben der Erdradius und die tieferen Grenzen gleich.</p><p><a href="${import.meta.env.BASE_URL}licenses/Geodaten.txt" target="_blank" rel="noopener">Geodaten und Bildquellen</a></p>${friday ? '<p><a href="./index.html">Gesamtanwendung öffnen</a></p>' : ""}`;
+  content.innerHTML = `<h2 id="dialogTitle">Über das Modell</h2><p>Die Farben sind Modellfarben. Der Keil macht die Schalen im Inneren sichtbar.</p><p>${labels ? "Die Kruste ist im Referenzmodell überall 35 km dick. In der Natur variiert ihre Dicke." : "Die äußerste Schale hat im Referenzmodell überall dieselbe Dicke. In der Natur ist sie unterschiedlich dick."} Beim Verbreitern der Außenschale bleiben der Erdradius und die tieferen Grenzen gleich.</p><p><a href="${localAsset("licenses/Geodaten.txt")}" target="_blank" rel="noopener">Geodaten und Bildquellen</a></p>${friday ? '<p><a href="?">Gesamtanwendung öffnen</a></p>' : ""}`;
   openDialog();
 }
 function openDialog() {
@@ -110,7 +140,7 @@ function renderShellControls() {
 }
 function siteInfo() {
   const r = world.region;
-  content.innerHTML = `<h2 id="dialogTitle">${r.name}</h2><div class="siteCard"><img src="${import.meta.env.BASE_URL}data/locator.webp" alt="Weltkarte mit markiertem Untersuchungsort"><i style="left:${(r.target.lon + 180) / 3.6}%;top:${(90 - r.target.lat) / 1.8}%"></i><span>${Math.abs(r.target.lat).toFixed(2)}° ${r.target.lat >= 0 ? "N" : "S"} · ${Math.abs(r.target.lon).toFixed(2)}° ${r.target.lon >= 0 ? "O" : "W"}</span></div><p>${r.limits}</p><h3>Detailstufen</h3><p>Globale Höhen liegen auf einem 0,5°-Raster. In der Deutschen Bucht zeigt die regionale Karte Landbedeckung in etwa 75-m-Feldern. Das regionale Wattenmeer-Luftbild zeigt rund 20 m pro Bildpunkt. Erst im Untersuchungsgebiet werden lokale Luftbilder und Gelände sichtbar.</p><p>${r.sources.join("<br>")}</p><p><a href="${import.meta.env.BASE_URL}licenses/Geodaten.txt" target="_blank" rel="noopener">Quellen und Nutzungsrechte</a></p>`;
+  content.innerHTML = `<h2 id="dialogTitle">${r.name}</h2><div class="siteCard"><img src="${localAsset("data/locator.webp")}" alt="Weltkarte mit markiertem Untersuchungsort"><i style="left:${(r.target.lon + 180) / 3.6}%;top:${(90 - r.target.lat) / 1.8}%"></i><span>${Math.abs(r.target.lat).toFixed(2)}° ${r.target.lat >= 0 ? "N" : "S"} · ${Math.abs(r.target.lon).toFixed(2)}° ${r.target.lon >= 0 ? "O" : "W"}</span></div><p>${r.limits}</p><h3>Detailstufen</h3><p>Globale Höhen liegen auf einem 0,5°-Raster. In der Deutschen Bucht zeigt die regionale Karte Landbedeckung in etwa 75-m-Feldern. Das regionale Wattenmeer-Luftbild zeigt rund 20 m pro Bildpunkt. Erst im Untersuchungsgebiet werden lokale Luftbilder und Gelände sichtbar.</p><p>${r.sources.join("<br>")}</p><p><a href="${localAsset("licenses/Geodaten.txt")}" target="_blank" rel="noopener">Quellen und Nutzungsrechte</a></p>`;
   openDialog();
 }
 
@@ -253,7 +283,7 @@ function select(i: number) {
 function updateNote() {
   if (world.mode === "nyos") { syncNyos(world); return; }
   const note = $("modelnote");
-  note.hidden = world.mode === "globe" || (world.mode === "plates" && !world.processSite);
+  note.hidden = world.mode === "globe";
   note.classList.toggle(
     "exaggerated",
     world.mode === "inside" && world.shell.expanded,
@@ -268,7 +298,7 @@ function updateNote() {
       : world.mode === "plates"
         ? world.processDetail
           ? "Schematischer Schnitt · Zeit stark überhöht"
-          : "Regionale Ansicht"
+          : world.processSite ? "Regionale Ansicht" : "Grafische Abdeckung · Plattendicke überhöht · Zeit stark beschleunigt"
         : world.region.label;
   if (world.mode === "inside" && world.shell.cut && world.shell.lithosphere && world.shell.visible[0] && world.shell.visible[1]) {
     note.textContent = labels ? "Lithosphäre: Erdkruste und starrer oberster Mantel. Untergrenze schematisch." : "Referenzmaßstab · Schraffur für den starren Außenbereich. Untergrenze schematisch.";
@@ -364,7 +394,10 @@ async function boot() {
     return;
   }
   renderSide();
-  world.onLayer = select;
+  world.onLayer = i => {
+    if (labels || released.has(i)) showDefinition(layers[i]);
+    else select(i);
+  };
   world.onBoundary = () => { if (world.mode === "plates") renderSide(); };
   for (const m of ["globe", "inside", "plates", "nyos", "place"] as const)
     $("nav-" + m).onclick = () => navigate(m);
@@ -382,7 +415,7 @@ async function boot() {
   };
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && !dialog.open && $("definition") && !$("definition").hidden) {
-      $("definition").querySelector("button")?.click();
+      $("definition").querySelector<HTMLButtonElement>(":scope > button")?.click();
       return;
     }
     if (

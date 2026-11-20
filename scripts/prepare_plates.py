@@ -36,7 +36,7 @@ for f in features:
 # Preserve polygon IDs as exact pixel values. Repeated display colours cannot identify one plate.
 Image.frombytes("L", canvas.size, canvas.tobytes()).save(OUT / "plates.png", optimize=True)
 # Label sites are points inside their source polygons. A horizontal interior chord supplies small-plate sites.
-sites = {"AF": (16, 12), "NA": (-98, 47), "SA": (-57, -16), "EU": (66, 49), "PA": (-153, -5),
+sites = {"FT": (-178.472, -14.806), "AF": (16, 12), "NA": (-98, 47), "SA": (-57, -16), "EU": (66, 49), "PA": (-153, -5),
          "AU": (133, -24), "AN": (10, -77), "IN": (76, 16), "NZ": (-99, -22), "OK": (147, 52),
          "AR": (45, 24), "CA": (-74, 15), "PS": (136, 20), "SO": (51, -15), "CO": (-93, 7)}
 labels = {}

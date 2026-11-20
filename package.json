@@ -17,7 +17,9 @@
     "audit": "node tests/flight-audit.mjs && python3 scripts/analyse_flight.py test-results/audit",
     "test:grundlagen": "node tests/grundlagen.mjs",
     "test:freitag": "node tests/freitag.mjs && node tests/schalen-bildvergleich.mjs",
-    "test:vergleich": "node tests/vergleich.mjs"
+    "test:vergleich": "node tests/vergleich.mjs",
+    "standalone": "python3 scripts/standalone.py",
+    "test:plattenatlas": "npm run standalone && node tests/plattengeometrie.mjs && node tests/plattenatlas.mjs && python3 scripts/atlas_film.py"
   },
   "dependencies": {
     "three": "0.180.0",
