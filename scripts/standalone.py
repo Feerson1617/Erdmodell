@@ -8,7 +8,7 @@ from pathlib import Path
 
 root = Path(__file__).resolve().parents[1]
 dist = root / "dist"
-output = root / "artifacts/GeoRisiko-Erdmodell-G4.3.html"
+output = root / "artifacts/GeoRisiko-Erdmodell-G4.3.1.html"
 (js_file,) = (dist / "assets").glob("*.js")
 (css_file,) = (dist / "assets").glob("*.css")
 assets = {}
@@ -49,7 +49,7 @@ loader = """window.__geoAsset = path => {
 js = re.sub(r'</script', lambda _: r'<\/script', js, flags=re.I)
 html = f"""<!doctype html>
 <html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>GeoRisiko 3D · Erdmodell G4.3</title><link rel="icon" href="data:,"><style>{css}</style></head>
+<title>GeoRisiko 3D · Erdmodell G4.3.1</title><link rel="icon" href="data:,"><style>{css}</style></head>
 <body><div id="app"></div><noscript>Zum Drehen des Erdmodells bitte JavaScript einschalten.</noscript>
 <script>const embedded={json.dumps(assets,separators=(',',':'))}, urls=new Map();{loader}</script>
 <script type="module">{js}</script></body></html>

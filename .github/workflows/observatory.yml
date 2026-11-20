@@ -1,4 +1,4 @@
-name: GeoRisiko G4.3 Plattenatlas
+name: GeoRisiko G4.3.1 Plattenatlas
 on:
   pull_request:
   workflow_dispatch:
@@ -125,7 +125,7 @@ jobs:
       - name: Einzeldatei direkt bereitstellen
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
-          path: artifacts/GeoRisiko-Erdmodell-G4.3.html
+          path: artifacts/GeoRisiko-Erdmodell-G4.3.1.html
           archive: false
           overwrite: true
           if-no-files-found: error
@@ -136,24 +136,25 @@ jobs:
           fi
           python3 -c 'import lxml.etree'
       - run: node tests/packages.mjs
+      - run: node tests/atlas-auslieferung.mjs
       - name: Unterricht-ZIP zum direkten Download bereitstellen
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
-          path: artifacts/GeoRisiko-G4.3-Freitag-Unterricht.zip
+          path: artifacts/GeoRisiko-G4.3.1-Freitag-Unterricht.zip
           archive: false
           overwrite: true
           if-no-files-found: error
       - name: SCORM-1.2-ZIP zum direkten Download bereitstellen
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
-          path: artifacts/GeoRisiko-G4.3-SCORM-1.2.zip
+          path: artifacts/GeoRisiko-G4.3.1-SCORM-1.2.zip
           archive: false
           overwrite: true
           if-no-files-found: error
       - name: Sichtpruefung-ZIP zum direkten Download bereitstellen
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
-          path: artifacts/GeoRisiko-G4.3-Sichtpruefung.zip
+          path: artifacts/GeoRisiko-G4.3.1-Sichtpruefung.zip
           archive: false
           overwrite: true
           if-no-files-found: error

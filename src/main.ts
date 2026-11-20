@@ -94,7 +94,7 @@ function showDefinition(item: Pick<Annotation,"name"|"text">) {
 const shellPins = new AnnotationLayer($("pins"),showDefinition);
 const tectonicPins = new AnnotationLayer($("platePins"), item => {
   if (world.processSite) showDefinition(item);
-  else { world.inspectPlate(item.id); renderSide(); }
+  else { const comparing=!!world.mosaic?.pair; world.inspectPlate(item.id); if(comparing)world.locatePlate(); renderSide(); }
 });
 function warn(s: string) {
   alertText = s;
@@ -107,7 +107,7 @@ function infoPage() {
     return;
   }
   if (world?.mode === "plates") {
-    content.innerHTML = `<h2 id="dialogTitle">Über die Plattenmodelle</h2><p>Nur das Kartenbild öffnet sich. Jede Platte umfasst die Kruste und den starren obersten Mantel. Darunter liegt überwiegend festes, langsam verformbares Gestein. Die Farben und die überhöhte Plattendicke helfen bei der Unterscheidung.</p><p>Die Bewegung folgt den Rotationspolen des Modells PB2002. Als Bezug dient die Pazifische Platte. Das Modell beschleunigt die Zeit stark. Am heutigen Rand klingt die Bewegung aus, damit die Erdkugel geschlossen bleibt. Die Linien folgen dem globalen Plattenmodell PB2002. In der Natur kann sich die Verformung über eine breite Zone verteilen.</p><p>Das regionale Satellitenbild zeigt die Landschaft. Der vergrößerte Schnitt darüber erklärt den Prozess schematisch. Pfeillängen, Schichtdicken und Spielzeit haben keinen gemeinsamen Maßstab.</p><p><a href="${localAsset("licenses/Geodaten.txt")}" target="_blank" rel="noopener">Quellen und Nutzungsrechte</a></p>`;
+    content.innerHTML = `<h2 id="dialogTitle">Über die Plattenmodelle</h2><p>Nur das Kartenbild öffnet sich. Jede Platte umfasst die Kruste und den starren obersten Mantel. Darunter liegt überwiegend festes, langsam verformbares Gestein. Die Farben und die überhöhte Plattendicke helfen bei der Unterscheidung.</p><p>Der Atlas zeigt die heutigen Plattengrenzen. Im Grenzvergleich bewegen sich zwei starre Gesteinsausschnitte relativ zueinander. Ihre Richtung folgt den Rotationspolen von PB2002. Deren Ausgangsdaten beziehen sich auf die Pazifische Platte. Im Vergleich ist die Bewegung auf beide Seiten verteilt. Zeit, Abstand und Dicke sind schematisch. Der neutrale Untergrund dient als Zeichenfläche. Die Linien folgen dem globalen Plattenmodell PB2002. In der Natur kann sich die Verformung über eine breite Zone verteilen.</p><p>Das regionale Satellitenbild zeigt die Landschaft. Der vergrößerte Schnitt darüber erklärt den Prozess schematisch. Pfeillängen, Schichtdicken und Spielzeit haben keinen gemeinsamen Maßstab.</p><p><a href="${localAsset("licenses/Geodaten.txt")}" target="_blank" rel="noopener">Quellen und Nutzungsrechte</a></p>`;
     openDialog();
     return;
   }
@@ -157,7 +157,10 @@ function renderSide() {
   $("orbitProcess").hidden = !(mode === "plates" && world.processDetail);
   if (mode === "plates") {
     const advancedOpen = !!side.querySelector<HTMLDetailsElement>("#plateSettings[open]");
+    const oldCode=side.dataset.profile;
     side.innerHTML = plateControls(world);
+    side.dataset.profile=world.profileCode+(world.mosaic?.pair ? "-pair":"");
+    if(oldCode!==side.dataset.profile)side.scrollTop=0;
     if (advancedOpen && $("plateSettings")) $<HTMLDetailsElement>("plateSettings").open = true;
     bindPlateControls(side, world, renderSide);
   }
@@ -298,7 +301,7 @@ function updateNote() {
       : world.mode === "plates"
         ? world.processDetail
           ? "Schematischer Schnitt · Zeit stark überhöht"
-          : world.processSite ? "Regionale Ansicht" : "Grafische Abdeckung · Plattendicke überhöht · Zeit stark beschleunigt"
+          : world.processSite ? "Regionale Ansicht" : world.mosaic?.pair ? "Zwei starre Ausschnitte · Abstand und Zeit schematisch" : "Heutige Platten · grafische Abdeckung · Dicke überhöht"
         : world.region.label;
   if (world.mode === "inside" && world.shell.cut && world.shell.lithosphere && world.shell.visible[0] && world.shell.visible[1]) {
     note.textContent = labels ? "Lithosphäre: Erdkruste und starrer oberster Mantel. Untergrenze schematisch." : "Referenzmaßstab · Schraffur für den starren Außenbereich. Untergrenze schematisch.";
@@ -464,6 +467,7 @@ async function boot() {
     if (status.textContent !== message) status.textContent = message;
   };
   await world.init();
+  Object.defineProperty(window,"geoAtlasCoverage",{value:()=>world.atlasCoverage()});
   Object.defineProperty(window, "geoObservatory", {
     value: () => ({...world.diagnostics(), annotationDom:{...tectonicPins.work}, shellAnnotationDom:{...shellPins.work}}),
   });

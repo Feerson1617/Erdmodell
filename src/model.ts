@@ -8,7 +8,7 @@ export const layers = [
   {
     name: "Erdkruste",
     material: "Die Erdkruste besteht aus festem Gestein. Unter Ozeanen ist es meist dichter als unter Kontinenten.",
-    origin: "Kruste entstand aus abgekühlter Gesteinsschmelze. Bis heute bildet sich neue Kruste, und ältere Kruste verändert sich.",
+    origin: "Neue Kruste bildet sich, wenn Gesteinsschmelze abkühlt. Ältere Kruste verändert sich, etwa wenn Platten zusammenstoßen.",
     outer: 6371,
     inner: 6336,
     color: 0x8c9f86,

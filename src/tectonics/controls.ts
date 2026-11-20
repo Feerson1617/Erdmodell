@@ -86,15 +86,23 @@ export function plateControls(world: World) {
     ${(["all", "divergent", "convergent", "transform"] as const).map((id) => `<label><input type="radio" name="kindFilter" value="${id}" ${options.category === id ? "checked" : ""}><span>${id === "all" ? "" : `<i class="swatchDot ${id}"></i>`}${id === "all" ? "Alle" : swatches[id]}</span></label>`).join("")}</fieldset>`;
   const boundary = world.selectedBoundary;
   const profile = world.profiles[world.profileCode];
-  const card = profile ? `<section class="scienceCard" id="plateProfile" aria-live="polite">
-    <div class="plateCardHead"><h2>${names[world.profileCode]}</h2><button id="atlasAll" title="Schließen" aria-label="Schließen">×</button></div><dl><dt>Lage</dt><dd>${profile.place}</dd>
-    <dt>Bewegung</dt><dd>${profile.motion}</dd><dt>An der Grenze</dt><dd>${profile.boundary}</dd></dl>
-    <button id="atlasLocate">Zentrieren</button><button id="atlasWorld">Weltansicht</button></section>` : "";
-  return `<h1>Plattentektonik</h1>
-    <div class="playback"><button id="atlasPlay" class="playButton" ${world.mosaic?"":"disabled"}>Platten bewegen</button>
+  const playback=`<div class="playback"><button id="atlasPlay" class="playButton" ${world.mosaic?"":"disabled"}>Platten bewegen</button>
     <button id="atlasReset" aria-label="Bewegung zurücksetzen" title="Bewegung zurücksetzen"><i data-lucide="rotate-ccw" aria-hidden="true"></i></button></div>
-    ${check("atlasSlow", "Langsamer", world.mosaic?.slow ?? false)}
-    ${card}
+    ${check("atlasSlow","Langsamer",world.mosaic?.slow ?? false)}`;
+  const pair=world.mosaic?.pair;
+  if (pair && profile) {
+    return `<h1>Grenzvergleich</h1><section class="scienceCard"><h2>${profile.where}</h2>
+      <p>${names[pair.bodies[0].name]} und ${names[pair.bodies[1].name]}</p>
+      <strong>${swatches[world.pairKind!]}</strong><p>Beobachte den hellen Streifen im Gestein.</p></section>
+      ${playback}<button id="atlasWorld" class="atlasReturn">Zur Weltansicht</button>${picker}`;
+  }
+  const title=profile ? `<div class="panelHead"><h1>Plattentektonik</h1><button id="atlasAll" aria-label="Steckbrief schließen" title="Schließen">×</button></div>` : "<h1>Plattentektonik</h1>";
+  const card = profile ? `<section class="scienceCard" id="plateProfile" aria-live="polite">
+    <h2>${names[world.profileCode]}</h2><dl><dt>Lage</dt><dd>${profile.place}</dd>
+    <dt>Bewegung</dt><dd>${profile.motion}</dd><dt>Beispiel an einer Plattengrenze</dt><dd>${profile.boundary}</dd></dl>
+    <div class="profileActions"><button id="atlasLocate">Zentrieren</button><button id="atlasCompare">Grenze ansehen</button><button id="atlasWorld">Weltansicht</button></div></section>` : "";
+  const start=`<div class="playback"><button id="atlasPlay" class="playButton" ${world.mosaic?"":"disabled"}>Platten bewegen</button></div>`;
+  return `${title}${start}${card}
     <div class="plateChecks">${check("boundaries", "Plattengrenzen zeigen", options.boundaries)}
     ${check("plateNames", "Namen zeigen", options.names || world.singlePlateName)}</div>
     ${picker}
@@ -189,7 +197,13 @@ export function bindPlateControls(
   };
   const click = (id: string, fn: () => void) =>
     side.querySelector("#" + id)?.addEventListener("click", fn);
-  click("atlasPlay", () => { world.mosaic?.play(); syncPlayback(world); });
+  click("atlasPlay", () => {
+    const wasOpen=!!world.mosaic?.pair;
+    world.comparePlates(true);
+    if (!wasOpen) refresh("atlasPlay");
+    syncPlayback(world);
+  });
+  click("atlasCompare", () => { world.comparePlates(false); refresh("atlasPlay"); });
   click("atlasReset", () => { world.mosaic?.reset(); syncPlayback(world); });
   click("atlasAll", () => { world.inspectPlate(""); refresh("atlasPlay"); });
   click("atlasWorld", () => { world.atlasWorld(); refresh("atlasPlay"); });

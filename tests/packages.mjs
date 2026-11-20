@@ -131,7 +131,7 @@ with zipfile.ZipFile(sys.argv[1]) as archive:
         mode = archive.getinfo("START.command").external_attr >> 16
         assert mode & 0o111
         (Path(sys.argv[2]) / "START.command").chmod(mode & 0o777)
-`, "artifacts/GeoRisiko-G4.3-" + name + ".zip", path], { stdio: "inherit" });
+`, "artifacts/GeoRisiko-G4.3.1-" + name + ".zip", path], { stdio: "inherit" });
     if (name === "Freitag-Unterricht") {
       const noPython=await mkdtemp(join(tmp,"Ohne Python "));
       await symlink("/usr/bin/dirname",join(noPython,"dirname"));

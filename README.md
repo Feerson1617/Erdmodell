@@ -1,5 +1,7 @@
 # GeoRisiko 3D · Unterricht am 20. November 2026
 
+**G4.3.1 per Doppelklick starten.** Die HTML-Datei herunterladen, im Finder öffnen und „Plattentektonik“ wählen. Alle Daten sind eingebettet. Die 3D-Darstellung benötigt WebGL 2. [Einzeldatei herunterladen](https://github.com/Feerson1617/Erdmodell/raw/refs/heads/feature/georisiko-g4-3-1-plattenkorrektur/ausgabe/GeoRisiko-Erdmodell-G4.3.1.html) · [Fachanhang](docs/plattenatlas-g4.3.1.md) · [Prüfbericht](docs/abnahme-g4.3.1.md)
+
 Das Freitags-Paket startet am geschlossenen Globus. „Schalenschnitt“ öffnet die vier anonymen Schalen. [Unterrichtseinstieg, Geräteprobe und Rückfall](docs/freitag-20-11-2026.md)
 
 
@@ -74,3 +76,7 @@ G4 basiert auf dem geprüften G2.1-Commit `3eb1487`. [Abnahme Nyos](docs/nyos-ab
 ## G4.3 · Interaktiver Plattenatlas
 
 Die [Offline-Einzeldatei](ausgabe/GeoRisiko-Erdmodell-G4.3.html) startet nach dem Herunterladen per Doppelklick. Das [kleine Prüf-ZIP](ausgabe/GeoRisiko-G4.3-Sichtpruefung.zip) enthält sieben Browserbilder, den Bedienfilm und die Messprotokolle. Der Atlas zeigt die 52 PB2002-Platten, ihre relative Bewegung und drei regionale Prozesse. Freigegebene Erdschalen bieten kurze Antworten zu Material und Entstehung. Die Bedienung, Quellen und fachlichen Grenzen stehen im [Begleittext](docs/plattenatlas-g4.3.md). Die [hochgeladene Einzeldatei](sicherung/Erdmodell.html) ist als Rückfallversion gesichert.
+
+## G4.3.1 · Heutige Platten und starre Grenzvergleiche
+
+„Zentrieren“ zeigt die gewählte Platte mit ihrer Umgebung. „Grenze ansehen“ öffnet den zugehörigen Vergleich. Zwei starre Gesteinsausschnitte verdeutlichen die Relativbewegung. Der Fachanhang erklärt die Daten und den symmetrischen Bezugsrahmen. Das Sichtprüfungs-ZIP enthält 18 Bildschirmaufnahmen, einen Bedienfilm und die Messprotokolle. [Sichtprüfung](ausgabe/GeoRisiko-G4.3.1-Sichtpruefung.zip) · [SCORM 1.2](ausgabe/GeoRisiko-G4.3.1-SCORM-1.2.zip)
