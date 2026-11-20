@@ -1,39 +1,83 @@
-"""Validate evidence against the portable HTML and assemble the small review ZIP."""
+"""Package content-addressed browser evidence, camera checks and the measured comparison."""
+import hashlib
+import json
+import zipfile
 from pathlib import Path
-import hashlib, json, zipfile
+
 root = Path(__file__).resolve().parents[1]
 out = root / "artifacts"
 evidence = root / "test-results/plattenatlas"
-report = json.loads((evidence/"pruefung.json").read_text())
+html = "GeoRisiko-Erdmodell-G4.3.1.html"
+archive_name = "GeoRisiko-G4.3.1-Sichtpruefung.zip"
 def digest(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
-assert report["htmlSHA256"] == digest(out/"GeoRisiko-Erdmodell-G4.3.html")
-assert report["fallbackSHA256"] == digest(root/"sicherung/Erdmodell.html")
-assert {r["engine"] for r in report["runs"]} == {"chromium","webkit"}
-entries = {"pruefung.json": (evidence/"pruefung.json").read_bytes(), "Modellgrenzen.md":(root/"docs/plattenatlas-g4.3.md").read_bytes()}
-summary = ["# Browserprüfung G4.3", "", "Geprüfte Einzeldatei (SHA-256) `"+report["htmlSHA256"]+"`.", ""]
-for run in report["runs"]:
-    assert not run["requests"] and not run["errors"]
-    assert len(run["plates"]) == 52 and len(run["shells"]) == 4 and len(run["sites"]) == 3
-    summary += [f"## {run['engine']} {run['version']}", "",
-        f"52 von 52 Flächen per Zeigertreffer identifiziert. Acht Antworten über die Schalenbeschriftungen geöffnet. Island, Japan und Kalifornien gestartet. Die Einzeldatei arbeitete bei gesperrtem HTTP(S)-Zugriff. Auch die Originaldatei wurde über file:// geöffnet.",
-        "", f"Nach Bewegung und Rücksetzung unterschieden sich {run['changedPixels']} Bildpunkte des geprüften Ausschnitts. Die Drehung wurde über die Oberflächenkoordinaten aller Platten geprüft. Der pazifikfeste Bezugspunkt blieb in Ruhe. Die Rücksetzung brachte alle Messpunkte exakt an die Ausgangsposition.",
-        "", "Geprüfte Bildschirmgrößen: "+", ".join(str(v["width"])+" × "+str(v["height"]) for v in run["viewports"])+".",
-        "", "Warme Ansichtswechsel (Geometrien / Texturen / Programme): "+", ".join(f"{v['geometries']} / {v['textures']} / {v['programs']}" for v in run["resources"])+".", ""]
+
+entries = {}
+def data(name):
+    entries[name] = (evidence/name).read_bytes()
+    return json.loads(entries[name])
+
+report = data("pruefung.json")
+geometry = data("geometrie.json")
+performance = data("leistungsvergleich.json")
+assert report["htmlSHA256"] == digest(out/html)
+assert report["fallbackSHA256"] == digest(root/"ausgabe/GeoRisiko-Erdmodell-G4.3.html")
+runs = report["runs"]
+assert {r["engine"] for r in runs} == {"chromium","webkit"}
+assert len(geometry["plates"])==52 and geometry["phases"]==32
+assert len(performance)==4 and all(len(r["stages"])==4 for r in performance)
+camera = {}
+for run in runs:
+    assert len(run["plates"])==52 and len(run["shells"])==4 and set(run["sites"])=={"island","japan","san"}
+    assert not run["requests"] and not run["errors"] and run["files"]==[html]
+    assert len(run["viewports"])==4 and run["relativePixels"]>32
+    camera[run["engine"]]={"platten":run["plates"],"bildschirme":run["viewports"]}
     for image in run["images"]:
         name=image["name"]+".jpg"
-        assert digest(evidence/name)==image["sha256"]
+        assert image["sha256"]==digest(evidence/name)
         entries[name]=(evidence/name).read_bytes()
-    if run.get("videoSHA256"):
-        assert digest(evidence/"bedienung.webm")==run["videoSHA256"]
+    if "videoSHA256" in run:
+        assert run["videoSHA256"]==digest(evidence/"bedienung.webm")
         entries["bedienung.webm"]=(evidence/"bedienung.webm").read_bytes()
-geometry=json.loads((evidence/"geometrie.json").read_text())
-assert len(geometry["plates"])==52 and geometry["phases"]==32 and len(geometry["boundaries"])==4
-entries["geometrie.json"]=(evidence/"geometrie.json").read_bytes()
-summary += ["## Geometrie und Richtung", "", f"{geometry['triangles']} gekrümmte Oberflächendreiecke in jeweils 32 Zeitständen auf Umklappen geprüft. Die gemeinsamen Randpunkte bleiben geschlossen. Für Island, Japan, Kalifornien und den Ostafrikanischen Graben wurden relative Richtung und Geschwindigkeit aus den Eulerpolen unabhängig mit den veröffentlichten Grenzdaten verglichen.", ""]
-assert "bedienung.webm" in entries and len([s for s in entries if s.endswith(".jpg")])>=7
-summary += ["## Reichweite", "", "Die bytegleiche Rückfallversion öffnet das Modell, sucht aber die dekorative Himmelsgrafik sky.png neben der Datei. G4.3 bettet dieses Bild ein. Die Messungen stammen aus echten Cloud-Browsern mit simulierter Maus- und Touchbedienung. Displayhelligkeit, Stifteingabe an einer physischen Tafel, Safari auf dem konkreten Schul-Mac und ein Import ins produktive Schul-LMS sind gesonderte Geräteprüfungen."]
-entries["Pruefbericht.md"]=("\n".join(summary)+"\n").encode()
+
+entries["kamerapruefung.json"]=json.dumps(camera,indent=2,ensure_ascii=False).encode()
+entries["Fachanhang.md"]=(root/"docs/plattenatlas-g4.3.1.md").read_bytes()
+assert len([name for name in entries if name.endswith(".jpg")])==18 and "bedienung.webm" in entries
+pairs=list(geometry["pairs"].values())
+brief=[
+"# GeoRisiko G4.3.1 · Abschlussbericht", "", "Geprüfte Einzeldatei, SHA-256 `"+report["htmlSHA256"]+"`.", "",
+"1. Im heutigen Weltatlas sind die Grenzpunkte ortsfest. Die frühere ortsabhängige Verformung im Bewegungsmodus wurde vollständig entfernt.",
+f"2. Alle {len(pairs)} Vergleichspaare verwenden starre Drehungen. Maximal gemessene Distanzabweichung innerhalb eines Körpers: {max(p['maxError'] for p in pairs):.2g} km. Die Orthogonalität der Körpermatrizen sichert die Distanzen für alle Meshpunkte.",
+"3. Zwei Gesteinsausschnitte zeigen horizontale Relativbewegung an einem namentlich bekannten PB2002-Segment. Die ursprünglichen vertiefenden Prozesse bei Island, Japan und Kalifornien bleiben erhalten.",
+f"4. Die Ausgangsdaten sind pazifikfest. Der örtliche Vergleich teilt den Differenzvektor beider Winkelgeschwindigkeiten symmetrisch auf die Körper auf. Größte Abweichung von der gerundeten, veröffentlichten Segmentrichtung: {max(p['bearingError'] for p in pairs):.2f}°.",
+f"5. Dicke, Anfangsabstand und Zeit sind schematisch. Keine historische Rekonstruktion. Die geprüfte kontinuierliche Untergrenze des Abstands der beiden Körper beträgt über alle Paare {min(p['continuousGap'] for p in pairs):.2f} Modellkilometer. Beim Auseinanderrücken wird eine neutrale Zeichenfläche sichtbar.",
+"6. Der helle Gesteinsstreifen zeigt den Versatz. Im Kalifornien-Vergleich verschoben sich die projizierten Punkte der beiden Körper relativ zueinander um "+' / '.join(f"{r['relativePixels']:.0f} px ({r['engine']})" for r in runs)+". Start, Zwischenstand, Endstand und Reset sind echte Browseraufnahmen. Eine Unterrichtserprobung mit Lernenden steht aus.",
+"7. Der Kameraabstand hängt von Umriss, Blickfeld und freiem Bildschirmraum ab. Die Tabelle unten zeigt die besonders geprüften Platten.",
+"8. Beide Browser trafen alle 52 Platten mit Maus oder Touch auf dem gerenderten Körper. Nach dem Zentrieren waren jeweils weitere Platten sichtbar. Anschließende Rotation und Rückkehr zur Weltansicht wurden ausgeführt.",
+"9. Alle Steckbriefe verwenden fest ausgewählte, verortete Beispiele. Die Himmelsrichtung bezieht sich auf die ausdrücklich benannte Nachbarplatte. Der Fachanhang erklärt die Auswahl.",
+"10. Die Prüfung erfasst 1920 × 1080 im Präsentationsmodus sowie 1366 × 768, 1024 × 768 und 768 × 1024. Titelumbruch, Steckbriefanfang, Modellfläche, Nachbarplatten und Schließziel sind protokolliert.",
+"11. Der Schalenschnitt öffnete sich anonym. Beide Browser gaben die vier Namen frei und öffneten und schlossen alle acht Antworten. Krustenmaßstab und Lithosphärenvergleich gehören zusätzlich zur Schalenregression.",
+"12. Chromium und WebKit öffneten die Einzeldatei unter file:// bei gesperrtem HTTP(S). Es gab keine weiteren Dateianforderungen und keine Browserfehler.",
+"13. Die Browserprotokolle belegen Flächentreffer, Kamera, Auswahl, Wiedergabe, Pause, Reset, Schalen, drei Regionen und Rückkehr. Die weiteren Testjobs im Pull Request prüfen auch Nyos, Navigation, Schulstunde und das entpackte SCORM-Paket.",
+"14. Die folgenden Tabellen vergleichen dieselben Cloud-Browser, Auflösungen und Eingabefolgen. Die beiden Bewegungsansichten haben unterschiedliche Bildausschnitte. CPU-Prozent beziehen sich auf einen logischen Kern. Geometrien, Texturen und Programme sind Ressourcenindikatoren. GPU-Speicher in Bytes wurde nicht gemessen.",
+"15. Die Werte betreffen Linux-Rendering. MacBook Air M1, iPad, physisches Smartboard und der Import ins produktive itslearning wurden nicht an Originalgeräten geprüft. Ein regionaler Schnitt kann auch Biegung oder Materialtransport erklären. Der Starrheitstest bezieht sich auf die beiden Körper jedes neuen Grenzvergleichs.",
+f"16. Auslieferung: {html}, GeoRisiko-G4.3.1-SCORM-1.2.zip und {archive_name}. Die unveränderte G4.3-Datei liegt im Repository unter ausgabe/GeoRisiko-Erdmodell-G4.3.html.", "",
+"## Kameraprüfung", "", "Stichprobe aus dem vollständigen Chromium-Flächentest. Die Spannweite ist aus einem Raster auf der frei sichtbaren Modellfläche bestimmt.", "",
+"| Platte | Kameraabstand (km) | erfasste Spannweite (px) | weitere sichtbare Platten |","|---|---:|---:|---:|"]
+plates=next(r for r in runs if r["engine"]=="chromium")["plates"]
+for code in ["PA","NA","EU","AF","AU","NZ","GP","FT"]:
+    p=plates[code]
+    brief.append(f"| {p['name']} | {p['pose'][2]:.0f} | {p['span']:.0f} | {len(set(p['coverage'])-{code,''})} |")
+brief += ["","## Performancevergleich","", "| Engine | Version | Ansicht | FPS | P95 / längste Pause (ms) | Bilder >150 ms | CPU % | Geom. / Text. / Programme am Ende |","|---|---|---|---:|---:|---:|---:|---|"]
+for row in performance:
+    for s in row["stages"]:
+        end=s["states"][-1]
+        brief.append(f"| {row['engine']} | {row['version']} | {s['stage']} | {s['fps']:.1f} | {s['p95']:.0f} / {s['max']:.0f} | {s['over150']} | {s['cpuPercent']:.0f} | {end['geometries']} / {end['textures']} / {end['programs']} |")
+brief += ["","Renderer laut Browser:",*["- "+r["engine"]+" — "+r["renderer"] for r in performance if r["version"]=="G4.3.1"],""]
+entries["Pruefbericht.md"]="\n".join(brief).encode()
 (evidence/"Pruefbericht.md").write_bytes(entries["Pruefbericht.md"])
-with zipfile.ZipFile(out/"GeoRisiko-G4.3-Sichtpruefung.zip","w",zipfile.ZIP_DEFLATED) as archive:
-    for name,data in sorted(entries.items()): archive.writestr(name,data)
+with zipfile.ZipFile(out/archive_name,"w",zipfile.ZIP_DEFLATED) as z:
+    for name,contents in sorted(entries.items()):z.writestr(name,contents)
+with zipfile.ZipFile(out/archive_name) as z:
+    assert z.testzip() is None and all(z.read(name)==value for name,value in entries.items())
+print(out/archive_name)

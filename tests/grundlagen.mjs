@@ -285,7 +285,7 @@ async function exercise(browser, engine) {
       );
       await click("info");
       assert.match(await texts(), /Nur das Kartenbild öffnet sich/);
-      assert.match(await texts(), /Als Bezug dient die Pazifische Platte/);
+      assert.match(await texts(), /Ausgangsdaten beziehen sich auf die Pazifische Platte/);
       await click("closeDialog");
     }
     await click("boundaries");

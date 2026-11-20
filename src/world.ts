@@ -196,6 +196,11 @@ export class World {
         this.nav.camera,
       );
       if (this.mode === "plates") {
+        if (this.mosaic?.pair) {
+          const sample=ray.intersectObjects(this.mosaic.pair.bodies,false)[0];
+          if (sample) { this.inspectPlate(sample.object.name); this.locatePlate(); this.onBoundary?.(); }
+          return;
+        }
         const point = ray.ray.intersectSphere(new T.Sphere(new T.Vector3(), R), new T.Vector3());
         if (point) {
           const tolerance = (this.nav.pose.d * 2 * Math.tan(T.MathUtils.degToRad(this.nav.camera.fov / 2)) * 16) / (b.height * R);
@@ -339,9 +344,9 @@ export class World {
       if (!active && this.mosaic.group.visible) { this.mosaic.close(); this.profileCode = ""; }
       this.mosaic.selected = active ? plate : "";
     }
-    this.nav.minimumDistance = active ? 340 : .06;
-    if (active && !this.nav.flight && this.nav.goal.d < 340) this.nav.fly({...this.nav.goal, d: 500});
-    this.atlas.setLayers(this.mode === "plates" && boundaries, types, types && category !== "all" ? category : null, active ? null : plate || null);
+    this.nav.minimumDistance = active ? (this.mosaic?.pair ? 160 : 340) : .06;
+    if (active && !this.nav.flight && this.nav.goal.d < this.nav.minimumDistance) this.nav.fly({...this.nav.goal, d: 500});
+    this.atlas.setLayers(this.mode === "plates" && !this.mosaic?.pair && boundaries, types, types && category !== "all" ? category : null, active ? null : plate || null);
   }
   setPlateOptions(options: Partial<PlateOptions>) {
     if (options.plate !== undefined || options.names !== undefined || options.boundaries === false) this.singlePlateName = false;
@@ -356,6 +361,7 @@ export class World {
   }
   inspectPlate(code: string, point?: T.Vector3) {
     if (code && !this.profiles[code]) return;
+    this.mosaic?.endPair(!this.nav.reducedMotion.matches);
     this.setPlateOptions({plate:code});
     this.mosaic?.clearAnchor();
     this.singlePlateName = !!code;
@@ -368,16 +374,42 @@ export class World {
     this.atlasReturn = {...HOME};
     this.nav.fly(HOME);
   }
+  private fitSlope() {
+    const view=this.canvas.getBoundingClientRect();
+    const panel=document.getElementById("sidebar")!.getBoundingClientRect();
+    const overlay=panel.bottom>view.top+10 && panel.top<view.bottom-10 && panel.left<view.left+40;
+    const halfWidth=Math.max(view.width*.22,view.width/2-(overlay ? panel.right-view.left+14 : 20));
+    const halfHeight=Math.max(60,view.height/2-62);
+    return 2*Math.min(halfWidth,halfHeight)*Math.tan(this.nav.camera.fov*RAD/2)/view.height;
+  }
+  get pairKind() { return this.mosaic?.pair && typeOf(this.mosaic.pair.step[2]); }
+  comparePlates(autoplay:boolean) {
+    if (!this.atlas || !this.mosaic) return;
+    if (!this.mosaic.pair) {
+      const code=this.profileCode || "EU";
+      const profile=this.profiles[code];
+      this.inspectPlate(code);
+      const pair=this.mosaic.beginPair(this.atlas.steps[profile.step-1]);
+      this.updatePlateLayers();
+      const d=Math.max(180,pair.span/(.86*this.fitSlope()));
+      this.nav.fly({...pair.site,d,tilt:32,bearing:pair.heading},true);
+    }
+    if (autoplay) this.mosaic.play();
+  }
   locatePlate() {
     const coordinates = plateCentres[this.profileCode as keyof typeof plateCentres];
     if (!coordinates) return;
     const [lon,lat] = coordinates;
     this.pickedPlatePoint = position(lat,lon,2);
-    this.nav.fly({lon,lat,d:2400,tilt:0,bearing:0});
+    const angle=Math.min(62*RAD,this.mosaic!.extents.get(this.profileCode)!);
+    const distance=R*(Math.sin(angle)/(.72*this.fitSlope())-(1-Math.cos(angle)));
+    this.nav.fly({lon,lat,d:clamp(distance,340,19500),tilt:0,bearing:0},true);
   }
   get atlasReady() { return !!this.atlas; }
   get annotationTransition() { return this.processSite ? this.processReveal : this.mosaic?.annotationPose ?? 0; }
   plateLabels() {
+    if (this.mosaic?.pair && this.mode==="plates")
+      return this.mosaic.pair.labels(this.nav.camera,this.canvas.clientWidth,this.canvas.clientHeight);
     if (!this.atlas || this.mode !== "plates" || !(this.plateOptions.names || this.singlePlateName) || this.processReveal > 0.5) return [];
     return this.atlas.labels(this.nav.camera, this.canvas.clientWidth, this.canvas.clientHeight, this.nav.pose.d, this.processSite ?? undefined,this.plateOptions.plate,this.mosaic?.anchor() ?? this.pickedPlatePoint,this.singlePlateName && !this.plateOptions.names,this.smallPlateNames);
   }
@@ -775,6 +807,20 @@ export class World {
         p.z < 1,
     };
   }
+  /** Geographic coverage of the unobstructed atlas viewport, sampled only during acceptance tests. */
+  atlasCoverage() {
+    if (!this.atlas || !this.mosaic?.group.visible) return [];
+    const box=this.canvas.getBoundingClientRect(), ray=new T.Raycaster(), sphere=new T.Sphere(new T.Vector3(),R);
+    const grid=[];
+    for(let j=0;j<15;j++)for(let i=0;i<23;i++) {
+      const x=(i+.5)/23, y=(j+.5)/15;
+      if(document.elementFromPoint(box.x+x*box.width,box.y+y*box.height)!==this.canvas)continue;
+      ray.setFromCamera(new T.Vector2(2*x-1,1-2*y),this.nav.camera);
+      const hit=ray.ray.intersectSphere(sphere,new T.Vector3());
+      if(hit)grid.push({x,y,code:this.atlas.plateAt(hit.normalize())});
+    }
+    return grid;
+  }
   diagnostics() {
     const { lat, lon, d, tilt, bearing } = this.nav.pose;
     return {
@@ -802,7 +848,7 @@ export class World {
       programs: this.gl.info.programs?.length,
       tectonics: {
         ...this.plateOptions,
-        mosaic: this.mosaic?.diagnostics(),
+        mosaic: this.mosaic?.diagnostics(this.nav.camera,this.canvas.clientWidth,this.canvas.clientHeight),
         ready: !!this.atlas, count: this.atlas?.steps.length ?? 0,
         selected: this.selectedStep?.[0] ?? null, site: this.processSite, anchor: this.anchor,
         patchOpacity: this.patchOpacity, processVisible: this.processReveal > 0 && !!this.processSite && this.models.has(this.processSite),
@@ -891,7 +937,7 @@ export class World {
     this.globeOccluded = intactLandscape && this.nyos.localWeight === 1 && !!this.nyosCoverage?.containsView(this.nav.camera);
     if (this.mosaic && !this.mosaic.group.visible && this.mode === "plates" && !this.processSite && d >= 340)
       this.mosaic.open(this.nav.camera.position,this.nav.reducedMotion.matches);
-    this.mosaic?.tick(Math.min(.30,this.frameMs/1000),this.nav.reducedMotion.matches);
+    this.mosaic?.tick(Math.min(.30,this.frameMs/1000),this.nav.reducedMotion.matches,!!this.nav.flight);
     const mosaicVisible = !!this.mosaic?.group.visible;
     this.planet.group.visible = !inside && !mosaicVisible && !this.globeOccluded;
     this.shell.group.visible = inside;

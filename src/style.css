@@ -246,6 +246,9 @@ figcaption { margin-top: 6px; font-size: .9em; color: var(--muted); }
 .scienceCard button, .shellQuestions button { min-height:40px; margin:3px 4px 3px 0; }
 .shellQuestions button[aria-expanded=true] { border-color:#a4c59d; }
 
-.plateCardHead { display:flex; align-items:center; justify-content:space-between; gap:8px; }
-.plateCardHead h2 { overflow-wrap:anywhere; }
-.plateCardHead #atlasAll { flex:none; min-width:42px; min-height:42px; font-size:1.5rem; line-height:1; }
+#atlasAll { min-width:44px; min-height:44px; font-size:1.5em; line-height:1; }
+.scienceCard h2 { text-wrap:balance; hyphens:manual; overflow-wrap:normal; line-height:1.22; }
+.profileActions { display:flex; flex-wrap:wrap; gap:4px; }
+.profileActions button, #desk[data-mode="plates"] button { min-height:44px; }
+#desk[data-mode="plates"] .plateCheck { min-height:44px; }
+.present #desk[data-mode="plates"] { --sidebar-width:clamp(285px,22vw,370px); }

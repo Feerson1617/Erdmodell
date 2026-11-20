@@ -74,3 +74,7 @@ G4 basiert auf dem geprüften G2.1-Commit `3eb1487`. [Abnahme Nyos](docs/nyos-ab
 ## G4.3 · Interaktiver Plattenatlas
 
 Die [Offline-Einzeldatei](ausgabe/GeoRisiko-Erdmodell-G4.3.html) startet nach dem Herunterladen per Doppelklick. Das [kleine Prüf-ZIP](ausgabe/GeoRisiko-G4.3-Sichtpruefung.zip) enthält sieben Browserbilder, den Bedienfilm und die Messprotokolle. Der Atlas zeigt die 52 PB2002-Platten, ihre relative Bewegung und drei regionale Prozesse. Freigegebene Erdschalen bieten kurze Antworten zu Material und Entstehung. Die Bedienung, Quellen und fachlichen Grenzen stehen im [Begleittext](docs/plattenatlas-g4.3.md). Die [hochgeladene Einzeldatei](sicherung/Erdmodell.html) ist als Rückfallversion gesichert.
+
+## G4.3.1 · Heutige Platten und starre Grenzvergleiche
+
+Die [Einzeldatei](ausgabe/GeoRisiko-Erdmodell-G4.3.1.html) startet nach dem Herunterladen per Doppelklick. „Zentrieren“ zeigt die gewählte Platte mit ihrer Umgebung. „Grenze ansehen“ öffnet den zugehörigen Vergleich. Zwei starre Gesteinsausschnitte verdeutlichen die Relativbewegung. Der [Fachanhang](docs/plattenatlas-g4.3.1.md) erklärt die Daten und den symmetrischen Bezugsrahmen. Die Prüfdateien und das SCORM-1.2-Paket stehen beim GitHub-Lauf des Pull Requests bereit.

@@ -1,3 +1,4 @@
+import examples from "./examples.json";
 import type { Step } from "./atlas";
 
 export const locations: Record<string, string> = {
@@ -64,20 +65,25 @@ const processes:Record<string,string>={
   OTF:"Hier gleiten die Platten am Meeresboden seitlich aneinander vorbei. Dabei können Erdbeben entstehen.",
   CTF:"Hier gleiten die Platten an Land seitlich aneinander vorbei. Dabei können Erdbeben entstehen.",
 };
-/** Report one named neighbour and one actual PB2002 segment, never a plate-wide heading. */
+const landmarks:Record<number,string> = {
+  2092:"Hier stoßen zwei Kontinente zusammen. Dabei hebt sich der Himalaya.",
+  3080:"Hier taucht die Nazca-Platte unter Südamerika ab. Dabei können starke Erdbeben entstehen.",
+  2629:"Hier taucht die Pazifische Platte unter die Ochotskplatte ab. Dabei können starke Erdbeben entstehen.",
+  4209:"Hier rücken die Platten auseinander. Aufsteigende Schmelze kühlt ab und bildet neue Kruste.",
+  2877:"An der San-Andreas-Verwerfung gleiten die Seiten aneinander vorbei. Wenn sie sich ruckartig lösen, bebt die Erde.",
+  1439:"An der Alpenverwerfung gleiten die Seiten schräg aneinander vorbei. Dabei werden die Südalpen angehoben.",
+  5502:"Hier wird die Erdkruste gedehnt. Entlang von Brüchen sinken Teile des Bodens ab.",
+};
 export function buildProfiles(steps:Step[], names:Record<string,string>) {
-  const profiles:Record<string,{place:string;motion:string;boundary:string;step:number}>={};
-  for(const code of Object.keys(locations)){
-    const candidates=steps.filter(s=>s[1].slice(0,2)===code || s[1].slice(-2)===code);
-    // Prefer a well-defined nonzero model vector and a long representative segment.
-    const sample=({PA:2877,NA:2877,EU:4209,OK:2629,AF:5502,SO:5502} as Record<string,number>)[code];
-    const best=(sample && candidates.find(s=>s[0]===sample)) || candidates.filter(s=>s[7]>=2).sort((a,b)=>length(b)-length(a))[0] || candidates[0];
-    const left=best[1].slice(0,2)===code,other=left?best[1].slice(-2):best[1].slice(0,2);
-    const peer=names[other].replace(/e (Platte|Seeplatte)$/,"en $1");
-    const direction=directions[Math.round((best[8]+(left?0:180))/45)%8];
-    const where=best[0]===2877?"Bei Kalifornien":best[0]===2629?"Vor Japan":best[0]===4209?"Auf Island":best[0]===5502?"Im Ostafrikanischen Graben":"An einem Grenzabschnitt";
-    profiles[code]={place:locations[code],motion:best[7]>=2?`${where} bewegt sie sich gegenüber der ${peer} nach ${direction}.`:`Gegenüber der ${peer} ist die Bewegung an diesem Abschnitt im Modell sehr gering.`,boundary:processes[best[2]],step:best[0]};
-  }
-  return profiles;
+  return Object.fromEntries(Object.entries(examples).map(([code,example]) => {
+    const segment=steps[example.step-1];
+    const left=segment[1].slice(0,2), right=segment[1].slice(-2);
+    if (code!==left && code!==right) throw Error("Ungültige Zuordnung für "+code);
+    const neighbour=left===code?right:left;
+    const peer=names[neighbour].replace(/e (Platte|Seeplatte)$/,"en $1");
+    const direction=directions[Math.round((segment[8]+(left===code?0:180))/45)%8];
+    return [code,{...example,neighbour,place:locations[code],
+      motion:`${example.where} bewegt sie sich gegenüber der ${peer} nach ${direction}.`,
+      boundary:landmarks[example.step] ?? processes[segment[2]]}];
+  }));
 }
-function length(s:Step){return Math.hypot(s[6]-s[4],(((s[5]-s[3]+540)%360)-180)*Math.cos((s[4]+s[6])*Math.PI/360));}

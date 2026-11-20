@@ -1,6 +1,7 @@
+import {hz,processTicks} from "./prozesszeit.mjs";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { readFile, readdir, mkdir, writeFile } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { performance } from "node:perf_hooks";
 import { preview } from "vite";
@@ -21,28 +22,6 @@ const stages = [
   "Prozessmodell wechseln",
   "Definition öffnen und schließen",
 ];
-const hz = Number(execFileSync("getconf", ["CLK_TCK"], { encoding: "utf8" }));
-async function processTicks(root) {
-  const stats = new Map();
-  for (const id of await readdir("/proc")) {
-    if (!/^\d+$/.test(id)) continue;
-    try {
-      const raw = await readFile("/proc/" + id + "/stat", "utf8");
-      const fields = raw.slice(raw.lastIndexOf(")") + 2).split(" ");
-      stats.set(+id, { ppid: +fields[1], ticks: +fields[11] + +fields[12] });
-    } catch {
-      /* A helper may exit during enumeration. */
-    }
-  }
-  const family = new Set([root]);
-  for (const pid of family)
-    for (const [id, s] of stats) if (s.ppid === pid) family.add(id);
-  return new Map(
-    [...family]
-      .filter((id) => stats.has(id))
-      .map((id) => [id, stats.get(id).ticks]),
-  );
-}
 const delta = (before, after) =>
   Object.fromEntries(
     Object.entries(after ?? {}).map(([k, v]) => [k, v - (before?.[k] ?? 0)]),
@@ -311,7 +290,7 @@ const report = { baseline, candidate, runs: [] };
 for (const engine of (process.env.TEST_ENGINES ?? "chromium,webkit").split(
   ",",
 )) {
-  const order = engine === "chromium" ? ["G4.2", "G4.3"] : ["G4.3", "G4.2"];
+  const order = engine === "chromium" ? ["G4.2", "G4.3.1"] : ["G4.3.1", "G4.2"];
   for (const name of order) {
     const r = await measure(
       engine,
@@ -331,7 +310,7 @@ for (const engine of (process.env.TEST_ENGINES ?? "chromium,webkit").split(
   }
 }
 const rows = [
-  "# Leistungsvergleich G4.2 und G4.3",
+  "# Leistungsvergleich G4.2 und G4.3.1",
   "",
   `Referenz \`${baseline}\`, Kandidat \`${candidate}\`.`,
   "",
@@ -347,7 +326,7 @@ for (const engine of new Set(report.runs.map((r) => r.engine))) {
     "",
     runs[0].renderer,
     "",
-    "| Szenario | G4.2 FPS | G4.3 FPS | G4.2 P95 ms | G4.3 P95 ms | CPU alt / neu % |",
+    "| Szenario | G4.2 FPS | G4.3.1 FPS | G4.2 P95 ms | G4.3.1 P95 ms | CPU alt / neu % |",
     "|---|---:|---:|---:|---:|---:|",
   );
   for (let i = 0; i < stages.length; i++) {
@@ -366,7 +345,7 @@ for (const engine of new Set(report.runs.map((r) => r.engine))) {
     "| Stand | Vorher | Nachher |",
     "|---|---|---|",
     `| G4.2 | ${resources(switchOld.start)} | ${resources(switchOld.end)} |`,
-    `| G4.3 | ${resources(switchNew.start)} | ${resources(switchNew.end)} |`,
+    `| G4.3.1 | ${resources(switchNew.start)} | ${resources(switchNew.end)} |`,
   );
   const [a, b] = runs.map((r) => r.samples[3]);
   rows.push(

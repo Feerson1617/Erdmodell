@@ -21,7 +21,7 @@ def files(folder):
 
 
 def archive(folder, name, entries):
-    dest = folder / ("GeoRisiko-G4.3-" + name + ".zip")
+    dest = folder / ("GeoRisiko-G4.3.1-" + name + ".zip")
     with zipfile.ZipFile(dest, "w") as z:
         for key, value in sorted(entries.items()):
             entry = zipfile.ZipInfo(key, date_time=(2026, 1, 1, 0, 0, 0))
@@ -46,10 +46,10 @@ nyos_docs = (
     "nyos-abnahme.md",
 )
 web = files(dist)
-web["Pruefstand.txt"] = f"GeoRisiko 3D · G4.3 · Freitag, 20. November 2026\nGeprüfter Git-Commit: {commit}\n".encode()
+web["Pruefstand.txt"] = f"GeoRisiko 3D · G4.3.1 · Freitag, 20. November 2026\nGeprüfter Git-Commit: {commit}\n".encode()
 assert "index.html" in web
 source = (root / "docs/data-sources-and-licenses.md").read_bytes()
-web["Plattenatlas-G4.3.md"] = (root / "docs/plattenatlas-g4.3.md").read_bytes()
+web["Plattenatlas-G4.3.1.md"] = (root / "docs/plattenatlas-g4.3.1.md").read_bytes()
 web["Quellen.md"] = source
 web["g1.1-data.md"] = (root / "docs/g1.1-data.md").read_bytes()
 web["data-sources-and-licenses.md"] = source
@@ -78,7 +78,7 @@ def add(el, name, value=None, **attrs):
 
 xsi = "http://www.w3.org/2001/XMLSchema-instance"
 ET.register_namespace("xsi", xsi)
-m = ET.Element(tag("manifest"), identifier="GEORISIKO-G4-3", version="1.2")
+m = ET.Element(tag("manifest"), identifier="GEORISIKO-G4-3-1", version="1.2")
 m.set(
     "{" + xsi + "}schemaLocation",
     ns + " imscp_rootv1p1p2.xsd " + adl + " adlcp_rootv1p2.xsd",
@@ -147,7 +147,7 @@ baseline = "441f1480b6fc1d65faf5ef5b06882ccdc6775656"
 timings = json.loads(comparison["leistung.json"])
 assert timings["baseline"] == baseline and timings["candidate"] == commit
 assert {(r["engine"],r["version"]) for r in timings["runs"]} == {
-    (e,v) for e in ("chromium","webkit") for v in ("G4.2","G4.3")}
+    (e,v) for e in ("chromium","webkit") for v in ("G4.2","G4.3.1")}
 assert all(len(r["samples"]) == 7 and all(s["fps"] > 0 for s in r["samples"]) for r in timings["runs"])
 assert comparison["Leistungsvergleich.md"]
 before = json.loads(comparison["g4.2/pruefung.json"])
@@ -199,7 +199,7 @@ review["Pruefung/geraeteprobe.html"] = (root / "scripts/nyos-geraeteprobe.html")
 review.update({"Pruefung/" + name: content for name, content in checks.items()})
 for name in ("qualitaet-g4.2.1", "grundlagen-g4.2", "g2.1-bericht", "g2.1-daten", "g2.1-prozessmodelle", "unterricht-15-12", "geoscience-validation", "roadmap"):
     review["Pruefung/" + name + ".md"] = (root / f"docs/{name}.md").read_bytes()
-measured = ["# Messbericht zum Schalenmodell im G4.3-Build", "", f"Produktionsbuild `{commit}`", "",
+measured = ["# Messbericht zum Schalenmodell im G4.3.1-Build", "", f"Produktionsbuild `{commit}`", "",
             "14 Bedienfolgen pro Engine. Bildzeiten stammen aus einer separaten ruhenden Schalenansicht bei 1920 × 1080. Die Auflösung gilt für das Modell neben der Bedienleiste.", ""]
 for run in json.loads(checks["unterricht/pruefung.json"])["runs"]:
     cadence = run["cadence"]

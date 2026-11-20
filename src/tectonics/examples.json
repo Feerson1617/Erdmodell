@@ -1,0 +1,210 @@
+{
+  "AF": {
+    "step": 5502,
+    "where": "Im Ostafrikanischen Graben"
+  },
+  "AM": {
+    "step": 3621,
+    "where": "Am Baikalsee"
+  },
+  "AN": {
+    "step": 951,
+    "where": "Am Meeresrücken südlich von Australien"
+  },
+  "AP": {
+    "step": 3841,
+    "where": "In den zentralen Anden"
+  },
+  "AR": {
+    "step": 1367,
+    "where": "Im Zagrosgebirge"
+  },
+  "AS": {
+    "step": 5447,
+    "where": "Südlich von Kreta"
+  },
+  "AT": {
+    "step": 3480,
+    "where": "An der Nordanatolischen Verwerfung"
+  },
+  "AU": {
+    "step": 1439,
+    "where": "Auf Neuseelands Südinsel"
+  },
+  "BH": {
+    "step": 4121,
+    "where": "Im Westen von Neuguinea"
+  },
+  "BR": {
+    "step": 4835,
+    "where": "Am Meeresrücken westlich von Fidschi"
+  },
+  "BS": {
+    "step": 4078,
+    "where": "Im Gebiet der Bandasee"
+  },
+  "BU": {
+    "step": 4155,
+    "where": "Im Meer westlich der Andamanen"
+  },
+  "CA": {
+    "step": 1872,
+    "where": "Im Norden der Karibik"
+  },
+  "CL": {
+    "step": 4478,
+    "where": "Am Rand der Karolinen"
+  },
+  "CO": {
+    "step": 1956,
+    "where": "Vor Mexikos Pazifikküste"
+  },
+  "CR": {
+    "step": 4887,
+    "where": "Südwestlich von Fidschi"
+  },
+  "EA": {
+    "step": 5011,
+    "where": "Am Meeresrücken bei der Osterinsel"
+  },
+  "EU": {
+    "step": 4209,
+    "where": "Auf Island"
+  },
+  "FT": {
+    "step": 3253,
+    "where": "Im Meer bei Futuna"
+  },
+  "GP": {
+    "step": 5098,
+    "where": "Westlich der Galápagosinseln"
+  },
+  "IN": {
+    "step": 2092,
+    "where": "Im Himalaya"
+  },
+  "JF": {
+    "step": 2724,
+    "where": "Vor der Westküste Nordamerikas"
+  },
+  "JZ": {
+    "step": 5033,
+    "where": "Am Meeresrücken weit vor Chile"
+  },
+  "KE": {
+    "step": 1482,
+    "where": "Bei den Kermadecinseln"
+  },
+  "MA": {
+    "step": 3210,
+    "where": "Am Marianengraben"
+  },
+  "MN": {
+    "step": 4619,
+    "where": "Im Bismarckmeer"
+  },
+  "MO": {
+    "step": 4111,
+    "where": "Auf Neuguinea"
+  },
+  "MS": {
+    "step": 3993,
+    "where": "In der Molukkensee"
+  },
+  "NA": {
+    "step": 2877,
+    "where": "Bei Kalifornien"
+  },
+  "NB": {
+    "step": 4576,
+    "where": "Im Bismarckmeer"
+  },
+  "ND": {
+    "step": 3129,
+    "where": "Vor der Küste Ecuadors"
+  },
+  "NH": {
+    "step": 1765,
+    "where": "Bei Vanuatu"
+  },
+  "NI": {
+    "step": 3299,
+    "where": "Westlich von Tonga"
+  },
+  "NZ": {
+    "step": 3080,
+    "where": "Vor der Küste Chiles"
+  },
+  "OK": {
+    "step": 2629,
+    "where": "Vor Japan"
+  },
+  "ON": {
+    "step": 3141,
+    "where": "Bei den Ryūkyū-Inseln"
+  },
+  "PA": {
+    "step": 2877,
+    "where": "Bei Kalifornien"
+  },
+  "PM": {
+    "step": 5668,
+    "where": "Vor der Pazifikküste Mittelamerikas"
+  },
+  "PS": {
+    "step": 3233,
+    "where": "Am Tiefseegraben südlich von Japan"
+  },
+  "RI": {
+    "step": 3928,
+    "where": "Vor der Westküste Mexikos"
+  },
+  "SA": {
+    "step": 3080,
+    "where": "Vor der Küste Chiles"
+  },
+  "SB": {
+    "step": 4576,
+    "where": "Im Bismarckmeer"
+  },
+  "SC": {
+    "step": 5223,
+    "where": "Westlich der Südlichen Sandwichinseln"
+  },
+  "SL": {
+    "step": 3385,
+    "where": "Bei den Südlichen Shetlandinseln"
+  },
+  "SO": {
+    "step": 5502,
+    "where": "Im Ostafrikanischen Graben"
+  },
+  "SS": {
+    "step": 1601,
+    "where": "Vor Neubritannien"
+  },
+  "SU": {
+    "step": 1386,
+    "where": "Vor Java"
+  },
+  "SW": {
+    "step": 5261,
+    "where": "Östlich der Südlichen Sandwichinseln"
+  },
+  "TI": {
+    "step": 1416,
+    "where": "Im Gebiet von Timor"
+  },
+  "TO": {
+    "step": 1509,
+    "where": "Am Tongagraben"
+  },
+  "WL": {
+    "step": 4680,
+    "where": "Im Woodlark-Becken östlich von Neuguinea"
+  },
+  "YA": {
+    "step": 4407,
+    "where": "Im Meer nordwestlich der Ryūkyū-Inseln"
+  }
+}
