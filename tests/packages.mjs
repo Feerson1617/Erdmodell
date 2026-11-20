@@ -92,7 +92,7 @@ async function checkDeviceProbe(page, folder, base, shellMode) {
 }
 
 try {
-  for (const name of ["SCORM-1.2", "Freitag-Unterricht", "Sichtpruefung"]) {
+  for (const name of process.env.PACKAGE_ONLY ? [process.env.PACKAGE_ONLY] : ["SCORM-1.2", "Freitag-Unterricht", "Archiv-Sichtpruefung"]) {
     const path = join(tmp, name);
     execFileSync("python3", ["-c", `
 from pathlib import Path
@@ -113,7 +113,7 @@ with zipfile.ZipFile(sys.argv[1]) as archive:
         assert manifest.findtext(".//{*}schemaversion") == "1.2"
         assert sco.get("{http://www.adlnet.org/xsd/adlcp_rootv1p2}scormtype") == "sco"
         assert sco.get("href") == "index.html"
-        assert manifest.find(".//{*}item").get("parameters") == "?unterricht=schalenbau"
+        assert manifest.find(".//{*}item").get("parameters") is None
         files = {f.get("href") for f in sco.findall("{*}file")}
         assert files == {name for name in names if name != "imsmanifest.xml" and not name.endswith(".xsd")}
     archive.extractall(sys.argv[2])
@@ -131,7 +131,7 @@ with zipfile.ZipFile(sys.argv[1]) as archive:
         mode = archive.getinfo("START.command").external_attr >> 16
         assert mode & 0o111
         (Path(sys.argv[2]) / "START.command").chmod(mode & 0o777)
-`, "artifacts/GeoRisiko-G4.2.2-" + name + ".zip", path], { stdio: "inherit" });
+`, "artifacts/GeoRisiko-G4.3-" + name + ".zip", path], { stdio: "inherit" });
     if (name === "Freitag-Unterricht") {
       const noPython=await mkdtemp(join(tmp,"Ohne Python "));
       await symlink("/usr/bin/dirname",join(noPython,"dirname"));
@@ -287,7 +287,7 @@ with zipfile.ZipFile(sys.argv[1]) as archive:
         await page.evaluate(() => window.calls),
         name === "SCORM-1.2" ? ["initialize", "finish"] : [],
       );
-      if (name === "Sichtpruefung")
+      if (name === "Archiv-Sichtpruefung")
         for(const shell of [true,false])await checkDeviceProbe(page, path, origin + "/lms/kurse/erde",shell);
       assert.deepEqual(failures, []);
       await page.close();

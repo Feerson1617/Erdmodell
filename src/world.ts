@@ -14,6 +14,10 @@ import { NyosEvent } from "./nyos/event";
 import { NyosLessonState, type NyosView, type NyosMeasure } from "./nyos/state";
 import { reliefSites } from "./nyos/protection";
 import { loadAtlas, center, typeOf, names, type BoundaryKind, type Step } from "./tectonics/atlas";
+import mosaicUrl from "./tectonics/mosaic.json?url";
+import plateCentres from "./tectonics/labels.json";
+import {PlateMosaic, type SurfaceData} from "./tectonics/mosaic";
+import {buildProfiles} from "./tectonics/plate-info";
 import { SectionWindow } from "./tectonics/section-window";
 import { regionalImagery } from "./tectonics/imagery";
 import { ProcessModel, processView, PROCESS_FOCUS_HEIGHT } from "./tectonics/process";
@@ -77,6 +81,9 @@ export class World {
   onLayer?: (i: number) => void;
   onBoundary?: () => void;
   plateOptions: PlateOptions = { boundaries: false, names: false, types: false, category: "all", plate: "" };
+  mosaic?: PlateMosaic;
+  profiles: ReturnType<typeof buildProfiles> = {};
+  profileCode = "";
   singlePlateName = false;
   smallPlateNames = false;
   processChoice = "";
@@ -178,7 +185,7 @@ export class World {
     this.scene.add(this.air);
     this.scene.fog = new T.FogExp2(0xb6cfd0, 0);
     this.nav.onPick = (x, y) => {
-      if (this.mode !== "inside" && !(this.mode === "plates" && this.plateOptions.boundaries && !this.processDetail && this.atlas)) return;
+      if (this.mode !== "inside" && !(this.mode === "plates" && !this.processDetail && this.atlas)) return;
       const b = canvas.getBoundingClientRect(),
         ray = new T.Raycaster();
       ray.setFromCamera(
@@ -193,11 +200,11 @@ export class World {
         if (point) {
           const tolerance = (this.nav.pose.d * 2 * Math.tan(T.MathUtils.degToRad(this.nav.camera.fov / 2)) * 16) / (b.height * R);
           const direction = point.normalize();
-          const boundary = this.atlas!.pick(direction,tolerance);
+          const boundary = this.plateOptions.boundaries && (this.processSite || this.plateOptions.types) ? this.atlas!.pick(direction,tolerance) : null;
           this.selectBoundary(boundary);
           if (!boundary && !this.processSite) {
-            this.setPlateOptions({plate:this.atlas!.plateAt(direction)});
-            this.pickedPlatePoint = direction.multiplyScalar(R+2);
+            const hit = this.mosaic?.pick(ray);
+            if (hit) { this.inspectPlate(hit.object.name, hit.point); this.mosaic!.track(hit); }
           }
           this.onBoundary?.();
         }
@@ -246,9 +253,11 @@ export class World {
         : 39;
     this.nav.camera.updateProjectionMatrix();
   }
+  private planetInitialized?: Promise<void>;
   async init() {
     try {
-      await this.planet.init();
+      this.planetInitialized = this.planet.init();
+      await this.planetInitialized;
     } catch {
       this.warn("Basiskarte fehlt · Reliefkugel ohne Bilddaten");
     }
@@ -272,10 +281,27 @@ export class World {
   }
   private loadPlates() {
     if (!this.atlasLoading) {
-      this.atlasLoading = loadAtlas((lat, lon) => this.planet.elevation(lat, lon)).then((atlas) => {
+      this.atlasLoading = Promise.all([
+        loadAtlas((lat, lon) => this.planet.elevation(lat, lon)),
+        fetch(mosaicUrl).then(async response => {
+          if (!response.ok) throw new Error("Plattenflächen fehlen");
+          return await response.json() as SurfaceData;
+        }),
+        this.planetInitialized,
+      ]).then(([atlas, data]) => {
+        const neighbours = new Map<string,Set<string>>(Object.keys(data).map(code => [code,new Set()]));
+        for (const step of atlas.steps) {
+          const a=step[1].slice(0,2), b=step[1].slice(-2);
+          neighbours.get(a)?.add(b);
+          neighbours.get(b)?.add(a);
+        }
+        this.profiles = buildProfiles(atlas.steps, names);
+        this.mosaic = new PlateMosaic(data, this.planet.maps.A ?? this.planet.baseline!, neighbours);
+        this.scene.add(this.mosaic.group);
         this.atlas = atlas;
         this.scene.add(atlas.group);
         this.updatePlateLayers();
+        this.onBoundary?.();
       }).catch(() => {
         this.atlasLoading = undefined;
         this.warn("Plattendaten konnten nicht geladen werden. Plattenansicht erneut öffnen.");
@@ -307,7 +333,15 @@ export class World {
   private updatePlateLayers() {
     if (!this.atlas) return;
     const { boundaries, types, category, plate } = this.plateOptions;
-    this.atlas.setLayers(this.mode === "plates" && boundaries, types, types && category !== "all" ? category : null, plate || null);
+    const active = this.mode === "plates" && !this.processSite;
+    if (this.mosaic) {
+      if (active && this.nav.pose.d >= 340 && !this.mosaic.group.visible) this.mosaic.open(this.nav.camera.position, this.nav.reducedMotion.matches);
+      if (!active && this.mosaic.group.visible) { this.mosaic.close(); this.profileCode = ""; }
+      this.mosaic.selected = active ? plate : "";
+    }
+    this.nav.minimumDistance = active ? 340 : .06;
+    if (active && !this.nav.flight && this.nav.goal.d < 340) this.nav.fly({...this.nav.goal, d: 500});
+    this.atlas.setLayers(this.mode === "plates" && boundaries, types, types && category !== "all" ? category : null, active ? null : plate || null);
   }
   setPlateOptions(options: Partial<PlateOptions>) {
     if (options.plate !== undefined || options.names !== undefined || options.boundaries === false) this.singlePlateName = false;
@@ -320,11 +354,27 @@ export class World {
     }
     this.updatePlateLayers();
   }
+  inspectPlate(code: string, point?: T.Vector3) {
+    if (code && !this.profiles[code]) return;
+    this.setPlateOptions({plate:code});
+    this.mosaic?.clearAnchor();
+    this.singlePlateName = !!code;
+    this.profileCode = code;
+    this.pickedPlatePoint = point?.clone();
+    this.selectBoundary(null);
+  }
+  locatePlate() {
+    const coordinates = plateCentres[this.profileCode as keyof typeof plateCentres];
+    if (!coordinates) return;
+    const [lon,lat] = coordinates;
+    this.pickedPlatePoint = position(lat,lon,2);
+    this.nav.fly({lon,lat,d:2400,tilt:0,bearing:0});
+  }
   get atlasReady() { return !!this.atlas; }
-  get annotationTransition() { return this.processReveal; }
+  get annotationTransition() { return this.processSite ? this.processReveal : this.mosaic?.annotationPose ?? 0; }
   plateLabels() {
     if (!this.atlas || this.mode !== "plates" || !(this.plateOptions.names || this.singlePlateName) || this.processReveal > 0.5) return [];
-    return this.atlas.labels(this.nav.camera, this.canvas.clientWidth, this.canvas.clientHeight, this.nav.pose.d, this.processSite ?? undefined,this.plateOptions.plate,this.pickedPlatePoint,this.singlePlateName && !this.plateOptions.names,this.smallPlateNames);
+    return this.atlas.labels(this.nav.camera, this.canvas.clientWidth, this.canvas.clientHeight, this.nav.pose.d, this.processSite ?? undefined,this.plateOptions.plate,this.mosaic?.anchor() ?? this.pickedPlatePoint,this.singlePlateName && !this.plateOptions.names,this.smallPlateNames);
   }
   plates() {
     this.nyosLesson.playing = false;
@@ -669,7 +719,7 @@ export class World {
     this.leaveProcess();
     this.mode = "globe";
     this.updatePlateLayers();
-    if (forceHome) { this.processSlow = false; this.processLoop = false; }
+    if (forceHome) { this.inspectPlate(""); this.processSlow = false; this.processLoop = false; }
     if (forceHome || !wasAtlas) this.nav.fly(HOME, wasLocal || wasNyos);
     else if (wasLocal) this.nav.fly(this.atlasReturn, true);
   }
@@ -747,6 +797,7 @@ export class World {
       programs: this.gl.info.programs?.length,
       tectonics: {
         ...this.plateOptions,
+        mosaic: this.mosaic?.diagnostics(),
         ready: !!this.atlas, count: this.atlas?.steps.length ?? 0,
         selected: this.selectedStep?.[0] ?? null, site: this.processSite, anchor: this.anchor,
         patchOpacity: this.patchOpacity, processVisible: this.processReveal > 0 && !!this.processSite && this.models.has(this.processSite),
@@ -833,17 +884,21 @@ export class World {
     const intactLandscape = this.nyosLesson.view === "lake" ||
       (this.nyosLesson.view === "protection" && this.nyosLesson.measure === "settlements");
     this.globeOccluded = intactLandscape && this.nyos.localWeight === 1 && !!this.nyosCoverage?.containsView(this.nav.camera);
-    this.planet.group.visible = !inside && !this.globeOccluded;
+    if (this.mosaic && !this.mosaic.group.visible && this.mode === "plates" && !this.processSite && d >= 340)
+      this.mosaic.open(this.nav.camera.position,this.nav.reducedMotion.matches);
+    this.mosaic?.tick(Math.min(.30,this.frameMs/1000),this.nav.reducedMotion.matches);
+    const mosaicVisible = !!this.mosaic?.group.visible;
+    this.planet.group.visible = !inside && !mosaicVisible && !this.globeOccluded;
     this.shell.group.visible = inside;
     this.air.visible = !inside && d > 2200;
-    this.grid.visible = !inside && d > 2400;
+    this.grid.visible = !mosaicVisible && !inside && d > 2400;
     const before = performance.now();
     if (this.planet.group.visible) this.planet.update(lat, lon, d);
     this.terrainMs = performance.now() - before;
     for (const terrain of this.terrains.values()) {
       if (terrain === this.local || terrain.ready)
         terrain.update(lat, lon, d, now);
-      if (inside) terrain.group.visible = false;
+      if (inside || mosaicVisible) terrain.group.visible = false;
     }
     const b = basis(lat, lon),
       target = position(lat, lon),

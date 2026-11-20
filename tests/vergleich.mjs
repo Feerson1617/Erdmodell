@@ -311,7 +311,7 @@ const report = { baseline, candidate, runs: [] };
 for (const engine of (process.env.TEST_ENGINES ?? "chromium,webkit").split(
   ",",
 )) {
-  const order = engine === "chromium" ? ["G4.2", "G4.2.2"] : ["G4.2.2", "G4.2"];
+  const order = engine === "chromium" ? ["G4.2", "G4.3"] : ["G4.3", "G4.2"];
   for (const name of order) {
     const r = await measure(
       engine,
@@ -331,7 +331,7 @@ for (const engine of (process.env.TEST_ENGINES ?? "chromium,webkit").split(
   }
 }
 const rows = [
-  "# Leistungsvergleich G4.2 und G4.2.2",
+  "# Leistungsvergleich G4.2 und G4.3",
   "",
   `Referenz \`${baseline}\`, Kandidat \`${candidate}\`.`,
   "",
@@ -347,7 +347,7 @@ for (const engine of new Set(report.runs.map((r) => r.engine))) {
     "",
     runs[0].renderer,
     "",
-    "| Szenario | G4.2 FPS | G4.2.2 FPS | G4.2 P95 ms | G4.2.2 P95 ms | CPU alt / neu % |",
+    "| Szenario | G4.2 FPS | G4.3 FPS | G4.2 P95 ms | G4.3 P95 ms | CPU alt / neu % |",
     "|---|---:|---:|---:|---:|---:|",
   );
   for (let i = 0; i < stages.length; i++) {
@@ -366,7 +366,7 @@ for (const engine of new Set(report.runs.map((r) => r.engine))) {
     "| Stand | Vorher | Nachher |",
     "|---|---|---|",
     `| G4.2 | ${resources(switchOld.start)} | ${resources(switchOld.end)} |`,
-    `| G4.2.2 | ${resources(switchNew.start)} | ${resources(switchNew.end)} |`,
+    `| G4.3 | ${resources(switchNew.start)} | ${resources(switchNew.end)} |`,
   );
   const [a, b] = runs.map((r) => r.samples[3]);
   rows.push(

@@ -9,6 +9,7 @@ export class CameraController {
   pose = { ...HOME };
   goal = { ...HOME };
   orbit = false;
+  minimumDistance = .06;
   orbitMinimum = 38;
   inputRevision = 0;
   flight?: { from: Pose; to: Pose; start: number; ms: number; cruise: number; paced: boolean; elapsed: number; last: number };
@@ -71,7 +72,7 @@ export class CameraController {
   }
   zoom(f: number) {
     this.stop();
-    this.goal.d = clamp(this.goal.d * f, this.orbit ? this.orbitMinimum : 0.06, 35000);
+    this.goal.d = clamp(this.goal.d * f, this.orbit ? this.orbitMinimum : this.minimumDistance, 35000);
   }
   pan(dx: number, dy: number) {
     this.stop();

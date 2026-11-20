@@ -1,10 +1,11 @@
+import { localAsset } from "./assets";
 import * as T from "three";
 import { angularDistance, R, RAD, position, clamp, smooth } from "./geo";
 import { flattening } from "./regions";
 import { type Style, styles } from "./model";
 import type { Bounds } from "./regions";
 export const dataUrl = (file: string) =>
-  import.meta.env.BASE_URL + "data/" + file;
+  localAsset("data/" + file);
 export async function texture(file: string) {
   const t = await new T.TextureLoader().loadAsync(dataUrl(file));
   t.colorSpace = T.SRGBColorSpace;

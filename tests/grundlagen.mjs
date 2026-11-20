@@ -207,7 +207,7 @@ async function exercise(browser, engine) {
       /überwiegend aus festem Gestein/,
     );
     await shot("03-definition");
-    await p.tap("#definition button");
+    await p.tap("#definition > button");
     const pose = (w) => [w.lat, w.lon, w.d, w.tilt, w.bearing];
     const fixed = pose(await read(p));
     await click("scale");
@@ -229,7 +229,7 @@ async function exercise(browser, engine) {
       /Erdkruste und der starre oberste Erdmantel/,
     );
     await shot("04-lithosphaere");
-    await p.tap("#definition button");
+    await p.tap("#definition > button");
     if (reference) await click("lithosphere");
     else await click("scale");
     state = await read(p);
@@ -284,10 +284,8 @@ async function exercise(browser, engine) {
         null,
       );
       await click("info");
-      assert.doesNotMatch(
-        await texts(),
-        /Pazifische Platte|Eurasische Platte|Tiefseegraben|Lithosphäre/,
-      );
+      assert.match(await texts(), /Nur das Kartenbild öffnet sich/);
+      assert.match(await texts(), /Als Bezug dient die Pazifische Platte/);
       await click("closeDialog");
     }
     await click("boundaries");
@@ -301,7 +299,8 @@ async function exercise(browser, engine) {
     await p.check("#onePlateName");
     await p.waitForSelector("#platePins button");
     assert.equal(await pins("#platePins").count(), 1);
-    await p.uncheck("#onePlateName");
+    if (reference) await p.uncheck("#onePlateName");
+    else await p.tap("#atlasAll");
     assert.doesNotMatch(await texts(), /Afrikanische Platte|Eurasische Platte/);
     await click("plateNames");
     await p.waitForSelector("#platePins button");
@@ -319,11 +318,13 @@ async function exercise(browser, engine) {
 
     await verifyLayout(pins("#platePins"));
     await pins("#platePins").first().tap();
-    assert.match(
-      await p.locator("#layerText").innerText(),
-      /oberste Erdmantel/,
-    );
-    await p.tap("#definition button");
+    if (reference) {
+      assert.match(await p.locator("#layerText").innerText(), /oberste Erdmantel/);
+      await p.tap("#definition > button");
+    } else {
+      assert.equal(await p.locator("#plateProfile dd").count(),3);
+      await p.tap("#atlasAll");
+    }
     run.checks.push("B · Globus und Grenzen");
     for (const [i, id] of ["island", "japan", "san"].entries()) {
       await p.selectOption("#tectonicSite", id);
@@ -365,7 +366,7 @@ async function exercise(browser, engine) {
       await click("resetProcess");
       await pins("#platePins").first().tap();
       assert.ok((await p.locator("#layerText").innerText()).length < 180);
-      await p.tap("#definition button");
+      await p.tap("#definition > button");
       if (id === "japan") {
         await p.check("#loopProcess");
         await click("playProcess");
@@ -433,7 +434,7 @@ async function exercise(browser, engine) {
     await p.locator('[data-object="shell-1"]').click();
     assert.ok(await p.locator("#layerText").isVisible());
     if (!reference) await p.keyboard.press("Escape");
-    else await p.click("#definition button");
+    else await p.click("#definition > button");
     assert.equal(await p.locator("#layerText").count(), 0);
     await p.setViewportSize({ width: 768, height: 1024 });
     await p.waitForSelector('[data-object="shell-1"]');
@@ -476,7 +477,7 @@ async function recordDemo(browser) {
     await p.tap("#labels");
     await p.tap('[data-object="shell-1"]');
     await p.waitForTimeout(650);
-    await p.tap("#definition button");
+    await p.tap("#definition > button");
     await p.tap("#scale");
     await p.tap("#lithosphere");
     await p.waitForTimeout(650);
