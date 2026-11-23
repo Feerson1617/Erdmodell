@@ -128,6 +128,7 @@ async function allPairs(p) {
     await p.click("#atlasWorld");await rest(p);
     const s=await read(p);
     if (checked.length%10===0) console.log("Plattenvergleich",checked.length+1,code);
+    assert.ok(s.lon>=-180 && s.lon<180,"Geografischer Längengrad nach dem Atlasumlauf");
     checked.push({code,step:cases[code].step,geometries:s.geometries,textures:s.textures,programs:s.programs});
   }
   return checked;
