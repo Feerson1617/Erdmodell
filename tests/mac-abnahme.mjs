@@ -191,8 +191,17 @@ try {
     const p=await app.firstWindow(),ctx=app.context();
     await rest(p);
     const prefs=await app.evaluate(({BrowserWindow})=>{const w=BrowserWindow.getAllWindows()[0];w.setContentSize(1920,1080);
-      const v=w.webContents.getLastWebPreferences();return {sandbox:v.sandbox,contextIsolation:v.contextIsolation,nodeIntegration:v.nodeIntegration,webSecurity:v.webSecurity,devTools:v.devTools};});
-    assert.deepEqual(prefs,{sandbox:true,contextIsolation:true,nodeIntegration:false,webSecurity:true,devTools:false});
+      const v=w.webContents.getLastWebPreferences();return {sandbox:v.sandbox,contextIsolation:v.contextIsolation,nodeIntegration:v.nodeIntegration,webSecurity:v.webSecurity};});
+    assert.deepEqual(prefs,{sandbox:true,contextIsolation:true,nodeIntegration:false,webSecurity:true});
+    // devTools is a BrowserWindow option, not a Blink preference returned on macOS.
+    const toolsOpened=await app.evaluate(async({BrowserWindow})=>{
+      const contents=BrowserWindow.getAllWindows()[0].webContents;
+      contents.openDevTools({mode:"detach",activate:false});
+      await new Promise(done=>setTimeout(done,350));
+      return contents.isDevToolsOpened();
+    });
+    assert.equal(toolsOpened,false,"Entwicklerwerkzeuge im Präsentationsfenster");
+    report.devToolsOpened=toolsOpened;
     assert.equal(await p.evaluate(()=>typeof require+" "+typeof process),"undefined undefined");
     assert.equal(p.url(),"georisiko://modell/");
     const originPolicy=await p.evaluate(async()=>{
