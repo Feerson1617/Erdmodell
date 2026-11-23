@@ -1,5 +1,5 @@
 // Invoked only for a local device measurement. All samples stay in memory.
-export async function deviceProbe(milliseconds: number) {
+export async function deviceProbe(milliseconds: number, finished = () => true) {
   const read = () => {
     const s = (window as unknown as {geoObservatory: () => Record<string, unknown>}).geoObservatory();
     return Object.fromEntries(["mode","region","resolution","draws","triangles","textures","geometries","programs"].map(k => [k,s[k]]));
@@ -7,7 +7,7 @@ export async function deviceProbe(milliseconds: number) {
   const started = await new Promise<number>(requestAnimationFrame);
   const states = [read()], gaps: number[] = [];
   let previous = started;
-  while (previous - started < milliseconds) {
+  while (previous - started < milliseconds || !finished()) {
     const now = await new Promise<number>(requestAnimationFrame);
     gaps.push(now - previous);
     previous = now;
