@@ -8,5 +8,5 @@ module.exports = {
     hardenedRuntime:true, target:["dmg","zip"], artifactName:"GeoRisiko-macOS-arm64-app.${ext}" },
   dmg: { title:"GeoRisiko", artifactName:"GeoRisiko-macOS-arm64.dmg", sign:false,
     contents:[{x:150,y:135},{x:418,y:135,type:"link",path:"/Applications"}] },
-  publish: null
+  forceCodeSigning: true, publish: null
 };

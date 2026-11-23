@@ -3,7 +3,7 @@ const { join } = require("node:path");
 
 const origin = "georisiko://modell";
 const mime = { html: "text/html; charset=utf-8", js: "text/javascript", css: "text/css", json: "application/json",
-  webp: "image/webp", png: "image/png", woff2: "font/woff2", txt: "text/plain; charset=utf-8" };
+  webp: "image/webp", png: "image/png", woff2: "font/woff2", md: "text/plain; charset=utf-8", txt: "text/plain; charset=utf-8" };
 const policy = "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; object-src 'none'; frame-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'";
 
 // Only files actually shipped by Vite have a URL. Request paths never become filesystem paths.

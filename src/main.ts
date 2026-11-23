@@ -373,7 +373,8 @@ if (location.protocol === "georisiko:") content.addEventListener("click", async 
   if (!link) return;
   event.preventDefault();
   const url = new URL(link.href);
-  if (url.protocol !== "georisiko:" || url.host !== "modell" || !url.pathname.startsWith("/licenses/")) return;
+  const localNotice = url.pathname.startsWith("/licenses/") || /^\/assets\/[^/]+\.md$/.test(url.pathname);
+  if (url.protocol !== "georisiko:" || url.host !== "modell" || !localNotice) return;
   const response = await fetch(url);
   if (response.ok) {
     const heading = document.createElement("h2"), notice = document.createElement("p");

@@ -168,6 +168,8 @@ async function exercise(p,context,name,pid) {
 let viewport;
 try {
   const app=await _electron.launch({executablePath,args:["--force-device-scale-factor=1"],timeout:90000});
+  const stderr=[];
+  app.process().stderr?.on("data",chunk=>stderr.push(String(chunk)));
   try{
     const p=await app.firstWindow(),ctx=app.context();
     await rest(p);
@@ -201,7 +203,11 @@ try {
     await exercise(p,ctx,"Electron",app.process().pid);
     await p.close();const opened=app.waitForEvent("window");await app.evaluate(({app})=>app.emit("activate"));await rest(await opened);
     report.windowReopened=true;
-  }finally{await app.close();}
+  }finally{
+    await app.close();
+    await writeFile(join(out,"Electron-stderr.log"),stderr.join(""));
+    assert.ok(!stderr.some(line=>/FATAL:|GPU process isn't usable|Renderer process crashed/i.test(line)),"Electron-Prozessfehler");
+  }
   const browserServer=await chromium.launchServer({headless:false,channel:"chrome",args:["--force-device-scale-factor=1","--disable-background-networking"]});
   try{
     const browser=await chromium.connect(browserServer.wsEndpoint());

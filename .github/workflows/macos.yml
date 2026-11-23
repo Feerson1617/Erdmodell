@@ -9,10 +9,13 @@ jobs:
     timeout-minutes: 55
     env:
       ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+      # Ad-hoc identity '-' uses no signing secrets or Developer ID.
+      CSC_FOR_PULL_REQUEST: 'true'
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: 24
