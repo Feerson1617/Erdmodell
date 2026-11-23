@@ -24,8 +24,9 @@ function createWindow() {
     } });
   window = win;
   win.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
-  win.webContents.on("will-navigate", event => event.preventDefault());
-  win.webContents.on("will-frame-navigate", event => event.preventDefault());
+  win.webContents.on("will-frame-navigate", event => {
+    if (!event.isMainFrame || event.url !== origin + "/") event.preventDefault();
+  });
   for (const event of ["enter-full-screen", "leave-full-screen"]) win.on(event, () =>
     win.webContents.send("presentation:state", win.isFullScreen()));
   win.once("ready-to-show", () => win.show());

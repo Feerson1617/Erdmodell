@@ -28,6 +28,15 @@ for bundle in "$app" "$installed/zip/GeoRisiko.app"; do
   codesign -dv --verbose=4 "$bundle" 2>&1 | grep -E 'Signature=adhoc|Identifier=|Runtime Version'
 done
 cmp "$app/Contents/Resources/app.asar" "$installed/zip/GeoRisiko.app/Contents/Resources/app.asar"
+# Ask Gatekeeper about a separate download-marked copy without modifying the launch copy or the policy.
+quarantined="$installed/zip/GeoRisiko.app"
+xattr -w com.apple.quarantine "0083;$(printf '%x' "$(date +%s)");GeoRisiko-QA;" "$quarantined"
+xattr -p com.apple.quarantine "$quarantined"
+if spctl --assess --type execute --verbose=4 "$quarantined"; then
+  echo "Gatekeeper-Bewertung der Quarantänekopie auf diesem Runner: akzeptiert."
+else
+  echo "Gatekeeper-Bewertung der Quarantänekopie auf diesem Runner: abgelehnt (Status $?)."
+fi
 shasum -a 256 "$product/GeoRisiko-macOS-arm64.dmg" "$product/GeoRisiko-macOS-arm64-app.zip" artifacts/GeoRisiko-Web-Test.html > "$out/SHA256.txt"
 # LaunchServices uses the same launch mechanism as Finder. Quit gracefully before the instrumented run.
 open -n "$app"

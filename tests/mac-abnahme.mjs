@@ -81,6 +81,9 @@ async function scenarios(p,name,pid,row) {
     }
     await p.click("#definition > button");
   }
+  await p.click('[data-layer="2"]');await p.locator("#opacity").fill("40");assert.equal((await read(p)).shell.opacity[2],.4);
+  await p.click("#restoreLayers");await p.click("#evidence");assert.match(await p.locator("#content").innerText(),/vieler Erdbeben/);
+  await p.click("#closeDialog");
   await p.check("#scale");assert.ok((await read(p)).shell.expanded);
   await p.click("#lithosphere");assert.ok((await read(p)).shell.lithosphere);
   await p.click("#home");await p.click("#nav-plates");
@@ -165,7 +168,15 @@ async function exercise(p,context,name,pid) {
   console.log("Szenenprüfung",name,row.viewport,row.gpu);
   await scenarios(p,name,pid,row);
   if(name==="Electron"){
-    row.pairs=await allPairs(p);await recordFilm(p,context);
+    row.pairs=await allPairs(p);
+    row.places=[];
+    await p.click("#nav-place");
+    for(const place of ["hooge","helgoland"]) {
+      await p.selectOption("#siteSelect",place);
+      await p.waitForFunction(id=>{const w=window.geoObservatory();return w.region===id && w.localVisible && w.localReady && !w.flying;},place);
+      row.places.push(place);await capture(p,name+"-"+place);
+    }
+    await recordFilm(p,context);
     assert.ok(assets.has("/data/nyos/landscape.json") && assets.has("/data/relief.i16"));
   }
   row.requestedAssets=[...assets].sort();
