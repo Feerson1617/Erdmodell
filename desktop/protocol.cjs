@@ -11,7 +11,7 @@ async function assetHandler(root) {
   const files = new Map();
   async function index(directory, prefix) {
     for (const entry of await readdir(directory, { withFileTypes: true })) {
-      const key = prefix + entry.name, path = join(directory, entry.name);
+      const key = prefix + encodeURIComponent(entry.name), path = join(directory, entry.name);
       if (entry.isDirectory()) await index(path, key + "/");
       else if (entry.isFile()) files.set(key, path);
     }

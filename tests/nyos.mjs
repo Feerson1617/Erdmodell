@@ -1486,7 +1486,7 @@ try {
         const run = report.runs.at(-1);
         await missingDem(browser, run);
         run.Smartboard = await deviceProfile(browser, "Smartboard");
-        run.iPad = await deviceProfile(browser, "iPad");
+        if (process.env.LEGACY_IPAD_CHECK === "1") run.iPad = await deviceProfile(browser, "iPad");
         if (engine === "chromium") run.video = await recordDemo(browser);
       }
     } finally {

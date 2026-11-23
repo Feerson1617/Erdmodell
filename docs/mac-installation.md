@@ -2,7 +2,9 @@
 
 ## Unterrichtsgerät
 
-Die private Entwicklungsfassung ist für Macs mit Apple Silicon bestimmt. Der Build und der Test dokumentieren die tatsächlich verwendete macOS-Version und die vom Bundle deklarierte Mindestversion im Installationsprotokoll. Für das Öffnen der fertigen App sind ein Mac mit kompatiblem macOS und ein funktionierender WebGL-2-Grafikpfad erforderlich. Electron, Programmcode, Geodaten, Schriften und Texturen sind im Bundle enthalten.
+Die private Entwicklungsfassung benötigt Apple Silicon und mindestens macOS 13 Ventura. Electron 45 setzt diese Betriebssystemversion voraus. [Systemanforderung von Electron](https://github.com/electron/electron/blob/v45.4.1/docs/breaking-changes.md#removed-macos-12-support)
+
+ Der Build und der Test dokumentieren die tatsächlich verwendete macOS-Version und die vom Bundle deklarierte Mindestversion im Installationsprotokoll. Für das Öffnen der fertigen App sind ein Mac mit kompatiblem macOS und ein funktionierender WebGL-2-Grafikpfad erforderlich. Electron, Programmcode, Geodaten, Schriften und Texturen sind im Bundle enthalten.
 
 1. Im erfolgreichen macOS-Lauf **GeoRisiko-macOS-arm64.dmg** herunterladen. Die SHA-256-Prüfsummen der Installationsdateien und der HTML stehen im Abnahmepaket.
 2. Das DMG doppelklicken und **GeoRisiko** über die Verknüpfung in **Programme** ziehen. Das Volume auswerfen.

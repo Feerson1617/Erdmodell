@@ -63,13 +63,16 @@ async function compare(p,code) {
   await p.waitForFunction(()=>window.geoObservatory().tectonics.mosaic.progress>.025);
 }
 async function scenarios(p,name,pid,row) {
-  const record=async(scene)=>{await rest(p);row.scenes.push(await measure(p,pid,scene));await capture(p,name+"-"+scene);};
+  const record=async(scene)=>{console.log(name,scene);await rest(p);row.scenes.push(await measure(p,pid,scene));await capture(p,name+"-"+scene);};
   await p.click("#home");await record("01-Globus");
   const pose=await read(p);await p.locator("#earth").focus();await p.keyboard.press("ArrowRight");
   await p.waitForFunction(lon=>Math.abs(window.geoObservatory().lon-lon)>.01,pose.lon);
   await p.click("#home");await p.click("#nav-inside");await rest(p);
   assert.equal(await p.locator("#pins button").count(),0);await record("02-Schalenschnitt");
-  await p.click("#labels");await p.waitForFunction(()=>document.querySelectorAll("#pins button").length===4);
+  await p.click('[data-layer="1"]');await p.click("#revealOne");
+  await p.waitForFunction(()=>document.querySelectorAll("#pins button").length===1);
+  await p.click("#hideOne");await p.click("#labels");
+  await p.waitForFunction(()=>document.querySelectorAll("#pins button").length===4);
   await record("03-Vier-Schalen");
   for(let i=0;i<4;i++){
     await p.click('[data-object="shell-'+i+'"]');
@@ -119,7 +122,10 @@ async function allPairs(p) {
     assert.equal((await read(p)).tectonics.mosaic.pair.step,cases[code].step);
     await p.click("#atlasPlay");await p.waitForFunction(()=>window.geoObservatory().tectonics.mosaic.progress>.02);
     await p.click("#atlasReset");assert.equal((await read(p)).tectonics.mosaic.progress,0);
-    checked.push({code,step:cases[code].step});await p.click("#atlasWorld");await rest(p);
+    await p.click("#atlasWorld");await rest(p);
+    const s=await read(p);
+    if (checked.length%10===0) console.log("Plattenvergleich",checked.length+1,code);
+    checked.push({code,step:cases[code].step,geometries:s.geometries,textures:s.textures,programs:s.programs});
   }
   return checked;
 }
@@ -196,7 +202,15 @@ try {
       assert.ok(await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].isFullScreen()));
       await p.click("#present");await p.waitForFunction(()=>!document.body.classList.contains("present"));
     }
-    viewport=await p.evaluate(()=>({width:innerWidth,height:innerHeight}));
+    report.windowContent=await p.evaluate(()=>({width:innerWidth,height:innerHeight}));
+    report.display=await app.evaluate(({screen})=>screen.getAllDisplays().map(d=>({size:d.size,scaleFactor:d.scaleFactor})));
+    viewport={width:1920,height:1080};
+    report.viewportOverride=report.windowContent.width!==viewport.width || report.windowContent.height!==viewport.height;
+    if(report.viewportOverride) {
+      const viewportSession=await ctx.newCDPSession(p);
+      await viewportSession.send("Emulation.setDeviceMetricsOverride",{...viewport,deviceScaleFactor:1,mobile:false});
+    }
+    await p.waitForFunction(()=>innerWidth===1920 && innerHeight===1080);
     report.security=prefs;report.electron=await app.evaluate(({app})=>({version:process.versions.electron,chrome:process.versions.chrome,
       packaged:app.isPackaged,gpu:app.getGPUFeatureStatus()}));
     assert.ok(report.electron.packaged);
@@ -215,4 +229,5 @@ try {
     await exercise(await ctx.newPage(),ctx,"HTML",browserServer.process().pid);
     await browser.close();
   }finally{await browserServer.close();}
-}finally{await writeFile(join(out,"Pruefung.json"),JSON.stringify(report,null,2));}
+}catch(error){report.failure=String(error.stack);throw error;}
+finally{await writeFile(join(out,"Pruefung.json"),JSON.stringify(report,null,2));}

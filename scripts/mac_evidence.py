@@ -21,7 +21,7 @@ brief = ["# GeoRisiko für Mac · Abnahme", "", f"Commit `{r['commit']}`. [Mac-B
 "4. lipo bestätigte ARM64 am Hauptprogramm beider Bundles. codesign prüfte die verschachtelten Signaturen.",
 "5. Der LaunchServices-Start öffnete das Programm wie beim Finder-Start. Alle Laufzeitbestandteile befinden sich im Bundle.",
 "6. electron-builder erzeugte DMG und App-ZIP. hdiutil verifizierte das Image.",
-"7. Das DMG wurde schreibgeschützt gemountet, die App herauskopiert und das Volume ausgeworfen. Die Kopie startete und wurde regulär beendet. Der nächste Start dieser Kopie lieferte die 3D-Nachweise.",
+"7. Das DMG wurde schreibgeschützt gemountet, die App in einen leeren Testordner außerhalb des Volumes kopiert und das Volume ausgeworfen. Die Kopie startete und wurde regulär beendet. Der nächste Start dieser Kopie lieferte die 3D-Nachweise.",
 "8. Ad-hoc-Signatur, Renderer-Sandbox, Kontextisolation, webSecurity, deaktivierte Node-Integration, CSP und lokaler Ressourcen-Katalog sind eingerichtet. Für die private Fassung kann Gatekeeper eine Einzelbestätigung verlangen.",
 "9. Beide Ausgaben zeigten die regionalen Prozesse, Schalen und Nyos. In der installierten App wurden zusätzlich alle 52 Plattenflächen ausgewählt und die zugeordneten 48 unterschiedlichen Grenzvergleiche tatsächlich abgespielt und zurückgesetzt.",
 "10. Die HTML startete unter file:// in Chrome auf demselben Mac. Eine eigene Linux-Browserregression führt die fachlichen und visuellen Bestandstests aus.",
@@ -34,6 +34,7 @@ f"12. Der macOS-Runner meldete {r['hardware']['cpu']}, {r['hardware']['cores']} 
 "17. Der verlinkte Mac-Lauf stellt GeoRisiko-macOS-arm64.dmg, GeoRisiko-macOS-arm64-app.zip, GeoRisiko-Web-Test.html und GeoRisiko-Mac-Abnahme.zip einzeln bereit.","",
 "## Leistung", "",
 f"Electron {r['electron']['version']} mit Chromium {r['electron']['chrome']}. Browserfassung in Chrome {r['chrome']}. CSS-Fenster und Pixeldichte: {native['viewport']} / {web['viewport']}.",
+f"Das native Testfenster hatte {r['windowContent']['width']}×{r['windowContent']['height']} CSS-Pixel. Für den gemeinsamen 1920×1080-Test wurde "+("der Render-Viewport über das Testprotokoll eingestellt." if r['viewportOverride'] else "die tatsächliche Fenstergröße verwendet."),
 "", "| Szene und Produkt | Bild/s | Median / P95 / Maximum (ms) | CPU %¹ | RSS MiB Start → Ende | Renderpuffer (px) | Geometrien / Texturen / Programme / Draw Calls² |",
 "|---|---:|---|---:|---|---|---|"]
 for a,b in zip(native["scenes"],web["scenes"]):

@@ -4,6 +4,8 @@ GeoRisiko ist ein offline nutzbares 3D-Erdobservatorium für den Geographieunter
 
 ## Auf dem Mac starten
 
+Voraussetzung ist ein Mac mit Apple Silicon und macOS 13 Ventura oder neuer.
+
 Das Artefakt **GeoRisiko-macOS-arm64.dmg** aus dem erfolgreichen macOS-Lauf laden, öffnen und **GeoRisiko** auf **Programme** ziehen. Das Volume auswerfen und die App in Programme doppelklicken. Die private Entwicklungsfassung ist ad hoc signiert. Beim ersten Öffnen kann macOS eine Bestätigung verlangen. Das App-ZIP ist eine alternative Auslieferung für Apple Silicon. [Installation, macOS-Freigabe und Geräteprüfung](docs/mac-installation.md) · [Mac-Builds](https://github.com/Feerson1617/Erdmodell/actions/workflows/macos.yml)
 
 „Präsentieren“ und **⌃⌘F** wechseln ins Vollbild. Zum Prüfen des eigenen Geräts die gewünschte Szene öffnen und im Menü **Hilfe → Geräteprüfung starten** wählen. Das Ergebnis lässt sich als JSON sichern.
