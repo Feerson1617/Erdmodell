@@ -1,12 +1,7 @@
-name: GeoRisiko G4.3.1 Plattenatlas
-on:
-  pull_request:
-  workflow_dispatch:
-    inputs:
-      publish_pages:
-        description: GitHub Pages vom Hauptbranch veröffentlichen
-        type: boolean
-        default: false
+name: GeoRisiko · Browserregression
+on: [pull_request, workflow_dispatch]
+env:
+  ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
 permissions:
   contents: read
 jobs:
@@ -94,85 +89,4 @@ jobs:
           path: test-results/
           overwrite: true
           if-no-files-found: warn
-
-  pack:
-    needs: test
-    runs-on: ubuntu-24.04
-    container: mcr.microsoft.com/playwright:v1.56.1-noble@sha256:f1e7e01021efd65dd1a2c56064be399f3e4de00fd021ac561325f2bfbb2b837a
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: npm
-      - run: npm ci
-      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
-      - uses: actions/download-artifact@v4
-        with:
-          name: Produktionsbuild
-          path: dist/
-      - uses: actions/download-artifact@v4
-        with:
-          pattern: Browsertests-*
-          merge-multiple: true
-          path: test-results/
-      - run: npm run standalone
-      - run: npm run package
-      - run: python3 scripts/atlas_review.py
-      - name: Einzeldatei direkt bereitstellen
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
-        with:
-          path: artifacts/GeoRisiko-Erdmodell-G4.3.1.html
-          archive: false
-          overwrite: true
-          if-no-files-found: error
-      - name: XML-Schemaprüfung für SCORM vorbereiten
-        run: |
-          if ! python3 -c 'import lxml.etree' 2>/dev/null; then
-            apt-get update && apt-get install -y python3-lxml
-          fi
-          python3 -c 'import lxml.etree'
-      - run: node tests/packages.mjs
-      - run: node tests/atlas-auslieferung.mjs
-      - name: Unterricht-ZIP zum direkten Download bereitstellen
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
-        with:
-          path: artifacts/GeoRisiko-G4.3.1-Freitag-Unterricht.zip
-          archive: false
-          overwrite: true
-          if-no-files-found: error
-      - name: SCORM-1.2-ZIP zum direkten Download bereitstellen
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
-        with:
-          path: artifacts/GeoRisiko-G4.3.1-SCORM-1.2.zip
-          archive: false
-          overwrite: true
-          if-no-files-found: error
-      - name: Sichtpruefung-ZIP zum direkten Download bereitstellen
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
-        with:
-          path: artifacts/GeoRisiko-G4.3.1-Sichtpruefung.zip
-          archive: false
-          overwrite: true
-          if-no-files-found: error
-      - uses: actions/upload-pages-artifact@v3
-        if: github.event_name == 'workflow_dispatch' && inputs.publish_pages && github.ref == 'refs/heads/main'
-        with:
-          path: dist
-  pages:
-    if: github.event_name == 'workflow_dispatch' && inputs.publish_pages && github.ref == 'refs/heads/main'
-    needs: pack
-    runs-on: ubuntu-24.04
-    permissions:
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
-    steps:
-      - id: deploy
-        uses: actions/deploy-pages@v4
 

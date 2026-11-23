@@ -159,6 +159,13 @@ export class CameraController {
         lerp(Math.log(this.pose.d), Math.log(this.goal.d), t),
       );
     }
+    // The globe can rotate indefinitely, while local DEMs are indexed by geographic
+    // longitude. Shift pose and goal together to preserve the ongoing drag distance.
+    const fullTurns = Math.floor((this.pose.lon + 180) / 360);
+    if (fullTurns) {
+      this.pose.lon -= 360 * fullTurns;
+      this.goal.lon -= 360 * fullTurns;
+    }
     const { lat, lon, d, tilt, bearing } = this.pose,
       b = basis(lat, lon),
       a = tilt * RAD;

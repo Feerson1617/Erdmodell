@@ -1,0 +1,59 @@
+name: GeoRisiko · macOS ARM64
+on: [pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  mac:
+    name: Apple Silicon · App, DMG und Offline-Prüfung
+    runs-on: macos-26
+    timeout-minutes: 55
+    env:
+      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+      # Ad-hoc identity '-' uses no signing secrets or Developer ID.
+      CSC_FOR_PULL_REQUEST: 'true'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run mac:build
+      - run: bash scripts/mount-macos.sh
+      - name: Bedienfilm vorbereiten
+        run: command -v ffmpeg || brew install ffmpeg
+      - name: Installierte App und Einzeldatei am selben Mac bedienen und messen
+        env:
+          TEST_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: node tests/mac-abnahme.mjs
+      - run: python3 scripts/mac_evidence.py
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          path: artifacts/GeoRisiko-Mac-Abnahme.zip
+          archive: false
+          if-no-files-found: error
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          path: artifacts/macos/GeoRisiko-macOS-arm64.dmg
+          archive: false
+          if-no-files-found: error
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          path: artifacts/macos/GeoRisiko-macOS-arm64-app.zip
+          archive: false
+          if-no-files-found: error
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          path: artifacts/GeoRisiko-Web-Test.html
+          archive: false
+          if-no-files-found: error
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mac-protokoll
+          path: |
+            test-results/mac/*.log
+            test-results/mac/*.json

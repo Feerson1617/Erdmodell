@@ -1,3 +1,9 @@
+import { deviceProbe } from "./device-probe";
+declare global {
+  interface Window {
+    geoPresentation?: { toggle: () => Promise<void>; onChange: (listener: (state: boolean) => void) => void };
+  }
+}
 import {localAsset} from "./assets";
 import { AnnotationLayer, type Annotation } from "./annotations";
 import { siteCatalog, firstRegion } from "./regions";
@@ -361,12 +367,29 @@ function updatePins() {
   tectonicPins.draw(plates,[...obstacles,side],layoutRevision);
 }
 $("info").onclick = infoPage;
+// Keep local source notices readable inside the packaged window.
+if (location.protocol === "georisiko:") content.addEventListener("click", async event => {
+  const link = event.target instanceof Element ? event.target.closest("a") : null;
+  if (!link) return;
+  event.preventDefault();
+  const url = new URL(link.href);
+  const localNotice = url.pathname.startsWith("/licenses/") || /^\/assets\/[^/]+\.md$/.test(url.pathname);
+  if (url.protocol !== "georisiko:" || url.host !== "modell" || !localNotice) return;
+  const response = await fetch(url);
+  if (response.ok) {
+    const heading = document.createElement("h2"), notice = document.createElement("p");
+    heading.id = "dialogTitle"; heading.textContent = link.textContent;
+    notice.style.whiteSpace = "pre-wrap"; notice.textContent = await response.text(); content.replaceChildren(heading, notice);
+  }
+});
 dialog.onclose = () => content.replaceChildren();
 $("closeDialog").onclick = () => dialog.close();
 dialog.onclick = (e) => {
   if (e.target === dialog) dialog.close();
 };
+window.geoPresentation?.onChange(setPresentation);
 $("present").onclick = async () => {
+  if (window.geoPresentation) { await window.geoPresentation.toggle(); return; }
   setPresentation(!present);
   try {
     if (present) await document.documentElement.requestFullscreen?.();
@@ -440,6 +463,7 @@ async function boot() {
         e.key === "ArrowUp" ? 42 : e.key === "ArrowDown" ? -42 : 0,
       );
     else if (e.key === "Escape" && present) {
+      if (window.geoPresentation) { void window.geoPresentation.toggle(); return; }
       setPresentation(false);
       if (document.fullscreenElement) void document.exitFullscreen();
     }
@@ -467,6 +491,7 @@ async function boot() {
     if (status.textContent !== message) status.textContent = message;
   };
   await world.init();
+  Object.defineProperty(window, "geoDeviceProbe", {value: deviceProbe});
   Object.defineProperty(window,"geoAtlasCoverage",{value:()=>world.atlasCoverage()});
   Object.defineProperty(window, "geoObservatory", {
     value: () => ({...world.diagnostics(), annotationDom:{...tectonicPins.work}, shellAnnotationDom:{...shellPins.work}}),
