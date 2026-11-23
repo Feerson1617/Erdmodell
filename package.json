@@ -13,24 +13,30 @@
     "test:g1": "node tests/classroom.mjs && node tests/browser.mjs",
     "test:g2": "node tests/tectonics.mjs",
     "test:nyos": "node tests/nyos.mjs",
-    "package": "python3 scripts/package.py",
     "audit": "node tests/flight-audit.mjs && python3 scripts/analyse_flight.py test-results/audit",
     "test:grundlagen": "node tests/grundlagen.mjs",
     "test:freitag": "node tests/freitag.mjs && node tests/schalen-bildvergleich.mjs",
     "test:vergleich": "node tests/vergleich.mjs",
     "standalone": "python3 scripts/standalone.py",
-    "test:plattenatlas": "npm run standalone && node tests/plattengeometrie.mjs && node tests/plattenatlas.mjs && python3 scripts/atlas_film.py && node tests/atlas-leistung.mjs"
+    "test:plattenatlas": "npm run standalone && node tests/plattengeometrie.mjs && node tests/plattenatlas.mjs && python3 scripts/atlas_film.py",
+    "mac:package": "node scripts/stage-desktop.mjs && electron-builder --config desktop/builder.cjs --mac --arm64 --publish never",
+    "mac:build": "npm run build && npm run standalone && npm run mac:package"
   },
   "dependencies": {
-    "three": "0.180.0",
+    "@fontsource-variable/dm-sans": "5.2.8",
     "lucide": "0.468.0",
-    "@fontsource-variable/dm-sans": "5.2.8"
+    "three": "0.180.0"
   },
   "devDependencies": {
     "@types/three": "0.180.0",
-    "typescript": "5.9.3",
-    "vite": "7.2.2",
+    "electron": "45.4.1",
+    "electron-builder": "26.18.0",
     "playwright": "1.56.1",
-    "pngjs": "7.0.0"
-  }
+    "pngjs": "7.0.0",
+    "typescript": "5.9.3",
+    "vite": "7.2.2"
+  },
+  "description": "GeoRisiko – dreidimensionales Erdobservatorium für den Geographieunterricht",
+  "author": "GeoRisiko",
+  "main": "desktop/main.cjs"
 }
