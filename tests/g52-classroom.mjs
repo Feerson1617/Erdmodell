@@ -103,12 +103,14 @@ export async function classroom(p,dir,record=false){
     log.favorites.push("Historischer Zeitpunkt und Verfolgung","Globale Karte und Datenebenen");
     await recall("p2");await click("observe-play");const running=await save("Wiedergabe · Prüfung");await recall("p0");
     await recall(running);assert.ok((await state()).playing);await click("observe-play");
-    await p.reload();await p.waitForFunction(()=>window.geoObservatory?.().ready);await recall(key);
+    const nativePresentation=await p.evaluate(()=>Boolean(window.geoPresentation)&&document.body.classList.contains("present"));
+    await p.reload();await p.waitForFunction(()=>window.geoObservatory?.().ready);
+    if(nativePresentation)await p.waitForSelector("body.present");await recall(key);
     assert.equal((await state()).site,"san");assert.deepEqual((await state()).camera,expected.camera);
     log.favorites.push("Laufende Wiedergabe und Abruf nach Neuladen");
     // Remove only the three temporary scenes created during this test.
     for(const id of [running,mapKey,timeKey,key]){await click("saved-views");await choose("saved-list",id);await click("view-remove");await click("view-close");}
-    await click("obswitch");await click("home");if(await p.locator("body.present").count())await click("present");
+    await click("obswitch");await click("home");if(await p.locator("body.present").count()){await click("present");await p.waitForSelector("body.present",{state:"detached"});}
     await writeFile(join(dir,record?"Unterricht-App.json":"Unterricht-HTML.json"),JSON.stringify(log,null,2));return log;
   }finally{await display.detach();}
 }
