@@ -1,4 +1,4 @@
-import {graphics,quality} from "./graphics";
+import {graphics,quality,materials} from "./graphics";
 import {WaterProfile} from "./water-profile";
 import {fields, regionKeys, timeKeys} from "./saved-state";
 import {tracks} from "./reconstruction";
@@ -47,8 +47,15 @@ export class Observatory {
     world.customPick=(x,y)=>this.pick(x,y);
     world.customRender=(dt)=>this.frame(dt);
   }
+  private parkfield?:RegionalScene;
+  private parkDefaults?:ReturnType<typeof fields<RegionalScene,typeof regionKeys[number]>>;
   close(){
-    this.profile.hide();this.profileWanted=false;this.switching=false;this.spare?.dispose();this.spare=undefined;this.revision++;this.region?.dispose();this.region=undefined;this.maps.group.visible=false;this.mode="";
+    this.profile.hide();this.profileWanted=false;this.switching=false;this.spare?.dispose();this.spare=undefined;this.revision++;
+    const r=this.region;
+    if(r?.ready&&r.spec.site==="san"&&r.spec.theme==="earthquake"&&!r.spec.comparison&&!r.spec.event){
+      this.parkfield?.dispose();r.playing=false;r.orbit.enabled=false;this.parkfield=r;
+    }else r?.dispose();
+    this.region=undefined;this.maps.group.visible=false;this.mode="";
     this.world.nav.enabled=true;this.world.nav.minimumDistance=.06;this.labels.replaceChildren();this.message="";this.lastUI="";
     this.closeTime();delete document.body.dataset.observatory;
     document.querySelectorAll(".obsNav").forEach(b=>b.removeAttribute("aria-current"));
@@ -64,6 +71,7 @@ export class Observatory {
   async openMap(purpose:"events"|"boundaries"="events"){
     this.base();this.mode="map";this.mapPurpose=purpose;this.theme="earthquake";this.mark();
     this.world.nav.fly({lat:purpose==="events"?12:15,lon:purpose==="events"?-146:-20,d:15300,tilt:0,bearing:0},true);
+    void materials().then(lib=>{if(this.mode==="map"){this.world.gl.initTexture(lib.color);this.world.gl.initTexture(lib.relief);}}).catch(()=>{});
     this.world.nav.minimumDistance=150;this.maps.group.visible=true;this.maps.events.visible=purpose==="events";this.maps.boundaries.visible=true;
     this.maps.event=undefined;this.maps.selectStep(undefined);this.draw();
     const rev=this.revision;
@@ -73,11 +81,17 @@ export class Observatory {
     if(spec.process==="complex"&&spec.theme==="earthquake")spec={...spec,theme:"process"};
     this.base();this.mode="regional";this.theme=spec.theme;this.mark();
     this.world.nav.minimumDistance=.06;this.world.nav.fly({lat:spec.lat,lon:spec.lon,d:Math.max(3600,(spec.site?sites[spec.site].width:110)*3.2),tilt:12,bearing:0},true,1150);
-    const reg=new RegionalScene(spec,$("earth") as HTMLCanvasElement);this.region=reg;reg.orbit.enabled=false;
+    const cached=spec.site==="san"&&spec.theme==="earthquake"&&!spec.comparison&&!spec.event?this.parkfield:undefined;
+    if(cached)this.parkfield=undefined;
+    const reg=cached??new RegionalScene(spec,$("earth") as HTMLCanvasElement);this.region=reg;reg.orbit.enabled=false;
+    if(cached){
+      Object.assign(reg,this.parkDefaults);reg.restoreCamera("land",false,[3.4,4.5,7.4],[0,0,-.5]);reg.update(0);reg.timings.reused=1;this.draw();return;
+    }
+    if(spec.site==="san"&&spec.theme==="earthquake")this.parkDefaults=fields(reg,regionKeys);
     this.enrich(reg);const rev=this.revision;this.draw();
     try{
       await reg.init();if(rev!==this.revision)return;
-      reg.ready=false;const start=performance.now();await this.world.gl.compileAsync(reg.scene,reg.camera);
+      reg.ready=false;const start=performance.now();reg.prepareRender(this.world.gl);await this.world.gl.compileAsync(reg.scene,reg.camera);
       if(rev!==this.revision)return;reg.timings.warmShaderMs=performance.now()-start;reg.ready=true;this.draw();
     }
     catch{if(rev===this.revision){reg.error="Das lokale Gelände konnte nicht geladen werden.";this.draw();}}
@@ -186,13 +200,17 @@ export class Observatory {
 
     if(!this.mode)return false;
     if(this.mode==="time")return this.frameTime(dt);
-    const r=this.region;if(!r||!r.ready||this.world.nav.flight)return false;
+    const r=this.region;
+    if(this.mode==="regional"&&(!r?.ready||this.switching||this.world.nav.flight)){graphics.scope="loading";graphics.activity="load";return false;}
+    if(!r||!r.ready||this.world.nav.flight)return false;
     r.orbit.enabled=true;this.world.nav.enabled=false;const canvas=this.world.gl.domElement;r.camera.aspect=canvas.clientWidth/canvas.clientHeight;r.camera.updateProjectionMatrix();
     r.update(dt);
     const state=[r.view,r.cut,r.opening.toFixed(4),r.vertical,r.coastal,r.front.visible,r.labels.visible,
       canvas.width,canvas.height,r.local?.revision,graphics.revision,...r.camera.position.toArray().map(v=>v.toFixed(7)),...r.orbit.target.toArray().map(v=>v.toFixed(7)),...regionKeys.map(key=>r[key])].join("|");
     const start=r.timings.firstDrawMs===undefined?performance.now():0;
     graphics.idle=this.lastScene===r&&state===this.drawnState&&!r.playing&&r.viewSettled;
+    graphics.scope=[r.spec.site??r.spec.process,r.spec.theme,r.localActive?"local":"regional"].join("/");
+    graphics.activity=graphics.idle?"cached":r.playing?"animation":this.lastScene===r?"camera":"still";
     if(!graphics.idle){
       r.prepareRender(this.world.gl);this.world.gl.render(r.renderScene,r.camera);this.lastScene=r;this.drawnState=state;
     }
@@ -412,6 +430,7 @@ export class Observatory {
     if(!$("g-split-caption")){const el=document.createElement("div");el.id="g-split-caption";$("earth").parentElement!.append(el);}
   }
   private frameTime(dt:number){
+    graphics.scope="time";graphics.activity=this.timeline?.playing?"animation":"still";
     const t=this.timeline;if(!t)return false;const rendered=t.render(dt,this.world.gl,this.world.nav.camera);
     if(t.follow&&t.tracking&&t.year<=0&&!this.world.nav.flight){
       const v=t.reconstruction.at(Math.abs(t.year),t.tracking);if(v){this.world.nav.goal.lat=v.lat;this.world.nav.goal.lon=v.lon;}

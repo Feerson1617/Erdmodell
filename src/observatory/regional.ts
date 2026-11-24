@@ -47,7 +47,7 @@ export class RegionalScene {
     const q=this.grade.value=quality();
     if(this.localActive){this.local!.update(this.camera,this.progress,q);renderer.shadowMap.needsUpdate=true;return;}
     this.sunlight.castShadow=q>0;const size=[512,1024,2048][q],shadow=this.sunlight.shadow;
-    const samples=[1,2,8][q];for(const tex of [this.lib.color,this.lib.relief,this.lib.plants,this.colorMap,this.relief,this.contextMap]){
+    const samples=4;for(const tex of [this.lib.color,this.lib.relief,this.colorMap,this.relief,this.contextMap]){
       if(tex&&tex.anisotropy!==samples){tex.anisotropy=samples;tex.needsUpdate=true;}
     }
     if(shadow.mapSize.x!==size){shadow.map?.dispose();shadow.map=null;shadow.mapSize.set(size,size);}

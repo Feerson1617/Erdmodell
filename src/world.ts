@@ -1,4 +1,4 @@
-import {observeCadence,graphics} from "./observatory/graphics";
+import {observeFrame,graphics,cadence} from "./observatory/graphics";
 import * as T from "three";
 import { CameraController, HOME, type Pose } from "./camera";
 import { angularDistance, R, RAD, position, basis, smooth, clamp } from "./geo";
@@ -839,7 +839,7 @@ export class World {
       bearing,
       flying: !!this.nav.flight,
       fps: this.fps,
-      frames: this.frames,
+      frames: this.frames,renderedFrames:cadence.frames,frameKinds:{...cadence.totals},qualityChanges:cadence.changes.slice(),
       pixelRatio: this.gl.getPixelRatio(),
       frameMs: this.frameMs,
       resolution: { initial: this.resolution.maximum, minimum: this.resolution.minimum, maximum: this.resolution.maximum, width: this.canvas.width, height: this.canvas.height, reductions: this.resolution.reductions, recoveries: this.resolution.recoveries },
@@ -888,7 +888,7 @@ export class World {
     if (!this.running) return;
     requestAnimationFrame(this.render);
     if (document.hidden) { this.last = 0; return; }
-    if(!graphics.idle&&this.last&&now-this.last>600)observeCadence(1000/(now-this.last),Math.min(3.1,(now-this.last)/1000));
+
     if (!this.last || now - this.last > 2000) {
       this.fpsStart = now;
       this.frameCount = 0;
@@ -902,9 +902,6 @@ export class World {
     this.frameCount++;
     if (now - this.fpsStart >= 900) {
       this.fps = (this.frameCount * 1000) / (now - this.fpsStart);
-      if(!graphics.idle)observeCadence(this.fps,(now-this.fpsStart)/1000);
-      const ratio = graphics.idle?undefined:this.resolution.sample(this.fps, (now - this.fpsStart) / 1000);
-      if (ratio !== undefined) this.gl.setPixelRatio(ratio);
       this.frameCount = 0;
       this.fpsStart = now;
     }
@@ -1016,8 +1013,11 @@ export class World {
     }
     this.gl.setClearColor(0xaccbd0, zoom);
     const submit = performance.now();
+    graphics.activity=this.nav.flight?"camera":"world";graphics.scope=this.mode;
     if(!this.customRender?.(dt))this.gl.render(this.scene, this.nav.camera);
     this.renderMs = performance.now() - submit;
+    const sample=observeFrame(now);
+    if(sample){const ratio=this.resolution.sample(sample.fps,sample.seconds);if(ratio!==undefined)this.gl.setPixelRatio(ratio);}
     this.onFrame?.();
   };
 }

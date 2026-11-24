@@ -1,34 +1,34 @@
+import {RenderCadence,type Activity} from "./render-cadence";
 import * as T from "three";
 import {localAsset} from "../assets";
 
 export type Profile="auto"|"classroom"|"maximum";
 const key="georisiko.graphics.g6";
-export const graphics={profile:"auto" as Profile,adaptive:1,revision:0,idle:false};
+export const cadence=new RenderCadence();
+export const graphics={profile:"auto" as Profile,adaptive:1,revision:0,idle:false,activity:"world" as Activity,scope:"world"};
 try{const saved=localStorage.getItem(key);if(saved==="maximum"||saved==="classroom")graphics.profile=saved;}catch{/* private file session */}
 export function quality(){return graphics.profile==="maximum"?2:graphics.profile==="classroom"?1:graphics.adaptive;}
-let slow=0,fast=0;
-export function observeCadence(fps:number,seconds:number){
-  if(graphics.profile!=="auto")return;
-  slow=fps<28?slow+seconds:0;fast=fps>52?fast+seconds:0;
-  if(slow>3&&graphics.adaptive!==0){graphics.adaptive=0;graphics.revision++;fast=0;}
-  if(fast>12&&graphics.adaptive!==1){graphics.adaptive=1;graphics.revision++;slow=0;}
+export function observeFrame(now:number){
+  const sample=cadence.frame(now,graphics.activity,graphics.scope,graphics.profile==="auto");
+  if(graphics.adaptive!==cadence.grade){graphics.adaptive=cadence.grade;if(graphics.profile==="auto")graphics.revision++;}
+  return sample;
 }
 export function installProfiles(parent:HTMLElement){
   const details=document.createElement("details");details.id="g6-quality-menu";
   details.innerHTML='<summary aria-label="Grafikqualität" title="Grafikqualität"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 7h8m4 0h6M3 17h3m4 0h11"/><circle cx="13" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg></summary><label>Grafikqualität<select id="graphics-profile"><option value="auto">Automatisch</option><option value="classroom">Unterricht</option><option value="maximum">Maximal</option></select></label>';
   parent.prepend(details);const select=details.querySelector("select")!;select.value=graphics.profile;
-  select.onchange=()=>{graphics.profile=select.value as Profile;graphics.revision++;slow=fast=0;try{localStorage.setItem(key,select.value);}catch{}details.open=false;};
+  select.onchange=()=>{graphics.profile=select.value as Profile;graphics.revision++;cadence.restart();try{localStorage.setItem(key,select.value);}catch{}details.open=false;};
   document.addEventListener("pointerdown",e=>{if(!details.contains(e.target as Node))details.open=false;});
 }
 export async function loadTexture(file:string,srgb=false){
   const texture=await new T.TextureLoader().loadAsync(localAsset("data/g6/"+file));texture.colorSpace=srgb?T.SRGBColorSpace:T.NoColorSpace;
   texture.anisotropy=1;return texture;
 }
-let library:Promise<{color:T.Texture;relief:T.Texture;plants:T.Texture}>|undefined;
+let library:Promise<{color:T.Texture;relief:T.Texture}>|undefined;
 export function materials(){
   // The fixed library is shared by the active region and the single warm comparison scene.
-  return library??=Promise.all([loadTexture("facies.webp",true),loadTexture("facies-relief.webp"),loadTexture("botany.webp",true)])
-    .then(([color,relief,plants])=>({color,relief,plants})).catch(error=>{library=undefined;throw error;});
+  return library??=Promise.all([loadTexture("facies.webp",true),loadTexture("facies-relief.webp")])
+    .then(([color,relief])=>({color,relief})).catch(error=>{library=undefined;throw error;});
 }
 export type Library=Awaited<ReturnType<typeof materials>>;
 export const libraryGLSL=`
