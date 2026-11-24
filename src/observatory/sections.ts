@@ -1,3 +1,4 @@
+import {libraryGLSL} from "./graphics";
 import * as T from "three";
 import type {RegionalScene} from "./regional";
 
@@ -12,13 +13,32 @@ const palette:Record<Rock,[number,string,string]>={
   fault:[0x876550,"Störungszone","Hier grenzt bewegtes Gestein an den benachbarten Gesteinskörper."]};
 function material(kind:Rock,r:RegionalScene,accreted=false){
   const m=new T.MeshStandardMaterial({color:palette[kind][0],roughness:kind==="basalt"?.79:.94,side:T.DoubleSide});
-  m.customProgramCacheKey=()=>"g521-"+kind+accreted;
+  m.customProgramCacheKey=()=>"g6-"+kind+accreted+Boolean(r.lib);
   m.onBeforeCompile=shader=>{
     shader.uniforms.stressPhase=r.stressSignals.phase;shader.uniforms.showStress=r.stressSignals.show;shader.uniforms.ceiling={value:r.rockCeiling};
     shader.vertexShader="attribute vec2 coupling;attribute vec3 geologyCoord;varying vec2 lock;varying vec3 stone;varying float sectionZ;\n"+shader.vertexShader.replace("#include <begin_vertex>","#include <begin_vertex>\nstone=geologyCoord;sectionZ=position.z;lock=coupling;");
     const noise="float hashRock(vec3 p){p=fract(p*.31831+vec3(.17,.43,.71));p*=17.;return fract(p.x*p.y*p.z*(p.x+p.y+p.z));} float mineral(vec3 p){vec3 a=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(mix(hashRock(a),hashRock(a+vec3(1,0,0)),f.x),mix(hashRock(a+vec3(0,1,0)),hashRock(a+vec3(1,1,0)),f.x),f.y),mix(mix(hashRock(a+vec3(0,0,1)),hashRock(a+vec3(1,0,1)),f.x),mix(hashRock(a+vec3(0,1,1)),hashRock(a+vec3(1,1,1)),f.x),f.y),f.z);}";
     const structure=kind==="sediment"?"sin(stone.y*38.+a*3.)*.11":kind==="continental"?"smoothstep(.48,.88,b)*.22-smoothstep(.64,.85,a)*.19":kind==="basalt"?"smoothstep(.72,.83,b)*.19-a*.13":kind==="mantle"?"sin(stone.y*11.+a*4.)*.043+b*.10":kind==="wedge"?"mineral(stone*vec3(7.,2.,8.))*.22-a*.10":kind==="warm"?"sin(stone.y*4.+a*5.)*.08+b*.06":"a*.12-b*.09";
     shader.fragmentShader="uniform highp sampler2D ceiling;varying vec3 stone;varying float sectionZ;varying vec2 lock;uniform float showStress,stressPhase;"+noise+"\n"+shader.fragmentShader.replace("#include <color_fragment>","#include <color_fragment>\nvec2 cell=clamp((stone.xz+vec2(6.,4.5))*16.,vec2(0.),vec2(191.999,143.999));ivec2 at=ivec2(cell);vec2 u=fract(cell);float h=mix(mix(texelFetch(ceiling,at,0).r,texelFetch(ceiling,at+ivec2(1,0),0).r,u.x),mix(texelFetch(ceiling,at+ivec2(0,1),0).r,texelFetch(ceiling,at+ivec2(1,1),0).r,u.x),u.y);"+(accreted?"":"if(abs(sectionZ)>.002&&stone.y>h-.015)discard;")+"float a=mineral(stone*4.7),b=mineral(stone*29.+a*2.);diffuseColor.rgb*=.94+.12*(b-.5)+("+structure+");float band=mineral(stone*vec3(15.,32.,13.));diffuseColor.rgb*=.91+.14*band+.06*smoothstep(-4.,.2,stone.y);float strain=lock.x*smoothstep(0.,.36,stressPhase)*(1.-smoothstep(lock.y,lock.y+.07,stressPhase));diffuseColor.rgb=mix(diffuseColor.rgb,vec3(.70,.22,.068),.72*showStress*strain);");
+    if(r.lib){
+      const tile={sediment:5,continental:4,basalt:3,mantle:2,warm:1,wedge:7,fault:6}[kind];
+      const scales={sediment:[.95,2.3],continental:[1.75,1.65],basalt:[2.4,2.6],mantle:[2.1,1.5],warm:[1.3,.9],wedge:[2.4,2.1],fault:[2.9,2.8]}[kind];
+      Object.assign(shader.uniforms,{faciesColor:{value:r.lib.color},faciesRelief:{value:r.lib.relief},detailGrade:r.grade});
+      shader.fragmentShader=libraryGLSL+shader.fragmentShader.replace("#include <roughnessmap_fragment>",`#include <roughnessmap_fragment>
+        vec3 axis=abs(cross(dFdx(stone),dFdy(stone)))+vec3(.000001);axis=normalize(axis);axis=pow(axis,vec3(4.));axis/=axis.x+axis.y+axis.z;
+        vec2 scale=vec2(${scales[0]},${scales[1]});
+        vec2 section=stone.xy*scale+vec2(.13*stone.z,.21*sin(stone.x*1.4)+.18*a);
+        vec3 photo=fieldSample(faciesColor,section,${tile}.).rgb*axis.z+fieldSample(faciesColor,stone.yz*scale,${tile}.).rgb*axis.x+fieldSample(faciesColor,stone.xz*scale,${tile}.).rgb*axis.y;
+        vec3 micro=fieldSample(faciesRelief,section,${tile}.).rgb;
+        float coarse=fieldSample(faciesColor,section*.29+vec2(.24,.8),${tile}.).g;
+        float exposure=clamp(.34+2.4*sqrt(luma6(photo)+.004),.46,1.86);
+        diffuseColor.rgb*=mix(.78,1.13,smoothstep(.015,.45,coarse))*exposure;
+        diffuseColor.rgb=mix(diffuseColor.rgb,photo*vec3(1.12,1.01,.92),.14);
+        float broken=smoothstep(.63,.99,lock.x)*smoothstep(.58,.85,mineral(stone*vec3(9.,4.,11.)));
+        diffuseColor.rgb*=1.-.25*broken;
+        roughnessFactor=clamp(mix(roughnessFactor,micro.b,.54),.52,1.);
+      `).replace("#include <normal_fragment_maps>","#include <normal_fragment_maps>\n normal=normalize(normal+mat3(viewMatrix)*vec3(micro.r-.5,micro.g-.5,0.)*.51);");
+    }
   };return m;
 }
 // A closed solid, with separately shaded cap, base, exposed cross-section and side faces.

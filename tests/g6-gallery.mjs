@@ -7,7 +7,7 @@ import {pathToFileURL} from "node:url";
 import {execFileSync} from "node:child_process";
 const out=resolve(process.env.G6_OUT??"test-results/g6"),group=process.env.G6_GROUP;
 await mkdir(out,{recursive:true});
-const server=await chromium.launchServer({headless:true,...(process.env.G6_CHROME?{channel:"chrome"}:{args:["--use-angle=swiftshader","--enable-unsafe-swiftshader"]})});
+const server=await chromium.launchServer({headless:!process.env.G6_CHROME,...(process.env.G6_CHROME?{channel:"chrome"}:{args:["--use-angle=swiftshader","--enable-unsafe-swiftshader"]})});
 const browser=await chromium.connect(server.wsEndpoint()),ctx=await browser.newContext({viewport:{width:1920,height:1080},deviceScaleFactor:1,reducedMotion:"reduce"});
 const p=await ctx.newPage();p.setDefaultTimeout(110000);const errors=[],network=[],rows=[];
 p.on("pageerror",e=>{errors.push(e.message);console.error(e.message);});p.on("console",m=>{if(m.type()==="error"){errors.push(m.text());console.error(m.text());}});p.on("request",r=>{if(/^https?:/.test(r.url()))network.push(r.url());});
@@ -17,21 +17,26 @@ const rss=()=>{const ps=execFileSync("ps",["-axo","pid=,ppid=,rss="],{encoding:"
  return ps.reduce((sum,[id,,kb])=>sum+(tree.has(id)?kb:0),0)/1024;};
 const state=()=>p.evaluate(()=>window.geoObservatory());
 const rest=async()=>{await p.waitForFunction(()=>{const w=window.geoObservatory?.(),s=w?.observatory;return w?.ready&&!w.flying&&(s?.mode!=="regional"||s.ready&&s.viewSettled)&&(s?.mode!=="time"||s.timeReady);});await p.evaluate(()=>new Promise(ok=>requestAnimationFrame(()=>requestAnimationFrame(ok))));};
-const click=async id=>p.click("#"+id),select=async(id,v)=>p.selectOption("#"+id,v),phase=async v=>p.locator("#g-progress").fill(String(v));
+const click=async id=>{console.log("click",id);await p.click("#"+id);},select=async(id,v)=>{console.log("choose",id,v);await p.selectOption("#"+id,v);},phase=async v=>p.locator("#g-progress").fill(String(v));
 let loadMs=0;
 const visit=async(site,volcano=false)=>{const start=performance.now();await click(volcano?"nav-volcano":"nav-earthquake");if(volcano)await rest();await select(volcano?"g-site":"g-launch",site);await rest();loadMs=performance.now()-start;};
 const view=async v=>{await select("g-view",v);await rest();};
 const shot=async(name,measure=false)=>{
  if(process.env.G6_KEEP&&!process.env.G6_KEEP.split(",").some(key=>name.startsWith(key+"-")))return;
- await rest();const w=await state(),s=w.observatory;await p.screenshot({path:join(out,name+".jpg"),type:"jpeg",quality:86});
+ await rest();console.log("capture",name);const w=await state(),s=w.observatory;await p.screenshot({path:join(out,name+".jpg"),type:"jpeg",quality:86});
  const data=measure&&process.env.G6_PERF?await p.evaluate(()=>window.geoDeviceProbe(2500)):undefined;
  rows.push({name,camera:s.camera??[w.lat,w.lon,w.d,w.tilt,w.bearing],region:s.site??w.mode,phase:s.progress??s.year,cut:s.cut,playing:s.playing,viewport:[1920,1080],resolution:w.resolution,draws:w.draws,triangles:w.triangles,geometries:w.geometries,textures:w.textures,loadMs,warm:s.timings,profile:s.graphics,rssMiB:rss(),data});loadMs=0;
 };
 const zoom=async()=>{const box=await p.locator("#earth").boundingBox();await p.mouse.move(box.x+box.width*.63,box.y+box.height*.44);await p.mouse.wheel(0,-850);await p.waitForTimeout(400);};
-const groupIs=k=>!group||group===k;
+const stage=process.env.G6_STAGE;const groupIs=k=>!stage&&(!group||group===k);
 try{
  const start=performance.now();await p.goto(pathToFileURL(resolve(process.argv[2])).href);await rest();loadMs=performance.now()-start;
  if(process.env.G6_PROFILE){await p.click("#g6-quality-menu summary");await p.selectOption("#graphics-profile",process.env.G6_PROFILE);await rest();}
+ if(stage==="B"){for(const site of ["san","japan","island"]){await visit(site,site==="island");await view("cut");await phase(.49);await shot(site+"-Schnitt");}}
+ if(stage==="C"){await visit("japan");await view("land");await phase(.55);await shot("Meer");await view("coast");await phase(.658);await shot("Ufer");}
+ if(stage==="D"){await visit("island",true);await view("vent");await phase(.82);await shot("Lavastrom");await select("g-eruption","explosive");await phase(.76);await shot("Aschesaeule");}
+ if(stage==="E"){for(const site of ["himalaya","rift","hawaii"]){await visit(site,site==="hawaii");await shot(site+"-Landschaft");}}
+ if(stage==="F"){await shot("Globus");await click("nav-inside");await shot("Schalen");}
  if(groupIs("world")){await shot("01-Globus",true);await click("nav-inside");await shot("02-Schalen");}
  if(groupIs("san")){await visit("san");await shot("03-Parkfield",true);await zoom();await shot("04-Boden");await view("overhead");await zoom();await shot("05-Bewuchs");await phase(.49);await shot("06-Transform");await view("cut");await shot("07-Schnitt");await view("overhead");if(!await p.isVisible("#g-stress"))await p.locator("#g-stress").locator("xpath=ancestor::details[1]/summary").click();await p.check("#g-stress");await phase(.30);await shot("08-Spannung");await view("waves");await phase(.53);await shot("09-Wellen",true);}
  if(groupIs("japan")){await visit("japan");await shot("10-Tohoku",true);await zoom();await shot("10a-Kuestenrelief");await view("water");await phase(.49);await shot("11-Meeresboden");await view("cut");await shot("12-Subduktion");await view("land");await zoom();await phase(.58);await shot("13-Wasser");await view("ocean");await phase(.63);await shot("14-Offenes-Meer",true);await view("coast");await phase(.658);await shot("15-Ueberflutung");}
@@ -39,4 +44,4 @@ try{
  if(groupIs("other")){await visit("hawaii",true);await phase(.81);await shot("21-Hawaii");await visit("himalaya");await view("cut");await phase(.74);await shot("22-Himalaya");await visit("rift");await view("cut");await phase(.74);await shot("23-Graben");await visit("japan",true);await view("vent");await phase(.78);await shot("23a-Zaozan");}
  if(groupIs("global")){await click("nav-plates");await click("g-time");await rest();await p.locator("#g-year").fill("-125");await shot("24-Zeitreise");await select("g-scenario","aurica");await p.locator("#g-year").fill("160");await p.check("#g-compare");await select("g-second","amasia");await shot("25-Zukunft");await click("nav-nyos");await p.waitForFunction(()=>window.geoObservatory().nyos.terrainVisible&&!window.geoObservatory().flying);await shot("26-Nyos");await click("saved-views");await select("saved-list","p3");await click("view-apply");await p.waitForSelector(".classroom-views",{state:"hidden"});await click("present");await shot("27-Smartboard");}
  assert.deepEqual(errors,[]);assert.deepEqual(network,[]);await writeFile(join(out,"Aufnahmen.json"),JSON.stringify(rows,null,2));console.log(out,rows.length);
-}finally{await browser.close();await server.close();}
+}catch(e){console.error(await p.evaluate(()=>({body:document.body.innerText.slice(0,900),ready:window.geoObservatory?.()?.ready})).catch(()=>({})));throw e;}finally{await browser.close();await server.close();}

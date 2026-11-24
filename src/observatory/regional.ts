@@ -160,7 +160,7 @@ export class RegionalScene {
     if(this.spec.site){
       const base="data/g5/terrain/"+this.spec.site;
       const asset=(suffix:string)=>localAsset(this.spec.arcTransect?"data/g51/zao/"+(suffix===".i16"?"terrain.i16":suffix.slice(1)):base+suffix);
-      const enhanced=this.spec.site==="san";
+      const enhanced=["san","japan","island"].includes(this.spec.site)&&!this.spec.arcTransect;
       const region=this.spec.arcTransect?"zao":this.spec.site;
       const [response,tex,normal,rough,farHeight,farImage,lib,relief]=await Promise.all([fetch(asset(".i16")),enhanced?loadTexture(region+"-surface.webp",true):new T.TextureLoader().loadAsync(asset("-surface.webp")),new T.TextureLoader().loadAsync(asset("-normal.webp")),new T.TextureLoader().loadAsync(asset("-rough.webp")),fetch(asset("-context.i16")),enhanced?loadTexture(region+"-context.webp",true):new T.TextureLoader().loadAsync(asset("-context.webp")),enhanced?materials():undefined,enhanced?loadTexture(region+"-relief.webp"):undefined]);
       if(this.disposed){tex.dispose();normal.dispose();rough.dispose();farImage.dispose();relief?.dispose();return;}
@@ -229,7 +229,7 @@ export class RegionalScene {
         const prepare=terrain.onBeforeCompile.bind(terrain);
         terrain.onBeforeCompile=(s,renderer)=>{prepare(s,renderer);s.uniforms.phase=this.stressSignals.phase;s.uniforms.showStress=this.stressSignals.show;
           s.vertexShader="attribute vec2 coupling;varying vec2 locking;varying vec2 groundPos;\n"+s.vertexShader.replace("#include <begin_vertex>","#include <begin_vertex>\nlocking=coupling;groundPos=position.xz;");
-          s.fragmentShader="uniform float phase,showStress;varying vec2 locking;varying vec2 groundPos;\n"+s.fragmentShader.replace("#include <color_fragment>","#include <color_fragment>\nfloat load=showStress*locking.x*smoothstep(0.,.36,phase)*(1.-smoothstep(locking.y,locking.y+.07,phase));float rings=.5+.5*cos(17.*length(groundPos*vec2(.95,.54)));diffuseColor.rgb=mix(diffuseColor.rgb,vec3(.95,.29,.036),load*(.38+.46*rings));");};
+          s.fragmentShader="uniform float phase,showStress;varying vec2 locking;varying vec2 groundPos;\n"+s.fragmentShader.replace("#include <color_fragment>","#include <color_fragment>\nfloat load=showStress*locking.x*smoothstep(0.,.36,phase)*(1.-smoothstep(locking.y,locking.y+.07,phase));float rings=.5+.5*cos(17.*length(groundPos*vec2(.95,.54)));diffuseColor.rgb=mix(diffuseColor.rgb,vec3(.48,.13,.27),load*(.55+.36*rings));");};
       }
       if(this.contextMap){
         const prepare=terrain.onBeforeCompile.bind(terrain);

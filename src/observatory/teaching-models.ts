@@ -133,7 +133,10 @@ function witness(r:RegionalScene){
         if(i<72){const k=i*2;indices.push(k,k+1,k+2,k+1,k+3,k+2);}
       }
       const g=new T.BufferGeometry();g.setAttribute("position",new T.Float32BufferAttribute(coords,3));g.setIndex(indices);g.computeVertexNormals();
-      const mat=new T.MeshStandardMaterial({color:stripe?0xffe9ae:0x4a4237,roughness:.92,side:T.DoubleSide});
+      const mat=new T.MeshStandardMaterial({color:stripe?0xe5d8ae:0x8d795f,roughness:.92,side:T.DoubleSide});
+      if(!stripe&&r.lib){const tex=r.lib.color;mat.onBeforeCompile=sh=>{
+        sh.uniforms.track={value:tex};sh.vertexShader="varying vec2 trackUV;\n"+sh.vertexShader.replace("#include <begin_vertex>","#include <begin_vertex>\ntrackUV=position.xz;");
+        sh.fragmentShader="uniform sampler2D track;varying vec2 trackUV;\n"+sh.fragmentShader.replace("#include <color_fragment>","#include <color_fragment>\nvec2 p=trackUV*3.;float grit=textureGrad(track,(vec2(1.,1.)+.004+.992*fract(p))/vec2(4.,2.),dFdx(p)/vec2(4.,2.),dFdy(p)/vec2(4.,2.)).g;diffuseColor.rgb*=.57+1.4*sqrt(grit);");};}
       const road=object(g,mat,"marker");road.name="Schematischer Vergleichsweg";r.witnesses.add(road);r.bindRock(g,side);
       if(stripe)r.onAnimate(()=>{const p=g.attributes.position;r.markerEnds[index]=[p.getX(0),p.getY(0),(p.getZ(0)+p.getZ(1))/2];});
     }
