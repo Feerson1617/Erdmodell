@@ -30,6 +30,7 @@ const shot=async(name)=>{
  if(!before){
    const phase={"12-Vor-dem-Bruch":"Ausgangszustand","13-Spannungsaufbau":"Spannungsaufbau","16-Wellen":"Bruch und Wellenausbreitung","18a-Seitenversatz":"Seitlicher Versatz am Meeresboden","18b-Tiefer-Bruch":"Bruch in der Tiefe","20-Ueberflutung":"Küste überflutet","20a-Rueckzug":"Wasser zieht sich zurück","21b-Explosiv-im-Nahmodell":"Ruhendes Lavafeld","23a-Ruhige-Bucht":"Ruhige Nahbucht","24-Pangaea":"Pangäa","25-Kontinentalbewegung":"Der Atlantik wächst","25a-Gegenwart":"Gegenwart"};
    if(phase[name])assert.equal(result.title,phase[name],name);
+   if(name==="20-Ueberflutung")assert.ok(result.pins.some(p=>p.name==="Überfluteter Bereich"),"Anker auf zuvor trockenem, jetzt benetztem Gelände");
    if(name==="22-Hawaii")assert.ok(!result.pins.some(p=>p.name==="Kontinentale Kruste"));
  }
  await p.screenshot({path:join(out,name+".jpg"),type:"jpeg",quality:81});report.shots.push({name,...result});console.log(name,result.title||"",result.pins.map(v=>v.name).join(", "));

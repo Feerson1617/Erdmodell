@@ -303,23 +303,30 @@ export class RegionalScene {
           normals.needsUpdate=true;});
         const surface=mesh(g,water,"Wasseroberfläche");
         if(this.water){
-          const solver=this.water,row=21*121;
-          let name="Wasseroberfläche",chosen=-1;
-          // Read the same wet mask and vertex heights that the water material draws.
-          this.onAnimate(()=>{
-            chosen=-1;name="Wasseroberfläche";let best=0;
-            for(let i=1;i<120;i++){
-              const k=row+i;if(wet.getX(k)<=.002)continue;
-              const flooded=this.spec.coastLesson&&solver.depths[i]<=.001&&terrain[k]>=-.001;
+          const solver=this.water,probe=new T.Vector3();
+          let name="Wasseroberfläche",chosen=-1,last="";
+          // Select only vertices of the drawn wet mask inside the current view. The shore camera
+          // can show a fraction of one grid row; a far-off global maximum has no visible anchor.
+          const findPoint=()=>{
+            const key=[this.progress,this.camera.aspect,...this.camera.matrixWorld.elements].join("|");
+            if(key===last)return;last=key;chosen=-1;name="Wasseroberfläche";let best=-Infinity;
+            for(const j of (front?[1,4,12,21]:[41,38,30,21]))for(let i=1;i<120;i++){
+              const k=j*121+i;if(wet.getX(k)<=.002)continue;
+              probe.fromBufferAttribute(pos,k).project(this.camera);
+              if(Math.max(Math.abs(probe.x),Math.abs(probe.y),Math.abs(probe.z))>=1)continue;
+              const newlyWet=this.spec.coastLesson&&solver.depths[i]<=.001&&terrain[k]>=-.001;
               const change=Math.abs(levels[i]-solver.surfaces[i]);
-              const weight=front?(flooded?2+wet.getX(k):change):wet.getX(k);
-              if(weight<=best)continue;
-              best=weight;chosen=k;
-              name=front&&flooded?"Überfluteter Bereich":front&&change>.006?"Wasserwelle":"Wasseroberfläche";
+              const feature=front||this.cut;
+              const term=feature&&newlyWet?"Überfluteter Bereich":feature&&change>.006?"Wasserwelle":"Wasseroberfläche";
+              const priority=term==="Überfluteter Bereich"?3:term==="Wasserwelle"?2:0;
+              const score=priority+Math.min(change,.5)-.45*probe.x**2-.6*probe.y**2;
+              if(score>best){best=score;chosen=k;name=term;}
             }
-          });
-          surface.userData.lessonAnchor=()=>chosen<0?undefined:new T.Vector3().fromBufferAttribute(pos,chosen);
-          Object.defineProperty(surface.userData,"explanation",{get:()=>({name,answer:name==="Überfluteter Bereich"?"Dieses Gelände lag anfangs trocken. Hier bedeckt es jetzt Wasser aus dem Küstenmodell.":name==="Wasserwelle"?"An dieser Stelle unterscheidet sich die Wasserhöhe vom Ruhezustand. Die Wasserwelle bewegt sich durch das Meer.":"Die Wasserhöhe stammt aus der Flachwasserberechnung."})});
+          };
+          surface.userData.lessonAnchor=()=>{findPoint();return chosen<0?undefined:new T.Vector3().fromBufferAttribute(pos,chosen);};
+          Object.defineProperty(surface.userData,"explanation",{get:()=>{
+            findPoint();return {name,answer:name==="Überfluteter Bereich"?"Dieses Gelände lag anfangs trocken. Hier bedeckt es jetzt Wasser aus dem Küstenmodell.":name==="Wasserwelle"?"An dieser Stelle unterscheidet sich die Wasserhöhe vom Ruhezustand. Die Wasserwelle bewegt sich durch das Meer.":"Die Wasserhöhe stammt aus der Flachwasserberechnung."};
+          }});
         }
         (front?this.front:this.scene).add(surface);
       }
