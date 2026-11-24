@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';import {pathToFileURL} from 'node:url';i
 const b=await chromium.launch({args:['--use-angle=swiftshader','--enable-unsafe-swiftshader']});
 try{const p=await b.newPage({viewport:{width:1366,height:768},reducedMotion:'reduce'});const errors=[];
 p.on('pageerror',e=>errors.push(String(e)));p.on('console',m=>{if(m.type()==='error')errors.push(m.text().slice(0,260));});
-await p.goto(pathToFileURL(resolve(process.env.G5_HTML||'artifacts/GeoRisiko-G5.1-Web-Test.html')).href);await p.waitForFunction(()=>window.geoObservatory?.().ready);
+await p.goto(pathToFileURL(resolve(process.env.G5_HTML||'artifacts/GeoRisiko-G5.2-Web-Test.html')).href);await p.waitForFunction(()=>window.geoObservatory?.().ready);
 for(const [width,height] of [[1920,1080],[1366,768],[1024,768],[768,1024]]){await p.setViewportSize({width,height});await p.click('#nav-plates');assert.ok(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),String(width));}
 await p.setViewportSize({width:1366,height:768});await p.click('#g-forces');await p.waitForSelector('#g-play');await p.click('#g-step');await p.screenshot({path:'/tmp/g5-antrieb.png'});
 await p.click('#nav-inside');await p.click('#g-litho');await p.waitForSelector('#g-cut');await p.screenshot({path:'/tmp/g5-litho.png'});

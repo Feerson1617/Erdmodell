@@ -408,6 +408,7 @@ export class World {
     const distance=R*(Math.sin(angle)/(.72*this.fitSlope())-(1-Math.cos(angle)));
     this.nav.fly({lon,lat,d:clamp(distance,340,19500),tilt:0,bearing:0},true);
   }
+  async loadClassroomAtlas(){await this.loadPlates();}
   get atlasReady() { return !!this.atlas; }
   get annotationTransition() { return this.processSite ? this.processReveal : this.mosaic?.annotationPose ?? 0; }
   plateLabels() {

@@ -42,3 +42,17 @@ Die folgenden Nachweise sind im Ordner G51 des Sichtprüfungspakets enthalten. D
 | F4 S19 · Naturgefahr und Verwundbarkeit | Bei gleicher Quelle ändern sich Bodenschwingung, Bebauung und Aussteifung getrennt. Magnitude bezeichnet die Größe der Quelle, Intensität ihre örtliche Wirkung. | G51/26a–27 und G5/28. Die Gebäude sind qualitative Modelle. |
 | F4 S20 · Vorsorge und Resilienz | Warnung, Fluchtweg, Standortverlagerung und Wiederherstellung der Versorgung werden im Küstenraum sichtbar. Nyos liefert das zweite Unterrichtsbeispiel. | G51/28, Nyos-Bestandsprüfungen. Nutzungskonflikte, Akteure und die Bewertung von Maßnahmen gehören in das Unterrichtsgespräch. |
 | Präsentation und Sprachbildung | Beobachten verbirgt Namen und Erklärungen. Die Lehrkraft kann das Modell anhalten, einen Schritt zeigen und Erläuterungen freigeben. | G51/29–30. Der technische Test ersetzt keine Rückmeldung der Klasse. |
+
+
+## G5.2 · Beobachtung und selbstständige fachliche Erarbeitung
+
+Die Zuordnung verwendet die Fachanforderungen Geographie Schleswig-Holstein 2015, S. 18–19 und 26, den Leitfaden 2016, S. 46–47, und das schulinterne Curriculum ETS Tönning/Friedrichstadt, S. 6. Die rechte Spalte erfordert eine Leistung der Lernenden im Unterricht.
+
+| Unterrichtsgegenstand | Direkt beobachtbar | Erklärung auf Wunsch | Aufgabe im Unterricht |
+|---|---|---|---|
+| Ursachen eines Bebens | Globale Punkte und Grenzlinien, blockierter Kontakt, verformter Weg und bleibender Versatz | Platten bewegen sich weiter, Gestein verformt sich elastisch und gleitet beim Bruch | Eine Vermutung aus der Karte mit dem lokalen Modell überprüfen und die Maßstabsgrenze begründen |
+| Wellen | Getrennte Fronten und lokale Teilchenbewegungen, Ankunft an der Oberfläche | P-Schwingung längs, S-Schwingung quer zur Ausbreitung | Erschütterung und bleibende Geländeverschiebung anhand eigener Beobachtungen unterscheiden |
+| Transfer vor Japan | 176 Katalogorte im Tiefenprofil, getrennte Kontaktlinie, Wassersäule und Küstenwirkung | Unterschied zwischen Lage eines gemessenen Bebens und modellierter Struktur | Eigene Deutung mit unabhängigen Messungen abgleichen, Gegenbeispiele berücksichtigen |
+| Magnitude und Intensität | Gleiche Quelle, zwei Siedlungsstandorte, Untergrund und sichtbare Gebäudereaktion | Größe des Bebens an der Quelle und örtlich unterschiedliche Stärke der Erschütterung | Einen Vergleich unter Konstanthalten der Quelle planen und begründen |
+| Naturrisiko und Resilienz | Besiedlung, Aussteifung, Warnung, Fluchtweg und Versorgung im Wiederaufbau | Gefahr, Exposition, Anfälligkeit, Vorbereitung und Wiederherstellung | Vorsorgemaßnahmen auch nach Aufwand, Zugang und Interessen bewerten |
+| Zeitliche und räumliche Orientierung | Zeitstrahl, auswählbarer Kontinentalbereich, vier Zukunftsmöglichkeiten | Rekonstruktionen und Szenarien beruhen auf unterschiedlichen Grundlagen | Kartenmuster, Rekonstruktion und mögliche Zukunft hinsichtlich ihrer Aussagekraft vergleichen |

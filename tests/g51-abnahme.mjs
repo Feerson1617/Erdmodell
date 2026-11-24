@@ -61,9 +61,9 @@ export async function acceptG51(p,dir,films=true){
   await display.detach();return {pictures,movies,dimensions:[1920,1080]};
 }
 
-export async function longClassroom(p,measure){
+export async function longClassroom(p,measure,readMemory){
   const {click,ready,visit,time}=controls(p);
-  const display=await p.context().newCDPSession(p),start=performance.now(),samples=[];
+  const display=await p.context().newCDPSession(p),start=performance.now(),samples=[],home=[];
   const sizes=[[1280,800],[1920,1080],[2560,1440]];
   let n=0;
   try{
@@ -72,15 +72,18 @@ export async function longClassroom(p,measure){
       await display.send("Emulation.setDeviceMetricsOverride",{width,height,deviceScaleFactor:1,mobile:false});
       await p.waitForFunction(([w,h])=>innerWidth===w&&innerHeight===h,[width,height]);
       const label=["Parkfield","Tohoku und Tsunami","Zeitreise","Vulkanismus"][n%4];
-      if(n%4===2){await time();await click("g-time-play");}
+      const loadStart=performance.now();
+      if(n%4===2){await time();if(n%8===6){await p.selectOption("#g-scenario","aurica");await p.locator("#g-year").fill("160");await p.check("#g-compare");await p.waitForFunction(()=>window.geoObservatory().observatory.timeReady);}await click("g-time-play");}
       else{if(n%4===3){await click("nav-volcano");await ready();}else{await visit(n%4===0?"san":"japan");await click("g-cut");}await click("g-play");}
-      samples.push({width,height,...await measure(label,15000)});
+      samples.push({width,height,readyMs:performance.now()-loadStart,futureComparison:n%8===6,...await measure(label,15000)});
       if(n%4===2)await click("g-time-play");
       await click("home");await p.waitForFunction(()=>!window.geoObservatory().flying);
+      const resources=await p.evaluate(()=>{const s=window.geoObservatory();return {geometries:s.geometries,textures:s.textures,programs:s.programs,jsHeap:performance.memory?.usedJSHeapSize};});
+      home.push({cycle:n,width,height,rssMiB:readMemory(),...resources});
       if(n%8===0)console.log("Unterrichtsdauer",Math.round((performance.now()-start)/1000),"s",width,height);
       n++;
     }
   }finally{await display.send("Emulation.setDeviceMetricsOverride",{width:1920,height:1080,deviceScaleFactor:1,mobile:false});await display.detach();}
   assert.equal(new Set(samples.map(s=>s.width)).size,3);
-  return {elapsedMs:performance.now()-start,samples};
+  return {elapsedMs:performance.now()-start,samples,home};
 }

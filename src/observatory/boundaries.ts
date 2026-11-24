@@ -21,9 +21,10 @@ export function geology(s:Step){
   const down=sub?(symbol==="\\"?left:right):null,over=sub?(down===left?right:left):null;
   const dipAzimuth=sub?(strike+(down===left?90:270))%360:null;
   const elevation=Number(f[3]),worldElevation=Number(f[4]),surface=elevation<0?"Unter dem Meer":"An Land";
+  const coastalUncertainty=Math.abs(elevation)<100||Math.sign(elevation)!==Math.sign(worldElevation);
   const model=classify(s),regionalDEM=(Object.keys(referenceSteps) as (keyof typeof referenceSteps)[]).find(k=>referenceSteps[k][0]===s[0])??null;
   return {id:s[0],pair:s[1],category:s[2],...center(s),strike,left,right,relativeAzimuth:s[8],relativeSpeedMmPerYear:s[7],
-    divergent:Number(f[1]),dextral:Number(f[2]),elevation,worldElevation,surface,coastalUncertainty:Math.abs(elevation)<100||Math.sign(elevation)!==Math.sign(worldElevation),
+    divergent:Number(f[1]),dextral:Number(f[2]),elevation,worldElevation,surface,coastalUncertainty,marine:!coastalUncertainty&&elevation<0,oblique:sub&&Math.abs(Number(f[2]))>=.5*s[7],localQuake:model!=="complex",
     descending:down,overriding:over,polarity:sub?symbol:null,dipAzimuth,orogen:Boolean(f[5]),model,regionalDEM,
     lithosphere:sub?(model==="arc"?"Ozeanische Unterplatte · Inselbogen":"Unterplatte meist ozeanisch · obere Lithosphäre örtlich offen"):s[2][0]==="O"?"Ozeanisch geprägt":"Kontinental geprägt",
     scope:regionalDEM?"Referenzregion mit idealisiertem Untergrund":["complex","convergence"].includes(model)?"Allgemeines Anschauungsmodell":"Regional angepasstes Anschauungsmodell",

@@ -70,7 +70,7 @@ function menu() {
   ]));
 }
 app.whenReady().then(async () => {
-  localSession = session.fromPartition("georisiko-local");
+  localSession = session.fromPartition("persist:georisiko-classroom",{cache:false});
   localSession.setPermissionRequestHandler((_wc,_p,callback)=>callback(false));
   localSession.setPermissionCheckHandler(()=>false);
   localSession.webRequest.onBeforeRequest({urls:["http://*/*","https://*/*","ws://*/*","wss://*/*","file://*/*"]}, (_r,done)=>done({cancel:true}));

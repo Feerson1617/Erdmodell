@@ -31,12 +31,17 @@ export class MapLayers {
     this.dots?.geometry.setAttribute("color",new T.Float32BufferAttribute(colors,3));}
   pick(dir:T.Vector3,tol:number,preferEvents:boolean){
     this.event=undefined;this.selectedStep=undefined;
-    if(this.active){this.boundaries.remove(this.active);this.active.geometry.dispose();(this.active.material as T.Material).dispose();this.active=undefined;}
+    this.selectStep(undefined);
     if(preferEvents && this.events.visible){let best=tol*tol;this.centers.forEach((p,i)=>{const d=p.distanceToSquared(dir);if(d<best){best=d;this.event=this.rows[i];}});if(this.event)return;}
     if(!this.boundaries.visible)return;
     let best=tol*tol;const p=new T.Vector3(),v=new T.Vector3();
     this.arcs.forEach(({a,b},i)=>{v.subVectors(b,a);p.subVectors(dir,a);const t=T.MathUtils.clamp(p.dot(v)/v.lengthSq(),0,1);p.copy(a).addScaledVector(v,t).normalize();const d=p.distanceToSquared(dir);if(d<best){best=d;this.selectedStep=this.steps[i];}});
-    if(this.selectedStep){const s=this.selectedStep;this.active=new T.Line(new T.BufferGeometry().setFromPoints([position(s[4],s[3],60),position(s[6],s[5],60)]),new T.LineBasicMaterial({color:0xffffff}));this.boundaries.add(this.active);}
+    this.selectStep(this.selectedStep);
+  }
+  selectStep(step?:Step){
+    if(this.active){this.boundaries.remove(this.active);this.active.geometry.dispose();(this.active.material as T.Material).dispose();this.active=undefined;}
+    this.selectedStep=step;
+    if(step){const s=step;this.active=new T.Line(new T.BufferGeometry().setFromPoints([position(s[4],s[3],60),position(s[6],s[5],60)]),new T.LineBasicMaterial({color:0xffffff}));this.boundaries.add(this.active);}
   }
   get pair(){const ids=this.selectedStep?.[1].match(/[A-Z]{2}/g)??[];return ids.map(id=>names[id]).join(" und ");}
 }

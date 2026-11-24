@@ -74,7 +74,7 @@ questions=[
 ('Welche Regressionen wurden geprüft?','Native und HTML-Bedienprüfung, 52 Platten mit 48 verschiedenen Grenzvergleichen, regionale Film- und Bildfolgen, Themenwechsel, Paare, Offlinezugriffe und Sicherheitsvorgaben. Die eigenen Geometrie- und Zeitprotokolle liegen unter G51. Die zusätzliche Browsermatrix läuft separat am selben Commit.'),
 ('Wo befinden sich die vier Dateien?',f'DMG, vollständiges App-ZIP, Einzel-HTML und dieses Sichtprüfungspaket stehen als vier einzelne Artefakte im [macOS-Lauf]({url}). Das DMG wurde verifiziert, gemountet, ausgeworfen und die kopierte App gestartet. Die Ad-hoc-Signatur ist lokal prüfbar. Gatekeepers Bewertung der markierten Testkopie steht in installation.log.'),
 ]
-intro=['# GeoRisiko G5.1 · fachlicher Prüfbericht','',f'Commit `{raw["commit"]}`. [Prüflauf]({url})','',
+intro=['# GeoRisiko G5.2 · Bestands- und Leistungstests','',f'Commit `{raw["commit"]}`. [Prüflauf]({url})','',
        'Die Serien G5 und G51 sind neue Originalaufnahmen aus der installierten App. Der JPEG-Bildkopf jeder Einzelaufnahme wurde auf 1920 × 1080 Pixel geprüft, auch nach einem nativen Vollbildwechsel. Vergleich/G5 enthält die entsprechenden früheren Bildschirmaufnahmen. Die Serie G5 verwendet die Bedienfolge des Ausgangsstands. Die neue Serie G51 umfasst zusätzlich Detailansichten.','']
 for i,(title,answer) in enumerate(questions,1):
     intro.extend([f'**{i}. {title}**','',answer,''])
@@ -86,13 +86,18 @@ intro.extend(['','## Vergleich App und Einzel-HTML','','|Produkt|Szene|FPS|P95 m
 for row in (app,web):
     for s in row['g5']['measurements']:
         intro.append(f"|{row['name']}|{s['scene']}|{s['fps']:.1f}|{s['p95']:.1f}|{s['max']:.1f}|{s['cpuPercent']:.0f}|{s['rssBeforeMiB']:.0f} / {s['rssAfterMiB']:.0f}|")
-(out/'G5.1-Abnahmebericht.md').write_text('\n'.join(intro)+'\n')
+(out/'Bestandspruefung.md').write_text('\n'.join(intro)+'\n')
 files={p.relative_to(out).as_posix():p for p in out.rglob('*') if p.is_file() and p.parent.name!='film' and p.suffix in {'.md','.jpg','.png','.log','.mp4','.json'}}
 files['SHA256-Produkte.txt']=out/'SHA256.txt'
 for name in ['curriculum-coverage.md','g51-quellen.md','g5-quellen.md','g5-unterricht.md','g5-referenz.json','mac-installation.md']:
     files['Dokumentation/'+name]=root/'docs'/name
 for p in (root/'docs/g51-bildvergleich').iterdir():files['Vergleich/G5/'+p.name]=p
-dest=root/'artifacts/GeoRisiko-G5.1-Sichtpruefung.zip'
+import sys
+sys.path.insert(0,str(root/'scripts/g52'))
+from report import evidence
+files.update(evidence(root,out,raw))
+files['Dokumentation/g52-unterricht.md']=root/'docs/g52-unterricht.md'
+dest=root/'artifacts/GeoRisiko-G5.2-Sichtpruefung.zip'
 with ZipFile(dest,'w',ZIP_DEFLATED) as z:
     for name,p in sorted(files.items()):z.write(p,name)
     z.writestr('SHA256-Inhalt.txt',''.join(hashlib.sha256(p.read_bytes()).hexdigest()+'  '+name+'\n' for name,p in sorted(files.items())))
