@@ -1,3 +1,4 @@
+import {coastalSand,coastalGrass} from "./coast-appearance";
 import * as T from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import zao from "./zao.json";
@@ -169,6 +170,10 @@ export class RegionalScene {
   }
   private buildSurface(){
     const f=this.faultModel;
+    if(this.spec.coastLesson){
+      this.colorMap=coastalSand();
+      for(const front of [false,true])(front?this.front:this.scene).add(coastalGrass((x,z)=>this.height(x,z),front));
+    }
     for(const side of (this.spec.process==="rift"?[-1,0,1]:[-1,1])){
       const terrain=new T.MeshStandardMaterial({color:this.colorMap?0xffffff:0x93866b,roughness:.86,map:this.colorMap??null,normalMap:this.normalMap??null,normalScale:new T.Vector2(.75,.75),roughnessMap:this.roughMap??null,side:T.DoubleSide});
       terrain.onBeforeCompile=s=>{s.uniforms.opening=this.ui.opening;s.vertexShader="varying float restZ;\n"+s.vertexShader.replace("#include <begin_vertex>","#include <begin_vertex>\nrestZ=position.z;");s.fragmentShader="uniform float opening;varying float restZ;\n"+s.fragmentShader.replace("#include <color_fragment>","#include <color_fragment>\nif(restZ>4.52*(1.-opening))discard;");};
@@ -222,7 +227,7 @@ export class RegionalScene {
     this.orbit.minDistance=view==="coast"?2.1:4;
     if(view==="coast"&&this.spec.coastLesson){
       this.reframe(false);this.view=view;this.transition=undefined;
-      this.orbit.target.set(-3.05,.012,-.35);this.camera.position.copy(this.orbit.target).add(new T.Vector3(-.45,2.25,1.64));this.orbit.update();return;
+      this.orbit.target.set(-3.05,.012,-.35);this.camera.position.copy(this.orbit.target).add(new T.Vector3(-.76,1.76,2.05));this.orbit.update();return;
     }
     if(view==="land"||view==="overhead"){
       this.reframe(false);this.view=view;
