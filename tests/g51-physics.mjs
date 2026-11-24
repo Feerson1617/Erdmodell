@@ -28,7 +28,7 @@ try{
  const ready=()=>p.waitForFunction(()=>window.geoObservatory().observatory.ready&&document.querySelector("#g-cut"));
  const progress=async v=>{await p.locator("#g-progress").fill(String(v));await p.evaluate(()=>new Promise(done=>requestAnimationFrame(()=>requestAnimationFrame(done))));};
  for(const [i,site] of ["san","japan","rift","himalaya"].entries()){
-   await p.selectOption(i?"#g-site":"#g-launch",site);await ready();await p.click("#g-cut");
+   await p.selectOption(i?"#g-site":"#g-launch",site);await ready();await p.click("#g-cut");await p.waitForFunction(()=>window.geoObservatory().observatory.viewSettled);
    const initial=await data();await progress(.52);const event=await data();const f=event.physics;
    assert.ok(f.rupture.length>6);assert.equal(event.focus[0],event.epicenter[0]);assert.ok(event.epicenter[1]>event.focus[1]);
    assert.ok(f.maxPlaneError<2e-5,site+" Bruch auf der Kontaktfläche");assert.ok(f.focusError<1e-8);

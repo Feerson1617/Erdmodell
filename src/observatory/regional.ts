@@ -359,7 +359,8 @@ export class RegionalScene {
     if((t!==this.lastT||this.lastSection!==this.section.visible) && (this.lastT<0||!["volcano","lithosphere"].includes(this.spec.theme))){
       const water=this.water,bed=water?Float32Array.from({length:water.cells},(_,j)=>water.bed(-6+j*water.dx,t)):undefined;
       for(const {g,base,side,slice,waterSkin,shear,motionData} of this.solids){
-        if(slice&&!this.section.visible)continue;
+        // Initialize every mesh at the solver reference before deferring hidden frames.
+        if(slice&&!this.section.visible&&this.lastT>=0)continue;
         const pos=g.attributes.position as T.BufferAttribute;
         for(let i=0;i<pos.count;i++){const x=base[3*i],y=base[3*i+1],z=base[3*i+2],d=this.deformed;
           if(waterSkin&&waterSkin[2*i]===1)d.set(0,0,0);else {
