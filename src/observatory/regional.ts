@@ -1,4 +1,4 @@
-import {seaMaterial,waterSection} from "./sea-material";
+import {seaMaterial,waterSection,seabed} from "./sea-material";
 import {groundCover} from "./landscape-details";
 import {loadTexture,materials,decorateTerrain,quality,graphics,type Library} from "./graphics";
 import {coastalSand,coastalGrass} from "./coast-appearance";
@@ -184,12 +184,17 @@ export class RegionalScene {
     this.nearSurface=this.height(this.faultModel.hx,0);this.ui.focus.value=this.faultModel.hy;
     this.buildSurface();this.addVectors();this.addTrace();if(this.lib&&this.colorMap&&this.spec.site)groundCover(this,this.lib,this.colorMap);else this.groundDetails();this.buildQuake();this.buildExtras();this.ready=true;this.update(0);this.timings.geometryMs=performance.now()-build-this.timings.solverMs;
   }
+  get surfaceImage(){return this.colorMap;}
+  private get metresPerUnit(){
+    return this.spec.site?(this.spec.width??sites[this.spec.site].width)*1000/(12*(this.spec.site==="japan"?4.7:2.4)):36;
+  }
   private surround(h:Int16Array,image:T.Texture){
     this.contextHeights=h;
     if(h.length!==145*109)throw Error("Das Landschaftsumfeld fehlt.");
     const gain=(this.spec.site==="japan"?4.7:2.4)*.012/(this.spec.width??sites[this.spec.site!].width);
     const terrain=new T.MeshStandardMaterial({map:image,roughness:.94,side:T.DoubleSide});
-    const water=seaMaterial(this.ui.t);
+    seabed(terrain,this.metresPerUnit);
+    const water=seaMaterial(this.ui.t,this.metresPerUnit);
     for(const front of [false,true])for(const [x0,x1,z0,z1] of [[-24,-6,0,18],[6,24,0,18],[-6,6,4.5,18]]){
       const parent=front?this.front:this.scene,cols=Math.ceil((x1-x0)*3),rows=Math.ceil((z1-z0)*4);
       const geometry=()=>indexed(rows,cols,(i,j)=>{
@@ -248,6 +253,7 @@ export class RegionalScene {
           shader.fragmentShader="uniform sampler2D contextImage;varying vec2 landscapeXY;\n"+shader.fragmentShader.replace("#include <map_fragment>", "#include <map_fragment>\nfloat border=smoothstep(.78,1.,max(abs(landscapeXY.x)/6.,abs(landscapeXY.y)/4.5));diffuseColor.rgb=mix(diffuseColor.rgb,texture2D(contextImage,vec2(.5+landscapeXY.x/48.,.5-landscapeXY.y/36.)).rgb,border);");};
       }
       if(this.lib)decorateTerrain(terrain,this.lib,this.relief,this.spec.site==="island"||this.spec.site==="hawaii"?2:this.spec.site==="japan"?1:this.spec.site==="himalaya"?3:this.spec.site==="rift"?4:0,this.grade,this.spec.theme);
+      if(this.spec.site&&["japan","island","hawaii"].includes(this.spec.site))seabed(terrain,this.metresPerUnit);
       for(const front of [false,true]){
         const bounds=new Map<number,[number,number]>();
         const columns=this.water?120:64;const g=indexed(36,columns,(i,j)=>{const z=(front?0:-4.5)+j/8;
@@ -260,7 +266,7 @@ export class RegionalScene {
     if(!["forces","lithosphere"].includes(this.spec.theme)&&(this.spec.coastLesson||this.groundData?.some(h=>h<0)||this.windows?.some(h=>h<0))){
       for(const front of [false,true]){
         const g=indexed(42,120,(i,j)=>{const x=-6+12*i/120,z=(front?0:-4.5)+4.5*j/42;return [x,0,z,i/120,j/42];});
-        const water=seaMaterial(this.ui.t);
+        const water=seaMaterial(this.ui.t,this.metresPerUnit);
         const pos=g.attributes.position as T.BufferAttribute,wet=new T.Float32BufferAttribute(new Float32Array(pos.count),1);g.setAttribute("depthWet",wet);
         const levels=new Float32Array(121),depths=new Float32Array(121),terrain=Float32Array.from({length:pos.count},(_,i)=>this.height(pos.getX(i),pos.getZ(i)));
         const crossRelief=Float32Array.from(terrain,(h,i)=>h-this.height(pos.getX(i),0));

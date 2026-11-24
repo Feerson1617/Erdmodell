@@ -30,6 +30,8 @@ for name,old in index['Vorher'].items():
     new=index['Nachher'][name]
     assert compare(old['camera'],new['camera']), (name,old['camera'],new['camera'])
     assert compare(old.get('phase'),new.get('phase')) and old.get('playing')==new.get('playing') and old.get('cut')==new.get('cut'),name
+    if name in ['03-Parkfield','10-Tohoku','10a-Kuestenrelief','16-Reykjanes','17-Basalt','21-Hawaii']:
+        assert new['view']==old['view']=='land' and not new['cut'] and not old['cut'],name
     assert old['viewport']==new['viewport'] and all(old['resolution'][k]==new['resolution'][k] for k in ['width','height']),name
 files={}
 for rel in ['Pruefung.json','installation.log','SHA256.txt','G52/Ressourcen.json','G51/Mechanik.json','G51/Zeitreise.log','G521/Kontakte.json','G521/Bedienung.json','G521/Wasserbilanz.json','G521/Speicher.json']:

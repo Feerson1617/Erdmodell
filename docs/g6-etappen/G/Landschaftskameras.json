@@ -1,0 +1,202 @@
+[
+  {
+    "name": "10a-Kuestenrelief",
+    "view": "land",
+    "camera": {
+      "position": [
+        -2.470000000000001,
+        1.6799999999999997,
+        -0.6299999999999994
+      ],
+      "target": [
+        -5.720000000000001,
+        0.06,
+        -2.83
+      ]
+    },
+    "region": "japan",
+    "phase": 0,
+    "cut": false,
+    "playing": false,
+    "viewport": [
+      1280,
+      720
+    ],
+    "resolution": {
+      "initial": 1,
+      "minimum": 0.75,
+      "maximum": 1,
+      "width": 848,
+      "height": 554,
+      "reductions": 1,
+      "recoveries": 0
+    },
+    "draws": 20,
+    "triangles": 117098,
+    "geometries": 51,
+    "textures": 13,
+    "loadMs": 5636.35527,
+    "warm": {
+      "dataMs": 80.5,
+      "solverMs": 28.899999998509884,
+      "geometryMs": 182.30000000447035,
+      "warmShaderMs": 47.79999999701977,
+      "firstDrawMs": 659.3000000044703
+    },
+    "profile": {
+      "profile": "auto",
+      "grade": 0
+    },
+    "rssMiB": 1142.49609375
+  },
+  {
+    "name": "16-Reykjanes",
+    "view": "land",
+    "camera": {
+      "position": [
+        3.3999999999999995,
+        4.499999999999999,
+        7.3999999999999995
+      ],
+      "target": [
+        0,
+        0,
+        -0.5
+      ]
+    },
+    "region": "island",
+    "phase": 0,
+    "cut": false,
+    "playing": false,
+    "viewport": [
+      1280,
+      720
+    ],
+    "resolution": {
+      "initial": 1,
+      "minimum": 0.75,
+      "maximum": 1,
+      "width": 848,
+      "height": 554,
+      "reductions": 1,
+      "recoveries": 0
+    },
+    "draws": 32,
+    "triangles": 157890,
+    "geometries": 84,
+    "textures": 14,
+    "loadMs": 3508.154579,
+    "warm": {
+      "dataMs": 92.69999999552965,
+      "solverMs": 0,
+      "geometryMs": 239.89999999850988,
+      "warmShaderMs": 76,
+      "firstDrawMs": 1261.8999999985099
+    },
+    "profile": {
+      "profile": "auto",
+      "grade": 0
+    },
+    "rssMiB": 1249.9921875
+  },
+  {
+    "name": "17-Basalt",
+    "view": "land",
+    "camera": {
+      "position": [
+        3.4999999999999996,
+        1.62,
+        -4
+      ],
+      "target": [
+        0.3,
+        0.065,
+        -1.8
+      ]
+    },
+    "region": "island",
+    "phase": 0,
+    "cut": false,
+    "playing": false,
+    "viewport": [
+      1280,
+      720
+    ],
+    "resolution": {
+      "initial": 1,
+      "minimum": 0.75,
+      "maximum": 1,
+      "width": 848,
+      "height": 554,
+      "reductions": 1,
+      "recoveries": 0
+    },
+    "draws": 29,
+    "triangles": 182870,
+    "geometries": 58,
+    "textures": 14,
+    "loadMs": 0,
+    "warm": {
+      "dataMs": 53,
+      "solverMs": 0,
+      "geometryMs": 220.10000000149012,
+      "warmShaderMs": 26.599999994039536,
+      "firstDrawMs": 463.3999999985099
+    },
+    "profile": {
+      "profile": "auto",
+      "grade": 0
+    },
+    "rssMiB": 1258.6640625
+  },
+  {
+    "name": "21-Hawaii",
+    "view": "land",
+    "camera": {
+      "position": [
+        3.3999999999999995,
+        4.499999999999999,
+        7.3999999999999995
+      ],
+      "target": [
+        0,
+        0,
+        -0.5
+      ]
+    },
+    "region": "hawaii",
+    "phase": 0.81,
+    "cut": false,
+    "playing": false,
+    "viewport": [
+      1280,
+      720
+    ],
+    "resolution": {
+      "initial": 1,
+      "minimum": 0.75,
+      "maximum": 1,
+      "width": 748,
+      "height": 489,
+      "reductions": 2,
+      "recoveries": 0
+    },
+    "draws": 38,
+    "triangles": 180414,
+    "geometries": 86,
+    "textures": 14,
+    "loadMs": 2590.282966999999,
+    "warm": {
+      "dataMs": 40,
+      "solverMs": 0,
+      "geometryMs": 100.59999999403954,
+      "warmShaderMs": 31.5,
+      "firstDrawMs": 960.7999999970198
+    },
+    "profile": {
+      "profile": "auto",
+      "grade": 0
+    },
+    "rssMiB": 1114.69921875
+  }
+]

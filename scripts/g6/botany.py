@@ -17,7 +17,7 @@ for idx,name in enumerate(['grass','scrub','oak','conifer','moss','acacia','fern
             pts=[(x+math.sin(angle)*length*t*(.52+.48*t),y-length*(math.cos(angle*.62)*t-.27*abs(angle)*t*t)) for t in [j/10 for j in range(11)]]
             blade=rng.uniform(2,6);d.polygon([(a-blade*(1-j/10),b) for j,(a,b) in enumerate(pts)]+[(a+blade*(1-j/10),b) for j,(a,b) in reversed(list(enumerate(pts)))],fill=col)
             if name=='fern':
-                for j,(a,b) in enumerate(pts[2:-1]): 
+                for j,(a,b) in enumerate(pts[2:-1]):
                     for sign in [-1,1]:d.polygon([(a,b),(a+sign*(24-j*2),b-14),(a,b-4)],fill=col)
             if name=='reeds' and i%6==0:
                 a,b=pts[-1];d.line((a,b+7,a+2,b-19),fill=(141,107,62,255),width=4)
