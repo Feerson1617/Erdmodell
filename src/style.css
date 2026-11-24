@@ -339,3 +339,18 @@ body[data-observatory=time] #observe-note,#g-age{font-size:clamp(1.08rem,1.75vw,
 #water-profile .advance{stroke:#72f4c8;stroke-width:7;fill:none;}
 
 #g6-quality-menu{position:relative;align-self:center}#g6-quality-menu summary{display:grid;place-items:center;cursor:pointer;width:34px;height:34px;color:inherit;border-radius:7px}#g6-quality-menu summary:hover{background:#8baba428}#g6-quality-menu label{position:absolute;right:0;top:40px;display:grid;gap:8px;padding:14px 16px;background:#183139;color:white;border:1px solid #51717a;border-radius:10px;box-shadow:0 6px 24px #07182055;z-index:12}#g6-quality-menu select{min-width:135px}
+
+.boundary-lesson{font-size:clamp(16px,1.1vw,22px);line-height:1.38}
+.boundary-lesson h1{font-size:clamp(27px,2.2vw,43px);line-height:1.08}
+.lesson-place{color:#bdd1bc;font-weight:600;margin:.8em 0 .35em}.lesson-lead{font-size:1.16em;color:#f4f4e9}
+.boundary-lesson dl>div{border-top:1px solid #52665c;padding:.58em 0}
+.boundary-lesson dt{font-weight:650;color:#c4dbc2}.boundary-lesson dd{margin:.2em 0 0}
+.lesson-limit{font-size:.86em;color:#d1d8d2}
+#pair-process{padding:.6em 1em;background:#dce8cd;color:#233528;font-weight:650}
+.pair-navigation label{display:block}.pair-navigation .playback{margin:.5em 0}
+@media(min-width:801px){
+body:not(.observing) #desk.pair-layout[data-mode=plates]{display:grid;grid-template-columns:minmax(0,61fr) minmax(0,39fr)}
+body:not(.observing) #desk.pair-layout[data-mode=plates] .view{grid-column:1;grid-row:1}
+body:not(.observing) #desk.pair-layout[data-mode=plates] #sidebar{position:static;grid-column:2;grid-row:1;margin:0;border-radius:0;width:auto;max-height:100%;padding:clamp(16px,2vw,38px);background:#22392e;overflow-y:auto}
+body:not(.observing) #desk.pair-layout[data-mode=plates] #modelnote{left:16px;max-width:85%}
+}

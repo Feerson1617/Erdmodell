@@ -107,7 +107,8 @@ function showDefinition(item: Pick<Annotation,"name"|"text">) {
 const shellPins = new AnnotationLayer($("pins"),showDefinition);
 const tectonicPins = new AnnotationLayer($("platePins"), item => {
   if (world.processSite) showDefinition(item);
-  else { const comparing=!!world.mosaic?.pair; world.inspectPlate(item.id); if(comparing)world.locatePlate(); renderSide(); }
+  else if(world.mosaic?.pair)world.selectPairBody(item.id);
+  else {world.inspectPlate(item.id);renderSide();}
 });
 function warn(s: string) {
   alertText = s;
@@ -170,6 +171,7 @@ function renderSide() {
   layoutRevision++;
   const mode = world.mode;
   desk.dataset.mode = mode;
+  desk.classList.toggle("pair-layout",mode==="plates"&&!!world.mosaic?.pair);
   for (const id of ["globe", "inside", "plates", "nyos", "place"]) {
     $("nav-" + id).setAttribute("aria-current", mode === id ? "page" : "false");
   }
@@ -186,7 +188,8 @@ function renderSide() {
     bindPlateControls(side, world, renderSide);
     const extra=document.createElement("div");extra.className="g-atlas-tools";
     extra.innerHTML='<button id="g-time">Zeitreise</button><button id="g-forces">Plattenantrieb</button><button id="g-boundaries">Grenze untersuchen</button>'+(world.selectedBoundary?'<button id="g-selected">Prozess ansehen</button>':'');
-    side.querySelector("h1")?.after(extra);
+    if(world.mosaic?.pair){extra.hidden=true;side.append(extra);}else side.querySelector("h1")?.after(extra);
+    if($("pair-process"))$("pair-process").onclick=()=>observatory.openBoundary(world.mosaic!.pair!.step,"process");
     $("g-forces").onclick=()=>observatory.openConcept("forces");
     $("g-time").onclick=()=>observatory.openTime();
     $("g-boundaries").onclick=()=>void observatory.openMap("boundaries");
@@ -388,7 +391,7 @@ function updatePins() {
   annotationKey = key;
   const obstacles = pinObstacles;
   shellPins.draw(world.mode === "inside" && (labels || released.size) ? world.layerMarkers(released,labels) : [],obstacles,layoutRevision);
-  const plates = world.mode === "plates" && (o.names || world.singlePlateName)
+  const plates = world.mode === "plates" && (o.names || world.singlePlateName || world.mosaic?.pair)
     ? world.processDetail ? world.processLabels() : world.plateLabels().map(p => ({
       ...p,id:p.code,text:"Zu dieser Platte gehören die Erdkruste und der starre oberste Erdmantel. Sie bewegt sich langsam gegenüber anderen Platten."
     })) : [];
@@ -453,7 +456,7 @@ async function boot() {
   const baseView=()=>({
     mode:world.mode,site:world.region.id,style:world.style,labels,released:[...released],
     shell:{...fields(world.shell,["cut","selected","subdued"]),visible:[...world.shell.visible],opacity:[...world.shell.opacity],comparison:world.shell.expanded?"expanded" as const:world.shell.lithosphere?"lithosphere" as const:"reference" as const},
-    plates:{...world.plateOptions},profile:world.profileCode,pair:Boolean(world.mosaic?.pair),pairTime:world.mosaic?.progress??0,pairPlaying:world.mosaic?.playing??false,
+    plates:{...world.plateOptions},profile:world.profileCode,pair:Boolean(world.mosaic?.pair),pairStep:world.mosaic?.pair?.step[0],pairTime:world.mosaic?.progress??0,pairPlaying:world.mosaic?.playing??false,
     process:fields(world,["processDetail","processSite","processProgress","processPlaying","processLoop","processSlow","singlePlateName","smallPlateNames"]),
     nyos:fields(world.nyosLesson,lessonKeys),nyosDetail:world.nyosDetail
   });
@@ -466,7 +469,7 @@ async function boot() {
     if(b.mode==="plates"){
       await world.loadClassroomAtlas(Boolean(b.process.processSite));world.setPlateOptions(b.plates);
       if(b.process.processSite)world.visit(b.process.processSite,!b.process.processDetail);
-      else if(b.profile&&world.profiles[b.profile]){world.inspectPlate(b.profile);if(b.pair){world.comparePlates(false);if(world.mosaic){world.mosaic.progress=b.pairTime;world.mosaic.playing=b.pairPlaying;}}}
+      else if(b.profile&&world.profiles[b.profile]){world.inspectPlate(b.profile);if(b.pair){world.comparePlates(false,b.pairStep);if(world.mosaic){world.mosaic.progress=b.pairTime;world.mosaic.playing=b.pairPlaying;}}}
       Object.assign(world,fields(b.process,["processProgress","processPlaying","processLoop","processSlow","singlePlateName","smallPlateNames"]));
     }
     renderSide();
@@ -530,7 +533,7 @@ async function boot() {
   world.onFrame = () => {
     observation.update();
     if(observatory.mode){if(status.textContent)status.textContent="";return;}
-    if ((world.mode==="inside" && (labels || released.size)) || (world.mode==="plates" && (world.plateOptions.names || world.singlePlateName))) updatePins();
+    if ((world.mode==="inside" && (labels || released.size)) || (world.mode==="plates" && (world.plateOptions.names || world.singlePlateName || world.mosaic?.pair))) updatePins();
     const now = performance.now();
     if (now - lastHud < 55) return;
     lastHud = now;

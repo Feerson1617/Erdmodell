@@ -202,7 +202,7 @@ export class World {
       if (this.mode === "plates") {
         if (this.mosaic?.pair) {
           const sample=ray.intersectObjects(this.mosaic.pair.bodies,false)[0];
-          if (sample) { this.inspectPlate(sample.object.name); this.locatePlate(); this.onBoundary?.(); }
+          if (sample) this.selectPairBody(sample.object.name);
           return;
         }
         const point = ray.ray.intersectSphere(new T.Sphere(new T.Vector3(), R), new T.Vector3());
@@ -386,14 +386,22 @@ export class World {
     const halfHeight=Math.max(60,view.height/2-62);
     return 2*Math.min(halfWidth,halfHeight)*Math.tan(this.nav.camera.fov*RAD/2)/view.height;
   }
+  selectPairBody(code:string){
+    const pair=this.mosaic?.pair;
+    if(!pair)return;
+    for(const body of pair.bodies)(body.material as T.MeshStandardMaterial).emissive.setHex(body.name===code?0x302817:0);
+    const area=document.getElementById("pair-object");
+    if(area){area.hidden=false;area.textContent=names[code]+" · "+this.profiles[code].place;}
+  }
   get pairKind() { return this.mosaic?.pair && typeOf(this.mosaic.pair.step[2]); }
-  comparePlates(autoplay:boolean) {
+  comparePlates(autoplay:boolean, stepId?:number) {
     if (!this.atlas || !this.mosaic) return;
-    if (!this.mosaic.pair) {
-      const code=this.profileCode || "EU";
+    if (!this.mosaic.pair || stepId) {
+      const step=stepId?this.atlas.steps[stepId-1]:this.selectedStep;
+      const code=step?.[1].slice(0,2)||this.profileCode || "EU";
       const profile=this.profiles[code];
       this.inspectPlate(code);
-      const pair=this.mosaic.beginPair(this.atlas.steps[profile.step-1]);
+      const pair=this.mosaic.beginPair(step??this.atlas.steps[profile.step-1]);
       this.updatePlateLayers();
       const d=Math.max(180,pair.span/(.86*this.fitSlope()));
       this.nav.fly({...pair.site,d,tilt:32,bearing:pair.heading},true);
