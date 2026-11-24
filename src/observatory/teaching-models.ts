@@ -102,8 +102,7 @@ function witness(r:RegionalScene){
     const p=Array.from({length:40},(_,i)=>{const x=s*(i/13+.012),z=-.80+.07*Math.sin(x*2);return vec(x,r.height(x,z)+.022,z);});
     const seam=line(p,0xe7dfae,"marker");r.witnesses.add(seam);
     r.onAnimate(t=>{const vals=seam.geometry.attributes.position as T.BufferAttribute;
-      for(let i=0;i<p.length;i++){const pt=p[i],load=T.MathUtils.smoothstep(t,0,.35),release=T.MathUtils.smoothstep(t,.36,.49),l=Math.exp(-Math.abs(pt.x)*.85);
-        const z=pt.z+s*.33*load*(1-l+l*release);vals.setXYZ(i,pt.x,r.height(pt.x,z)+.024,z);}vals.needsUpdate=true;});
+      for(let i=0;i<p.length;i++){const pt=p[i],y=r.height(pt.x,pt.z),d=r.faultModel.offset(r.deformed,pt.x,y,pt.z,s,t);vals.setXYZ(i,pt.x+d.x,y+.025+d.y,pt.z+d.z);}vals.needsUpdate=true;});
   }
 }
 export function addTeachingModels(r:RegionalScene){
@@ -117,17 +116,6 @@ export function addTeachingModels(r:RegionalScene){
         if(r.spec.process==="ridge")magnetic(r);
         else if(["subduction","arc"].includes(r.spec.process))volcano(r);
         else if(r.spec.process==="transform"||r.spec.process==="oceanTransform")witness(r);
-        else {
-          const h=(x:number)=>r.height(x,0),collision=r.spec.process==="collision",rift=r.spec.process==="rift";
-          const thick=(x:number)=>.54+(collision?.77*Math.exp(-x*x*.29):0);
-          const root=ribbon(r,x=>h(x)-thick(x),h,0x987d61,"crust");
-          for(const sign of [-1,1]){
-            const slope=rift?-sign:sign;
-            r.section.add(line([vec(1.5*sign,h(1.5*sign),.13),vec(1.5*sign+1.35*slope,-1.9,.13)],0x544440,"rigid"));
-            arrow([vec(sign*3.1,-.35,.19),vec(sign*2.8,-.35,.19),vec(sign*(rift?3.65:2.25),-.35,.19)],0xa4c7bd,"rigid",r.section);
-          }
-          r.onAnimate(t=>{root.scale.y=1+(collision?.26:rift?-.10:.09)*t;});
-        }
         r.reframe(true);break;
       case "earthquake":if(r.spec.process==="transform")witness(r);break;
     }

@@ -2,11 +2,14 @@ import * as T from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import traces from "./traces.json";
 import { localAsset } from "../assets";
-import { sites, type Process, type Site } from "./boundaries";
+import { sites, referenceGeology, type Geology, type Process, type Site } from "./boundaries";
 
+import { Fault, onset, pSpeed, sSpeed } from "./fault";
+import { geologySolids } from "./sections";
+let globalWindows:Promise<Int16Array>|undefined;
 export type Theme="process"|"earthquake"|"volcano"|"risk"|"forces"|"lithosphere"|"magnet";
-export type RegionSpec={site?:Site; name:string; process:Process; lat:number;lon:number; strike:number; azimuth?:number; theme:Theme};
-export const reference=(site:Site,theme:Theme):RegionSpec=>({...sites[site],site,process:sites[site].process as Process,theme});
+export type RegionSpec={site?:Site; name:string; process:Process; lat:number;lon:number; strike:number; azimuth?:number; geology?:Geology; comparison?:RegionSpec; theme:Theme};
+export const reference=(site:Site,theme:Theme):RegionSpec=>({...sites[site],site,geology:referenceGeology(site),process:sites[site].process as Process,theme});
 export const phases=[0,.34,.49,.68,1];
 const clamp=T.MathUtils.clamp;
 function ramp(a:number,b:number,x:number){return T.MathUtils.smoothstep(x,a,b);}
@@ -26,24 +29,6 @@ function indexed(rows:number,cols:number,vertex:(i:number,j:number)=>number[],re
   const g=new T.BufferGeometry();g.setAttribute("position",new T.Float32BufferAttribute(pos,3));
   g.setAttribute("uv",new T.Float32BufferAttribute(uv,2));g.setIndex(index);g.computeVertexNormals();return g;
 }
-const numberTypes:Record<Process,number>={transform:0,oceanTransform:0,subduction:1,arc:1,ridge:2,rift:3,collision:4,convergence:4,complex:0,hotspot:5};
-const rockShader=`
-float grain(vec3 p){return sin(p.x*9.3+sin(p.z*3.2)+p.y*3.)*.5+sin(p.x*26.+p.y*14.+p.z*13.)*.22+sin(p.z*57.+p.x*43.)*.08;}
-float slipped(vec3 p){float front=smoothstep(0.,.105,t-.35-.022*length(p-vec3(0.,focus,0.)));return front;}
-vec3 offsetRock(vec3 p,float side){
- float load=smoothstep(0.,.35,t);
- float release=slipped(p);float nearFault=exp(-abs(p.x)*.85);
- float drift=side*.33*load*(1.-nearFault+nearFault*release);
- float d=length(p-vec3(0.,focus,0.));float age=(t-.43)*19.-d;
- float shake=age>0.?sin(age*10.)*exp(-age*1.5)*.055/(1.+.14*d):0.;
- vec3 offset=vec3(0.,shake,0.);
- if(kind<.5)offset.z+=sense*drift;
- else if(kind<1.5){offset.x-=drift*.55;offset.y+=vertical*release*.44*exp(-pow((p.x+.65)*.91,2.));}
- else if(kind<3.5){offset.x+=drift*.68;offset.y-=load*.21*exp(-p.x*p.x*2.);}
- else if(kind<4.5){offset.x-=drift*.68;offset.y+=load*.34*exp(-p.x*p.x*.45);}
- return offset;
-}
-`;
 export class RegionalScene {
   readonly scene=new T.Scene();
   readonly camera=new T.PerspectiveCamera(38,1,.02,120);
@@ -52,6 +37,21 @@ export class RegionalScene {
   readonly witnesses=new T.Group();readonly settlement=new T.Group();readonly mechanisms=new T.Group();
   private ui={t:{value:0},kind:{value:0},focus:{value:-1},vertical:{value:1},clock:{value:0},stress:{value:0},sense:{value:1},opening:{value:0}};
   private groundData?:Int16Array;private colorMap?:T.Texture;private normalMap?:T.Texture;private roughMap?:T.Texture;private sky:T.CanvasTexture;private contextMap?:T.Texture;private reveal=0;private transition?:{from:T.Vector3;to:T.Vector3;look:T.Vector3;goal:T.Vector3;fraction:number};
+  faultModel!:Fault;private windows?:Int16Array;
+  private solids:{g:T.BufferGeometry;base:Float32Array;side:number}[]=[];private lastT=-1;
+  readonly deformed=new T.Vector3();
+  bindRock(g:T.BufferGeometry,side:number){this.solids.push({g,side,base:new Float32Array(g.attributes.position.array)});(g.attributes.position as T.BufferAttribute).setUsage(T.DynamicDrawUsage);}
+  physicalState(){
+    const f=this.faultModel;if(!f)return {};
+    const sample=this.solids.find(s=>s.side===1),i=sample?Math.floor(sample.base.length/6)*3:0;
+    const coords=this.rupture.geometry.attributes.position;
+    let maxPlaneError=0;if(this.rupture.visible)for(let j=0;j<coords.count;j++)maxPlaneError=Math.max(maxPlaneError,Math.abs(coords.getX(j)-f.xAt(coords.getY(j))));
+    const distance=Math.hypot(this.epicenter[1]-f.hy,this.epicenter[0]-f.hx);
+    return {maxPlaneError,focusError:Math.abs(f.hx-f.xAt(f.hy)),pArrival:onset+distance/pSpeed,sArrival:onset+distance/sSpeed,
+      earlyShake:f.shaking(onset+distance/pSpeed-.002,f.hx,this.epicenter[1],0),lateShake:f.shaking(1,f.hx,this.epicenter[1],0),fault:f.kind,trace:f.trace,dipSign:f.dipSign,profile:f.profile.length,waterEvent:f.waterEvent,
+      rupture:this.rupture.visible?Array.from(this.rupture.geometry.attributes.position.array):[],waveFronts:this.waves.map(w=>w.visible),
+      vertex:sample?{rest:Array.from(sample.base.slice(i,i+3)),drawn:Array.from(sample.g.attributes.position.array.slice(i,i+3)),side:sample.side}:null};
+  }
   private waves:T.Line[]=[];private particles:T.InstancedMesh[]=[];private fault!:T.Line;private rupture!:T.Line;
   private waterColumn?:T.Mesh; private nearSurface=0;private rockMaterial:T.Material[]=[];
   private people:T.Mesh[]=[];private route?:T.Line;private motion:((t:number)=>void)[]=[];
@@ -67,7 +67,7 @@ export class RegionalScene {
     this.scene.add(new T.HemisphereLight(0xfff6dd,0x8b9da2,2.05));
     const sun=new T.DirectionalLight(0xffdda9,2.5);sun.position.set(-6,9,5);this.scene.add(sun,this.front,this.section,this.witnesses,this.settlement,this.mechanisms);
     if(spec.azimuth!==undefined)this.ui.sense.value=Math.cos((spec.azimuth-spec.strike)*Math.PI/180)>=0?1:-1;
-    this.vertical=spec.process!=="oceanTransform";this.ui.kind.value=numberTypes[spec.process];this.reframe(false);
+    this.vertical=["arc","subduction"].includes(spec.process);this.reframe(false);
   }
   get viewSettled(){return !this.transition && Math.abs(this.reveal-Number(this.cut))<.012;}
   reframe(cut:boolean){this.cut=cut;this.camera.position.set(cut?1.3:3.4,cut?2.1:4.5,cut?8.4:7.4);
@@ -82,10 +82,11 @@ export class RegionalScene {
       const m=(1-g)*((1-f)*h[j*193+i]+f*h[j*193+i+1])+g*((1-f)*h[(j+1)*193+i]+f*h[(j+1)*193+i+1]);
       return m/1000/(sites[this.spec.site!].width/12)*(this.spec.site==="japan"?4.7:2.4);
     }
-    const k=this.spec.process,terrain=.09*Math.sin(x*2+z*.8)*Math.cos(z*1.4);
-    if(k==="ridge"||k==="oceanTransform")return -.8+(k==="ridge"?.5*Math.exp(-x*x):0)+terrain;
-    if(k==="subduction"||k==="arc")return -.45-.42*Math.exp(-x*x)+.88*Math.exp(-Math.pow((x+3)*.8,2))+terrain;
-    return .15+terrain+(k==="collision"?.7*Math.exp(-x*x*.45):k==="rift"?-.3*Math.exp(-x*x):0);
+    if(this.windows && this.spec.geology){
+      const u=clamp((x/12+.5)*6,0,6),v=clamp((z/9+.5)*6,0,6),i=Math.min(5,Math.floor(u)),j=Math.min(5,Math.floor(v)),dx=u-i,dy=v-j;
+      const h=this.windows,k=i+j*7;return .00024*((1-dy)*((1-dx)*h[k]+dx*h[k+1])+dy*((1-dx)*h[k+7]+dx*h[k+8]));
+    }
+    return .12+.08*Math.cos(x+z*.2);
   }
   async init(){
     if(this.spec.site){
@@ -96,7 +97,12 @@ export class RegionalScene {
       const [heightBytes,contextBytes]=await Promise.all([response.arrayBuffer(),farHeight.arrayBuffer()]);const heights=new Int16Array(heightBytes);if(heights.length!==193*145)throw Error("Höhenraster unvollständig");
       if(this.disposed){tex.dispose();normal.dispose();rough.dispose();farImage.dispose();return;}this.groundData=heights;this.colorMap=tex;this.normalMap=normal;this.roughMap=rough;normal.anisotropy=4;tex.colorSpace=T.SRGBColorSpace;tex.anisotropy=4;this.contextMap=farImage;farImage.colorSpace=T.SRGBColorSpace;this.surround(new Int16Array(contextBytes),farImage);
     }
-    this.nearSurface=this.height(0,0);this.ui.focus.value=this.nearSurface-1.18;
+    if(!this.spec.site && this.spec.geology){
+      globalWindows??=fetch(localAsset("data/g51/regional-relief.i16")).then(r=>{if(!r.ok)throw Error("Regionalraster fehlt");return r.arrayBuffer();}).then(b=>new Int16Array(b)).catch(e=>{globalWindows=undefined;throw e;});
+      const heights=await globalWindows;if(this.disposed)return;
+      const index=(this.spec.geology.id-1)*49;this.windows=heights.subarray(index,index+49);
+    }
+    this.faultModel=new Fault(this.spec,(x,z)=>this.height(x,z));this.nearSurface=this.height(this.faultModel.hx,0);this.ui.focus.value=this.faultModel.hy;
     this.buildSurface();this.addTrace();this.groundDetails();this.buildQuake();this.buildExtras();this.ready=true;this.update(0);
   }
   private surround(h:Int16Array,image:T.Texture){
@@ -116,58 +122,29 @@ export class RegionalScene {
       parent.add(mesh(geometry(false),terrain,"Landschaftsumfeld"));if(["japan","hawaii","island"].includes(this.spec.site!))parent.add(mesh(geometry(true),water,"Offenes Meer"));
     }
   }
-  private rock(surface:boolean,side:number){
-    const mat=new T.MeshStandardMaterial({color:surface?(this.colorMap?0xffffff:0x87936e):0xcb9873,
-      roughness:surface?.81:.96,metalness:0,map:surface?this.colorMap??null:null,normalMap:surface?this.normalMap??null:null,normalScale:new T.Vector2(.72,.72),roughnessMap:surface?this.roughMap??null:null,side:T.DoubleSide});
-    mat.customProgramCacheKey=()=>String(surface)+String(side);
-    mat.onBeforeCompile=s=>{
-      Object.assign(s.uniforms,this.ui);s.uniforms.sideOfFault={value:side};
-      s.vertexShader="uniform float t,kind,focus,vertical,sense,sideOfFault; varying vec3 rockPos;"+rockShader+s.vertexShader;
-      s.vertexShader=s.vertexShader.replace("#include <begin_vertex>","#include <begin_vertex>\nrockPos=position;transformed+=offsetRock(position,sideOfFault);");
-      s.fragmentShader="uniform float t,kind,stress,vertical,sense,focus,opening; varying vec3 rockPos;"+rockShader+s.fragmentShader;
-      const pigment=surface?`if(rockPos.z>4.52*(1.-opening))discard;diffuseColor.rgb=mix(diffuseColor.rgb,vec3(.37,.32,.19),.075);diffuseColor.rgb*=1.+.055*grain(rockPos);`:
-        `float x=rockPos.x,y=rockPos.y;
-        float fold=.13*sin(x*1.8)+.07*sin(x*3.1);
-        if(kind>3.5 && kind<4.5)fold+=.36*cos(x*2.)*exp(-x*x*.23);
-        float rockgrain=grain(rockPos*1.7);float stratum=sin((y+fold)*14.+sin(x*.8)+.34*rockgrain);
-        vec3 bed=mix(vec3(.20,.157,.135),vec3(.47,.32,.23),smoothstep(-.85,.68,stratum));
-        bed=mix(bed,vec3(.28,.32,.30),smoothstep(.7,.94,sin((y+fold)*7.3)));
-        if(kind>.5 && kind<1.5){float slab=abs(y-(focus+x*.64));bed=mix(bed,vec3(.12,.22,.24),1.-smoothstep(.08,.18,slab));}
-        bed+=vec3(.055,.038,.02)*clamp(1.-abs(sin((y+fold)*43.+rockgrain*.45))*5.,0.,1.);diffuseColor.rgb=bed*(1.+.16*grain(rockPos));`;
-      s.fragmentShader=s.fragmentShader.replace("#include <map_fragment>","#include <map_fragment>\n"+pigment+
-        "diffuseColor.rgb=mix(diffuseColor.rgb,vec3(.82,.33,.11),stress*.47*smoothstep(0.,.34,t)*(1.-slipped(rockPos))*exp(-abs(rockPos.x)));");
-    };
-    this.rockMaterial.push(mat);return mat;
-  }
   private buildSurface(){
+    const f=this.faultModel;
     for(const side of [-1,1]){
-      const terrain=this.rock(true,side),section=this.rock(false,side);
+      const terrain=new T.MeshStandardMaterial({color:this.colorMap?0xffffff:0x93866b,roughness:.86,map:this.colorMap??null,normalMap:this.normalMap??null,normalScale:new T.Vector2(.75,.75),roughnessMap:this.roughMap??null,side:T.DoubleSide});
+      terrain.onBeforeCompile=s=>{s.uniforms.opening=this.ui.opening;s.vertexShader="varying float restZ;\n"+s.vertexShader.replace("#include <begin_vertex>","#include <begin_vertex>\nrestZ=position.z;");s.fragmentShader="uniform float opening;varying float restZ;\n"+s.fragmentShader.replace("#include <color_fragment>","#include <color_fragment>\nif(restZ>4.52*(1.-opening))discard;");};
       for(const front of [false,true]){
-        const g=indexed(72,96,(i,j)=>{const x=(side<0?-6:0)+i/16,z=(front?0:-4.5)+j/16;return [x,this.height(x,z),z,x/12+.5,.5-z/9];});
-        (front?this.front:this.scene).add(mesh(g,terrain,"Gelände"));
+        const g=indexed(36,64,(i,j)=>{const x=side<0?T.MathUtils.lerp(-6,f.trace,i/64):T.MathUtils.lerp(f.trace,6,i/64),z=(front?0:-4.5)+j/8;return [x,this.height(x,z)+.009,z,x/12+.5,.5-z/9];});
+        this.bindRock(g,side);(front?this.front:this.scene).add(mesh(g,terrain,"Gelände"));
       }
-      const wall=indexed(36,96,(i,j)=>{const x=(side<0?-6:0)+i/16,y=T.MathUtils.lerp(-7.5,this.height(x,0),j/36);
-        return [x,y,0,i/96,j/36];},true);
-      this.section.add(mesh(wall,section,"Geologischer Schnitt"));
     }
-    if(!["forces","lithosphere"].includes(this.spec.theme)&&(this.spec.site==="japan"||this.spec.site==="hawaii"||this.spec.site==="island"||["oceanTransform","subduction","arc","ridge"].includes(this.spec.process))){
+    geologySolids(this);
+    if(!["forces","lithosphere"].includes(this.spec.theme)&&(this.groundData?.some(h=>h<0)||this.windows?.some(h=>h<0))){
       for(const front of [false,true]){
         const g=indexed(42,112,(i,j)=>{const x=-6+12*i/112,z=(front?0:-4.5)+4.5*j/42;return [x,0,z,i/112,j/42];});
         const water=new T.MeshStandardMaterial({color:0x287a88,roughness:.29,metalness:.16,transparent:true,opacity:.78,side:T.DoubleSide,depthWrite:false});
-        water.onBeforeCompile=s=>{Object.assign(s.uniforms,this.ui);
-          s.vertexShader="uniform float t,clock,vertical,kind;varying float crest;\n"+s.vertexShader;
-          s.vertexShader=s.vertexShader.replace("#include <begin_vertex>",`#include <begin_vertex>
-          float d=abs(position.x+.55);float passage=(t-.48)*15.-d;
-          float longwave=exp(-pow(passage*1.2,2.))-.46*exp(-pow((passage-.95)*1.15,2.));
-          float start=smoothstep(.41,.49,t);float uplift=exp(-pow((position.x+.55)*1.25,2.))*(1.-smoothstep(.48,.58,t));
-          crest=vertical*step(.5,kind)*(1.-step(1.5,kind))*start*(uplift+longwave)*(.14+.10*smoothstep(2.,4.,-position.x));
-          transformed.y+=crest+.009*sin(position.x*5.+position.z*2.+clock)*cos(position.z*3.4-clock*.7);`);
-          s.fragmentShader="varying float crest;\n"+s.fragmentShader;s.fragmentShader=s.fragmentShader.replace("#include <color_fragment>","#include <color_fragment>\ndiffuseColor.rgb+=vec3(.24,.28,.2)*max(0.,crest)*2.;");};
+        const pos=g.attributes.position as T.BufferAttribute;
+        let previous=-1;this.onAnimate(t=>{if(t===previous)return;previous=t;for(let i=0;i<pos.count;i++)pos.setY(i,this.waterHeight(pos.getX(i),t));pos.needsUpdate=true;});
         (front?this.front:this.scene).add(mesh(g,water,"Wasseroberfläche"));
       }
       this.waterColumn=mesh(new T.CylinderGeometry(.22,.22,1,24),new T.MeshBasicMaterial({color:0x66dacf,transparent:true,opacity:.36}),"Verdrängte Wassersäule");this.section.add(this.waterColumn);
     }
   }
+  waterHeight(x:number,t:number){return this.faultModel.waterEvent?this.faultModel.uplift(x,t):0;}
   private addTrace(){
     const site=this.spec.site;if(site!=="san"&&site!=="japan")return;
     const s=sites[site],angle=s.strike*Math.PI/180,trace=traces[site],points:T.Vector3[]=[];
@@ -200,14 +177,14 @@ export class RegionalScene {
   }
   private buildQuake(){
     const focus=this.ui.focus.value;
-    const origin=new T.Vector3(0,focus,.055),epic=new T.Vector3(0,this.nearSurface+.015,.055);
+    const origin=this.faultModel.point(focus),epic=new T.Vector3(origin.x,this.nearSurface,0);
     this.section.add(this.labels);this.labels.add(path([origin,epic],0xe7dfb5,"Lot"));
     for(const [p,color,name] of [[origin,0xff975e,"Hypozentrum"],[epic,0xffedbd,"Epizentrum"]] as const){
       const pin=mesh(new T.SphereGeometry(.095,16,12),new T.MeshStandardMaterial({color,emissive:color,emissiveIntensity:.2}),name);pin.position.copy(p);this.labels.add(pin);}
-    const dip=this.ui.kind.value===1?.64:(this.ui.kind.value===3?-1.3:0);
-    const x=dip?-1.4/dip:0;const emergence=dip?new T.Vector3(1.18/dip,this.nearSurface,.055):epic;
-    this.fault=path([new T.Vector3(x,focus-1.4,.03),origin,emergence],0x342f2e,"Störungsfläche");this.section.add(this.fault);
-    this.rupture=path([new T.Vector3(),new T.Vector3()],0xffcf89,"Bruchfront");this.section.add(this.rupture);
+    const f=this.faultModel;
+    const points=Array.from({length:64},(_,i)=>f.point(f.top-i*.075,.018));
+    this.fault=path(points,0x463e36,"Störungsfläche");this.section.add(this.fault);
+    this.rupture=path(Array.from({length:49},()=>origin.clone()),0xffcf89,"Bruchfront");this.section.add(this.rupture);
     for(const [index,color] of [0xe7b96d,0x5bc4cb].entries()){
       const line=new T.LineSegments(new T.BufferGeometry().setAttribute("position",new T.Float32BufferAttribute(new Float32Array(240*3),3)),new T.LineBasicMaterial({color}));line.name=index?"S-Welle":"P-Welle";this.waves.push(line);this.section.add(line);
       const beads=new T.InstancedMesh(new T.SphereGeometry(.035,6,5),new T.MeshBasicMaterial({color}),32);beads.frustumCulled=false;this.particles.push(beads);this.section.add(beads);
@@ -224,7 +201,7 @@ export class RegionalScene {
     if(!this.ready)return;
     const t=this.progress;this.ui.t.value=t;this.ui.clock.value=this.age;this.ui.stress.value=+this.stress;
     this.ui.vertical.value=+this.vertical;
-    this.ui.kind.value=this.spec.theme==="earthquake"&&["subduction","arc","oceanTransform"].includes(this.spec.process)?(this.vertical?1:0):numberTypes[this.spec.process];const motion=matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const motion=matchMedia("(prefers-reduced-motion: reduce)").matches;
     this.reveal=motion?+this.cut:T.MathUtils.damp(this.reveal,+this.cut,9,dt);
     this.ui.opening.value=this.reveal;this.front.visible=this.reveal<.992;this.section.visible=this.reveal>.05;
     if(this.transition){
@@ -233,28 +210,39 @@ export class RegionalScene {
     }
     this.labels.visible=this.names && this.spec.theme==="earthquake";
     const quake=this.spec.theme==="earthquake"||this.spec.theme==="risk";this.fault.visible=quake;
-    this.rupture.visible=quake&&t>.35&&t<.53;
-    const faultX=this.ui.kind.value===1?-1:0;
-    const u=ramp(.35,.47,t);
-    this.rupture.geometry.setFromPoints([new T.Vector3(0,this.ui.focus.value,.07),new T.Vector3(faultX*u,this.ui.focus.value-1.2*u,.07)]);
+    const f=this.faultModel;
+    if(t!==this.lastT){
+      for(const {g,base,side} of this.solids){
+        const pos=g.attributes.position as T.BufferAttribute;
+        for(let i=0;i<pos.count;i++){const x=base[3*i],y=base[3*i+1],z=base[3*i+2],d=f.offset(this.deformed,x,y,z,side,t);pos.setXYZ(i,x+d.x,y+d.y,z+d.z);}
+        pos.needsUpdate=true;
+      }
+      this.lastT=t;
+    }
+    this.rupture.visible=quake&&f.kind!=="unknown"&&t>onset&&t<.72;
+    if(this.rupture.visible){
+      const pos=this.rupture.geometry.attributes.position as T.BufferAttribute;
+      for(let i=0;i<pos.count;i++){const a=2*Math.PI*i/(pos.count-1),radius=Math.min(1.45,(t-onset)*16),y=Math.min(f.top-.02,f.hy+radius*.7*Math.cos(a)),v=f.point(y,-Math.abs(radius*Math.sin(a)));pos.setXYZ(i,v.x,v.y,v.z);}
+      pos.needsUpdate=true;this.rupture.frustumCulled=false;
+    }
     for(let n=0;n<2;n++){
-      const speed=n?12:19,rad=Math.max(0,(t-.45)*speed),line=this.waves[n],beads=this.particles[n];
-      line.visible=beads.visible=quake&&t>.45&&t<.94;const arr=line.geometry.attributes.position as T.BufferAttribute;
+      const speed=n?sSpeed:pSpeed,rad=Math.max(0,(t-onset)*speed),line=this.waves[n],beads=this.particles[n];
+      line.visible=beads.visible=quake&&t>onset&&t<.94;const arr=line.geometry.attributes.position as T.BufferAttribute;
       for(let i=0;i<120;i++){
-        const a=i/120*Math.PI*2,b=(i+1)/120*Math.PI*2,x=rad*Math.cos(a),y=this.ui.focus.value+rad*Math.sin(a),xx=rad*Math.cos(b),yy=this.ui.focus.value+rad*Math.sin(b);
+        const a=i/120*Math.PI*2,b=(i+1)/120*Math.PI*2,x=f.hx+rad*Math.cos(a),y=this.ui.focus.value+rad*Math.sin(a),xx=f.hx+rad*Math.cos(b),yy=this.ui.focus.value+rad*Math.sin(b);
         const outside=y>this.height(x,0)||yy>this.height(xx,0)||Math.abs(x)>6||Math.abs(xx)>6;
         arr.setXYZ(i*2,x,y,.081+n*.012);arr.setXYZ(i*2+1,outside?x:xx,outside?y:yy,.081+n*.012);
       }arr.needsUpdate=true;line.frustumCulled=false;
       const dummy=new T.Object3D();for(let i=0;i<32;i++){const along=.14+i*.14,phase=along-rad;
-        const v=.09*Math.sin(phase*12)*Math.exp(-phase*phase*5);dummy.position.set(along+(n?0:v),this.ui.focus.value-.28*n+(n?v:0),.095);dummy.scale.setScalar(dummy.position.y<this.height(dummy.position.x,0)?1:0);dummy.updateMatrix();beads.setMatrixAt(i,dummy.matrix);}
+        const v=.09*Math.sin(phase*12)*Math.exp(-phase*phase*5);dummy.position.set(f.hx+along+(n?0:v),this.ui.focus.value-.28*n+(n?v:0),.095);dummy.scale.setScalar(dummy.position.y<this.height(dummy.position.x,0)?1:0);dummy.updateMatrix();beads.setMatrixAt(i,dummy.matrix);}
       beads.instanceMatrix.needsUpdate=true;
     }
-    if(this.waterColumn){const x=-.55,h=this.height(x,0);this.waterColumn.visible=quake&&this.vertical&&this.ui.kind.value===1&&h<-.05&&t>.38&&t<.62;
-      this.waterColumn.scale.y=Math.max(.03,-h+.19*ramp(.4,.5,t));this.waterColumn.position.set(x,h+this.waterColumn.scale.y/2,.05);}
+    if(this.waterColumn){const x=f.hx,h=this.height(x,0),top=this.waterHeight(x,t);this.waterColumn.visible=f.waterEvent&&t>=onset&&t<.67;
+      const dy=f.offset(this.deformed,x,h,0,x>=f.trace?1:-1,t).y;this.waterColumn.scale.y=Math.max(.03,top-h-dy);this.waterColumn.position.set(x,h+dy+this.waterColumn.scale.y/2,.065);}
     for(const fn of this.motion)fn(t);this.orbit.update();this.lastCamera.copy(this.camera.position);
   }
-  get focus(){return [0,this.ui.focus.value,0];}
-  get epicenter(){return [0,this.nearSurface,0];}
+  get focus(){return [this.faultModel?.hx??0,this.ui.focus.value,0];}
+  get epicenter(){return [this.faultModel?.hx??0,this.nearSurface,0];}
   dispose(){
     this.disposed=true;this.orbit.dispose();const gs=new Set<T.BufferGeometry>(),ms=new Set<T.Material>();
     this.scene.traverse(o=>{const m=o as T.Mesh;if(m.geometry)gs.add(m.geometry);if(m.material)for(const a of Array.isArray(m.material)?m.material:[m.material])ms.add(a);});

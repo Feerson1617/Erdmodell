@@ -1,9 +1,10 @@
+import underwater from "./transform-sea.json";
 import * as T from "three";
 import { addTeachingModels,topicNames,explanations } from "./teaching-models";
 import type { World } from "../world";
 import { R } from "../geo";
-import {center, type Step} from "../tectonics/atlas";
-import {classify,localStrike,processNames,sites,type Site} from "./boundaries";
+import {center, names, type Step} from "../tectonics/atlas";
+import {geology,classify,localStrike,processNames,sites,type Site} from "./boundaries";
 import viewCentres from "./time-focus.json";
 import {TimeGlobe,scenarios,type Scenario} from "./time";
 import { MapLayers } from "./globe";
@@ -67,14 +68,17 @@ export class Observatory {
     try{await reg.init();if(rev===this.revision)this.draw();}
     catch{if(rev===this.revision){reg.error="Das lokale Gelände konnte nicht geladen werden.";this.draw();}}
   }
+  private horizontalSeabed():RegionSpec{
+    const g=geology(underwater as Step);
+    return {lat:g.lat,lon:g.lon,name:"Untermeerische Transformstörung",process:g.model,geology:g,strike:g.strike,theme:"earthquake"};
+  }
   openConcept(theme:"forces"|"lithosphere"){
     void this.openRegion({name:topicNames[theme],lat:0,lon:-24,strike:0,process:theme==="forces"?"subduction":"convergence",theme});
   }
   openBoundary(step:Step,theme:Theme="earthquake"){
-    const {lat,lon}=center(step),process=classify(step);
-    const spec:RegionSpec={lat,lon,name:processNames[process],strike:localStrike(step),azimuth:step[8],process,theme};
-    for(const key of Object.keys(sites) as Site[]){const s=sites[key];if(s.process===process && Math.hypot(lat-s.lat,(lon-s.lon)*Math.cos(lat*Math.PI/180))<.7){void this.openRegion(reference(key,theme));return;}}
-    void this.openRegion(spec);
+    const g=geology(step),details=g.regionalDEM?reference(g.regionalDEM,theme):undefined;
+    const spec:RegionSpec=details??{lat:g.lat,lon:g.lon,name:processNames[g.model],strike:g.strike,process:g.model,theme};
+    spec.geology=g;spec.azimuth=g.relativeAzimuth;void this.openRegion(spec);
   }
   private pick(x:number,y:number){
     if(!this.mode)return false;
@@ -104,16 +108,7 @@ export class Observatory {
     return result;
   }
   coverage(){
-    const dem=this.world.planet.heightData;
-    return this.maps.steps.map(s=>{
-      const c=center(s),model=classify(s),i=Math.round((c.lon+180)*2),j=Math.round((90-c.lat)*2);
-      const h=dem?.[j*721+i],surface=h===undefined||Math.abs(h)<20?"Unbestimmt im globalen Raster":h<0?"Unter dem Meer":"An Land";
-      const local=Object.entries(sites).find(([,v])=>v.process===model&&Math.hypot(v.lat-c.lat,((v.lon-c.lon+540)%360-180)*Math.cos(c.lat*Math.PI/180))<.7);
-      return {id:s[0],pair:s[1],category:s[2],...c,strike:localStrike(s),relativeAzimuth:s[8],relativeSpeedMmPerYear:s[7],model,surface,
-        scope:local?"Referenzregion mit idealisiertem Untergrund":model==="complex"||model==="convergence"?"Allgemeine Anschauung":"Regional angepasste Anschauung",
-        regionalDEM:local?.[0]??null,faultTrace:local?.[0]==="san"?"GEM UCERF3 UCF_32":local?.[0]==="japan"?"USGS Slab2 jap":null,
-        source:"PB2002 und Lage über ETOPO-Raster 0,5°",ruptureGeometry:"schematisch",eventMechanism:null};
-    });
+    return this.maps.steps.map(geology);
   }
   private action(id:string,fn:()=>void){const b=$(id);if(b)b.onclick=fn;}
   private change(id:string,fn:(value:string)=>void){const b=$<HTMLSelectElement>(id);if(b)b.onchange=()=>fn(b.value);}
@@ -138,13 +133,13 @@ export class Observatory {
     }else if(this.mode==="regional"&&this.region){
       const r=this.region,sp=r.spec;
       this.side.innerHTML='<p class="g-kicker">'+(sp.site?topicNames[sp.theme]:sp.theme==='forces'||sp.theme==='lithosphere'?'Schematisch vergrößerter Schnitt':'Vereinfachtes Modell dieser Grenzart')+'</p><h1>'+sp.name+'</h1><div class="g-stack">'+(sp.site?selectRegions(sp.theme,sp.site):'')+
-        '<small>'+(sp.site?'Höhen aus Geodaten · Untergrund schematisch':(sp.theme==='forces'||sp.theme==='lithosphere'?'Schematische Größen und Tiefen':'Lage und Grenzrichtung aus PB2002 · Untergrund schematisch'))+'</small>'+
+        (sp.geology?'<small>'+names[sp.geology.left]+' · '+names[sp.geology.right]+'</small>':'')+'<small>'+(sp.site?'Höhen aus Geodaten · Untergrund schematisch':(sp.theme==='forces'||sp.theme==='lithosphere'?'Schematische Größen und Tiefen':'Lage und Grenzrichtung aus PB2002 · Untergrund schematisch'))+'</small>'+
         (!r.ready?'<p role="status">'+(r.error||'Gelände wird geladen …')+'</p>':
         button("g-cut",r.cut?"An die Oberfläche":"Untergrund öffnen")+
         (sp.theme==='lithosphere'?'':'<label class="g-range"><span id="g-phase"></span><input id="g-progress" type="range" min="0" max="1" step=".001" value="'+r.progress+'"></label>'+
         '<div class="g-buttons">'+button("g-play","Abspielen")+button("g-step","Einzelschritt")+button("g-reset","Zurücksetzen")+'</div>')+
         '<label><input type="checkbox" id="g-names" '+(r.names?"checked":"")+'> Namen zeigen</label>'+
-        (sp.theme==="earthquake"&&(sp.process==="subduction"||sp.process==="oceanTransform"||sp.process==="arc")?'<label>Seebeben vergleichen<select id="g-sea">'+opts({vertical:"Meeresboden hebt sich",flat:"Seitlicher Versatz"},r.vertical?"vertical":"flat")+'</select></label>':'')+
+        (sp.theme==="earthquake"&&(sp.comparison||r.faultModel.waterEvent||sp.process==="oceanTransform"&&sp.geology?.elevation!<0)?'<label>Zwei Modellereignisse vergleichen<select id="g-sea">'+opts({vertical:"B · Überschiebung in Japan",flat:"A · Untermeerischer Seitenversatz"},r.vertical?"vertical":"flat")+'</select></label>':'')+
         this.extraControls(r)+'<div id="g-object" aria-live="polite"></div>'+
         '<details><summary>Modell steuern</summary><label><input type="checkbox" id="g-slow" '+(r.slow?"checked":"")+'> Zeitlupe</label><label><input type="checkbox" id="g-stress" '+(r.stress?"checked":"")+'> Spannung im Modell</label></details>'+
         item("Was geschieht hier?",explain[sp.process])+this.extraInfo(r))+
@@ -153,7 +148,12 @@ export class Observatory {
       this.action("g-cut",()=>{r.reframe(!r.cut);this.draw();});this.action("g-play",()=>{if(r.progress>=1)r.progress=0;r.playing=!r.playing;});
       this.action("g-step",()=>r.step());this.action("g-reset",()=>{r.progress=0;r.playing=false;});
       if($("g-progress"))$<HTMLInputElement>("g-progress").oninput=e=>{r.playing=false;r.progress=Number((e.target as HTMLInputElement).value);};
-      this.change("g-sea",v=>{r.vertical=v==="vertical";r.progress=0;r.playing=false;});this.change("g-names",()=>{r.names=!r.names;});
+      this.change("g-sea",v=>{
+        const openCut=r.cut;
+        const next=v==="vertical"?reference("japan","earthquake"):this.horizontalSeabed();
+        next.comparison=sp.comparison??{...sp,comparison:undefined};
+        void this.openRegion(next).then(()=>{if(this.region?.spec===next && openCut){this.region.reframe(true);this.draw();}});
+      });this.change("g-names",()=>{r.names=!r.names;});
       this.change("g-slow",()=>{r.slow=!r.slow;});this.change("g-stress",()=>{r.stress=!r.stress;});this.action("g-map",()=>void this.openMap());this.bindExtra(r);
     }else this.drawTime();
     this.action("g-world",()=>this.navigateBase("globe"));if(this.message){const p=document.createElement("p");p.textContent=this.message;this.side.append(p);}
@@ -187,7 +187,7 @@ export class Observatory {
     if(this.labels.dataset.key!==key||this.labels.childElementCount!==positions.length){this.labels.dataset.key=key;this.labels.replaceChildren();for(const a of positions){const el=document.createElement("span");el.textContent=a.name;this.labels.append(el);}}
     positions.forEach(({p},i)=>{const v=p.project(r.camera),el=this.labels.children[i] as HTMLElement;el.style.left=((1+v.x)*b.width/2)+"px";el.style.top=((1-v.y)*b.height/2)+"px";});
   }
-  diagnostics(){const r=this.region;return {mode:this.mode,site:r?.spec.site,process:r?.spec.process,theme:this.theme,ready:r?.ready??(this.maps.steps.length>0),progress:r?.progress,cut:r?.cut,viewSettled:r?.viewSettled,focus:r?.focus,epicenter:r?.epicenter,events:this.maps.rows.length,steps:this.maps.steps.length,selected:this.maps.selectedStep?.[0],...this.timeDiagnostics()};}
+  diagnostics(){const r=this.region;return {mode:this.mode,site:r?.spec.site,geology:r?.spec.geology,physics:r?.ready?r.physicalState():undefined,process:r?.spec.process,theme:this.theme,ready:r?.ready??(this.maps.steps.length>0),progress:r?.progress,cut:r?.cut,viewSettled:r?.viewSettled,focus:r?.focus,epicenter:r?.epicenter,events:this.maps.rows.length,steps:this.maps.steps.length,selected:this.maps.selectedStep?.[0],...this.timeDiagnostics()};}
   private enrich(r:RegionalScene){addTeachingModels(r);}
   private extraControls(r:RegionalScene){
     if(r.spec.theme==="risk")return '<label>Raumnutzung<select id="g-exposure">'+opts({empty:"Unbesiedelt",sparse:"Einzelne Häuser",dense:"Dichte Siedlung"},r.exposure)+'</select></label><label><input type="checkbox" id="g-protect" '+(r.protection?"checked":"")+'> Bauweise verstärken</label><details><summary>Weitere Schutzmaßnahmen</summary><label><input type="checkbox" id="g-route" '+(r.safeRoute?"checked":"")+'> Fluchtweg markieren</label><label><input type="checkbox" id="g-warning" '+(r.warning?"checked":"")+'> Warnung und Evakuierung üben</label><label><input type="checkbox" id="g-relocate" '+(r.relocate?"checked":"")+'> Siedlung verlagern</label></details>';
