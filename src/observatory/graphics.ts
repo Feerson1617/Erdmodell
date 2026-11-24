@@ -22,7 +22,7 @@ export function installProfiles(parent:HTMLElement){
 }
 export async function loadTexture(file:string,srgb=false){
   const texture=await new T.TextureLoader().loadAsync(localAsset("data/g6/"+file));texture.colorSpace=srgb?T.SRGBColorSpace:T.NoColorSpace;
-  texture.anisotropy=4;return texture;
+  texture.anisotropy=1;return texture;
 }
 let library:Promise<{color:T.Texture;relief:T.Texture;plants:T.Texture}>|undefined;
 export function materials(){

@@ -888,6 +888,7 @@ export class World {
     if (!this.running) return;
     requestAnimationFrame(this.render);
     if (document.hidden) { this.last = 0; return; }
+    if(this.last&&now-this.last>600)observeCadence(1000/(now-this.last),Math.min(3.1,(now-this.last)/1000));
     if (!this.last || now - this.last > 2000) {
       this.fpsStart = now;
       this.frameCount = 0;

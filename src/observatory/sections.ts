@@ -28,9 +28,10 @@ function material(kind:Rock,r:RegionalScene,accreted=false){
         vec3 axis=abs(cross(dFdx(stone),dFdy(stone)))+vec3(.000001);axis=normalize(axis);axis=pow(axis,vec3(4.));axis/=axis.x+axis.y+axis.z;
         vec2 scale=vec2(${scales[0]},${scales[1]});
         vec2 section=stone.xy*scale+vec2(.13*stone.z,.21*sin(stone.x*1.4)+.18*a);
-        vec3 photo=fieldSample(faciesColor,section,${tile}.).rgb*axis.z+fieldSample(faciesColor,stone.yz*scale,${tile}.).rgb*axis.x+fieldSample(faciesColor,stone.xz*scale,${tile}.).rgb*axis.y;
-        vec3 micro=fieldSample(faciesRelief,section,${tile}.).rgb;
-        float coarse=fieldSample(faciesColor,section*.29+vec2(.24,.8),${tile}.).g;
+        vec3 photo=fieldSample(faciesColor,section,${tile}.).rgb;
+        if(detailGrade>1.5&&axis.z<.97)photo=photo*axis.z+fieldSample(faciesColor,stone.yz*scale,${tile}.).rgb*axis.x+fieldSample(faciesColor,stone.xz*scale,${tile}.).rgb*axis.y;
+        vec3 micro=detailGrade<.5?vec3(.5,.5,.87):fieldSample(faciesRelief,section,${tile}.).rgb;
+        float coarse=detailGrade<.5?photo.g:fieldSample(faciesColor,section*.29+vec2(.24,.8),${tile}.).g;
         float exposure=clamp(.34+2.4*sqrt(luma6(photo)+.004),.46,1.86);
         diffuseColor.rgb*=mix(.78,1.13,smoothstep(.015,.45,coarse))*exposure;
         diffuseColor.rgb=mix(diffuseColor.rgb,photo*vec3(1.12,1.01,.92),.14);
