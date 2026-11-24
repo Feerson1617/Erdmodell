@@ -1,3 +1,5 @@
+import stations from "./gnss.json";
+import { Reconstructions } from "./reconstruction";
 import * as T from "three";
 import { R,position } from "../geo";
 import { localAsset } from "../assets";
@@ -6,7 +8,7 @@ export const scenarios={past:{label:"Rekonstruktion",end:250},ultima:{label:"Pan
 export type Scenario=keyof typeof scenarios;
 type Evidence={name:string;kind:string;coords:[number,number][]};
 const fragment=`
-uniform sampler2D first,second;uniform float blend,future;varying vec2 coord;varying vec3 norm;
+uniform sampler2D first,second;uniform float blend,future,rigid;varying vec2 coord;varying vec3 norm;
 void main(){
  vec3 a=texture2D(first,coord).rgb,b=texture2D(second,coord).rgb;
  float land=mix(a.x,b.x,blend),boundary=mix(a.y,b.y,blend);
@@ -14,12 +16,12 @@ void main(){
  vec3 sea=mix(vec3(.048,.17,.22),vec3(.11,.27,.32),light);
  vec3 earth=mix(vec3(.57,.53,.355),vec3(.68,.72,.52),lat*.57+light*.36);
  earth=mix(earth,earth*vec3(1.10,.91,.78),future);
- vec3 col=mix(sea,earth,land*(1.-future));col=mix(col,vec3(.66,.48,.33),mix(a.b,b.b,blend)*.23*(1.-future));col=mix(col,vec3(.89,.74,.51),boundary*.88);
+ vec3 col=mix(sea,earth,land*(1.-future)*(1.-rigid));col=mix(col,vec3(.66,.48,.33),mix(a.b,b.b,blend)*.23*(1.-future));col=mix(col,vec3(.89,.74,.51),boundary*.88);
  float rim=pow(1.-abs(normalize(norm).z),4.);
  gl_FragColor=vec4(col*(.72+.32*light)+vec3(.11,.21,.24)*rim,1.);
 }`;
 function globe(){
- const material=new T.ShaderMaterial({uniforms:{first:{value:null},second:{value:null},blend:{value:0},future:{value:0}},vertexShader:"varying vec2 coord;varying vec3 norm;void main(){coord=uv;norm=normalize(normalMatrix*normal);gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}",fragmentShader:fragment});
+ const material=new T.ShaderMaterial({uniforms:{first:{value:null},second:{value:null},blend:{value:0},future:{value:0},rigid:{value:0}},vertexShader:"varying vec2 coord;varying vec3 norm;void main(){coord=uv;norm=normalize(normalMatrix*normal);gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}",fragmentShader:fragment});
  const geometry=new T.SphereGeometry(R,144,88).rotateY(-Math.PI/2);const sphere=new T.Mesh(geometry,material);sphere.visible=false;
  const scene=new T.Scene();scene.add(sphere);return {scene,sphere,material};
 }
@@ -29,7 +31,10 @@ export class TimeGlobe {
   private channels=["",""];private displayed=["",""];private previousMarks="";
   year=-250;scenario:Scenario="past";compare=false;direction=1;speed=7;playing=false;layer="";error="";
   get ready(){return Boolean(this.displayed[0] && this.displayed[0]===this.channels[0] && (this.model==="past" || this.models) && (!this.compare || (this.displayed[1] && this.displayed[1]===this.channels[1])));}
-  constructor(){this.primary.scene.add(this.markers);void fetch(localAsset("data/g5/evidence.json")).then(r=>r.json()).then(data=>{this.evidence=data;this.previousMarks="";}).catch(()=>{this.error="Belegorte konnten nicht geladen werden.";});}
+  reconstruction=new Reconstructions(this.primary.material.uniforms);
+  gnss="";tracking="";trail=false;follow=false;showBoundaries=false;comparison:Scenario="novo";
+  constructor(){this.primary.scene.add(this.markers,this.reconstruction.land,this.reconstruction.track,this.reconstruction.lines[0]);this.other.scene.add(this.reconstruction.lines[1]);
+    void this.reconstruction.load().catch(()=>{if(!this.disposed)this.error="Die Kontinentalblöcke konnten nicht geladen werden. Die Karte zeigt den berechneten Zeitschnitt.";});void fetch(localAsset("data/g5/evidence.json")).then(r=>r.json()).then(data=>{this.evidence=data;this.previousMarks="";}).catch(()=>{this.error="Belegorte konnten nicht geladen werden.";});}
   private rotating?:Promise<void>;private models?:Record<string,number[][][]>;private continents=[new T.Group(),new T.Group()];
   private async buildContinents(){
     const [data,angles]=await Promise.all([fetch(localAsset("data/g5/time/future.i16")),fetch(localAsset("data/g5/time/future-rotations.json"))]);
@@ -78,9 +83,9 @@ export class TimeGlobe {
       const ahead=lo+5*(this.year<0?-this.direction:this.direction);if(ahead>=0&&ahead<=scenarios[model].end)void this.load(model+"-"+ahead).catch(()=>{});
     }).catch(()=>{if(this.channels[idx]===key){this.error="Dieser Zeitschnitt fehlt. Bitte eine andere Zeit wählen.";this.playing=false;}});
   }
-  setYear(y:number){const max=this.scenario==="past"?0:scenarios[this.scenario].end;this.year=T.MathUtils.clamp(y,-250,max);if(this.year<=0)this.compare=false;}
+  setYear(y:number){const max=this.scenario==="past"?0:Math.min(scenarios[this.scenario].end,this.compare?scenarios[this.second].end:Infinity);this.year=T.MathUtils.clamp(y,-250,max);if(this.year<=0)this.compare=false;}
   get model():Scenario{return this.year<=0?"past":this.scenario;}
-  get second():Scenario{return this.scenario==="novo"?"ultima":"novo";}
+  get second():Scenario{return this.comparison===this.scenario?(this.scenario==="novo"?"ultima":"novo"):this.comparison;}
   evidenceCentre(){
     const points=this.evidence.filter(item=>item.kind===this.layer);
     if(!points.length)return;
@@ -89,8 +94,13 @@ export class TimeGlobe {
     return {lat:T.MathUtils.radToDeg(Math.atan2(centre.y,Math.hypot(centre.x,centre.z))),lon:T.MathUtils.radToDeg(Math.atan2(centre.x,centre.z))};
   }
   private updateMarkers(){
-    const slice=Math.round(Math.abs(this.year)/5),key=[this.layer,this.year>0,slice,this.evidence.length].join("/");
+    const slice=Math.round(Math.abs(this.year)/5),key=[this.layer,this.year>0,slice,this.evidence.length,this.gnss].join("/");
     if(key===this.previousMarks)return;this.previousMarks=key;this.markers.clear();
+    if(this.gnss&&this.year===0){const st=stations.find(s=>s.id===this.gnss)!;
+      const pin=new T.Mesh(this.pinGeo,this.pinMat);pin.position.copy(position(st.lat,st.lon,72));pin.name=st.id;this.markers.add(pin);
+      const arrow=new T.ArrowHelper(new T.Vector3(),pin.position,720,0xf6c779,150,95);
+      const north=position(st.lat+.1,st.lon).sub(position(st.lat,st.lon)).normalize(),east=position(st.lat,st.lon+.1).sub(position(st.lat,st.lon)).normalize();
+      arrow.setDirection(north.multiplyScalar(st.north).addScaledVector(east,st.east).normalize());this.markers.add(arrow);}
     if(!this.layer||this.year>0)return;
     for(const e of this.evidence.filter(v=>v.kind===this.layer)){
       const [lat,lon]=e.coords[slice];const m=new T.Mesh(this.pinGeo,this.pinMat);m.position.copy(position(lat,lon,72));m.name=e.name;this.markers.add(m);}
@@ -98,6 +108,10 @@ export class TimeGlobe {
   private pinGeo=new T.SphereGeometry(93,12,8);private pinMat=new T.MeshBasicMaterial({color:0xffae62});
   render(dt:number,gl:T.WebGLRenderer,camera:T.PerspectiveCamera){
     if(this.playing){const max=this.scenario==="past"?0:scenarios[this.scenario].end;this.setYear(this.year+dt*this.speed*this.direction);if(this.year===max||this.year===-250)this.playing=false;}
+    this.reconstruction.draw(Math.abs(this.year),this.model==="past",this.tracking,this.trail);
+    this.primary.material.uniforms.rigid.value=+(this.model==="past"&&this.reconstruction.ready);
+    this.reconstruction.boundaries(this.model,this.year,0,this.showBoundaries);
+    this.reconstruction.boundaries(this.second,this.year,1,this.compare&&this.showBoundaries);
     this.rotate(this.model,0);this.prepare(this.model,0);this.updateMarkers();
     if(!this.primary.sphere.visible)return false;
     if(this.compare&&this.year>0){if(this.year>scenarios[this.second].end){this.setYear(scenarios[this.second].end);this.playing=false;}
@@ -111,7 +125,7 @@ export class TimeGlobe {
     return true;
   }
   pick(ray:T.Raycaster){return ray.intersectObjects(this.markers.children)[0]?.object.name;}
-  dispose(){this.disposed=true;for(const entry of this.cache.values())entry.texture?.dispose();this.cache.clear();
+  dispose(){this.disposed=true;this.reconstruction.dispose();for(const entry of this.cache.values())entry.texture?.dispose();this.cache.clear();
     for(const m of this.continents[0].children as T.Mesh[]){m.geometry.dispose();(m.material as T.Material).dispose();}
     for(const v of [this.primary,this.other]){v.sphere.geometry.dispose();v.material.dispose();}this.pinGeo.dispose();this.pinMat.dispose();}
 }

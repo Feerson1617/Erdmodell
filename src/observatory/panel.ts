@@ -1,3 +1,5 @@
+import {tracks} from "./reconstruction";
+import gnss from "./gnss.json";
 import { depthSection } from "./depth-section";
 import underwater from "./transform-sea.json";
 import * as T from "three";
@@ -239,19 +241,35 @@ export class Observatory {
   private closeTime(){this.timeline?.dispose();this.timeline=undefined;$("g-split-caption")?.remove();}
   private drawTime(){
     const t=this.timeline;if(!t)return;
+    const assumptions:Record<Scenario,string>={past:"",ultima:"Der Atlantik schließt sich wieder.",novo:"Der Pazifik schließt sich. Der Atlantik bleibt offen.",aurica:"Atlantik und Pazifik schließen sich. Ein neuer Ozean öffnet sich.",amasia:"Kontinentalbereiche sammeln sich im Norden."};
     const labels={past:"Vergangenheit bis heute",ultima:"Pangaea Ultima",novo:"Novopangaea",aurica:"Aurica",amasia:"Amasia"};
     this.side.innerHTML='<p class="g-kicker">Plattentektonik</p><h1>Zeitreise</h1><div class="g-stack"><h2 id="g-age"></h2><small id="g-certainty"></small>'+
       '<label>Zeit wählen<input type="range" min="-250" max="'+(t.scenario==="past"?0:scenarios[t.scenario].end)+'" step=".1" id="g-year" value="'+t.year+'"></label>'+
       '<div class="g-buttons">'+button("g-reverse","Rückwärts")+button("g-time-play","Abspielen")+button("g-today","Heute")+button("g-time-focus","Flächen zentrieren")+'</div>'+
       '<label>Station<select id="g-station">'+opts({"-250":"Pangäa","-200":"Beginnende Aufspaltung","-150":"Weitere Trennung","-100":"Atlantik öffnet sich","-50":"Indien nähert sich Eurasien","0":"Gegenwart"},String(t.year))+'</select></label>'+
       '<label>Zeitmodell<select id="g-scenario">'+opts(labels,t.scenario)+'</select></label>'+
-      (t.scenario!=="past"?'<label><input id="g-compare" type="checkbox" '+(t.compare?"checked":"")+'> Zwei Möglichkeiten vergleichen</label>':'')+
+      (t.scenario==="past"?'<details id="g-tracking"><summary>Kontinent verfolgen</summary><label>Kontinentalbereich<select id="g-track">'+opts({"":"Ausblenden",...Object.fromEntries(Object.entries(tracks).map(([k,v])=>[k,v[0]]))},t.tracking)+'</select></label><label><input id="g-trail" type="checkbox" '+(t.trail?"checked":"")+'> Bewegungsspur</label><label><input id="g-follow" type="checkbox" '+(t.follow?"checked":"")+'> Kamera folgt</label></details>':
+      '<label><input id="g-compare" type="checkbox" '+(t.compare?"checked":"")+'> Zwei Möglichkeiten vergleichen</label>'+
+      (t.compare?'<label>Zweites Modell<select id="g-second">'+opts(Object.fromEntries(Object.entries(labels).filter(([k])=>k!=="past"&&k!==t.scenario)),t.second)+'</select></label><small>Gemeinsamer Zeitraum bis +'+Math.min(scenarios[t.scenario].end,scenarios[t.second].end)+' Mio. Jahre. '+assumptions[t.second]+'</small>':'')+
+      '<label><input type="checkbox" id="g-future-lines" '+(t.showBoundaries?"checked":"")+'> Modellgrenzen zeigen</label><small>'+assumptions[t.scenario]+'</small>')+
       '<label>Tempo<select id="g-speed">'+opts({"3":"Langsam","7":"Normal","14":"Schnell"},String(t.speed))+'</select></label>'+
       '<details id="g-evidence"><summary>Belege ansehen</summary><label>Hinweis im Globus<select id="g-evidence-kind">'+opts({"":"Ausblenden",margin:"Kontinentalränder",fossil:"Mesosaurus-Fundregionen",rock:"Alte Gebirgsgürtel",india:"Weg Indiens",australia:"Weg Australiens"},t.layer)+'</select></label><p id="g-evidence-name"></p><p id="g-evidence-info"></p>'+
       button("g-magnet","Magnetstreifen am Rücken")+button("g-motion","Heutige Bewegung")+button("g-real-events","Beobachtete Erdbeben")+'</details>'+
-      item("Was zeigt das Modell?","Die hellen Flächen sind Kontinentalbereiche, auch unter flachem Meer. In der Vergangenheit zeigen Linien rekonstruierte Plattengrenzen. Zwischen zwei Zeitschnitten überblendet die Karte. In der Zukunft unterscheiden die Farbtöne bewegliche Kontinentalblöcke.")+
+      '<details id="g-gnss"><summary>Heute mit Satelliten messen</summary><label>Messstation<select id="g-station-gnss">'+opts(Object.fromEntries(gnss.map(s=>[s.id,s.id])),gnss[0].id)+'</select></label><p id="g-gnss-text"></p><small>GNSS · Nevada Geodetic Laboratory · Bezugsrahmen IGS14</small></details>'+
+      item("Was zeigt das Modell?","Die hellen Flächen sind Kontinentalbereiche, auch unter flachem Meer. In der Vergangenheit zeigen Linien rekonstruierte Plattengrenzen. Die starren Blöcke drehen sich. Grenzen und verformte Zonen stammen aus Zeitschnitten im Abstand von fünf Millionen Jahren. In der Zukunft unterscheiden die Farbtöne bewegliche Kontinentalblöcke.")+
       item("Wie sicher ist die Zukunft?","Die vier Modelle nehmen unterschiedliche künftige Plattengrenzen an. Sie zeigen Möglichkeiten. Wo Küsten, Gebirge und Städte liegen werden, lässt sich daraus nicht ablesen.")+
       button("g-to-atlas","Zum heutigen Plattenatlas")+button("g-world","Zum Globus")+'</div>';
+    this.change("g-track",v=>{t.tracking=v;const point=t.reconstruction.at(Math.abs(t.year),v);if(point)this.world.nav.fly({...point,d:16800,tilt:0,bearing:0},true);});
+    this.change("g-trail",()=>{t.trail=!t.trail;});this.change("g-follow",()=>{t.follow=!t.follow;});
+    this.change("g-second",v=>{t.comparison=v as Scenario;t.setYear(t.year);this.draw();});
+    this.change("g-future-lines",()=>{t.showBoundaries=!t.showBoundaries;});
+    const gnssInfo=(id:string)=>{const station=gnss.find(s=>s.id===id)!;
+      const az=(Math.atan2(station.east,station.north)*180/Math.PI+360)%360;
+      const label=["Norden","Nordosten","Osten","Südosten","Süden","Südwesten","Westen","Nordwesten"][Math.round(az/45)%8];
+      $("g-gnss-text").textContent="Die Station bewegt sich im globalen Bezugsrahmen nach "+label+".";
+      return station;};
+    gnssInfo(gnss[0].id);this.change("g-station-gnss",id=>{const station=gnssInfo(id);t.playing=false;t.setYear(0);t.layer="";t.tracking="";this.world.nav.fly({lat:station.lat,lon:station.lon,d:14400,tilt:0,bearing:0});t.gnss=station.id;});
+    $("g-gnss").ontoggle=()=>{if(($("g-gnss") as HTMLDetailsElement).open)$<HTMLSelectElement>("g-station-gnss").dispatchEvent(new Event("change"));else t.gnss="";};
     const age=$<HTMLInputElement>("g-year");age.oninput=()=>{t.playing=false;t.setYear(Number(age.value));};
     this.action("g-reverse",()=>{if(t.year<=-250)t.setYear(0);t.direction=-1;t.playing=true;});
     this.action("g-time-play",()=>{if(t.playing){t.playing=false;return;}t.direction=1;if(t.year===(t.scenario==="past"?0:scenarios[t.scenario].end))t.setYear(t.scenario==="past"?-250:0);t.playing=true;});
@@ -270,11 +288,14 @@ export class Observatory {
   }
   private frameTime(dt:number){
     const t=this.timeline;if(!t)return false;const rendered=t.render(dt,this.world.gl,this.world.nav.camera);
+    if(t.follow&&t.tracking&&t.year<=0&&!this.world.nav.flight){
+      const v=t.reconstruction.at(Math.abs(t.year),t.tracking);if(v){this.world.nav.goal.lat=v.lat;this.world.nav.goal.lon=v.lon;}
+    }
     const year=Math.round(t.year);$("g-age").textContent=year<0?"Vor "+(-year)+" Mio. Jahren":year>0?"In "+year+" Mio. Jahren":"Heute";
     $("g-certainty").textContent=t.error||(!rendered?"Rekonstruktion wird geladen …":year>0?"Mögliche Zukunft – keine sichere Vorhersage":year<0?"Wissenschaftliche Rekonstruktion":"Heutige Kontinentalflächen im Rekonstruktionsmodell");
     $("g-time-play").textContent=t.playing?"Pause":"Abspielen";$<HTMLInputElement>("g-year").value=String(t.year);
     const caption=$("g-split-caption");if(caption){caption.hidden=!t.compare;caption.textContent=t.compare?scenarios[t.scenario].label+"　 /　 "+scenarios[t.second].label:"";}
     return rendered;
   }
-  private timeDiagnostics(){const t=this.timeline;return t?{year:t.year,scenario:t.scenario,compare:t.compare,timeReady:t.ready,timeError:t.error}:{};}
+  private timeDiagnostics(){const t=this.timeline;return t?{year:t.year,scenario:t.scenario,compare:t.compare,timeReady:t.ready,timeError:t.error,rigid:t.reconstruction.ready,tracking:t.tracking,tracked:t.reconstruction.at(Math.abs(t.year),t.tracking)?.v.toArray(),second:t.second}:{};}
 }

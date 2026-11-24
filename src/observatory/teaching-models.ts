@@ -44,21 +44,22 @@ function flow(r:RegionalScene,c:T.CatmullRomCurve3,color:number,id:string,count:
 }
 function mantle(r:RegionalScene){
   const h=(x:number)=>r.height(x,0),base=(x:number)=>h(x)-.33,lower=(x:number)=>base(x)-.65;
-  ribbon(r,base,h,0xb5a47c,"crust");ribbon(r,lower,base,0x758a83,"rigid");ribbon(r,x=>lower(x)-2.8,lower,0xb6795d,"mantle");
-  if(r.spec.theme==="lithosphere")return;
+  if(r.spec.theme==="lithosphere"){ribbon(r,base,h,0xb5a47c,"crust");ribbon(r,lower,base,0x758a83,"rigid");ribbon(r,x=>lower(x)-2.8,lower,0xb6795d,"mantle");return;}
   const curves:[[T.Vector3,T.Vector3,T.Vector3],number,string][]=[
     [[vec(-2.5,-2.7),vec(-3,-1.6),vec(-2.65,-.82)],0xe9b477,"heat"],
     [[vec(-2.5,-.48),vec(-1.8,-.54),vec(-.85,-.65)],0xa9ceb5,"ridge"],
-    [[vec(.6,-.6),vec(1.5,-1.23),vec(2.25,-2.45)],0x9ac7cc,"pull"]];
+    [[vec(.6,r.faultModel.interfaceY(.6)-.16),vec(1.5,r.faultModel.interfaceY(1.5)-.16),vec(2.7,r.faultModel.interfaceY(2.7)-.16)],0x9ac7cc,"pull"]];
   for(const [pts,color,id] of curves){const c=arrow(pts,color,id,r.section);flow(r,c,color,id,6,0,1);}
 }
 function magnetic(r:RegionalScene){
-  const palette=[chips(0xb6c3a9),chips(0x555e5d)],widths=[.35,.16,.49,.26,.62,.22,.35,.52];
-  for(const sign of [-1,1]){let cursor=0;for(let i=0;i<widths.length;i++){
-    const w=widths[i],x=sign*(cursor+w/2);cursor+=w;
-    const stripe=object(new T.BoxGeometry(w,.11,1.3),palette[i%2],"stripe");r.scene.add(stripe);
-    r.onAnimate(t=>{const dx=x+sign*t*.8;stripe.position.set(dx,r.height(dx,-.7)+.09,-.7);});}
-    const fresh=object(new T.BoxGeometry(1,.095,1.3),palette[0],"stripe");r.scene.add(fresh);r.onAnimate(t=>{fresh.scale.x=Math.max(.002,t*.8);fresh.position.set(sign*t*.4,r.height(0,-.7)+.075,-.7);});
+  const materials=[chips(0xc1b698),chips(0x495c66)];
+  // Each strip freezes the field polarity at birth. New material appears on both sides of x=0.
+  const intervals=[[-1,-.65],[-.65,-.42],[-.42,0],[0,.14],[.14,.43],[.43,.53],[.53,.82],[.82,1]];
+  for(const sign of [-1,1])for(const [i,[birth,end]] of intervals.entries()){
+    const band=object(new T.BoxGeometry(1,.10,1.0),materials[i%2],"stripe");r.scene.add(band);
+    r.onAnimate(t=>{const young=Math.max(0,t-end)*2.5,old=(t-birth)*2.5;band.visible=old>0;
+      band.scale.x=Math.max(.001,old-young);const x=sign*(old+young)*.5;
+      band.position.set(x,r.height(x,-.55)+.075,-.55);});
   }
   flow(r,new T.CatmullRomCurve3([vec(.1,-1.7),vec(-.1,-.7),vec(0,r.height(0,0))]),0xeeb68a,"melt",8,.01,1);
 }

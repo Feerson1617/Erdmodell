@@ -92,6 +92,7 @@ export class RegionalScene {
       const u=clamp((x/12+.5)*6,0,6),v=clamp((z/9+.5)*6,0,6),i=Math.min(5,Math.floor(u)),j=Math.min(5,Math.floor(v)),dx=u-i,dy=v-j;
       const h=this.windows,k=i+j*7;return .00024*((1-dy)*((1-dx)*h[k]+dx*h[k+1])+dy*((1-dx)*h[k+7]+dx*h[k+8]));
     }
+    if(this.spec.theme==="forces")return .14+.52*Math.exp(-((x+3.8)**2)*1.2)-.43*Math.exp(-x*x*2);
     return .12+.08*Math.cos(x+z*.2);
   }
   async init(){
