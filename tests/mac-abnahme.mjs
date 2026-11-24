@@ -13,7 +13,7 @@ import { PNG } from "pngjs";
 const out=resolve("test-results/mac"), film=join(out,"film");
 await mkdir(film,{recursive:true});
 const executablePath=(await readFile(join(out,"executable-path.txt"),"utf8")).trim();
-const html=pathToFileURL(resolve("artifacts/GeoRisiko-G5.2-Web-Test.html")).href;
+const html=pathToFileURL(resolve("artifacts/GeoRisiko-G5.2.1-Web-Test.html")).href;
 const cases=JSON.parse(await readFile("src/tectonics/examples.json","utf8"));
 const report={commit:process.env.TEST_COMMIT, run:process.env.GITHUB_RUN_ID, platform:process.platform, arch:process.arch, runs:[]};
 const runCmd=(name,args)=>{const r=spawnSync(name,args,{encoding:"utf8"});assert.equal(r.status,0,r.stderr);return r.stdout.trim();};
@@ -194,9 +194,12 @@ async function exercise(p,context,name,pid) {
   row.requestedAssets=[...assets].sort();
   assert.deepEqual(errors,[]);assert.deepEqual(network,[]);return row;
 }
-let viewport;
+const launchInstalled=()=>_electron.launch({executablePath,args:["--force-device-scale-factor=1","--user-data-dir="+join(out,"testprofil")],timeout:90000});
+const savedState=async p=>p.evaluate(()=>{const s=window.geoObservatory().observatory;return {view:s.view,cut:s.cut,settings:s.settings,camera:s.camera,site:s.site,playing:s.playing,progress:s.progress,observing:document.body.classList.contains("observing")};});
+const openView=async(p,key)=>{await p.click("#saved-views");await p.selectOption("#saved-list",key);await p.click("#view-apply");await p.waitForSelector(".classroom-views",{state:"hidden"});await p.waitForFunction(()=>window.geoObservatory().observatory.ready&&window.geoObservatory().observatory.viewSettled);};
+let viewport,favorite;
 try {
-  const app=await _electron.launch({executablePath,args:["--force-device-scale-factor=1"],timeout:90000});
+  const app=await launchInstalled();
   const stderr=[];
   app.process().stderr?.on("data",chunk=>stderr.push(String(chunk)));
   try{
@@ -247,13 +250,24 @@ try {
       packaged:app.isPackaged,gpu:app.getGPUFeatureStatus()}));
     assert.ok(report.electron.packaged);
     await exercise(p,ctx,"Electron",app.process().pid);
-    await p.close();const opened=app.waitForEvent("window");await app.evaluate(({app})=>app.emit("activate"));await rest(await opened);
+    await p.close();const opened=app.waitForEvent("window");await app.evaluate(({app})=>app.emit("activate"));const reopened=await opened;await rest(reopened);
+    await openView(reopened,"p3");await reopened.selectOption("#observe-view","overhead");await reopened.selectOption("#observe-stage",".30");
+    await reopened.waitForFunction(()=>window.geoObservatory().observatory.viewSettled);
+    await reopened.click("#saved-views");await reopened.fill("#view-name","Neustartprüfung");await reopened.click("#view-save");
+    favorite=await reopened.locator("#saved-list").inputValue();assert.match(favorite,/^s/);await reopened.click("#view-close");
+    report.restart={firstPID:app.process().pid,before:await savedState(reopened)};
     report.windowReopened=true;
   }finally{
     await app.close();
     await writeFile(join(out,"Electron-stderr.log"),stderr.join(""));
     assert.ok(!stderr.some(line=>/FATAL:|GPU process isn't usable|Renderer process crashed/i.test(line)),"Electron-Prozessfehler");
   }
+  const second=await launchInstalled();
+  try{report.restart.secondPID=second.process().pid;assert.notEqual(report.restart.firstPID,report.restart.secondPID);
+    const p=await second.firstWindow();await rest(p);await openView(p,favorite);report.restart.after=await savedState(p);
+    assert.deepEqual(report.restart.after,report.restart.before);report.restart.verified=true;
+    await p.click("#saved-views");await p.selectOption("#saved-list",favorite);await p.click("#view-remove");await p.click("#view-close");
+  }finally{await second.close();}
   const browserServer=await chromium.launchServer({headless:false,channel:"chrome",args:["--force-device-scale-factor=1","--disable-background-networking"]});
   try{
     const browser=await chromium.connect(browserServer.wsEndpoint());

@@ -97,7 +97,7 @@ sys.path.insert(0,str(root/'scripts/g52'))
 from report import evidence
 files.update(evidence(root,out,raw))
 files['Dokumentation/g52-unterricht.md']=root/'docs/g52-unterricht.md'
-dest=root/'artifacts/GeoRisiko-G5.2-Sichtpruefung.zip'
+dest=root/'artifacts/GeoRisiko-G5.2.1-Sichtpruefung.zip'
 with ZipFile(dest,'w',ZIP_DEFLATED) as z:
     for name,p in sorted(files.items()):z.write(p,name)
     z.writestr('SHA256-Inhalt.txt',''.join(hashlib.sha256(p.read_bytes()).hexdigest()+'  '+name+'\n' for name,p in sorted(files.items())))

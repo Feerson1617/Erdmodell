@@ -62,11 +62,22 @@ function magnetic(r:RegionalScene){
   const materials=[chips(0xc1b698),chips(0x495c66)];
   // Each strip freezes the field polarity at birth. New material appears on both sides of x=0.
   const intervals=[[-1,-.65],[-.65,-.42],[-.42,0],[0,.14],[.14,.43],[.43,.53],[.53,.82],[.82,1]];
-  for(const sign of [-1,1])for(const [i,[birth,end]] of intervals.entries()){
-    const band=object(new T.BoxGeometry(1,.10,1.0),materials[i%2],"stripe");r.scene.add(band);
-    r.onAnimate(t=>{const young=Math.max(0,t-end)*2.5,old=(t-birth)*2.5;band.visible=old>0;
-      band.scale.x=Math.max(.001,old-young);const x=sign*(old+young)*.5;
-      band.position.set(x,r.height(x,-.55)+.075,-.55);});
+  if(r.spec.theme==="magnet")for(const sign of [-1,1])for(const [i,[birth,end]] of intervals.entries()){
+    const geometry=new T.PlaneGeometry(1,1,8,8),pos=geometry.attributes.position;
+    const band=object(geometry,materials[i%2],"stripe");band.frustumCulled=false;r.scene.add(band);
+    r.onAnimate(t=>{const young=Math.max(0,t-end)*.65,old=(t-birth)*.65;band.visible=old>0;
+      if(!band.visible)return;
+      for(let k=0;k<pos.count;k++){const x=sign*T.MathUtils.lerp(young,old,k%9/8),z=-1+Math.floor(k/9)/8;
+        const source=sign*Math.max(0,Math.abs(x)-.65*t);
+        pos.setXYZ(k,x,r.height(source,z)+.006,z);}
+      pos.needsUpdate=true;geometry.computeVertexNormals();});
+  }
+  if(r.spec.theme==="process"){
+    const top=r.height(0,0);
+    for(const sign of [-1,1]){
+      const path=new T.CatmullRomCurve3([vec(sign*.12,top-3.2),vec(sign*.15,top-2.35),vec(sign*.32,top-1.75),vec(sign*.74,top-1.48)]);
+      flow(r,path,0xc2a783,"mantle",4,0,1);
+    }
   }
   flow(r,new T.CatmullRomCurve3([vec(.1,-1.7),vec(-.1,-.7),vec(0,r.height(0,0))]),0xeeb68a,"melt",8,.01,1);
 }

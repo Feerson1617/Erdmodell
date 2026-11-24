@@ -4,10 +4,12 @@ import {onset} from "./fault";
 // One-dimensional depth-averaged shallow water. Hydrostatic reconstruction preserves
 // still water over a sloping bed. Time, horizontal distance and relief are model units.
 export class WaterSection{
-  readonly cells=121;readonly frames=241;readonly dx=12/(this.cells-1);
-  readonly surfaces=new Float32Array(this.cells*this.frames);
-  readonly depths=new Float32Array(this.cells*this.frames);
-  constructor(fault:Fault){
+  readonly frames=241;readonly dx:number;
+  readonly budget:{initial:number;final:number;outflow:number;residual:number};
+  readonly surfaces:Float32Array;
+  readonly depths:Float32Array;
+  constructor(fault:Pick<Fault,"height"|"uplift"|"hx"|"hy">,readonly cells=121){
+    this.dx=12/(cells-1);this.surfaces=new Float32Array(cells*this.frames);this.depths=new Float32Array(cells*this.frames);
     const n=this.cells,dx=this.dx,g=620;
     const z=new Float64Array(n),h=new Float64Array(n),q=new Float64Array(n),floor=new Float64Array(n);
     const mass=new Float64Array(n+1),rightFlux=new Float64Array(n+1),leftFlux=new Float64Array(n+1);
@@ -16,7 +18,9 @@ export class WaterSection{
       const x=-6+i*dx;floor[i]=fault.height(x,0);z[i]=floor[i];h[i]=Math.max(0,-z[i]);
       end[i]=fault.uplift(x,1);delay[i]=onset+Math.hypot(x-fault.hx,floor[i]-fault.hy)/16;
     }
-    const steps=6,dt=1/(this.frames-1)/steps;
+    const volume=()=>h.reduce((sum,depth)=>sum+depth,0)*dx;
+    const initial=volume();let outflow=0;
+    const steps=Math.max(6,Math.ceil(6*(cells-1)/120)),dt=1/(this.frames-1)/steps;
     for(let frame=0;frame<this.frames;frame++){
       for(let i=0;i<n;i++){this.surfaces[frame*n+i]=z[i]+h[i];this.depths[frame*n+i]=h[i];}
       for(let k=1;k<=steps&&frame<this.frames-1;k++){
@@ -34,12 +38,22 @@ export class WaterSection{
           leftFlux[face]=flux+.5*g*(h[l]*h[l]-hl*hl);
           rightFlux[face]=flux+.5*g*(h[r]*h[r]-hr*hr);
         }
+        outflow+=dt*(mass[n]-mass[0]);
         for(let i=0;i<n;i++){
           h[i]=Math.max(0,h[i]-dt/dx*(mass[i+1]-mass[i]));
           q[i]=h[i]<.0001?0:(q[i]-dt/dx*(leftFlux[i+1]-rightFlux[i]))/(1+dt*.10);
         }
       }
     }
+    const final=volume();this.budget={initial,final,outflow,residual:final-initial+outflow};
+  }
+  bed(x:number,t:number){return this.sample(x,t)-this.sample(x,t,true);}
+  private timeline?:{t:number;newlyWet:number;shore:number;deepest:number}[];
+  get shorelineHistory(){
+    return this.timeline??=Array.from({length:121},(_,i)=>{
+      // Compare states that can also be selected on the classroom time slider.
+      const t=Math.round(i*1000/120)/1000;return {t,...this.extent(t)};
+    });
   }
   extent(t:number){
     let newlyWet=0,shore=6,deepest=0;

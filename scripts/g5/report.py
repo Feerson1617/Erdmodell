@@ -57,7 +57,7 @@ lines.extend(['','Die CPU-Zeit ist die Summe des Prozessbaums. 100 % entsprechen
 files={p.relative_to(out).as_posix():p for p in out.rglob('*') if p.is_file() and (p.parent==out or p.parent==g) and p.suffix in ('.jpg','.json','.png','.log','.md','.mp4')};files['SHA256.txt']=out/'SHA256.txt'
 for n in ['curriculum-coverage.md','g5-quellen.md','g5-unterricht.md','g5-referenz.json','mac-installation.md']:files['Dokumentation/'+n]=root/'docs'/n
 for p in (root/'docs/g5-bildvergleich').iterdir():files['Vergleich/G4.3.1-Mac/'+p.name]=p
-files['Dokumentation/README.md']=root/'README.md';dest=root/'artifacts/GeoRisiko-G5.2-Sichtpruefung.zip'
+files['Dokumentation/README.md']=root/'README.md';dest=root/'artifacts/GeoRisiko-G5.2.1-Sichtpruefung.zip'
 with ZipFile(dest,'w',ZIP_DEFLATED) as z:
     for filename,path in sorted(files.items()):z.write(path,filename)
 with ZipFile(dest) as z:assert z.testzip() is None

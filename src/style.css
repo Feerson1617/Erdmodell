@@ -321,3 +321,19 @@ body[data-observatory=time] #observe-note,#g-age{font-size:clamp(1.08rem,1.75vw,
 
 .present dialog.depth-analysis{width:min(1280px,94vw);}
 @media (min-width:1100px) and (max-width:1340px){.headTools #present span{display:none;}header nav button{padding-inline:4px;}}
+
+#water-profile{position:absolute;inset:8% 5% auto;z-index:4;background:#102825f7;border:1px solid #719487;border-radius:12px;color:#e1eee9;padding:12px clamp(10px,1.6vw,24px);box-shadow:0 8px 34px #08181270;}
+#water-profile[hidden]{display:none;}
+.profile-heading,.profile-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+.profile-heading strong{font-size:1.35em;}.profile-heading span,.profile-actions span{color:#b8cfc3;}
+.profile-heading button{margin-left:auto;}
+#water-profile svg{width:100%;max-height:46vh;display:block;font:17px "DM Sans",sans-serif;fill:#d6e9df;}
+#water-profile svg path{vector-effect:non-scaling-stroke;}
+#water-profile .profile-reference{stroke:#e1e9da;stroke-dasharray:7 5;fill:none;}
+#water-profile .wave,#water-profile .edge{stroke:#7cddd1;stroke-width:3;fill:none;}
+#water-profile .rock{fill:#987959;}#water-profile .water{fill:#307f91;}#water-profile .inland{fill:#5bd6b4;}#water-profile .depth{stroke:#ffd381;stroke-width:4;}
+.profile-actions span:nth-child(2){margin-right:auto;}
+@media(max-height:720px){#water-profile{inset:4% 4% auto;}#water-profile svg{max-height:36vh;}}
+
+#water-profile .original-shore{stroke:#f4efe0;stroke-dasharray:3 4;stroke-width:1.6;fill:none;}
+#water-profile .advance{stroke:#72f4c8;stroke-width:7;fill:none;}
