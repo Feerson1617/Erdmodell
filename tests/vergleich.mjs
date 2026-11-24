@@ -1,3 +1,4 @@
+import {shellNames} from "./lesson-controls.mjs";
 import {hz,processTicks} from "./prozesszeit.mjs";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
@@ -254,7 +255,7 @@ async function measure(engine, version, dir) {
       run.samples.push(await sample(p, n, cdp, bs.process().pid));
     };
     await p.click("#nav-inside");
-    await waitModel(p);
+    await waitModel(p);await shellNames(p,false);
     await p.waitForTimeout(7000);
     await take(0);
     await p.click("#labels");
@@ -264,7 +265,7 @@ async function measure(engine, version, dir) {
       await p.selectOption("#tectonicSite", site);
       await waitModel(p, site);
     }
-    await p.check("#loopProcess");
+    await p.uncheck("#plateNames");await p.check("#loopProcess");
     for (const n of [2, 3]) {
       if (n === 3) await p.check("#plateNames");
       await p.click("#playProcess");

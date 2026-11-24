@@ -23,7 +23,7 @@ const vocabulary:Record<string,[string,string]>={
  "Gefährdete Menschen":["Gefährdete Menschen","Wer sich im betroffenen Gebiet aufhält, ist der Naturgefahr ausgesetzt."],
  "Vergleichsweg":["Vergleichsweg","An diesem Weg lässt sich die Bewegung der beiden Seiten ablesen."]
 };
-const preferred=["Erdbebenherd","Epizentrum","P-Wellenfront","S-Wellenfront","Lavafluss","Basaltische Spalte","Geländemarker","Ruhige Nahbucht","Verdrängte Wassersäule","Ursprüngliche Uferlinie","Magmareservoir","Asche und Gas","Versetzte Geländelinie","Mantelkeil","Gebäude","Evakuierungsweg","Zug der absinkenden Platte","Starrer oberster Mantel"];
+const preferred=["Erdbebenherd","Epizentrum","P-Wellenfront","S-Wellenfront","Lavafluss","Basaltische Spalte","Geländemarker","Ruhige Nahbucht","Verdrängte Wassersäule","Ursprüngliche Uferlinie","Magmareservoir","Asche und Gas","Versetzte Geländelinie","Mantelkeil","Gebäude","Evakuierungsweg","Zug der absinkenden Platte","Starrer oberster Mantel","Blockierter Kontakt","Abtauchende ozeanische Kruste","Relative Bewegungsrichtung","Elastisch verformtes Gestein"];
 function description(o:T.Object3D):Info|undefined{
  if(o.userData.explanation)return o.userData.explanation;
  const v=vocabulary[o.name];if(v)return {name:v[0],answer:v[1]};
@@ -46,7 +46,7 @@ function hitVisible(r:RegionalScene,h:T.Intersection){
  if(!drawn(h.object)||!r.isGeologyVisible(h))return false;
  const mesh=h.object as T.Mesh,wet=mesh.geometry?.attributes.depthWet;
  if(wet&&h.face&&h.barycoord){const {a,b,c}=h.face,v=h.barycoord;if(wet.getX(a)*v.x+wet.getX(b)*v.y+wet.getX(c)*v.z<=.002)return false;}
- if(mesh.name==="Gelände"&&r.cut&&h.point.z>0)return false;
+ if(mesh.name==="Gelände"&&h.point.z>4.52*(1-r.opening))return false;
  const mat=mesh.material as T.Material|undefined;
  return mat?.side!==T.BackSide&&!(mat?.transparent&&!description(mesh));
 }
@@ -65,10 +65,10 @@ export class ObjectLabels{
  private ro:ResizeObserver;private targets=new Map<string,T.Mesh>();private object?:T.Mesh;private picked?:T.Vector3;
  constructor(private host:HTMLElement){
    host.classList.add("annotations");this.layer=new AnnotationLayer(host,a=>this.select(a.id));
-   this.signals=[".tools","#obswitch","#observation-controls",".orientation",".water-profile"].flatMap(s=>Array.from(document.querySelectorAll<HTMLElement>(s)));
+   this.signals=[".tools","#obswitch","#observation-controls",".orientation","#water-profile"].flatMap(s=>Array.from(document.querySelectorAll<HTMLElement>(s)));
    this.ro=new ResizeObserver(()=>{this.rev++;this.key="";});this.ro.observe(host);for(const el of this.signals)this.ro.observe(el);
  }
- clear(){this.scene=undefined;this.object=undefined;this.selected="";this.picked=undefined;this.key="";this.targets.clear();this.layer.draw([],[],++this.rev);}
+ clear(){this.scene=undefined;this.object=undefined;this.selected="";this.picked=undefined;this.key="";this.targets.clear();this.layer.clear();this.rev++;}
  private select(id:string,object=this.targets.get(id),point?:T.Vector3){
    if(!object)return;
    claimObject(id);this.selected=id;this.object=object;this.picked=point?object.worldToLocal(point.clone()):undefined;this.key="";
@@ -89,15 +89,25 @@ export class ObjectLabels{
    this.last=now;this.key=state;
    this.objects=[];r.renderScene.traverseVisible(o=>{if((o as T.Mesh).geometry&&description(o))this.objects.push(o as T.Mesh);});
    this.objects.sort((a,b)=>this.rank(a)-this.rank(b));
+   // The cut face exposes the front rocks. A nearer opaque rock may cover a deeper label.
+   const rocks=this.objects.filter(o=>o.geometry?.hasAttribute("geologyCoord")&&r.section.visible);
+   const sight=new T.Raycaster(),direction=new T.Vector3(),eye=r.camera.position;
+   const model=r.spec.site??r.spec.process,source=r.localActive?"Geländeausschnitt · Quellen im Katalog G6.1":r.spec.geology?.source??"Regionale Modellgeometrie · Quellenkatalog G5/G6";
+   const phase=document.getElementById("learn-phase")?.textContent||r.view;
    const out:Annotation[]=[],used=new Set<string>();this.targets.clear();const rect=this.host.getBoundingClientRect();
    for(const mesh of this.objects){
      const info=description(mesh)!;if(used.has(info.name))continue;
      if(!show&&this.object!==mesh)continue;
      let p=this.picked&&mesh===this.object?mesh.localToWorld(this.picked.clone()):anchor(mesh);if(!p)continue;
+     if(mesh.name==="Gelände"&&p.z>4.52*(1-r.opening))continue;
      const xy=project(p,r.camera,rect.width,rect.height);if(!xy||terrainBlocks(r,p))continue;
      // Front faces of a cut are visible only from the open half-space.
      if(mesh.geometry.hasAttribute("geologyCoord")&&p.z>=-.005&&r.camera.position.z<0)continue;
-     used.add(info.name);if(!allowed(mesh.uuid,used.size-1))continue;this.targets.set(mesh.uuid,mesh);out.push({id:mesh.uuid,name:info.name,text:info.answer,...xy});
+     if(rocks.length&&p.y<0&&mesh.geometry.hasAttribute("geologyCoord")){
+       direction.subVectors(p,eye);sight.far=direction.length()-.045;sight.set(eye,direction.normalize());
+       if(sight.intersectObjects(rocks,false).some(hit=>hit.object!==mesh&&hitVisible(r,hit)))continue;
+     }
+     used.add(info.name);if(!allowed(mesh.uuid,used.size-1))continue;this.targets.set(mesh.uuid,mesh);out.push({id:mesh.uuid,name:info.name,text:info.answer,phase,source,model,...xy});
      if(out.length>=(r.moreNames?8:4))break;
    }
    this.layer.draw(out,this.signals,this.rev);for(const button of this.host.querySelectorAll<HTMLButtonElement>("button"))button.setAttribute("aria-pressed",String(button.dataset.object===this.selected));

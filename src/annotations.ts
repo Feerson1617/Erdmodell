@@ -4,6 +4,9 @@ export type Annotation = {
   id: string;
   name: string;
   text: string;
+  model?: string;
+  source?: string;
+  phase?: string;
   x: number;
   y: number;
 };
@@ -50,6 +53,13 @@ export class AnnotationLayer {
     private explain: (label: Annotation) => void,
   ) {}
 
+  clear() {
+    this.host.replaceChildren();
+    this.nodes.clear();
+    this.sizes.clear();
+    this.frame = undefined;
+  }
+
   draw(labels: Annotation[], obstacles: HTMLElement[], revision: number) {
     if (!labels.length) {
       if (this.host.childElementCount) this.host.replaceChildren();
@@ -95,6 +105,9 @@ export class AnnotationLayer {
       }
       const { anchor, button, line } = node;
       node.label = label;
+      if (label.source && button.dataset.source !== label.source) button.dataset.source = label.source;
+      if (label.model && button.dataset.model !== label.model) button.dataset.model = label.model;
+      if (label.phase && button.dataset.phase !== label.phase) button.dataset.phase = label.phase;
       if(button.firstElementChild?.textContent!==label.name)button.firstElementChild!.textContent=label.name;
       let size = this.sizes.get(label.name);
       if (!size) {

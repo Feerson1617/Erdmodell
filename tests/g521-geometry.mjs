@@ -12,7 +12,7 @@ try{
  await p.addInitScript(()=>{window.__THREE_DEVTOOLS__=new EventTarget();window.__THREE_DEVTOOLS__.addEventListener("observe",({detail})=>{
     if(!detail.isWebGLRenderer)return;const draw=detail.render.bind(detail);
     detail.render=(s,c)=>{if(c.far===120)window.renderedSection=s;return draw(s,c);};});});
- await p.goto(pathToFileURL(resolve(process.env.G521_HTML??"artifacts/GeoRisiko-G6.1-Web-Test.html")).href);
+ await p.goto(pathToFileURL(resolve(process.env.G521_HTML??"artifacts/GeoRisiko-G6.2-Web-Test.html")).href);
  await p.waitForFunction(()=>window.geoObservatory?.().ready);
  const ready=()=>p.waitForFunction(()=>{const w=window.geoObservatory(),o=w.observatory;return !w.flying&&o.mode==="regional"&&o.ready&&o.viewSettled;});
  const audit=()=>p.evaluate(()=>{

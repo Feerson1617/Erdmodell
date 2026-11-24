@@ -118,6 +118,7 @@ export class NyosProtection {
       ),
       steel,
     );
+    shell.name = "Nyos-Entgasungsrohr";
     shell.position.set(x, (top + this.intakeY) / 2, z);
     this.pipeView.add(shell);
     pipe(this.pipeView, 0.007, this.intakeY, top, x, z, liquid);

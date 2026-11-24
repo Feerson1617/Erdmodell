@@ -1,3 +1,4 @@
+import {nyosLabels} from "./nyos/labels";
 import {allowsLabel,claimObject} from "./observatory/reveal";
 import {installProfiles} from "./observatory/graphics";
 import {classroomViews} from "./observatory/classroom-views";
@@ -222,7 +223,7 @@ function renderSide() {
     ($("shellOptions")??side).append(detail);detail.onclick=()=>observatory.openConcept("lithosphere");
     if (optionsOpen) $<HTMLDetailsElement>("shellOptions").open = true;
   }
-  if (mode === "inside" || mode === "plates") {
+  if (mode === "inside" || mode === "plates" || mode === "nyos") {
     const area = document.createElement("section");
     area.id = "definition"; area.hidden = true; area.setAttribute("aria-live","polite");
     (side.querySelector(".panelHead") ?? side.querySelector("h1"))?.after(area);
@@ -388,13 +389,14 @@ function updatePins() {
   const dimensions = $("earth");
   const key = [world.mode,p.lat,p.lon,p.d,p.tilt,p.bearing,dimensions.clientWidth,dimensions.clientHeight,
     labels,released.size,s.cut,s.expanded,s.lithosphere,s.group.visible,s.visible.join(),o.boundaries,o.names,o.plate,world.singlePlateName,
-    document.body.dataset.reveal,world.processDetail,world.processSite,world.processChoice,world.smallPlateNames,world.atlasReady,world.processProgress,world.annotationTransition,present,layoutRevision].join("/");
+    world.mode==="nyos"?[world.nyos.localWeight,world.nyosLesson.view,world.nyosLesson.measure,world.nyosLesson.dissolved,world.nyosLesson.air,Math.round(world.nyosLesson.progress*100)].join():null,document.body.dataset.reveal,world.processDetail,world.processSite,world.processChoice,world.smallPlateNames,world.atlasReady,world.processProgress,world.annotationTransition,present,layoutRevision].join("/");
   if (annotationKey === key) return;
   annotationKey = key;
   const obstacles = pinObstacles;
-  shellPins.draw(world.mode === "inside" && (labels || released.size) ? world.layerMarkers(released,labels).filter((a,i)=>allowsLabel(a.id,i)) : [],obstacles,layoutRevision);
-  const plates = world.mode === "plates" && (o.names || world.singlePlateName || world.mosaic?.pair)
-    ? world.processDetail ? world.processLabels() : world.plateLabels().map(p => ({
+  const inLesson=document.body.classList.contains("observing")&&!friday;
+  shellPins.draw(world.mode==="nyos"?nyosLabels(world,dimensions.clientWidth,dimensions.clientHeight).filter((a,i)=>allowsLabel(a.id,i)):world.mode === "inside" && (labels || released.size || inLesson) ? world.layerMarkers(released,labels||inLesson).filter((a,i)=>allowsLabel(a.id,i)) : [],obstacles,layoutRevision);
+  const plates = world.mode === "plates" && (o.names || inLesson || world.singlePlateName || world.mosaic?.pair)
+    ? world.processDetail ? world.processLabels() : world.plateLabels(inLesson).map(p => ({
       ...p,id:p.code,text:"Zu dieser Platte gehören die Erdkruste und der starre oberste Erdmantel. Sie bewegt sich langsam gegenüber anderen Platten."
     })) : [];
   tectonicPins.draw(plates.filter((a,i)=>allowsLabel(a.id,i)),[...obstacles,side],layoutRevision);
@@ -537,7 +539,7 @@ async function boot() {
   world.onFrame = () => {
     observation.update();
     if(observatory.mode){if(status.textContent)status.textContent="";return;}
-    if ((world.mode==="inside" && (labels || released.size)) || (world.mode==="plates" && (world.plateOptions.names || world.singlePlateName || world.mosaic?.pair))) updatePins();
+    if (world.mode==="inside"||world.mode==="plates") updatePins();
     const now = performance.now();
     if (now - lastHud < 55) return;
     lastHud = now;
@@ -549,7 +551,7 @@ async function boot() {
     if (world.mode === "plates") { syncPlayback(world); }
     if (world.mode === "nyos") {
       if (side.dataset.nyosError !== String(!!world.nyos.error)) renderSide();
-      syncNyos(world);
+      syncNyos(world);updatePins();
     }
     const message = world.nyosWarning || (world.mode === "place" && world.local.warning) || alertText || "";
     if (status.textContent !== message) status.textContent = message;

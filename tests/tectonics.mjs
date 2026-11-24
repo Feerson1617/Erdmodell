@@ -1,3 +1,4 @@
+import {plainAtlas} from "./lesson-controls.mjs";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -236,7 +237,7 @@ async function exercise(browser, engine) {
     await page.tap("#nav-plates");
     await page.waitForFunction(() => window.geoObservatory().tectonics.ready);
     assert.deepEqual(pose(await diagnostics(page)), pose(before), "Kamerapose beim Aktivieren der Ebene");
-    assert.equal((await diagnostics(page)).tectonics.boundaries, false);
+    await plainAtlas(page);assert.equal((await diagnostics(page)).tectonics.boundaries, false);
     run.boundaryFrames = await boundaryCycle(page);
     await page.tap("#boundaries");
     await painted(page);
@@ -418,7 +419,7 @@ async function recordDemo(browser) {
     const video = p.video();
     await p.goto(url); await settled(p);
     await p.tap("#nav-plates");
-    await p.tap("#boundaries");
+    await plainAtlas(p);await p.tap("#boundaries");
     await p.tap("#plateSettings summary");
     await p.tap("#boundaryTypes");
     await p.tap("#plateNames");

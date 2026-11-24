@@ -95,10 +95,10 @@ export function plateControls(world: World) {
     return `<div class="pair-navigation"><label>Grenzvergleich<select id="pair-examples">${Object.entries({...teachingSteps,[pair.step[0]]:boundaryLesson(pair.step).place}).map(([id,text])=>`<option value="${id}" ${Number(id)===pair.step[0]?"selected":""}>${text}</option>`).join("")}</select></label>${playback}</div>${comparisonLesson(pair.step)}<div id="pair-object" hidden></div><button id="atlasWorld" class="atlasReturn">Zur Weltansicht</button><div hidden>${picker}</div>`;
 
   }
-  const title=profile ? `<div class="panelHead"><h1>Plattentektonik</h1><button id="atlasAll" aria-label="Steckbrief schließen" title="Schließen">×</button></div>` : "<h1>Plattentektonik</h1>";
+  const title=profile ? `<div class="panelHead"><h1 data-teach="terms">Plattentektonik</h1><button id="atlasAll" aria-label="Steckbrief schließen" title="Schließen">×</button></div>` : '<h1 data-teach="terms">Plattentektonik</h1>';
   const card = profile ? `<section class="scienceCard" id="plateProfile" aria-live="polite">
     <h2>${names[world.profileCode]}</h2><dl><dt>Lage</dt><dd>${profile.place}</dd>
-    <dt>Bewegung</dt><dd>${profile.motion}</dd><dt>Beispiel an einer Plattengrenze</dt><dd>${profile.boundary}</dd></dl>
+    <dt>Bewegung</dt><dd data-teach="phase">${profile.motion}</dd><dt>Beispiel an einer Plattengrenze</dt><dd data-teach="effects">${profile.boundary}</dd></dl>
     <details><summary>Nachbarplatten</summary><p>${profile.neighbours}</p></details><div class="profileActions"><button id="atlasLocate">Zentrieren</button><button id="atlasCompare">Grenze ansehen</button><button id="atlasWorld">Weltansicht</button></div></section>` : "";
   const start=`<label class="siteSelect">Grenzvergleich auswählen<select id="pair-examples"><option value="">Grenze wählen</option>${Object.entries(teachingSteps).map(([id,text])=>`<option value="${id}">${text}</option>`).join("")}</select></label><div class="playback"><button id="atlasPlay" class="playButton" ${world.mosaic?"":"disabled"}>Platten bewegen</button></div>`;
   return `${title}${start}${card}

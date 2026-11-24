@@ -1,3 +1,4 @@
+import {names} from "../tectonics/atlas";
 import {seaMaterial,waterSection,seabed} from "./sea-material";
 import {LocalLandscape,localView} from "./local-landscape";
 import {loadTexture,materials,decorateTerrain,quality,graphics,type Library} from "./graphics";
@@ -267,7 +268,18 @@ export class RegionalScene {
         const columns=this.water?120:64;const g=indexed(36,columns,(i,j)=>{const z=(front?0:-4.5)+j/8;
           let range=bounds.get(j);if(!range){range=this.water?[-6,6]:f.horizonRange(side,x=>this.height(x,z));bounds.set(j,range);}
           const x=T.MathUtils.lerp(range[0],range[1],i/columns);return [x,this.height(x,z),z,x/12+.5,.5-z/9];});
-        this.bindRock(g,side);g.userData.surface=true;g.userData.front=front;const land=mesh(g,terrain,"Gelände");land.receiveShadow=true;this.scene.add(land);
+        this.bindRock(g,side);g.userData.surface=true;g.userData.front=front;const land=mesh(g,terrain,"Gelände");land.receiveShadow=true;
+        // Anchor to a vertex in the same deforming buffer as the surface.
+        const idx=18*(columns+1)+Math.floor(columns*.46);
+        land.userData.lessonAnchor=()=>new T.Vector3().fromBufferAttribute(g.attributes.position,idx);
+        const geology=this.spec.geology;
+        Object.defineProperty(land.userData,"explanation",{get:()=>{
+          if(this.water)return {name:this.spec.coastLesson?"Küstengelände":"Meeresboden",answer:"Der Boden trägt das Wasser. Seine Verlagerung kann die Wassersäule in Bewegung setzen."};
+          if(this.stress&&this.spec.site==="san"&&this.progress>0&&this.progress<onset)return {name:"Elastisch verformtes Gestein",answer:"Der farbig hervorgehobene Bereich speichert Spannung, solange die Störung festhält."};
+          if(!geology||!side)return {name:"Geländeoberfläche",answer:"Die Oberfläche begrenzt den dargestellten Gesteinskörper."};
+          const leftOnMinus=Math.cos((geology.strike-this.spec.strike)*Math.PI/180)>=0;
+          return {name:names[(side<0)===leftOnMinus?geology.left:geology.right],answer:"Dieser Ausschnitt gehört zur beschrifteten Platte. Er bewegt sich gegenüber der Nachbarplatte."};
+        }});this.scene.add(land);
       }
     }
     geologySolids(this);
@@ -358,7 +370,8 @@ export class RegionalScene {
     const total=to(g.relativeAzimuth);const left=to(g.strike-90).multiplyScalar(2);const source=left.setY(this.height(left.x,left.z)+.32);
     const along=to(g.strike),cross=to(g.strike+90);
     // PB2002 describes the left plate relative to the right, in directed line coordinates.
-    const add=(vec:T.Vector3,start:T.Vector3,color:number)=>{const len=vec.length();if(len>.035)group.add(new T.ArrowHelper(vec.clone().normalize(),start,len,color,Math.min(.24,len*.3),.14));};
+    const add=(vec:T.Vector3,start:T.Vector3,color:number)=>{const len=vec.length();if(len<=.035)return;
+      const arrow=new T.ArrowHelper(vec.clone().normalize(),start,len,color,Math.min(.24,len*.3),.14);arrow.userData.explanation={name:color===0xffdd88?"Relative Bewegungsrichtung":color===0x86e8df?"Bewegung längs der Grenze":"Bewegung quer zur Grenze",answer:names[g.left]+" bewegt sich relativ zur "+names[g.right]+". Gold zeigt die gesamte Bewegung."};group.add(arrow);};
     const v=total.multiplyScalar(2),a=along.multiplyScalar(v.dot(along)),b=cross.multiplyScalar(v.dot(cross));
     add(v,source,0xffdd88);add(a,source.clone().add(new T.Vector3(0,.035,0)),0x86e8df);add(b,source.clone().add(a),0xbfb5ff);
     this.onAnimate(()=>{group.visible=this.vectors&&!this.cut;});
@@ -408,6 +421,7 @@ export class RegionalScene {
     const f=this.faultModel;
     const points=Array.from({length:64},(_,i)=>f.point(f.top-i*.075,.018));
     this.fault=path(points,0x463e36,"Störungsfläche");this.section.add(this.fault);
+    Object.defineProperty(this.fault.userData,"explanation",{get:()=>this.progress<onset?{name:"Blockierter Kontakt",answer:"Hier hält ein Teil der Störung fest. Umgebendes Gestein kann sich elastisch verformen."}:{name:"Störungsfläche",answer:"Auf dieser Fläche hat sich das Gestein gegeneinander verschoben."}});
     this.rupture=path(Array.from({length:49},()=>origin.clone()),0xffcf89,"Bruchfront");this.section.add(this.rupture);
     this.waves=waveAnalysis(this);
   }

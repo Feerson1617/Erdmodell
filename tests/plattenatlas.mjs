@@ -1,3 +1,4 @@
+import {shellNames,plainAtlas} from "./lesson-controls.mjs";
 import assert from "node:assert/strict";
 import {createHash} from "node:crypto";
 import {mkdir,readFile,writeFile} from "node:fs/promises";
@@ -7,7 +8,7 @@ import {chromium,webkit} from "playwright";
 import {Vector3} from "three";
 import {PNG} from "pngjs";
 
-const out=resolve("test-results/plattenatlas"), html=resolve("artifacts/GeoRisiko-G6.1-Web-Test.html");
+const out=resolve("test-results/plattenatlas"), html=resolve("artifacts/GeoRisiko-G6.2-Web-Test.html");
 const fallback=resolve("ausgabe/GeoRisiko-Erdmodell-G4.3.html");
 const hash=async file=>createHash("sha256").update(await readFile(file)).digest("hex");
 const surfaces=JSON.parse(await readFile("src/tectonics/mosaic.json","utf8"));
@@ -65,7 +66,7 @@ for(const engine of [chromium,webkit]){
     await p.mouse.move(cx+66,cy+15,{steps:6});await p.mouse.up();
     await p.waitForFunction(lon=>Math.abs(window.geoObservatory().lon-lon)>.25,home.lon);
     await p.click("#home");await rest(p);await shot("01-globus");
-    await p.click("#nav-inside");await rest(p);assert.equal(await p.locator("#pins button").count(),0);
+    await p.click("#nav-inside");await rest(p);await p.waitForSelector('#pins [data-object="shell-3"]');await shellNames(p,false);assert.equal(await p.locator("#pins button").count(),0);
     await p.click("#labels");await shot("02-schalenschnitt");
     assert.ok(await p.evaluate(()=>{
       const title=document.querySelector(".panelHead h1").getBoundingClientRect();
@@ -89,7 +90,7 @@ for(const engine of [chromium,webkit]){
     await p.emulateMedia({reducedMotion:"no-preference"});
     await p.click("#nav-plates");await p.waitForFunction(()=>{const o=window.geoObservatory().tectonics.mosaic?.opening;return o>0 && o<1;});
     await p.waitForFunction(()=>window.geoObservatory().tectonics.mosaic?.opening===1);
-    await shot("04-weltatlas");await p.emulateMedia({reducedMotion:"reduce"});
+    await shot("04-weltatlas");await plainAtlas(p);await p.emulateMedia({reducedMotion:"reduce"});
     await p.tap("#plateSettings summary");
     await p.waitForFunction(()=>document.querySelector("#plateSelect")?.options.length===53);
     const options=await p.locator("#plateSelect option").evaluateAll(os=>Object.fromEntries(os.filter(o=>o.value).map(o=>[o.value,o.textContent])));
@@ -206,7 +207,7 @@ for(const engine of [chromium,webkit]){
     }
     for(const key of ["geometries","textures","programs"])assert.equal(run.resources[1][key],run.resources.at(-1)[key],key);
     assert.deepEqual(run.requests,[]);assert.deepEqual(run.errors,[]);
-    assert.deepEqual(run.files,["GeoRisiko-G6.1-Web-Test.html"]);
+    assert.deepEqual(run.files,["GeoRisiko-G6.2-Web-Test.html"]);
     report.runs.push(run);console.log(run.engine,"52 Flächen, acht Antworten, Offline-Betrieb geprüft");
     if(engine===chromium){
       const film=await browser.newContext({viewport:{width:1024,height:680},recordVideo:{dir:out,size:{width:960,height:638}}});

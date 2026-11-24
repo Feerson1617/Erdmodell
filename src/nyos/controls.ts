@@ -49,10 +49,10 @@ function protectionControls(state: NyosLessonState) {
   ).join("");
   const choose = `<label class="nyosChoose" for="nyos-measure">Maßnahme</label>
     <select id="nyos-measure">${choices}</select>`;
-  if (state.measure === "pipe") return choose + `<p class="nyosCaption" id="nyos-pipe-text" aria-live="polite">${pipeCaption(state.progress)}</p>
+  if (state.measure === "pipe") return choose + `<p class="nyosCaption" data-teach="phase" id="nyos-pipe-text" aria-live="polite">${pipeCaption(state.progress)}</p>
     ${playback(state)}${dissolvedControl(state)}`;
   if (state.measure === "monitor") return choose + `<p class="nyosCaption">Eine Sonde misst in verschiedenen Tiefen. Wiederholte Messungen zeigen, wie sich Schichtung und Gasgehalt verändern.</p>`;
-  return choose + `<p class="nyosCaption">Talboden und Hang zeigen zwei mögliche Lagen für Siedlungen. Das Relief spielt bei Warnung und Vorsorge eine Rolle.</p>
+  return choose + `<p data-teach="effects" class="nyosCaption">Talboden und Hang zeigen zwei mögliche Lagen für Siedlungen. Das Relief spielt bei Warnung und Vorsorge eine Rolle.</p>
     <p class="nyosKey">Beispielstandorte im heutigen Relief</p>`;
 }
 
@@ -62,22 +62,22 @@ function details(world: World) {
   if (state.view === "lake") return `<div class="regionScale" role="group" aria-label="Kartenausschnitt">
     <button id="nyos-overview" aria-pressed="${!world.nyosDetail}">Region</button>
     <button id="nyos-near" aria-pressed="${world.nyosDetail}">Zum See</button></div>`;
-  if (state.view === "event") return `<p id="nyos-phase" class="nyosCaption" aria-live="polite">${eventCaption(state.progress)}</p>
+  if (state.view === "event") return `<p id="nyos-phase" data-teach="phase" class="nyosCaption" aria-live="polite">${eventCaption(state.progress)}</p>
     ${playback(state)}${dissolvedControl(state)}
     <div id="nyos-air-control" hidden>${check("air", "Gas in der Luft zeigen", state.air)}
       <p id="nyos-air-key" class="nyosKey dissolvedKey" hidden>CO₂ ist farblos. Die Analysefarbe zeigt eine mögliche Ausbreitung im Relief. Verlauf und Reichweite sind schematisch.</p></div>
     <div id="nyos-places" hidden>${historicPlaces}</div>`;
-  return `<p class="nyosCaption">Leichteres Wasser liegt oben. Das dichtere Tiefenwasser mischt sich nur wenig mit ihm.</p>
+  return `<p data-teach="cause" class="nyosCaption">Leichteres Wasser liegt oben. Das dichtere Tiefenwasser mischt sich nur wenig mit ihm.</p>
     ${dissolvedControl(state)}`;
 }
 
 export function nyosControls(world: World) {
-  if (world.nyos.error) return `<h1>Nyos-See</h1><p class="nyosCaption">Die Übersicht zeigt die Lage in Kamerun.</p>
+  if (world.nyos.error) return `<h1 data-teach="terms">Nyos-See</h1><p class="nyosCaption">Die Übersicht zeigt die Lage in Kamerun.</p>
     <button id="nyos-near">Geländedaten erneut laden</button>`;
   const tabs = views.map(([id,label]) =>
     `<button id="nyos-${id}" aria-label="${label}" aria-pressed="${world.nyosLesson.view === id}">${id === "protection" ? "Schutz" : label}</button>`
   ).join("");
-  return `<h1>Nyos-See</h1><p class="nyosLocation">Kamerun</p>
+  return `<h1 data-teach="terms">Nyos-See</h1><p class="nyosLocation">Kamerun</p>
     <div class="nyosViews" role="group" aria-label="Ansicht am Nyos-See">${tabs}</div>
     <div class="nyosDetail">${details(world)}</div>`;
 }

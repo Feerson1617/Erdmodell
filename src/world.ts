@@ -422,11 +422,11 @@ export class World {
   async loadClassroomAtlas(regional:boolean){await this.loadPlates();if(regional)await this.loadRegionalImages();}
   get atlasReady() { return !!this.atlas; }
   get annotationTransition() { return this.processSite ? this.processReveal : this.mosaic?.annotationPose ?? 0; }
-  plateLabels() {
+  plateLabels(lesson = false) {
     if (this.mosaic?.pair && this.mode==="plates")
       return this.mosaic.pair.labels(this.nav.camera,this.canvas.clientWidth,this.canvas.clientHeight);
-    if (!this.atlas || this.mode !== "plates" || !(this.plateOptions.names || this.singlePlateName) || this.processReveal > 0.5) return [];
-    return this.atlas.labels(this.nav.camera, this.canvas.clientWidth, this.canvas.clientHeight, this.nav.pose.d, this.processSite ?? undefined,this.plateOptions.plate,this.mosaic?.anchor() ?? this.pickedPlatePoint,this.singlePlateName && !this.plateOptions.names,this.smallPlateNames);
+    if (!this.atlas || this.mode !== "plates" || !(lesson || this.plateOptions.names || this.singlePlateName) || this.processReveal > 0.5) return [];
+    return this.atlas.labels(this.nav.camera, this.canvas.clientWidth, this.canvas.clientHeight, this.nav.pose.d, this.processSite ?? undefined,this.plateOptions.plate,this.mosaic?.anchor() ?? this.pickedPlatePoint,this.singlePlateName && !lesson && !this.plateOptions.names,this.smallPlateNames);
   }
   plates() {
     this.nyosLesson.playing = false;

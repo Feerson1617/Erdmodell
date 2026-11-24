@@ -367,3 +367,11 @@ body:not(.observing) #desk.pair-layout[data-mode=plates] #modelnote{left:16px;ma
 .process-reading{border-left:3px solid #a4bf98;background:#20372e;border-radius:0 8px 8px 0;padding:.7em .9em;margin:.5em 0 .85em;font-size:clamp(15px,1.04vw,20px);line-height:1.38}
 .process-reading h2{margin:0 0 .3em;font-size:1.22em;color:#ddebd4}.process-reading strong{color:#f0d8a4;display:block}
 .process-reading p{margin:.42em 0 0}.process-reading :empty{display:none}
+@media(max-width:800px){
+body:not(.observing) #desk.pair-layout[data-mode=plates]{display:grid;grid-template-columns:1fr;grid-template-rows:minmax(230px,49%) minmax(0,1fr)}
+body:not(.observing) #desk.pair-layout[data-mode=plates] .view{grid-column:1;grid-row:1}
+body:not(.observing) #desk.pair-layout[data-mode=plates] #sidebar{grid-column:1;grid-row:2;position:static;width:auto;max-height:100%;border-radius:0;margin:0;overflow:auto}
+body:not(.observing) #desk.pair-layout[data-mode=plates] #modelnote{left:8px}
+}
+
+.annotations .annotation-anchor:has(button[aria-pressed="true"])::after{content:"";position:absolute;left:-5px;top:-5px;width:10px;height:10px;border:2px solid #ffdb82;border-radius:50%;box-shadow:0 0 0 2px #173137;pointer-events:none}

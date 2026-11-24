@@ -1,3 +1,4 @@
+import {boundaryLesson} from "../tectonics/learning";
 import {assumptions,learningFields,regionalReading,timeReading,setReading} from "./lesson";
 import {project,AnnotationLayer} from "../annotations";
 import {ObjectLabels} from "./object-labels";
@@ -46,6 +47,8 @@ export class Observatory {
     world.scene.add(this.maps.group);this.maps.group.visible=false;
     this.labels=document.createElement("div");this.labels.id="observatory-labels";$("earth").parentElement!.append(this.labels);
     this.objectLabels=new ObjectLabels(this.labels);this.timePins=new AnnotationLayer(this.labels,a=>setReading("g-evidence-name",a.name+" · "+a.text));
+    const resizeTime=new ResizeObserver(()=>{this.timeLayout++;this.timeKey="";});
+    [this.labels,$("obswitch"),$("observation-controls")].forEach(el=>resizeTime.observe(el));
     let down=[0,0];const canvas=$("earth");
     canvas.addEventListener("pointerdown",e=>{down=[e.clientX,e.clientY];});
     canvas.addEventListener("pointerup",e=>{if(this.mode==="regional"&&Math.hypot(e.clientX-down[0],e.clientY-down[1])<5)this.pickRegion(e.clientX,e.clientY);});
@@ -60,7 +63,7 @@ export class Observatory {
     if(r?.ready&&r.spec.site==="san"&&r.spec.theme==="earthquake"&&!r.spec.comparison&&!r.spec.event){
       this.parkfield?.dispose();r.playing=false;r.orbit.enabled=false;this.parkfield=r;
     }else r?.dispose();
-    this.region=undefined;this.maps.group.visible=false;this.mode="";
+    this.region=undefined;this.maps.group.visible=false;this.mode="";this.readingState="";
     this.world.nav.enabled=true;this.world.nav.minimumDistance=.06;this.objectLabels.clear();this.timeKey="";this.labels.replaceChildren();this.message="";this.lastUI="";
     this.closeTime();delete document.body.dataset.observatory;
     document.querySelectorAll(".obsNav").forEach(b=>b.removeAttribute("aria-current"));
@@ -109,8 +112,10 @@ export class Observatory {
     void this.openRegion({name:topicNames[theme],lat:0,lon:-24,strike:0,process:theme==="forces"?"subduction":"convergence",theme});
   }
   private boundarySpec(step:Step,theme:Theme){
-    const g=geology(step),details=g.regionalDEM?reference(g.regionalDEM,theme):undefined;
-    const spec:RegionSpec=details??{lat:g.lat,lon:g.lon,name:(geographicExamples as Record<string,string>)[g.id]??(names[g.left]+" · "+names[g.right]),strike:g.strike,process:g.model,theme};
+    const g=geology(step),site=g.regionalDEM?sites[g.regionalDEM]:undefined;
+    const distance=site?111.2*Math.hypot(g.lat-site.lat,(g.lon-site.lon)*Math.cos(site.lat*Math.PI/180)):Infinity;
+    const details=g.regionalDEM&&site&&distance<=site.width/2?reference(g.regionalDEM,theme):undefined;
+    const spec:RegionSpec=details??{lat:g.lat,lon:g.lon,name:boundaryLesson(step).place,strike:g.strike,process:g.model,theme};
     spec.geology=g;spec.azimuth=g.relativeAzimuth;return spec;
   }
   openBoundary(step:Step,theme:Theme="earthquake"){return this.openRegion(this.boundarySpec(step,theme));}
@@ -207,7 +212,7 @@ export class Observatory {
     this.action("g-world",()=>this.navigateBase("globe"));if(this.message){const p=document.createElement("p");p.textContent=this.message;this.side.append(p);}
   }
   private lastScene?:RegionalScene;
-  private drawnState="";
+  private drawnState="";private readingState="";
   private frame(dt:number){
     graphics.idle=false;
     if(this.lastScene!==this.region||this.world.nav.flight||this.mode!=="regional"){this.lastScene=undefined;this.drawnState="";}
@@ -233,8 +238,9 @@ export class Observatory {
     const cut=$("g-cut"),view=$<HTMLSelectElement>("g-view");
     if(cut){const label=r.cut?"An die Oberfläche":"Untergrund öffnen";if(cut.textContent!==label)cut.textContent=label;}
     if(view&&view.value!==r.view)view.value=r.view;
+    if(this.readingState!==state||!$("learn-term")?.textContent){this.readingState=state;
     const [term,phase,cause,effects]=regionalReading(r);
-    setReading("learn-term",term);setReading("learn-phase",r.phasesShown?phase:"");setReading("learn-cause",cause);setReading("learn-effects",effects);
+    setReading("learn-term",term);setReading("learn-phase",r.phasesShown?phase:"");setReading("learn-cause",cause);setReading("learn-effects",effects);}
     const play=$("g-play");
     if(play){setReading("g-play",r.playing?"Pause":"Abspielen");setReading("g-phase","Modellzeit");const range=$<HTMLInputElement>("g-progress");if(document.activeElement!==range&&+range.value!==r.progress)range.value=String(r.progress);}
     const stage=$<HTMLSelectElement>("g-stage");if(stage&&document.activeElement!==stage){stage.value=["0",".30",".49",".53","1"].reduce((a,b)=>Math.abs(+a-r.progress)<Math.abs(+b-r.progress)?a:b);}
@@ -428,12 +434,12 @@ export class Observatory {
     const camera=this.world.nav.camera,canvas=this.world.gl.domElement;
     const key=[t.ready,Math.round(t.year*10),t.layer,t.gnss,t.tracking,t.compare,t.markers.children.length,canvas.clientWidth,canvas.clientHeight,document.body.dataset.reveal,...camera.matrixWorld.elements].join("/");
     if(key!==this.timeKey){this.timeKey=key;
-      const points=t.markers.children.map(o=>({name:o.name,p:o.position}));
+      const points=t.markers.children.filter(o=>o.name).map(o=>({name:o.name,p:o.position}));
       const tracked=t.tracking&&t.year<=0?t.reconstruction.at(Math.abs(t.year),t.tracking):null;
       if(tracked)points.unshift({name:tracks[t.tracking][0],p:tracked.v.clone().normalize().multiplyScalar(R+65)});
       const labels=points.flatMap(({name,p},i)=>{const xy=project(p,camera,canvas.clientWidth,canvas.clientHeight);
         return xy&&p.dot(camera.position.clone().sub(p))>0&&allowsLabel(name,i)?[{id:name,name,text:t.gnss?"Satellitenmessungen zeigen die heutige Bewegung.":meaning,...xy}]:[];});
-      this.timePins.draw(t.compare?[]:labels,[$("obswitch"),$("observation-controls")],++this.timeLayout);
+      this.timePins.draw(t.compare?[]:labels,[$("obswitch"),$("observation-controls")],this.timeLayout);
     }
     const station=$<HTMLSelectElement>("g-station");if(station)station.value=String(t.year);const year=Math.round(t.year);$("g-age").textContent=year<0?"Vor "+(-year)+" Mio. Jahren":year>0?"In "+year+" Mio. Jahren":"Heute";
     $("g-certainty").textContent=t.error||(!rendered?"Rekonstruktion wird geladen …":year>0?"Mögliche Zukunft – keine sichere Vorhersage":year<0?"Wissenschaftliche Rekonstruktion":"Heutige Kontinentalflächen im Rekonstruktionsmodell");

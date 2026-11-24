@@ -1,3 +1,4 @@
+import {shellNames,plainAtlas} from "./lesson-controls.mjs";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -172,7 +173,7 @@ async function exercise(browser, engine) {
     assert.equal((await read(p)).style, "A");
 
     await click("nav-inside");
-    await settle(p);
+    await settle(p);await shellNames(p,false);
     assert.doesNotMatch(
       await texts(),
       /Erdkruste|Erdmantel|Erdkern|Lithosphäre/i,
@@ -254,7 +255,7 @@ async function exercise(browser, engine) {
     await click("cut");
     await click("home");
     await click("nav-inside");
-    await settle(p);
+    await settle(p);await shellNames(p,false);
     run.withoutLabels = await cadence(p);
     await click("labels");
     run.withLabels = await cadence(p);
@@ -277,6 +278,7 @@ async function exercise(browser, engine) {
     await click("home");
     await settle(p);
     await click("nav-plates");
+    if(!reference)await plainAtlas(p);
     if (!reference) {
       assert.ok(await p.locator("#plateNames").isVisible());
       assert.equal(
@@ -411,7 +413,7 @@ async function exercise(browser, engine) {
     run.checks.push("C · Drei animierte Räume");
     await click("home");
     await click("nav-inside");
-    await settle(p);
+    await settle(p);await shellNames(p,false);
     await p.setViewportSize({ width: 1920, height: 1080 });
     await click("present");
     await click("labels");
@@ -449,7 +451,7 @@ async function exercise(browser, engine) {
     await click("home");
     await settle(p);
     await click("nav-inside");
-    await settle(p);
+    await settle(p);await shellNames(p,false);
     assert.equal((await read(p)).shell.lithosphere, false);
     assert.equal(await pins("#pins").count(), 0);
     assert.deepEqual(errors, []);
@@ -474,7 +476,7 @@ async function recordDemo(browser) {
     await settle(p);
     await p.tap("#nav-inside");
     await settle(p);
-    await p.tap("#labels");
+    await shellNames(p,true);
     await p.tap('[data-object="shell-1"]');
     await p.waitForTimeout(650);
     await p.tap("#definition > button");
@@ -482,8 +484,8 @@ async function recordDemo(browser) {
     await p.tap("#lithosphere");
     await p.waitForTimeout(650);
     await p.tap("#nav-plates");
-    await p.tap("#boundaries");
-    await p.tap("#plateNames");
+    await p.check("#boundaries");
+    await p.check("#plateNames");
     await p.selectOption("#tectonicSite", "japan");
     await settle(p);
     await p.waitForSelector('[data-object="trench"]');

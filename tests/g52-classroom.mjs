@@ -47,7 +47,7 @@ export async function classroom(p,dir,record=false){
       assert.ok((await at(.53)).cut);await shot("07-Wellen");
       for(const id of ["p","s"]){await click("observe-"+id);await rest();assert.equal((await state()).physics.waveFronts[id==="p"?0:1],false);await click("observe-"+id);}
       assert.equal(await p.locator("#sidebar").isVisible(),false);
-      await step("Namen und Phasen freigeben",async()=>{await click("obswitch");await click("g-names");await p.locator("details").filter({has:p.locator("#g-phases")}).locator("summary").click();actions.push("Modell steuern");await click("g-phases");});assert.equal((await at(.53)).settings.phasesShown,true);
+      await step("Namen und Phasen freigeben",async()=>{await click("obswitch");await p.check("#g-names");await p.locator("details").filter({has:p.locator("#g-phases")}).locator("summary").click();actions.push("Modell steuern");await p.check("#g-phases");});assert.equal((await at(.53)).settings.phasesShown,true);
       await step("Japan als Transferbeispiel öffnen",async()=>{await choose("g-site","japan");await rest();await choose("g-view","cut");});await shot("08-Japan");
       const transfer=async(label,fn)=>{actions=[];const start=performance.now();await fn();await rest();const s=await state();
         log.transfer.push({label,actions:[...actions],ms:Math.round(performance.now()-start),site:s.site,phase:s.progress,view:s.view,playing:s.playing,focus:s.focus,mode:s.mode});};
@@ -63,7 +63,7 @@ export async function classroom(p,dir,record=false){
     await click("nav-earthquake");await choose("g-launch","san");await rest();await choose("g-view","cut");
     const cut=[];for(const t of [0,.18,.3,.36,.42,.53,.72,1]){await fill("g-progress",t);const s=await at(t);const err=s.physics.cutPlaneError;assert.ok(err<.000002);cut.push([t,err]);}log.cut=cut;
     await shot("09-Schnitt-Endzustand");
-    await choose("g-view","overhead");await fill("g-progress",.42);await click("g-vectors");await click("g-names");await click("g-s");await click("obswitch");await rest();
+    await choose("g-view","overhead");await fill("g-progress",.42);await click("g-vectors");await p.check("#g-names");await click("g-s");await click("obswitch");await rest();
     const expected=await state(),key=await save("Parkfield · Prüfung");await recall("p6");await recall(key);
     let actual=await state();for(const field of ["view","cut","settings","camera","progress","site"])assert.deepEqual(actual[field],expected[field],field);assert.equal(await p.locator("body.observing").count(),1);
     log.favorites.push("Region, Schnitt, Kamera, Modellzeit, Pause, Zustand, Namen, Wellen, Vektoren und Beobachten");

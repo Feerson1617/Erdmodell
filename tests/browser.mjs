@@ -1,3 +1,4 @@
+import {shellNames} from "./lesson-controls.mjs";
 import { chromium, webkit } from "playwright";
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
@@ -202,7 +203,7 @@ async function run(engine) {
     pass(
       "Schichtauswahl, Sichtbarkeit, Transparenz, Keilschnitt und gekennzeichneter Maßstab",
     );
-    await p.click("#labels");
+    await shellNames(p,true);
     await p.click('[data-layer="2"]');
     await p.click("#explainLayer");
     assert.match(await p.locator("#layerText").innerText(), /flüssigem Metall/);
@@ -290,7 +291,7 @@ async function run(engine) {
     await p.click("#scale");
     await p.setViewportSize({ width: 1920, height: 1080 });
     await p.click("#present");
-    await p.click("#labels");
+    await shellNames(p,true);
     await p.click('[data-layer="2"]');
     await p.click("#explainLayer");
     assert.match(await p.locator("#layerText").innerText(), /flüssigem Metall/);
