@@ -962,6 +962,7 @@ export class World {
         .addScaledVector(b.north, 1.05)
         .addScaledVector(b.east, -1.2)
         .normalize();
+    this.planet.setObservatoryLight(this.mode==="globe"?smooth((d-1800)/5200):0);
     this.planet.lightDirection(dir);
     this.nyos.lightDirection(dir);
     const shadow = this.local.group.visible && d < 2.3;

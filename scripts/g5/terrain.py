@@ -48,5 +48,6 @@ def build(item):
     rgb,colors=sample((lon+180)/4.5*512,(90-lat)/4.5*512,512,'https://gibs.earthdata.nasa.gov/wmts/epsg4326/best/BlueMarble_ShadedRelief_Bathymetry/default/500m/6/{y}/{x}.jpeg',False)
     Image.fromarray(rgb).save(out/(name+'.webp'),quality=88)
     return dict(site=name,grid=[193,145],bounds=s,meters=[int(dem.min()),int(dem.max())],tiles=[dict(url=u,sha256=sha256((cache/sha256(u.encode()).hexdigest()).read_bytes()).hexdigest()) for _,_,u in tiles+colors])
-with ThreadPoolExecutor(max_workers=2) as workers:result=list(workers.map(build,sites.items()))
-(out/'provenance.json').write_text(json.dumps(result,separators=(',',':')))
+if __name__=="__main__":
+    with ThreadPoolExecutor(max_workers=2) as workers:result=list(workers.map(build,sites.items()))
+    (out/'provenance.json').write_text(json.dumps(result,separators=(',',':')))

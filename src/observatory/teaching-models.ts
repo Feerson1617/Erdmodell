@@ -109,10 +109,26 @@ export function addTeachingModels(r:RegionalScene){
       case "magnet":magnetic(r);break;
       case "volcano":volcano(r);break;
       case "risk":settlements(r);break;
+      case "process":
+        if(r.spec.process==="ridge")magnetic(r);
+        else if(["subduction","arc"].includes(r.spec.process))volcano(r);
+        else if(r.spec.process==="transform"||r.spec.process==="oceanTransform")witness(r);
+        else {
+          const h=(x:number)=>r.height(x,0),collision=r.spec.process==="collision",rift=r.spec.process==="rift";
+          const thick=(x:number)=>.54+(collision?.77*Math.exp(-x*x*.29):0);
+          const root=ribbon(r,x=>h(x)-thick(x),h,0x987d61,"crust");
+          for(const sign of [-1,1]){
+            const slope=rift?-sign:sign;
+            r.section.add(line([vec(1.5*sign,h(1.5*sign),.13),vec(1.5*sign+1.35*slope,-1.9,.13)],0x544440,"rigid"));
+            arrow([vec(sign*3.1,-.35,.19),vec(sign*2.8,-.35,.19),vec(sign*(rift?3.65:2.25),-.35,.19)],0xa4c7bd,"rigid",r.section);
+          }
+          r.onAnimate(t=>{root.scale.y=1+(collision?.26:rift?-.10:.09)*t;});
+        }
+        r.reframe(true);break;
       case "earthquake":if(r.spec.process==="transform")witness(r);break;
     }
     if(["forces","lithosphere","magnet","volcano"].includes(r.spec.theme))r.reframe(true);
   };
 }
-export const topicNames:Record<Theme,string>={earthquake:"Erdbeben",volcano:"Vulkanismus",risk:"Naturrisiken und Schutz",forces:"Antrieb der Platten",lithosphere:"Äußere Erde im Detail",magnet:"Magnetstreifen"};
+export const topicNames:Record<Theme,string>={process:"Tektonischer Prozess",earthquake:"Erdbeben",volcano:"Vulkanismus",risk:"Naturrisiken und Schutz",forces:"Antrieb der Platten",lithosphere:"Äußere Erde im Detail",magnet:"Magnetstreifen"};
 export const explanations=text;

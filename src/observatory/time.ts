@@ -84,10 +84,10 @@ export class TimeGlobe {
     if(this.playing){const max=this.scenario==="past"?0:scenarios[this.scenario].end;this.setYear(this.year+dt*this.speed*this.direction);if(this.year===max||this.year===-250)this.playing=false;}
     this.rotate(this.model,0);this.prepare(this.model,0);this.updateMarkers();
     if(this.compare&&this.year>0){if(this.year>scenarios[this.second].end){this.setYear(scenarios[this.second].end);this.playing=false;}
-      this.rotate(this.second,1);this.prepare(this.second,1);const w=gl.domElement.clientWidth,h=gl.domElement.clientHeight,aspect=camera.aspect;
-      const split=Math.floor(w/2);gl.setScissorTest(true);camera.aspect=split/h;camera.updateProjectionMatrix();
+      this.rotate(this.second,1);this.prepare(this.second,1);const w=gl.domElement.clientWidth,h=gl.domElement.clientHeight,aspect=camera.aspect,fov=camera.fov;
+      const split=Math.floor(w/2);gl.setScissorTest(true);camera.aspect=split/h;camera.fov=fov/Math.min(1,camera.aspect*.91);camera.updateProjectionMatrix();
       for(const [i,view] of [this.primary,this.other].entries()){const width=i?w-split:split;gl.setViewport(i*split,0,width,h);gl.setScissor(i*split,0,width,h);gl.render(view.scene,camera);}
-      gl.setScissorTest(false);gl.setViewport(0,0,w,h);camera.aspect=aspect;camera.updateProjectionMatrix();
+      gl.setScissorTest(false);gl.setViewport(0,0,w,h);camera.aspect=aspect;camera.fov=fov;camera.updateProjectionMatrix();
     }else gl.render(this.primary.scene,camera);
   }
   pick(ray:T.Raycaster){return ray.intersectObjects(this.markers.children)[0]?.object.name;}
