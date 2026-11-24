@@ -20,6 +20,7 @@ assert len(mech['records'])==5819 and mech['sub']==1127 and len(mech['results'])
 for row in (app,web):
     trials=row['g5']['boundaryTrials']
     assert len({t['id'] for t in trials})>=30 and len({t['category'] for t in trials})==7
+assert app['g51']['dimensions']==[1920,1080]
 assert len(app['g51']['pictures'])>=30 and len(app['g51']['movies'])==2
 for group,folder in [(app['g5'],'G5'),(app['g51'],'G51')]:
     for video in group['movies']:
@@ -74,7 +75,7 @@ questions=[
 ('Wo befinden sich die vier Dateien?',f'DMG, vollständiges App-ZIP, Einzel-HTML und dieses Sichtprüfungspaket stehen als vier einzelne Artefakte im [macOS-Lauf]({url}). Das DMG wurde verifiziert, gemountet, ausgeworfen und die kopierte App gestartet. Die Ad-hoc-Signatur ist lokal prüfbar. Gatekeepers Bewertung der markierten Testkopie steht in installation.log.'),
 ]
 intro=['# GeoRisiko G5.1 · fachlicher Prüfbericht','',f'Commit `{raw["commit"]}`. [Prüflauf]({url})','',
-       'Die Serien G5 und G51 sind neue Originalaufnahmen aus der installierten App. Vergleich/G5 enthält die entsprechenden früheren Bildschirmaufnahmen. Die Serie G5 verwendet die Bedienfolge des Ausgangsstands. Die neue Serie G51 umfasst zusätzlich Detailansichten.','']
+       'Die Serien G5 und G51 sind neue Originalaufnahmen aus der installierten App. Der JPEG-Bildkopf jeder Einzelaufnahme wurde auf 1920 × 1080 Pixel geprüft, auch nach einem nativen Vollbildwechsel. Vergleich/G5 enthält die entsprechenden früheren Bildschirmaufnahmen. Die Serie G5 verwendet die Bedienfolge des Ausgangsstands. Die neue Serie G51 umfasst zusätzlich Detailansichten.','']
 for i,(title,answer) in enumerate(questions,1):
     intro.extend([f'**{i}. {title}**','',answer,''])
 intro.extend(['## Langzeittest der installierten App','','15 Sekunden je Messfenster. Übergänge und Öffnen und Schließen der Modelle zählen zur Gesamtdauer. Die Bildraten sind aus allen einzelnen Bildabständen je Szene und Viewport berechnet. RSS summiert den Prozessbaum und kann gemeinsam genutzte Seiten mehrfach zählen.','',

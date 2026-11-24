@@ -1,3 +1,4 @@
+import {fullHDPhoto} from "./native-picture.mjs";
 import assert from "node:assert/strict";
 import {mkdir} from "node:fs/promises";
 import {join} from "node:path";
@@ -14,6 +15,7 @@ function controls(page){
 
 export async function acceptG51(p,dir,films=true){
   await mkdir(dir,{recursive:true});
+  const display=await p.context().newCDPSession(p);
   const {click,select,ready,visit,time}=controls(p),pictures=[],movies=[];
   const range=(id,v)=>p.locator("#"+id).fill(String(v));
   const view=id=>select("g-view",id);
@@ -22,7 +24,7 @@ export async function acceptG51(p,dir,films=true){
   const shot=async name=>{
     await p.waitForFunction(()=>{const w=window.geoObservatory(),s=w.observatory;return !w.flying&&(s.mode!=="regional"||s.ready&&s.viewSettled)&&(s.mode!=="time"||s.timeReady);});
     await p.evaluate(()=>new Promise(done=>requestAnimationFrame(()=>requestAnimationFrame(done))));
-    await p.screenshot({path:join(dir,name+".jpg"),quality:85});pictures.push(name);
+    await fullHDPhoto(p,display,dir,name);pictures.push(name);
   };
   const film=async(name,fn)=>{if(films)movies.push(await screencast(p,dir,name,fn));else await fn();};
   await visit("san");await shot("01-Parkfield-Landschaft");await view("cut");await shot("02-Parkfield-Schnitt");
@@ -56,7 +58,7 @@ export async function acceptG51(p,dir,films=true){
   await visit("san");await view("cut");await click("obswitch");await p.waitForSelector("#observe-progress");assert.ok(await p.locator("#sidebar").evaluate(e=>e.inert));
   await range("observe-progress",.43);await shot("29-Beobachten");await click("present");await p.waitForFunction(()=>document.body.classList.contains("present"));await shot("30-Smartboard");
   await click("present");await click("obswitch");assert.equal(await p.locator("#sidebar").evaluate(e=>e.inert),false);
-  return {pictures,movies};
+  await display.detach();return {pictures,movies,dimensions:[1920,1080]};
 }
 
 export async function longClassroom(p,measure){

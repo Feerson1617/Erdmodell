@@ -1,3 +1,4 @@
+import {fullHDPhoto} from "./native-picture.mjs";
 import assert from "node:assert/strict";
 import {mkdir,writeFile,mkdtemp} from "node:fs/promises";
 import {join} from "node:path";
@@ -23,6 +24,7 @@ export async function screencast(page,dir,name,perform) {
 }
 export async function acceptG5(p,{dir,product,measure,films=true}){
   await mkdir(dir,{recursive:true});
+  const display=product==="Electron"?await p.context().newCDPSession(p):null;
   const result={checks:[],measurements:[],pictures:[],movies:[],loadTimes:[],cycles:[]};
   const get=()=>p.evaluate(()=>window.geoObservatory().observatory);
   const click=id=>p.locator("#"+id).click();
@@ -36,7 +38,7 @@ export async function acceptG5(p,{dir,product,measure,films=true}){
     });
     if(product!=="Electron")return;
     await p.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
-    await p.screenshot({path:join(dir,name+".jpg"),type:"jpeg",quality:85});
+    await fullHDPhoto(p,display,dir,name);
     result.pictures.push(name);
   };
   const perf=async(label,actions)=>result.measurements.push(await measure(label,actions));
@@ -111,5 +113,5 @@ export async function acceptG5(p,{dir,product,measure,films=true}){
   await click("home");await click("present");await p.waitForFunction(()=>document.body.classList.contains("present"));await shot("30-Praesentation");await click("present");await p.waitForFunction(()=>!document.body.classList.contains("present"));
   await perf("Wiederholter Modulwechsel",async()=>{for(let i=0;i<4;i++){await visit("japan");await time();await age(-100);await click("nav-volcano");await ready();await click("home");await p.waitForFunction(()=>!window.geoObservatory().flying);const s=await p.evaluate(()=>window.geoObservatory());result.cycles.push({geometries:s.geometries,textures:s.textures,programs:s.programs});}});
   result.checks.push("697 reale Ereignisse","5819 eindeutige Grenzabschnitte","Mindestens 30 geografische Treffer in neun Modelltypen","4 Zukunftsszenarien","Herd lotrecht unter Epizentrum","Siedlungsvergleich bei gleicher Quelle","Vollbild und Rückkehr");
-  return result;
+  await display?.detach();return result;
 }
