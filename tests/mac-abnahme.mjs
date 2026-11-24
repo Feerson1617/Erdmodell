@@ -47,7 +47,9 @@ async function measure(p,root,name,actions) {
   }
   const data=await sample,after=processes(root),elapsed=(performance.now()-from)/1000;
   const seconds=[...after.ticks].reduce((n,[pid,time])=>n+Math.max(0,time-(before.ticks.get(pid)??0)),0);
-  assert.ok(data.frames>1 && data.states.every(s=>s.draws>0 && s.geometries>0),name);
+  assert.ok(data.frames>1,name+" Bildfolge");
+  const empty=data.states.filter(s=>!(s.draws>0 && s.geometries>0));
+  assert.deepEqual(empty,[],name+" ohne gerenderte Geometrie");
   return {scene:name,...data,cpuPercent:seconds/elapsed*100,rssBeforeMiB:before.rssMiB,rssAfterMiB:after.rssMiB};
 }
 async function selectPlate(p,code) {
