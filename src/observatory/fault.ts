@@ -1,4 +1,5 @@
 import * as T from "three";
+import zao from "./zao.json";
 import sampled from "./miyagi.json";
 import type { RegionSpec } from "./regional";
 
@@ -15,8 +16,8 @@ export class Fault {
     this.dipSign=g?.dipAzimuth!=null?(Math.cos((g.dipAzimuth-spec.strike-90)*Math.PI/180)>=0?1:-1):spec.site==="japan"?-1:1;
     this.dip=this.kind==="normal"?58:this.kind==="thrust"?27:this.kind==="interface"?25:90;
     this.sense=(g?.dextral??1)>=0?1:-1;
-    this.profile=spec.site==="japan"&&this.kind==="interface"?sampled:[];
-    this.trace=this.profile.length?this.profile[0][0]:this.kind==="normal"&&p==="rift"?-1.45:0;
+    this.profile=spec.site==="japan"&&!spec.arcTransect&&this.kind==="interface"?sampled:[];
+    this.trace=spec.arcTransect?zao.trench:this.profile.length?this.profile[0][0]:this.kind==="normal"&&p==="rift"?-1.45:0;
     this.top=this.profile.length?-this.profile[0][1]*12*4.7/320:height(this.trace,0);
     this.hy=this.top-(this.kind==="interface"?.64:1.06);this.hx=this.xAt(this.hy);
     this.slipSign=this.kind==="normal"?-1:1;

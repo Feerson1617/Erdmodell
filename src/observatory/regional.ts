@@ -1,5 +1,6 @@
 import * as T from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import zao from "./zao.json";
 import traces from "./traces.json";
 import { localAsset } from "../assets";
 import { sites, referenceGeology, type Geology, type Process, type Site } from "./boundaries";
@@ -10,8 +11,8 @@ import { Fault, onset, pSpeed, sSpeed } from "./fault";
 import { geologySolids } from "./sections";
 let globalWindows:Promise<Int16Array>|undefined;
 export type Theme="process"|"earthquake"|"volcano"|"risk"|"forces"|"lithosphere"|"magnet";
-export type RegionSpec={site?:Site; name:string; process:Process; lat:number;lon:number; strike:number; azimuth?:number; geology?:Geology; comparison?:RegionSpec;coastLesson?:boolean; theme:Theme};
-export const reference=(site:Site,theme:Theme):RegionSpec=>({...sites[site],site,geology:referenceGeology(site),process:sites[site].process as Process,theme});
+export type RegionSpec={site?:Site; name:string; process:Process; lat:number;lon:number; strike:number; azimuth?:number; geology?:Geology; comparison?:RegionSpec;coastLesson?:boolean;arcTransect?:boolean;width?:number; theme:Theme};
+export const reference=(site:Site,theme:Theme):RegionSpec=>({...sites[site],...(site==="japan"&&theme==="volcano"?{...zao,arcTransect:true}:{}),site,geology:referenceGeology(site),process:sites[site].process as Process,theme});
 export const phases=[0,.34,.49,.68,1];
 const clamp=T.MathUtils.clamp;
 function ramp(a:number,b:number,x:number){return T.MathUtils.smoothstep(x,a,b);}
@@ -81,6 +82,23 @@ export class RegionalScene {
     if(spec.azimuth!==undefined)this.ui.sense.value=Math.cos((spec.azimuth-spec.strike)*Math.PI/180)>=0?1:-1;
     this.vertical=["arc","subduction"].includes(spec.process);this.reframe(false);
   }
+  private envelope?:T.DataTexture;
+  get rockCeiling(){
+    if(!this.envelope){
+      const cols=193,rows=145,values=new Float32Array(cols*rows);
+      for(let j=0;j<rows;j++)for(let i=0;i<cols;i++)values[j*cols+i]=this.height(i/16-6,j/16-4.5);
+      this.envelope=new T.DataTexture(values,cols,rows,T.RedFormat,T.FloatType);
+      this.envelope.needsUpdate=true;
+    }
+    return this.envelope;
+  }
+  isGeologyVisible(hit:T.Intersection){
+    const obj=hit.object as T.Mesh,rest=obj.geometry?.getAttribute("geologyCoord"),face=hit.face,b=hit.barycoord;
+    if(!rest||!face||!b)return true;
+    const at=(axis:"getX"|"getY"|"getZ")=>rest[axis](face.a)*b.x+rest[axis](face.b)*b.y+rest[axis](face.c)*b.z;
+    const z=at("getZ");
+    return Math.abs(z)<.002 || at("getY")<=this.height(at("getX"),z)-.015;
+  }
   get viewSettled(){return !this.transition && Math.abs(this.reveal-Number(this.cut))<.012;}
   reframe(cut:boolean){this.cut=cut;this.camera.position.set(cut?1.3:3.4,cut?2.1:4.5,cut?8.4:7.4);
     const goal=new T.Vector3(0,cut?-.68:0,cut?-.6:-.5),to=this.camera.position.clone();
@@ -96,7 +114,7 @@ export class RegionalScene {
       let blended=m;
       if(edge>0&&this.contextHeights){const cx=(x/48+.5)*144,cy=(z/36+.5)*108,a=Math.floor(cx),b=Math.floor(cy),u=cx-a,v=cy-b,hh=this.contextHeights,j=b*145+a;
         const far=(1-v)*((1-u)*hh[j]+u*hh[j+1])+v*((1-u)*hh[j+145]+u*hh[j+146]);blended=T.MathUtils.lerp(m,far,edge);}
-      return blended/1000/(sites[this.spec.site!].width/12)*(this.spec.site==="japan"?4.7:2.4);
+      return blended/1000/((this.spec.width??sites[this.spec.site!].width)/12)*(this.spec.site==="japan"?4.7:2.4);
     }
     if(this.spec.coastLesson)return -.48-.95*Math.tanh((x+2.45)*.85)+.42*Math.exp(-((x+4.95)**2)*1.3)+.035*Math.cos(z);
     if(this.windows && this.spec.geology){
@@ -109,7 +127,8 @@ export class RegionalScene {
   async init(){
     if(this.spec.site){
       const base="data/g5/terrain/"+this.spec.site;
-      const [response,tex,normal,rough,farHeight,farImage]=await Promise.all([fetch(localAsset(base+".i16")),new T.TextureLoader().loadAsync(localAsset(base+"-surface.webp")),new T.TextureLoader().loadAsync(localAsset(base+"-normal.webp")),new T.TextureLoader().loadAsync(localAsset(base+"-rough.webp")),fetch(localAsset(base+"-context.i16")),new T.TextureLoader().loadAsync(localAsset(base+"-context.webp"))]);
+      const asset=(suffix:string)=>localAsset(this.spec.arcTransect?"data/g51/zao/"+(suffix===".i16"?"terrain.i16":suffix.slice(1)):base+suffix);
+      const [response,tex,normal,rough,farHeight,farImage]=await Promise.all([fetch(asset(".i16")),new T.TextureLoader().loadAsync(asset("-surface.webp")),new T.TextureLoader().loadAsync(asset("-normal.webp")),new T.TextureLoader().loadAsync(asset("-rough.webp")),fetch(asset("-context.i16")),new T.TextureLoader().loadAsync(asset("-context.webp"))]);
       if(this.disposed){tex.dispose();normal.dispose();rough.dispose();farImage.dispose();return;}
       if(!response.ok)throw Error("Höhendaten fehlen");
       const [heightBytes,contextBytes]=await Promise.all([response.arrayBuffer(),farHeight.arrayBuffer()]);const heights=new Int16Array(heightBytes);if(heights.length!==193*145)throw Error("Höhenraster unvollständig");
@@ -127,7 +146,7 @@ export class RegionalScene {
   private surround(h:Int16Array,image:T.Texture){
     this.contextHeights=h;
     if(h.length!==145*109)throw Error("Das Landschaftsumfeld fehlt.");
-    const gain=(this.spec.site==="japan"?4.7:2.4)*.012/sites[this.spec.site!].width;
+    const gain=(this.spec.site==="japan"?4.7:2.4)*.012/(this.spec.width??sites[this.spec.site!].width);
     const terrain=new T.MeshStandardMaterial({map:image,roughness:.94,side:T.DoubleSide});
     const water=new T.MeshStandardMaterial({color:0x39818a,roughness:.33,metalness:.12,transparent:true,opacity:.72,side:T.DoubleSide});
     for(const front of [false,true])for(const [x0,x1,z0,z1] of [[-24,-6,0,18],[6,24,0,18],[-6,6,4.5,18]]){
@@ -180,13 +199,17 @@ export class RegionalScene {
   cameraView(view:string){
     if(view==="land"){this.reframe(false);return;}
     this.reframe(true);if(view==="cut")return;
+    if(view==="vent"){
+      const x=this.spec.arcTransect?zao.vent:0,y=this.height(x,-.08),goal=new T.Vector3(x,y+.48,-.12);
+      this.transition=undefined;this.camera.position.copy(goal).add(new T.Vector3(1,1.05,5.5));this.orbit.target.copy(goal);this.orbit.update();return;
+    }
     const f=this.faultModel,x=view==="coast"?-4.65:view==="water"?f.hx:Math.max(-3.9,Math.min(3.9,f.hx));
     const y=view==="waves"||view==="focus"?f.hy:view==="coast"||view==="water"?this.height(x,0):f.top-.35;
     const goal=new T.Vector3(x,y,-.18),to=goal.clone().add(new T.Vector3(view==="water"?2:.25,view==="water"?2.3:.54,view==="waves"?6.4:4.5));
     this.transition=undefined;this.camera.position.copy(to);this.orbit.target.copy(goal);this.orbit.update();
   }
   private addTrace(){
-    const site=this.spec.site;if(site!=="san"&&site!=="japan")return;
+    const site=this.spec.site;if(this.spec.arcTransect||site!=="san"&&site!=="japan")return;
     const s=sites[site],angle=s.strike*Math.PI/180,trace=traces[site],points:T.Vector3[]=[];
     const rows=trace.points;
     for(let i=1;i<rows.length;i++){const a=rows[i-1],b=rows[i];
@@ -271,6 +294,6 @@ export class RegionalScene {
   dispose(){
     this.disposed=true;this.orbit.dispose();const gs=new Set<T.BufferGeometry>(),ms=new Set<T.Material>();
     this.scene.traverse(o=>{const m=o as T.Mesh;if(m.geometry)gs.add(m.geometry);if(m.material)for(const a of Array.isArray(m.material)?m.material:[m.material])ms.add(a);});
-    for(const g of gs)g.dispose();for(const m of ms)m.dispose();this.colorMap?.dispose();this.normalMap?.dispose();this.roughMap?.dispose();this.sky.dispose();this.contextMap?.dispose();
+    for(const g of gs)g.dispose();for(const m of ms)m.dispose();this.colorMap?.dispose();this.normalMap?.dispose();this.roughMap?.dispose();this.sky.dispose();this.contextMap?.dispose();this.envelope?.dispose();
   }
 }

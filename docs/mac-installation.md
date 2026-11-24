@@ -17,7 +17,7 @@ Die Ad-hoc-Signatur bindet den Inhalt des Bundles kryptografisch. Für diese Ent
 
 Wenn macOS eine geladene App zunächst sperrt, Herkunft und Prüfsumme anhand des eigenen Pull Requests kontrollieren. Nach dem Öffnungsversuch bei **Systemeinstellungen → Datenschutz & Sicherheit** unter **Sicherheit** die von Apple angebotene Einzelentscheidung **Dennoch öffnen** für GeoRisiko bestätigen. Bei einer Schadsoftware- oder Beschädigungswarnung die Datei verwerfen und die Herkunft prüfen. Auf verwalteten Schulgeräten entscheidet die zuständige Administration über die Freigabe. [Apple – eine App eines nicht verifizierten Entwicklers öffnen](https://support.apple.com/de-de/guide/mac-help/mh40616/mac) · [Apple – sicher Apps auf dem Mac öffnen](https://support.apple.com/de-de/102445)
 
-## Zehn Sekunden auf dem eigenen M1 messen
+## Kurz- und Unterrichtsprüfung auf dem eigenen M1
 
 Die App am angeschlossenen Smartboard in der gewünschten Größe öffnen. Eine Szene wählen und gegebenenfalls die Bewegung starten. **Hilfe → Kurzprüfung (10 Sekunden) oder Ausführliche Unterrichtsprüfung (15 Minuten)** zeichnet Bildabstände und den Zustand des Renderers auf. Währenddessen kann die Lehrkraft die App weiter bedienen. Das Ergebnisfenster zeigt Bildrate, P95 und längste Pause. **JSON sichern** schreibt nur auf ausdrückliche Wahl in die gewählte Datei. Die Messung enthält technische Modell- und Prozessdaten. Es gibt keine Kennung für Lehrkräfte oder Lernende und keinen Upload.
 

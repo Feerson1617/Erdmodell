@@ -12,6 +12,7 @@ await p.click('#nav-risk');await p.selectOption('#g-exposure','empty');await p.s
 await p.click('#nav-plates');await p.click('#g-boundaries');await p.waitForFunction(()=>window.geoBoundaryModels().length===5819);
 const coverage=await p.evaluate(()=>window.geoBoundaryModels());assert.equal(new Set(coverage.map(s=>s.id)).size,5819);assert.equal(new Set(coverage.map(s=>s.category)).size,7);assert.ok(coverage.every(s=>s.model&&Number.isFinite(s.strike)&&s.lon>=-180&&s.lon<=180));
 const ids=await p.locator('#g-example option').evaluateAll(els=>els.map(e=>e.value).filter(Boolean));assert.ok(ids.length>=30);
+const trials=coverage.filter(s=>ids.includes(String(s.id)));assert.equal(new Set(trials.map(s=>s.category)).size,7);assert.equal(new Set(trials.map(s=>s.model)).size,9);
 for(const id of ids){
  await p.selectOption('#g-example',id);await p.waitForFunction(()=>!window.geoObservatory().flying);
  const box=await p.locator('#earth').boundingBox();await p.mouse.click(box.x+box.width/2,box.y+box.height/2);

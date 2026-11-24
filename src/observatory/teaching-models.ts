@@ -1,3 +1,4 @@
+import zao from "./zao.json";
 import {eruption} from "./eruption";
 import * as T from "three";
 import type { RegionalScene, Theme } from "./regional";
@@ -65,7 +66,7 @@ function magnetic(r:RegionalScene){
   flow(r,new T.CatmullRomCurve3([vec(.1,-1.7),vec(-.1,-.7),vec(0,r.height(0,0))]),0xeeb68a,"melt",8,.01,1);
 }
 function volcano(r:RegionalScene){
-  const k=r.spec.process,f=r.faultModel,vent=k==="subduction"||k==="arc"?T.MathUtils.clamp(f.trace+f.dipSign*5.4,-4.8,4.8):0,top=r.height(vent,-.33);
+  const k=r.spec.process,f=r.faultModel,vent=r.spec.arcTransect?zao.vent:k==="subduction"||k==="arc"?T.MathUtils.clamp(f.trace+f.dipSign*5.4,-4.8,4.8):0,top=r.height(vent,r.spec.arcTransect?0:-.33);
   if(k==="subduction"||k==="arc")flow(r,new T.CatmullRomCurve3([vec(vent,f.interfaceY(vent)),vec(vent-.11,(f.interfaceY(vent)+top)/2),vec(vent,top-.93)]),0x8bd2d7,"fluid",7,.04,.61);
   const plume=new T.CatmullRomCurve3([vec(vent+.2,top-2.15),vec(vent-.17,top-1.47),vec(vent,top-.93),vec(vent,top+.03)]);
   flow(r,plume,0xf2ad6c,k==="hotspot"?"hotspot":"melt",15,.12,.93);

@@ -43,7 +43,7 @@ export async function acceptG51(p,dir,films=true){
   await click("nav-volcano");await ready();await select("g-site","japan");await ready();await phase(.60);await shot("17-Vulkanbogen");
   await select("g-site","hawaii");await ready();await phase(.77);await shot("18-Inselkette");
   await select("g-eruption","effusive");await phase(.69);await shot("19-Lavastrom");
-  await select("g-site","japan");await ready();await select("g-eruption","explosive");await phase(.62);await shot("20-Ascheausbruch");
+  await select("g-site","japan");await ready();await select("g-eruption","explosive");await view("vent");await phase(.75);await shot("20-Ascheausbruch");
   await time();await range("g-year",-170);await shot("21-Kontinentalbewegung");
   await p.locator("#g-tracking summary").click();await select("g-track","501");await p.check("#g-trail");await p.check("#g-follow");await range("g-year",-70);await shot("22-Indien-verfolgen");
   await select("g-scenario","aurica");await range("g-year",165);await p.check("#g-compare");await select("g-second","amasia");await p.check("#g-future-lines");await shot("23-Zukunftsvergleich");
