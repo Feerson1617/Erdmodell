@@ -16,7 +16,7 @@ export function readableView(e:unknown){
   if(!one(b.mode,"globe|inside|nyos|place|plates")||!one(b.style,"A|B"))return false;
   if(s.mode==="map")return true;
   if(s.mode==="time"){
-    const t=s.time;return record(t)&&one(t.scenario,models)&&one(t.comparison,models)&&number(t.year,-250,250)&&[1,-1].includes(Number(t.direction))&&number(t.speed,1,30)&&flags(t,"compare playing trail follow showBoundaries")&&["layer","tracking","gnss"].every(k=>typeof t[k]==="string");
+    const t=s.time;return record(t)&&one(t.scenario,models)&&one(t.comparison,models)&&number(t.year,-250,250)&&(t.direction===1||t.direction===-1)&&number(t.speed,1,30)&&flags(t,"compare playing trail follow showBoundaries")&&["layer","tracking","gnss"].every(k=>typeof t[k]==="string");
   }
   if(s.mode==="regional"){
     const r=s.region;if(!record(r)||!record(r.settings)||!vec(r.position)||!vec(r.target)||!flag(r.cut)||!one(r.view,"land|overhead|cut|fault|focus|waves|water|ocean|coast|vent"))return false;

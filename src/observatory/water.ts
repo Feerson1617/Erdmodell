@@ -48,6 +48,10 @@ export class WaterSection{
     const final=volume();this.budget={initial,final,outflow,residual:final-initial+outflow};
   }
   bed(x:number,t:number){return this.sample(x,t)-this.sample(x,t,true);}
+  private timeline?:{t:number;newlyWet:number;shore:number;deepest:number}[];
+  get shorelineHistory(){
+    return this.timeline??=Array.from({length:121},(_,i)=>({t:i/120,...this.extent(i/120)}));
+  }
   extent(t:number){
     let newlyWet=0,shore=6,deepest=0;
     for(let i=0;i<this.cells;i++){const x=-6+i*this.dx,depth=this.sample(x,t,true);

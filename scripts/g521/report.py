@@ -17,12 +17,12 @@ assert raw['arch'] == 'arm64' and raw['electron']['packaged'] and raw['restart']
 assert raw['restart']['before'] == raw['restart']['after'] and raw['restart']['firstPID'] != raw['restart']['secondPID']
 assert not raw.get('failure') and all(not r['errors'] and not r['network'] for r in raw['runs'])
 assert res['resources'] == len(res['sha256']) >= 348 and len(mech['records']) == 5819 and mech['sub'] == 1127
-assert len(contacts) == 25 and len(water) == 4 and app['classroom']['elapsedMs'] >= 900000
+assert len(contacts) == 30 and len(water) == 4 and app['classroom']['elapsedMs'] >= 900000
 assert all(len(r['g52']['steps']) == 13 and len(r['g52']['transfer']) == 5 for r in raw['runs'])
 lesson = app['g52']
 assert len(lesson['movies']) == 2 and all(v['frames'] >= 5 for v in lesson['movies'])
 files = {}
-for f in ['Pruefung.json','installation.log','G52/Ressourcen.json','G51/Mechanik.json','G51/Zeitreise.log','G521/Kontakte.json','G521/Wasserbilanz.json','G521/Speicher.json','SHA256.txt']:
+for f in ['Pruefung.json','installation.log','G52/Ressourcen.json','G51/Mechanik.json','G51/Zeitreise.log','G521/Kontakte.json','G521/Wasserbilanz.json','G521/Speicher.json','G521/Bedienung.json','SHA256.txt']:
     files[f] = out / f
 for f in ['g521-unterricht.md','curriculum-coverage.md','g51-quellen.md','mac-installation.md']:
     files['Dokumentation/'+f] = root / 'docs' / f
@@ -43,6 +43,8 @@ text += table(['Gebiet','Spalt vorne','Überlappung vorne','Spalt innen','Hohlra
     for s in dict.fromkeys(r['site'] for r in contacts) for rows in [[r for r in contacts if r['site']==s]]])
 text+=['','Die bisher schwach erkennbare Welle erhält eine seitliche Analyse mit Ruhelinie, Tiefenmarke und gekennzeichneter Überhöhung. Wasser, Grund und benetzte Fläche stammen aus demselben Solver. Die Differenz am japanischen Geländegitter gegenüber dem Solver beträgt maximal %.8f.'%max(r['bedMismatch'] for r in contacts if r['site']=='japan'),'']
 text+=table(['Profil','Zellen','Max. neu nass','Am Ende','Bilanzrest','Max. Wasserstandsänderung'],[[n,s['cells'],s['most'],s['final'],f"{s['budget']['residual']:.2e}",f"{s['maxSignal']:.5f}"] for n,w in water.items() for s in w['stats']])
+nass=water['Kueste']['stats']
+text+=['','Bei feinerem Raster verändert sich die benetzte Strecke im Küstenmodell. Die maximale Breite zuvor trockener, benetzter Rasterzellen beträgt '+', '.join(f"{r['dx']*r['most']:.3f}" for r in nass)+' Modelleinheiten. Eine rasterunabhängig konvergierte Überflutungsgrenze ist daraus nicht ableitbar. Beide Zusatzprofile blieben endlich, das ungestörte Wasser am Hang blieb in Ruhe.']
 text+=['','Die Oberfläche in Parkfield zeigt den lokalen Spannungsaufbau vor dem Bruch und seine anschließende Entlastung. Wegversatz (Anfang, Aufbau, Bruch, Ende) in Modelleinheiten: '+', '.join(f'{n:.4f}' for n in lesson['marker'].values())+'.',
        '',f"Favorit nach vollständigem Prozessende und Neustart mit gleichem Profil wiederhergestellt (PID {raw['restart']['firstPID']} → {raw['restart']['secondPID']}). Einzelheiten zu Kamera, Phase und Schaltern stehen in Pruefung.json.",
        '', '## Unterricht und Szenenwechsel','']

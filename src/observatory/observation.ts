@@ -38,7 +38,7 @@ export class Observation{
         const input=document.createElement("input");input.type="range";input.min=source.min;input.max=source.max;input.step=source.step;input.setAttribute("aria-label",id==="g-year"?"Geologische Zeit":"Modellzeit");
         input.oninput=()=>{source.value=input.value;source.dispatchEvent(new Event("input"));};control=input;
       }else{
-        const b=document.createElement("button");b.textContent=inputs[id]??buttons[id];b.onclick=()=>source.click();control=b;
+        const b=document.createElement("button");b.textContent=inputs[id]??buttons[id];b.onclick=()=>{source.click();this.update();};control=b;
       }
       control.id=id==="g-launch"?"observe-region":id==="g-year"||id==="g-progress"?"observe-progress":"observe-"+id.slice(id.startsWith("g-")?2:0);
       control.dataset.from=id;this.controls.append(control);this.bindings.push({source,control});

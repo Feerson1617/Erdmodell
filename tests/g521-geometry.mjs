@@ -69,7 +69,7 @@ try{
    return {worstInterior,sampledVolume,voidVolume,overlapVolume,maxVoid,maxDeepVoid,basaltWidth,bedMismatch:marine.length?Math.max(...marine):null,meshCount:patches.length,columns:rows.length,gap:max("gap"),deep:max("deep"),overlap:max("overlap"),skin:max("skin"),empty:rows.filter(v=>!Number.isFinite(v.top)).length,worst:rows.sort((a,b)=>b.gap-a.gap).slice(0,2)};
  });
  const results=[];
- for(const site of (process.env.G521_SITES??"rift,ridge,japan,himalaya,san").split(",")){
+ for(const site of (process.env.G521_SITES??"rift,ridge,japan,himalaya,san,island").split(",")){
   if(site==="ridge"){await p.click("#nav-plates");await p.click("#g-boundaries");await p.selectOption("#g-example",{label:"Ozeanischer Rücken"});await p.waitForFunction(()=>!window.geoObservatory().flying);
     const b=await p.locator("#earth").boundingBox();await p.mouse.click(b.x+b.width/2,b.y+b.height/2);await p.click("#g-segment");}
   else{await p.click("#nav-earthquake");await p.selectOption("#g-launch",site);}
@@ -82,5 +82,5 @@ try{
   console.log(site,results.filter(x=>x.site===site).map(({t,gap,deep,overlap,skin})=>[t,gap,deep,overlap,skin].map(x=>+x.toFixed(4))));
  }
  await writeFile(join(dir,"Kontakte.json"),JSON.stringify(results,null,2));
- if(!process.env.G521_CHARACTERIZE)for(const row of results){if(row.site==="ridge"&&row.t>0)assert.ok(row.basaltWidth>row.t,"Basalt an der Achse");assert.ok(row.sampledVolume>20&&row.voidVolume/row.sampledVolume<.003&&row.overlapVolume/row.sampledVolume<.003,JSON.stringify(row));if(row.site==="japan")assert.ok(row.bedMismatch!==null&&row.bedMismatch<.00001);assert.ok(row.meshCount>=4&&row.empty===0);assert.ok(row.deep<.025&&row.gap<.045&&row.overlap<.05&&row.skin<.085,JSON.stringify(row));}
+ if(!process.env.G521_CHARACTERIZE)for(const row of results){if(row.site==="ridge"&&row.t>0)assert.ok(row.basaltWidth>row.t,"Basalt an der Achse");assert.ok(row.maxDeepVoid<.05,JSON.stringify(row));assert.ok(row.sampledVolume>20&&row.voidVolume/row.sampledVolume<.003&&row.overlapVolume/row.sampledVolume<.003,JSON.stringify(row));if(row.site==="japan")assert.ok(row.bedMismatch!==null&&row.bedMismatch<.00001);assert.ok(row.meshCount>=4&&row.empty===0);assert.ok(row.deep<.025&&row.gap<.045&&row.overlap<.05&&row.skin<.085,JSON.stringify(row));}
 }finally{await browser.close();}

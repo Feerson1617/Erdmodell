@@ -72,6 +72,13 @@ function magnetic(r:RegionalScene){
         pos.setXYZ(k,x,r.height(source,z)+.006,z);}
       pos.needsUpdate=true;geometry.computeVertexNormals();});
   }
+  if(r.spec.theme==="process"){
+    const top=r.height(0,0);
+    for(const sign of [-1,1]){
+      const path=new T.CatmullRomCurve3([vec(sign*.12,top-3.2),vec(sign*.15,top-2.35),vec(sign*.32,top-1.75),vec(sign*.74,top-1.48)]);
+      flow(r,path,0xc2a783,"mantle",4,0,1);
+    }
+  }
   flow(r,new T.CatmullRomCurve3([vec(.1,-1.7),vec(-.1,-.7),vec(0,r.height(0,0))]),0xeeb68a,"melt",8,.01,1);
 }
 function volcano(r:RegionalScene){

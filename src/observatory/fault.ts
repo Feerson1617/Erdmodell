@@ -50,6 +50,9 @@ export class Fault {
     }
     return side<0?[seam,-6]:[seam,6];
   }
+  get distributedSlip(){
+    return this.kind==="thrust"||this.kind==="interface"||this.spec.process==="ridge"&&["earthquake","risk"].includes(this.spec.theme);
+  }
   get riftRoot(){return this.top+this.trace*Math.tan(this.dip*Math.PI/180);}
   sideAt(x:number,y:number){
     if(this.spec.process==="rift"){const half=Math.max(0,-this.xAt(y));return x< -half?-1:x>half?1:0;}
@@ -59,7 +62,7 @@ export class Fault {
   // Solve the intersection with the actual topographic/layer horizon at this slice.
   horizonRange(side:number,horizon:(x:number)=>number):[number,number]{
     const rift=this.spec.process==="rift";
-    if(this.spec.process==="ridge"&&["process","magnet","forces"].includes(this.spec.theme)||this.kind==="strike"||this.kind==="unknown"||this.kind==="interface"||this.kind==="thrust")return side<0?[-6,this.trace]:[this.trace,6];
+    if(this.spec.process==="ridge"&&["process","magnet","forces"].includes(this.spec.theme)||this.kind==="strike"||this.kind==="unknown"||this.distributedSlip)return side<0?[-6,this.trace]:[this.trace,6];
     const root=(sign:number)=>{
       let a=-6,b=6;
       for(let i=0;i<22;i++){const x=(a+b)*.5,seam=this.xAt(horizon(x));if(x<(rift?sign*Math.max(0,-seam):seam))a=x;else b=x;}

@@ -58,7 +58,7 @@ export class RegionalScene {
     }}
     // Slip is distributed through a narrow shear zone. Adjacent lithologies
     // therefore carry the same displacement at their shared contact.
-    const shear=f.kind==="interface"||f.kind==="thrust"?Float32Array.from({length:coords.count},(_,i)=>
+    const shear=f.distributedSlip?Float32Array.from({length:coords.count},(_,i)=>
       T.MathUtils.smoothstep(Math.abs(coords.getY(i)-f.interfaceY(coords.getX(i))),0,.65)):undefined;
     g.setAttribute("coupling",new T.BufferAttribute(values,2));this.solids.push({g,side,slice,waterSkin,shear,motionData,base:new Float32Array(g.attributes.position.array)});(g.attributes.position as T.BufferAttribute).setUsage(T.DynamicDrawUsage);}
   physicalState(){
@@ -69,11 +69,11 @@ export class RegionalScene {
     const distance=Math.hypot(this.epicenter[1]-f.hy,this.epicenter[0]-f.hx);
     const vertices=this.solids.map(({g,base,side})=>{
       const k=Math.floor(base.length/6)*3,a=Array.from(base.slice(k,k+3)),b=Array.from(g.attributes.position.array.slice(k,k+3));
-      return {side,materialSide:f.kind==="thrust"||f.kind==="interface"?(a[1]>f.interfaceY(a[0])?f.dipSign:-f.dipSign):side,rest:a,drawn:b};
+      return {side,materialSide:f.distributedSlip?(a[1]>f.interfaceY(a[0])?f.dipSign:-f.dipSign):side,rest:a,drawn:b};
     });
     const cutFaces=this.solids.filter(s=>s.slice&&f.kind==="strike");
     let cutPlaneError=0;for(const s of cutFaces){const p=s.g.attributes.position;for(let i=0;i<p.count;i++)if(s.base[3*i+2]===0)cutPlaneError=Math.max(cutPlaneError,Math.abs(p.getZ(i)));}
-    return {waterProfile:this.water?Array.from({length:this.water.cells},(_,i)=>{const x=-6+i*this.water!.dx,t=this.progress;
+    return {floodHistory:this.water?.shorelineHistory,waterProfile:this.water?Array.from({length:this.water.cells},(_,i)=>{const x=-6+i*this.water!.dx,t=this.progress;
       return {x,bed:this.water!.bed(x,t),eta:this.water!.sample(x,t),depth:this.water!.sample(x,t,true)};}):undefined,cutPlaneError,markerEnds:this.markerEnds,flood:this.water?.extent(this.progress),vertices,profilePoints:f.profile.map(([x,km])=>({x,km,y:f.interfaceY(x)})),sense:f.sense,maxPlaneError,focusError:Math.abs(f.hx-f.xAt(f.hy)),pArrival:onset+distance/pSpeed,sArrival:onset+distance/sSpeed,
       earlyShake:f.shaking(onset+distance/pSpeed-.002,f.hx,this.epicenter[1],0),lateShake:f.shaking(1,f.hx,this.epicenter[1],0),fault:f.kind,trace:f.trace,dipSign:f.dipSign,profile:f.profile.length,waterEvent:f.waterEvent,waterSurface:this.water?.sample(f.hx,this.progress)??0,waterSignals:this.water?[0,.48,.58,.72,.88,1].map(t=>[t,this.water!.sample(f.hx,t),this.water!.sample(-4,t)]):[],
       rupture:this.rupture.visible?Array.from(this.rupture.geometry.attributes.position.array):[],waveFronts:this.waves.map(w=>w.visible),
@@ -317,7 +317,7 @@ export class RegionalScene {
       transforms.forEach((v,i)=>{m.setMatrixAt(i,v);m.setColorAt(i,new T.Color().setRGB(.73+.25*rand(),.77+.21*rand(),.69+.25*rand()));});
       let last=-1;const matrix=new T.Matrix4();this.onAnimate(t=>{
         if(last===t||this.spec.theme==="volcano")return;last=t;
-        transforms.forEach((v,i)=>{const x=v.elements[12],y=v.elements[13],z=v.elements[14],f=this.faultModel,h=this.height(x,z),shear=f.kind==="thrust"||f.kind==="interface",side=shear?(h>f.interfaceY(x)?f.dipSign:-f.dipSign):f.sideAt(x,h),d=f.offset(this.deformed,x,h,z,side,t);
+        transforms.forEach((v,i)=>{const x=v.elements[12],y=v.elements[13],z=v.elements[14],f=this.faultModel,h=this.height(x,z),shear=f.distributedSlip,side=shear?(h>f.interfaceY(x)?f.dipSign:-f.dipSign):f.sideAt(x,h),d=f.offset(this.deformed,x,h,z,side,t);
           if(shear){const w=T.MathUtils.smoothstep(Math.abs(h-f.interfaceY(x)),0,.65),shake=this.spec.theme==="earthquake"||this.spec.theme==="risk"?f.shaking(t,x,h,z):0;d.x*=w;d.y=T.MathUtils.lerp(shake,d.y,w);}
           matrix.copy(v);if(this.water)matrix.setPosition(x,y+this.water.bed(x,t)-this.height(x,0),z);else matrix.setPosition(x+d.x,y+d.y,z+d.z);m.setMatrixAt(i,matrix);});m.instanceMatrix.needsUpdate=true;
       });m.name=vegetation?"Symbolische Vegetationsgruppen":"Gestein an der Oberfläche";this.scene.add(m);

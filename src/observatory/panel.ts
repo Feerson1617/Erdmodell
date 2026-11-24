@@ -35,7 +35,7 @@ export class Observatory {
   mode:""|"map"|"regional"|"time"="";readonly maps=new MapLayers();region?:RegionalScene;
   theme:Theme="earthquake";private revision=0;private message="";private lastUI="";private labels:HTMLElement;
   private readonly profile=new WaterProfile($("earth").parentElement!);
-  private spare?:RegionalScene;private switching=false;private resumePlayback=false;
+  private spare?:RegionalScene;private switching=false;private resumePlayback=false;private profileWanted=false;
   private mapPurpose:"events"|"boundaries"="events";
   constructor(private world:World,private side:HTMLElement,private navigateBase:(mode:"globe"|"plates")=>void){
     world.scene.add(this.maps.group);this.maps.group.visible=false;
@@ -47,7 +47,7 @@ export class Observatory {
     world.customRender=(dt)=>this.frame(dt);
   }
   close(){
-    this.profile.hide();this.switching=false;this.spare?.dispose();this.spare=undefined;this.revision++;this.region?.dispose();this.region=undefined;this.maps.group.visible=false;this.mode="";
+    this.profile.hide();this.profileWanted=false;this.switching=false;this.spare?.dispose();this.spare=undefined;this.revision++;this.region?.dispose();this.region=undefined;this.maps.group.visible=false;this.mode="";
     this.world.nav.enabled=true;this.world.nav.minimumDistance=.06;this.labels.replaceChildren();this.message="";this.lastUI="";
     this.closeTime();delete document.body.dataset.observatory;
     document.querySelectorAll(".obsNav").forEach(b=>b.removeAttribute("aria-current"));
@@ -277,7 +277,7 @@ export class Observatory {
     return r.spec.theme==="earthquake"?item("Was sind P- und S-Wellen?","Goldene Punkte schwingen vor und zurück. Das zeigt die schnellere P-Welle. Türkise Punkte schwingen quer zur Laufrichtung. Diese S-Welle läuft nur durch festes Material.")+item("Was zeigen die zwei Orte?","Der Bruch beginnt im Erdbebenherd. Direkt darüber liegt an der Oberfläche das Epizentrum.")+item("Wann entsteht ein Tsunami?","Nicht jedes Seebeben löst einen Tsunami aus. Hebt oder senkt sich ein großer Teil des Meeresbodens, bewegt er die Wassersäule. Lange Wasserwellen laufen zur Küste und können dort höher werden."):"";}
   private async switchEvent(old:RegionalScene,spec:RegionSpec,view:string){
     const token=++this.revision,start=performance.now(),playing=this.switching?this.resumePlayback:old.playing;this.resumePlayback=playing;
-    const settings=fields(old,regionKeys);old.playing=false;this.switching=true;
+    const settings=fields(old,regionKeys);if(old.water)this.profileWanted=old.analysis;old.playing=false;this.switching=true;
     const match=(a:RegionSpec,b:RegionSpec)=>a.event===b.event&&a.site===b.site&&Boolean(a.coastLesson)===Boolean(b.coastLesson)&&a.theme===b.theme;
     const cached=this.spare&&match(this.spare.spec,spec)?this.spare:undefined;
     if(cached)this.spare=undefined;
@@ -286,7 +286,7 @@ export class Observatory {
     try{
       if(!cached){this.enrich(next);await next.init();}
       if(this.revision!==token){next.dispose();return;}
-      Object.assign(next,settings);next.playing=playing;next.analysis=Boolean(old.analysis&&next.water);
+      Object.assign(next,settings);next.playing=playing;next.analysis=Boolean(this.profileWanted&&next.water);
       next.cameraView(!next.water&&["water","ocean","coast"].includes(view)?"cut":view);next.update(0);
       if(!cached){const compiling=performance.now();await this.world.gl.compileAsync(next.scene,next.camera);next.timings.warmShaderMs=performance.now()-compiling;}
       if(this.revision!==token){next.dispose();return;}
@@ -405,5 +405,5 @@ export class Observatory {
     const caption=$("g-split-caption");if(caption){caption.hidden=!t.compare;caption.textContent=t.compare?scenarios[t.scenario].label+"　 /　 "+scenarios[t.second].label:"";}
     return rendered;
   }
-  private timeDiagnostics(){const t=this.timeline;return t?{year:t.year,scenario:t.scenario,compare:t.compare,timeReady:t.ready,timeError:t.error,rigid:t.reconstruction.ready,tracking:t.tracking,tracked:t.reconstruction.at(Math.abs(t.year),t.tracking)?.v.toArray(),second:t.second}:{};}
+  private timeDiagnostics(){const t=this.timeline;return t?{year:t.year,scenario:t.scenario,compare:t.compare,futureLines:t.showBoundaries,timeReady:t.ready,timeError:t.error,rigid:t.reconstruction.ready,tracking:t.tracking,tracked:t.reconstruction.at(Math.abs(t.year),t.tracking)?.v.toArray(),second:t.second}:{};}
 }

@@ -35,6 +35,7 @@ jobs:
           npx playwright install chromium
           G51_PHYSICS_LOG=test-results/mac/G51/Mechanik.json node tests/g51-physics.mjs
           node tests/g51-time.mjs > test-results/mac/G51/Zeitreise.log
+          G521_OUT=test-results/mac/G521 node tests/g521-observation.mjs
           G521_OUT=test-results/mac/G521 node tests/g521-storage.mjs
           G521_OUT=test-results/mac/G521 node tests/g521-water.mjs
           G521_OUT=test-results/mac/G521 node tests/g521-geometry.mjs

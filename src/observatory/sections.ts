@@ -22,7 +22,7 @@ function material(kind:Rock,r:RegionalScene,accreted=false){
   };return m;
 }
 // A closed solid, with separately shaded cap, base, exposed cross-section and side faces.
-function solid(r:RegionalScene,kind:Rock,side:number,point:(u:number,v:number,z:number)=>[number,number],label?:string){
+function solid(r:RegionalScene,kind:Rock,side:number,point:(u:number,v:number,z:number)=>[number,number],label?:string,columns=64){
   const pos:number[]=[],indices:number[]=[],parameters:number[]=[];
   function face(nx:number,ny:number,coord:(u:number,v:number)=>[number,number,number],reverse=false){
     const start=pos.length/3;
@@ -31,8 +31,8 @@ function solid(r:RegionalScene,kind:Rock,side:number,point:(u:number,v:number,z:
       if(i<nx&&j<ny){const k=start+j*(nx+1)+i,l=k+nx+1;indices.push(...(reverse?[k,l,k+1,l,l+1,k+1]:[k,k+1,l,k+1,l+1,l]));}
     }
   }
-  face(64,8,(u,v)=>[u,v,0],true);face(64,8,(u,v)=>[u,v,-4.5]);
-  face(64,12,(u,w)=>[u,0,-4.5*w]);face(64,12,(u,w)=>[u,1,-4.5*w],true);
+  face(columns,8,(u,v)=>[u,v,0],true);face(columns,8,(u,v)=>[u,v,-4.5]);
+  face(columns,12,(u,w)=>[u,0,-4.5*w]);face(columns,12,(u,w)=>[u,1,-4.5*w],true);
   face(8,12,(v,w)=>[0,v,-4.5*w]);face(8,12,(v,w)=>[1,v,-4.5*w],true);
   const g=new T.BufferGeometry();g.setIndex(indices);g.setAttribute("position",new T.Float32BufferAttribute(pos,3));g.computeVertexNormals();
   g.setAttribute("geologyCoord",g.attributes.position.clone());
@@ -43,18 +43,27 @@ function solid(r:RegionalScene,kind:Rock,side:number,point:(u:number,v:number,z:
 }
 export function geologySolids(r:RegionalScene){
   const f=r.faultModel,p=r.spec.process;const floor=-5.8;
-  if(f.kind==="interface"||f.kind==="thrust"){
+  if(f.distributedSlip){
     const thrust=f.kind==="thrust";
     const contact=(x:number,z:number)=>Math.min(r.height(x,z),f.interfaceY(x));
     const lower: [Rock,number,number][]=thrust?[["continental",0,1.25],["mantle",1.25,2.8],["warm",2.8,7]]:[["basalt",0,.24],["mantle",.24,.85],["warm",.85,7]];
     for(const end of [-6,6]){
+      // Match every solver column, including the extra node at the exact trench.
+      const grid=r.water?[f.trace,...Array.from({length:r.water.cells},(_,i)=>-6+i*r.water!.dx)
+        .filter(x=>(x-f.trace)*Math.sign(end-f.trace)>1e-7).sort((a,b)=>(a-b)*Math.sign(end-f.trace))]:undefined;
+      const columns=grid?grid.length-1:64;
+      if(columns<1)continue;
+      const at=(u:number)=>grid?grid[Math.round(u*columns)]:T.MathUtils.lerp(f.trace,end,u);
+      const exposed=Array.from({length:columns+1},(_,i)=>at(i/columns)).some(x=>
+        Array.from({length:13},(_,j)=>-4.5*j/12).some(z=>r.height(x,z)>f.interfaceY(x)+1e-7));
       for(const [kind,a,b] of lower)solid(r,kind,-f.dipSign,(u,v,z)=>{
-        const x=T.MathUtils.lerp(f.trace,end,u);return [x,contact(x,z)-T.MathUtils.lerp(a,b,v)];});
-      for(const [kind,a,b] of [["sediment",0,.10],[p==="arc"?"basalt":"continental",.10,.65],[thrust?"mantle":"wedge",.65,1]] as const)
+        const x=at(u);return [x,contact(x,z)-T.MathUtils.lerp(a,b,v)];},undefined,columns);
+      if(!exposed)continue;
+      for(const [kind,a,b] of [["sediment",0,.10],[p==="arc"||p==="ridge"?"basalt":"continental",.10,.65],[thrust?"mantle":"wedge",.65,1]] as const)
         solid(r,kind,f.dipSign,(u,v,z)=>{
-          const x=T.MathUtils.lerp(f.trace,end,u),surface=r.height(x,z),bottom=contact(x,z),thickness=surface-bottom;
+          const x=at(u),surface=r.height(x,z),bottom=contact(x,z),thickness=surface-bottom;
           const edge=(k:number)=>k===1?bottom:surface-Math.min(k,thickness*k/.65);
-          return [x,T.MathUtils.lerp(edge(a),edge(b),v)];});
+          return [x,T.MathUtils.lerp(edge(a),edge(b),v)];},undefined,columns);
     }
     return;
   }
