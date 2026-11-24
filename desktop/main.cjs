@@ -34,13 +34,13 @@ function createWindow() {
   win.loadURL(origin + "/").catch(error => dialog.showErrorBox("GeoRisiko konnte nicht starten", error.message));
 }
 
-async function deviceProbe() {
+async function deviceProbe(milliseconds) {
   if (!window || measuring) return;
   const win = window;
   measuring = true;
   try {
     const before = app.getAppMetrics();
-    const report = await win.webContents.executeJavaScript("window.geoDeviceProbe(10000)");
+    const report = await win.webContents.executeJavaScript("window.geoDeviceProbe("+milliseconds+")");
     const after = app.getAppMetrics();
     const { arch, versions } = process;
     const result = { ...report, arch, macOS: process.getSystemVersion(), electron: versions.electron,
@@ -65,7 +65,8 @@ function menu() {
     { label:"Ansicht", role:"windowMenu", submenu:[{label:"Modellfenster öffnen",accelerator:"CmdOrCtrl+O",click:createWindow},{role:"minimize",label:"Im Dock ablegen"},{role:"zoom",label:"Fenstergröße ändern"},{role:"front",label:"Alle Fenster nach vorne"},{role:"close",label:"Fenster schließen"}] },
     { label:"Präsentation", submenu:[{label:"Vollbild wechseln",accelerator:"Control+Command+F",click:togglePresentation}] },
     { label:"Hilfe", submenu:[{label:"Modellhinweise und Quellen",click:()=>window?.webContents.executeJavaScript("document.getElementById('info').click()")},
-      {label:"Geräteprüfung starten (10 Sekunden)",click:deviceProbe}] }
+      {label:"Kurzprüfung (10 Sekunden)",click:()=>deviceProbe(10000)},
+      {label:"Ausführliche Unterrichtsprüfung (15 Minuten)",click:()=>deviceProbe(900000)}] }
   ]));
 }
 app.whenReady().then(async () => {

@@ -40,7 +40,7 @@ async function capture(directory, version) {
     );
     await p.addStyleTag({
       content:
-        ".tools,.orientation,#modelnote,.annotations {visibility:hidden}",
+        ".tools,.orientation,#modelnote,.annotations,#obswitch {visibility:hidden}",
     });
     const pictures = {};
     const shot = async (name) => {

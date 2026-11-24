@@ -1,3 +1,4 @@
+import {Observation} from "./observatory/observation";
 import { Observatory } from "./observatory/panel";
 import { reference } from "./observatory/regional";
 import { deviceProbe } from "./device-probe";
@@ -111,7 +112,7 @@ function warn(s: string) {
 }
 function infoPage() {
   if(observatory?.mode){
-    content.innerHTML=`<h2 id="dialogTitle">Daten und Modellgrenzen</h2><p>Die Ereignispunkte sind Beobachtungen. Historische Flächen sind Rekonstruktionen. Die Zukunftsmodelle zeigen mögliche Entwicklungen. Bruch, Wasserwellen und Siedlungen erklären Prozesse in vereinfachter Form.</p><p>Regionale Bilder: EOxCloudless 2024 by EOX, mit modifizierten Copernicus-Sentinel-Daten (CC BY-NC-SA 4.0). Weitere lokale Quellen, Rechte und Modellgrenzen stehen im Katalog.</p><a href="${localAsset("licenses/G5-Daten.md")}">Wissenschaftlicher Daten- und Quellenkatalog</a>`;
+    content.innerHTML=`<h2 id="dialogTitle">Daten und Modellgrenzen</h2><p>Die Ereignispunkte sind Beobachtungen. Historische Flächen sind Rekonstruktionen. Die Zukunftsmodelle zeigen mögliche Entwicklungen. Bruch, Wasserwellen und Siedlungen erklären Prozesse in vereinfachter Form.</p><p>Regionale Bilder: EOxCloudless 2024 by EOX, mit modifizierten Copernicus-Sentinel-Daten (CC BY-NC-SA 4.0). Das Profil vor Japan nutzt 13 seismische Tiefen aus USGS Slab2. Die Punkte im Tiefenschnitt sind 176 dokumentierte Erdbeben. GNSS-Stationen liefern Bewegungsraten im globalen Bezugssystem IGS14. Weitere Quellen und Rechte stehen im Katalog.</p><a href="${localAsset("licenses/G5-Daten.md")}">Wissenschaftlicher Daten- und Quellenkatalog</a>`;
     openDialog();return;
   }
   if (world?.mode === "nyos") {
@@ -330,7 +331,9 @@ function updateNote() {
   }
 }
 function navigate(mode: World["mode"]) {
+  const leavingRegional=Boolean(observatory?.mode);
   observatory?.close();
+  if(leavingRegional&&(mode==="plates"||mode==="globe"))world.nav.fly({lat:15,lon:-20,d:16000,tilt:0,bearing:0},true);
   if (mode === "inside") world.inside();
   else if (mode === "nyos") world.visit("nyos");
   else if (mode === "plates") world.plates();
@@ -437,13 +440,14 @@ async function boot() {
     warn("Ersatzansicht · lokale Weltkarte");
     return;
   }
+  const observation=new Observation();
   observatory=new Observatory(world,side,navigate);
   for(const [id,run] of [["earthquake",()=>observatory.openMap()],["volcano",()=>observatory.openRegion(reference("hawaii","volcano"))],["risk",()=>observatory.openRegion(reference("san","risk"))]] as const){
     $("nav-"+id).classList.add("obsNav");$("nav-"+id).onclick=run;
   }
   renderSide();
   world.onLayer = i => {
-    if (labels || released.has(i)) showDefinition(layers[i]);
+    if (!observation.active && (labels || released.has(i))) showDefinition(layers[i]);
     else select(i);
   };
   world.onBoundary = () => { if (world.mode === "plates") renderSide(); };
@@ -495,6 +499,7 @@ async function boot() {
   let lastHud = 0;
   let lastBearing = NaN;
   world.onFrame = () => {
+    observation.update();
     if(observatory.mode){if(status.textContent)status.textContent="";return;}
     if ((world.mode==="inside" && (labels || released.size)) || (world.mode==="plates" && (world.plateOptions.names || world.singlePlateName))) updatePins();
     const now = performance.now();

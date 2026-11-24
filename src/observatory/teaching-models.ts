@@ -1,3 +1,5 @@
+import zao from "./zao.json";
+import {eruption} from "./eruption";
 import * as T from "three";
 import type { RegionalScene, Theme } from "./regional";
 
@@ -44,66 +46,72 @@ function flow(r:RegionalScene,c:T.CatmullRomCurve3,color:number,id:string,count:
 }
 function mantle(r:RegionalScene){
   const h=(x:number)=>r.height(x,0),base=(x:number)=>h(x)-.33,lower=(x:number)=>base(x)-.65;
-  ribbon(r,base,h,0xb5a47c,"crust");ribbon(r,lower,base,0x758a83,"rigid");ribbon(r,x=>lower(x)-2.8,lower,0xb6795d,"mantle");
-  if(r.spec.theme==="lithosphere")return;
+  if(r.spec.theme==="lithosphere"){ribbon(r,base,h,0xb5a47c,"crust");ribbon(r,lower,base,0x758a83,"rigid");ribbon(r,x=>lower(x)-2.8,lower,0xb6795d,"mantle");return;}
   const curves:[[T.Vector3,T.Vector3,T.Vector3],number,string][]=[
     [[vec(-2.5,-2.7),vec(-3,-1.6),vec(-2.65,-.82)],0xe9b477,"heat"],
     [[vec(-2.5,-.48),vec(-1.8,-.54),vec(-.85,-.65)],0xa9ceb5,"ridge"],
-    [[vec(.6,-.6),vec(1.5,-1.23),vec(2.25,-2.45)],0x9ac7cc,"pull"]];
+    [[vec(.6,r.faultModel.interfaceY(.6)-.16),vec(1.5,r.faultModel.interfaceY(1.5)-.16),vec(2.7,r.faultModel.interfaceY(2.7)-.16)],0x9ac7cc,"pull"]];
   for(const [pts,color,id] of curves){const c=arrow(pts,color,id,r.section);flow(r,c,color,id,6,0,1);}
 }
 function magnetic(r:RegionalScene){
-  const palette=[chips(0xb6c3a9),chips(0x555e5d)],widths=[.35,.16,.49,.26,.62,.22,.35,.52];
-  for(const sign of [-1,1]){let cursor=0;for(let i=0;i<widths.length;i++){
-    const w=widths[i],x=sign*(cursor+w/2);cursor+=w;
-    const stripe=object(new T.BoxGeometry(w,.11,1.3),palette[i%2],"stripe");r.scene.add(stripe);
-    r.onAnimate(t=>{const dx=x+sign*t*.8;stripe.position.set(dx,r.height(dx,-.7)+.09,-.7);});}
-    const fresh=object(new T.BoxGeometry(1,.095,1.3),palette[0],"stripe");r.scene.add(fresh);r.onAnimate(t=>{fresh.scale.x=Math.max(.002,t*.8);fresh.position.set(sign*t*.4,r.height(0,-.7)+.075,-.7);});
+  const materials=[chips(0xc1b698),chips(0x495c66)];
+  // Each strip freezes the field polarity at birth. New material appears on both sides of x=0.
+  const intervals=[[-1,-.65],[-.65,-.42],[-.42,0],[0,.14],[.14,.43],[.43,.53],[.53,.82],[.82,1]];
+  for(const sign of [-1,1])for(const [i,[birth,end]] of intervals.entries()){
+    const band=object(new T.BoxGeometry(1,.10,1.0),materials[i%2],"stripe");r.scene.add(band);
+    r.onAnimate(t=>{const young=Math.max(0,t-end)*2.5,old=(t-birth)*2.5;band.visible=old>0;
+      band.scale.x=Math.max(.001,old-young);const x=sign*(old+young)*.5;
+      band.position.set(x,r.height(x,-.55)+.075,-.55);});
   }
   flow(r,new T.CatmullRomCurve3([vec(.1,-1.7),vec(-.1,-.7),vec(0,r.height(0,0))]),0xeeb68a,"melt",8,.01,1);
 }
 function volcano(r:RegionalScene){
-  const k=r.spec.process,vent=k==="subduction"||k==="arc"?-2.7:0,top=r.height(vent,0);
-  if(k==="subduction"||k==="arc")flow(r,new T.CatmullRomCurve3([vec(-2,-2.35),vec(-2.17,-1.85),vec(-2.7,-1.45)]),0x8bd2d7,"fluid",7,.04,.61);
-  const plume=new T.CatmullRomCurve3([vec(vent+.2,-2.45),vec(vent-.17,-1.64),vec(vent,-.93),vec(vent,top+.03)]);
+  const k=r.spec.process,f=r.faultModel,vent=r.spec.arcTransect?zao.vent:k==="subduction"||k==="arc"?T.MathUtils.clamp(f.trace+f.dipSign*5.4,-4.8,4.8):0,top=r.height(vent,r.spec.arcTransect?0:-.33);
+  if(k==="subduction"||k==="arc")flow(r,new T.CatmullRomCurve3([vec(vent,f.interfaceY(vent)),vec(vent-.11,(f.interfaceY(vent)+top)/2),vec(vent,top-.93)]),0x8bd2d7,"fluid",7,.04,.61);
+  const plume=new T.CatmullRomCurve3([vec(vent+.2,top-2.15),vec(vent-.17,top-1.47),vec(vent,top-.93),vec(vent,top+.03)]);
   flow(r,plume,0xf2ad6c,k==="hotspot"?"hotspot":"melt",15,.12,.93);
   const reservoir=object(new T.IcosahedronGeometry(1,2),chips(0xb76d49),"chamber");reservoir.position.set(vent,-.98,.16);r.section.add(reservoir);
-  const cone=object(new T.ConeGeometry(.58,.65,40),chips(0x655d4d),"lava");r.scene.add(cone);
-  r.onAnimate(t=>{const f=T.MathUtils.smoothstep(t,.4,.95);reservoir.scale.set(.34+.28*f,.11+.075*f,.075);cone.scale.set(.85+.3*f,.1+.9*f,.85+.3*f);
-    cone.position.set(vent,top+cone.scale.y*.325,-.08);});
-  const lava=line(Array.from({length:28},(_,i)=>vec(vent+i/60,top+.63-i*.022,-.12+i*.008)),0xf4a16a,"lava");r.scene.add(lava);r.onAnimate(t=>{lava.visible=t>.67;lava.geometry.setDrawRange(0,Math.floor(28*T.MathUtils.smoothstep(t,.67,.94)));});
-  if(k==="hotspot"){
-    for(let i=0;i<5;i++){const mound=object(new T.ConeGeometry(.5,.68,32),chips(0x698063),"hotspot");r.scene.add(mound);r.onAnimate(t=>{const age=t*4.4-i;mound.visible=age>=0;
-      const z=-1.4+Math.max(0,age)*1.16,x=.32*Math.sin(age),f=T.MathUtils.clamp(age*2.7,.03,1);mound.scale.setScalar(f);mound.position.set(x,r.height(x,z)+.33*f,z);});}
-  }
+  reservoir.position.y=top-.91;r.onAnimate(t=>{const f=T.MathUtils.smoothstep(t,.18,.66);reservoir.scale.set(.34+.25*f,.11+.09*f,.095);});
+  eruption(r,vent,top);
 }
 function settlements(r:RegionalScene){
   const walls=chips(0xd8cbb1),roof=chips(0x805643),brace=chips(0x508980);
   const wallGeo=new T.BoxGeometry(.20,.28,.2),roofGeo=new T.ConeGeometry(.18,.105,4),braceGeo=new T.BoxGeometry(.027,.33,.025);
   const buildings:T.Group[]=[],baseX:number[]=[];
+  const sediment=object(new T.BoxGeometry(6.8,.27,.56,44,2,4),chips(0xb49b68),"shelter");
+  sediment.userData.explanation={name:"Lockerer Untergrund",answer:"Lockere Ablagerungen können die Erschütterung am Standort verstärken."};
+  const ground=sediment.geometry.attributes.position;
+  for(let i=0;i<ground.count;i++){const x=ground.getX(i),z=ground.getZ(i)+.19;ground.setXYZ(i,x,ground.getY(i)+r.height(x,z)-.15,z);}
+  sediment.geometry.computeVertexNormals();r.section.add(sediment);
   for(let i=0;i<30;i++){
-    const col=i%6,row=Math.floor(i/6);const x=-3.4+col*1.23,z=-2.02+row*.72;
+    const col=i%6,row=Math.floor(i/6),x=r.spec.coastLesson?-3.6+col*.15:-3.4+col*1.23,z=-2.04+row*.43;
     const g=new T.Group();g.userData.explanation=text.shelter;g.position.set(x,r.height(x,z),z);
     const wall=object(wallGeo,walls,"shelter"),cap=object(roofGeo,roof,"shelter");wall.position.y=.14;cap.position.y=.33;cap.rotation.y=Math.PI/4;
     const beam=object(braceGeo,brace,"shelter");beam.position.set(0,.15,.105);beam.rotation.z=.48;g.add(wall,cap,beam);r.settlement.add(g);buildings.push(g);baseX.push(x);
   }
-  const route=line(Array.from({length:28},(_,i)=>{const x=1-i*.16,z=-1.1+Math.sin(i/7)*.38;return vec(x,r.height(x,z)+.14,z);}),0xffde72,"route");r.settlement.add(route);
-  const beacon=object(new T.ConeGeometry(.12,.45,6),chips(0xe3a349),"route");beacon.position.set(1,r.height(1,-1.1)+.22,-1.1);r.settlement.add(beacon);
-  const walkers=new T.InstancedMesh(new T.SphereGeometry(.045,6,5),chips(0xf5d78a),10);r.settlement.add(walkers);const dummy=new T.Object3D();
-  r.onAnimate(t=>{route.visible=r.safeRoute&&r.exposure!=="empty";beacon.visible=r.warning&&r.exposure!=="empty";walkers.visible=route.visible&&r.warning;
-    for(let i=0;i<10;i++){const phase=T.MathUtils.clamp((t-.38)*1.8+i*.026,0,1),x=1-phase*4.32,z=-1.1+Math.sin(phase*27/7)*.38;dummy.position.set(x,r.height(x,z)+.17,z);dummy.updateMatrix();walkers.setMatrixAt(i,dummy.matrix);}walkers.instanceMatrix.needsUpdate=true;
-    buildings.forEach((g,i)=>{g.position.x=r.relocate?baseX[i]*.62-1.7:baseX[i];g.position.y=r.height(g.position.x,g.position.z);
-    const x=g.position.x;g.visible=r.exposure==="dense"||(r.exposure==="sparse"&&i%5===0);g.children[2].visible=r.protection;
-    const rel=(t-.42)*17.-Math.abs(x)*.69,shaking=rel>0?Math.sin(rel*13)*Math.exp(-rel*1.22):0;
-    const ground=x>0?1.65:.77;g.rotation.z=shaking*.13*ground*(r.protection?.44:1);});});
+  const routeStart=r.spec.coastLesson?-3.12:-1.5,routeEnd=r.spec.coastLesson?-5.03:-3.6;
+  const way=(t:number)=>{const x=T.MathUtils.lerp(routeStart,routeEnd,t),z=-1.35+.24*Math.sin(t*Math.PI);return vec(x,r.height(x,z)+.09,z);};
+  const route=line(Array.from({length:28},(_,i)=>way(i/27)),0xffde72,"route");r.settlement.add(route);
+  const beacon=object(new T.ConeGeometry(.12,.45,6),chips(0xe3a349),"route");beacon.position.copy(way(0));beacon.position.y+=.16;r.settlement.add(beacon);
+  const walkers=new T.InstancedMesh(new T.SphereGeometry(.052,7,5),chips(0xffdf85),10);r.settlement.add(walkers);const dummy=new T.Object3D();
+  const service=object(new T.BoxGeometry(.35,.10,.19),chips(0x5e9771),"shelter");service.userData.explanation={name:"Versorgung wiederherstellen",answer:"Mit Vorbereitung kann die Versorgung nach dem Ereignis früher wieder funktionieren."};service.position.copy(way(1));r.settlement.add(service);
+  r.onAnimate(t=>{sediment.visible=r.soil==="loose"&&!r.spec.coastLesson;route.visible=r.safeRoute&&r.exposure!=="empty";beacon.visible=r.warning&&r.exposure!=="empty";walkers.visible=route.visible&&r.warning;
+    const available=t<.49||t>(r.warning&&r.safeRoute?.77:.94);service.visible=r.exposure!=="empty";(service.material as T.MeshStandardMaterial).color.setHex(available?0x729f71:0x655d55);
+    for(let i=0;i<10;i++){dummy.position.copy(way(T.MathUtils.clamp((t-.36)*2.3+i*.016,0,1)));dummy.updateMatrix();walkers.setMatrixAt(i,dummy.matrix);}walkers.instanceMatrix.needsUpdate=true;
+    buildings.forEach((g,i)=>{const x=baseX[i]-(r.relocate&&r.spec.coastLesson?1.55:0),z=g.position.z,h=r.height(x,z);
+      const d=r.faultModel.offset(r.deformed,x,h,z,x>r.faultModel.trace?1:-1,t);
+      g.position.set(x+d.x,h+d.y,z);g.visible=r.exposure==="dense"||(r.exposure==="sparse"&&i%5===0);
+      g.children[2].visible=r.protection;
+      g.rotation.z=r.faultModel.shaking(t,x,h,z)*(r.soil==="loose"?2.3:1)*(r.protection?.56:1);
+    });
+  });
 }
 function witness(r:RegionalScene){
   for(const s of [-1,1]){
     const p=Array.from({length:40},(_,i)=>{const x=s*(i/13+.012),z=-.80+.07*Math.sin(x*2);return vec(x,r.height(x,z)+.022,z);});
     const seam=line(p,0xe7dfae,"marker");r.witnesses.add(seam);
     r.onAnimate(t=>{const vals=seam.geometry.attributes.position as T.BufferAttribute;
-      for(let i=0;i<p.length;i++){const pt=p[i],load=T.MathUtils.smoothstep(t,0,.35),release=T.MathUtils.smoothstep(t,.36,.49),l=Math.exp(-Math.abs(pt.x)*.85);
-        const z=pt.z+s*.33*load*(1-l+l*release);vals.setXYZ(i,pt.x,r.height(pt.x,z)+.024,z);}vals.needsUpdate=true;});
+      for(let i=0;i<p.length;i++){const pt=p[i],y=r.height(pt.x,pt.z),d=r.faultModel.offset(r.deformed,pt.x,y,pt.z,s,t);vals.setXYZ(i,pt.x+d.x,y+.025+d.y,pt.z+d.z);}vals.needsUpdate=true;});
   }
 }
 export function addTeachingModels(r:RegionalScene){
@@ -117,17 +125,6 @@ export function addTeachingModels(r:RegionalScene){
         if(r.spec.process==="ridge")magnetic(r);
         else if(["subduction","arc"].includes(r.spec.process))volcano(r);
         else if(r.spec.process==="transform"||r.spec.process==="oceanTransform")witness(r);
-        else {
-          const h=(x:number)=>r.height(x,0),collision=r.spec.process==="collision",rift=r.spec.process==="rift";
-          const thick=(x:number)=>.54+(collision?.77*Math.exp(-x*x*.29):0);
-          const root=ribbon(r,x=>h(x)-thick(x),h,0x987d61,"crust");
-          for(const sign of [-1,1]){
-            const slope=rift?-sign:sign;
-            r.section.add(line([vec(1.5*sign,h(1.5*sign),.13),vec(1.5*sign+1.35*slope,-1.9,.13)],0x544440,"rigid"));
-            arrow([vec(sign*3.1,-.35,.19),vec(sign*2.8,-.35,.19),vec(sign*(rift?3.65:2.25),-.35,.19)],0xa4c7bd,"rigid",r.section);
-          }
-          r.onAnimate(t=>{root.scale.y=1+(collision?.26:rift?-.10:.09)*t;});
-        }
         r.reframe(true);break;
       case "earthquake":if(r.spec.process==="transform")witness(r);break;
     }
