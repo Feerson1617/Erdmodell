@@ -50,7 +50,10 @@ export class WaterSection{
   bed(x:number,t:number){return this.sample(x,t)-this.sample(x,t,true);}
   private timeline?:{t:number;newlyWet:number;shore:number;deepest:number}[];
   get shorelineHistory(){
-    return this.timeline??=Array.from({length:121},(_,i)=>({t:i/120,...this.extent(i/120)}));
+    return this.timeline??=Array.from({length:121},(_,i)=>{
+      // Compare states that can also be selected on the classroom time slider.
+      const t=Math.round(i*1000/120)/1000;return {t,...this.extent(t)};
+    });
   }
   extent(t:number){
     let newlyWet=0,shore=6,deepest=0;
