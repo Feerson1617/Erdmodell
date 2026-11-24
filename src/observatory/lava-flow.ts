@@ -27,7 +27,8 @@ float cooled(vec2 p){
  vec2 i=floor(p),f=fract(p);float a=9.,b=9.;
  for(int j=-1;j<=1;j++)for(int k=-1;k<=1;k++){vec2 d=vec2(j,k);vec2 delta=d+.13+.74*vec2(grainHash(i+d),grainHash(i+d+31.9))-f;float r=dot(delta,delta);if(r<a){b=a;a=r;}else b=min(b,r);}
  return sqrt(b)-sqrt(a);
-}`;
+}
+`;
 export function lavaTongue(width:number){
   const rows=64,cols=8,p=new T.Float32BufferAttribute(new Float32Array((rows+1)*(cols+1)*3),3),uv=[],idx=[];
   for(let i=0;i<=rows;i++)for(let j=0;j<=cols;j++){uv.push(i/rows,j/cols);if(i<rows&&j<cols){const k=i*(cols+1)+j;idx.push(k,k+1,k+cols+1,k+1,k+cols+2,k+cols+1);}}
