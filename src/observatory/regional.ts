@@ -164,9 +164,9 @@ export class RegionalScene {
     if(this.spec.site){
       const base="data/g5/terrain/"+this.spec.site;
       const asset=(suffix:string)=>localAsset(this.spec.arcTransect?"data/g51/zao/"+(suffix===".i16"?"terrain.i16":suffix.slice(1)):base+suffix);
-      const enhanced=["san","japan","island"].includes(this.spec.site)&&!this.spec.arcTransect;
+      const photo=["san","japan","island"].includes(this.spec.site)&&!this.spec.arcTransect;
       const region=this.spec.arcTransect?"zao":this.spec.site;
-      const [response,tex,normal,rough,farHeight,farImage,lib,relief]=await Promise.all([fetch(asset(".i16")),enhanced?loadTexture(region+"-surface.webp",true):new T.TextureLoader().loadAsync(asset("-surface.webp")),new T.TextureLoader().loadAsync(asset("-normal.webp")),new T.TextureLoader().loadAsync(asset("-rough.webp")),fetch(asset("-context.i16")),enhanced?loadTexture(region+"-context.webp",true):new T.TextureLoader().loadAsync(asset("-context.webp")),enhanced?materials():undefined,enhanced?loadTexture(region+"-relief.webp"):undefined]);
+      const [response,tex,normal,rough,farHeight,farImage,lib,relief]=await Promise.all([fetch(asset(".i16")),photo?loadTexture(region+"-surface.webp",true):new T.TextureLoader().loadAsync(asset("-surface.webp")),new T.TextureLoader().loadAsync(asset("-normal.webp")),new T.TextureLoader().loadAsync(asset("-rough.webp")),fetch(asset("-context.i16")),photo?loadTexture(region+"-context.webp",true):new T.TextureLoader().loadAsync(asset("-context.webp")),materials(),loadTexture(region+"-relief.webp")]);
       if(this.disposed){tex.dispose();normal.dispose();rough.dispose();farImage.dispose();relief?.dispose();return;}
       if(!response.ok)throw Error("Höhendaten fehlen");
       const [heightBytes,contextBytes]=await Promise.all([response.arrayBuffer(),farHeight.arrayBuffer()]);const heights=new Int16Array(heightBytes);if(heights.length!==193*145)throw Error("Höhenraster unvollständig");
@@ -177,10 +177,11 @@ export class RegionalScene {
       const heights=await globalWindows;if(this.disposed)return;
       const index=(this.spec.geology.id-1)*49;this.windows=heights.subarray(index,index+49);
     }
+    if(!this.spec.site){this.lib=await materials();if(this.disposed)return;this.sunlight.castShadow=true;}
     this.timings.dataMs=performance.now()-start;const build=performance.now();
     this.faultModel=new Fault(this.spec,(x,z)=>this.height(x,z));if(this.faultModel.waterEvent)this.water=new WaterSection(this.faultModel);this.timings.solverMs=performance.now()-build;
     this.nearSurface=this.height(this.faultModel.hx,0);this.ui.focus.value=this.faultModel.hy;
-    this.buildSurface();this.addVectors();this.addTrace();if(this.lib&&this.colorMap)groundCover(this,this.lib,this.colorMap);else this.groundDetails();this.buildQuake();this.buildExtras();this.ready=true;this.update(0);this.timings.geometryMs=performance.now()-build-this.timings.solverMs;
+    this.buildSurface();this.addVectors();this.addTrace();if(this.lib&&this.colorMap&&this.spec.site)groundCover(this,this.lib,this.colorMap);else this.groundDetails();this.buildQuake();this.buildExtras();this.ready=true;this.update(0);this.timings.geometryMs=performance.now()-build-this.timings.solverMs;
   }
   private surround(h:Int16Array,image:T.Texture){
     this.contextHeights=h;

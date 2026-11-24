@@ -132,6 +132,10 @@ function infoPage() {
   openDialog();
 }
 function openDialog() {
+  if(content.querySelector("#dialogTitle")?.textContent?.match(/Modell|Quellen/i)&&!content.querySelector("[data-g6-credit]")){
+    const p=document.createElement("p");p.dataset.g6Credit="";p.textContent="Geländefarben stammen aus Satellitenbildern. Einzelne Pflanzen, Gesteinsoberflächen und Lavawege zeigen typische Formen. ";
+    const link=document.createElement("a");link.href=localAsset("licenses/G6-Bildquellen.txt");link.target="_blank";link.rel="noopener";link.textContent="Bildquellen und Lizenzen";p.append(link);content.append(p);
+  }
   if (!dialog.open) dialog.showModal();
   $("closeDialog").focus();
 }

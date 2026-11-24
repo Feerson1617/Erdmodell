@@ -55,9 +55,11 @@ export function decorateTerrain(m:T.MeshStandardMaterial,lib:Library,relief:T.Te
       vec2 sl=dem.rg*2.-1.;float slope=length(sl);
       float rock=smoothstep(.14,.64,slope+.10*sin(ground6.x*2.7+.8*ground6.z));
       vec2 face=ground6.xz+vec2(.31*ground6.y,-.57*ground6.y);
+      vec2 cliff=abs(sl.x)>abs(sl.y)?ground6.zy:ground6.xy;
       vec3 soil=fieldSample(faciesColor,face*1.8,${profile[0]}.).rgb;
       vec3 gravel=detailGrade<.5?soil:fieldSample(faciesColor,face*2.9+.31,${profile[1]}.).rgb;
       vec3 roughTex=detailGrade<.5?vec3(.5,.5,.89):fieldSample(faciesRelief,face*1.8,${profile[0]}.).rgb;
+      if(detailGrade>1.5)gravel=mix(gravel,fieldSample(faciesColor,cliff*2.6,${profile[1]}.).rgb,smoothstep(.34,.77,slope));
       vec3 nearColor=mix(soil,gravel,rock);
       float contrast=clamp(pow(luma6(nearColor)+.03,.6)*2.50,.50,1.54);
       float local=1.-smoothstep(.72,1.,max(abs(ground6.x)/6.,abs(ground6.z)/4.5));

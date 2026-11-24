@@ -1,0 +1,34 @@
+# Daten und grafische Ergänzungen
+
+| Quelle | Gebiet und Raster | Verwendung und Weitergabe |
+|---|---|---|
+| EOxCloudless 2024 by EOX IT Services GmbH, contains modified Copernicus Sentinel data 2024 | Bestehende Sentinel-2-Fenster, gedrehte Abtastung und eingeblendete Bathymetrie. Parkfield, Reykjanes und Tōhoku werden aus 16 Kacheln in jeweils 3072 × 2304 Pixel reprojiziert. Der USGS-NAIP-Export für Parkfield lieferte HTTP 502. Für den ausgelieferten Ausschnitt wird Sentinel-2 verwendet. | CC BY-NC-SA 4.0. Die bearbeiteten Bilder bleiben separat unter derselben Lizenz. Die nichtkommerzielle Bildungsweitergabe schließt Repository, App und Prüf-HTML ein. [EOX](https://cloudless.eox.at/) · [Lizenz](https://creativecommons.org/licenses/by-nc-sa/4.0/) |
+| Mapzen Terrain Tiles, Terrarium, Datengeber laut Tilezen-Attribution | Dieselben regionalen Koordinaten wie die Modellraster. Feinere Abtastung für Hangnormalen, Horizontverschattung und Materialverteilung. | Die Quellenattribution der Höhenkacheln bleibt bestehen. Daten und Einzellizenzen sind im vorhandenen Herkunftsverzeichnis aufgeführt. [Tilezen](https://github.com/tilezen/joerd/blob/master/docs/attribution.md) |
+| NASA Visible Earth, Blue Marble Next Generation, Reto Stöckli und NASA Earth Observatory, NASA GIBS | Globale, wolkenfreie Erdoberfläche. Lokale Ableitung für die heutige Tagseite. | NASA-Erdbeobachtungsdaten mit Quellenangabe. Verwendung und Weitergabe als Kartenbild ohne NASA-Kennzeichen. [Blue Marble](https://earthobservatory.nasa.gov/features/BlueMarble) · [NASA-Bildnutzung](https://www.nasa.gov/nasa-brand-center/images-and-media/) |
+
+Die bekannten Modellhöhen, Störungsflächen, Wasserraster und historischen Rekonstruktionen bleiben die wissenschaftliche Grundlage. Gras, Gehölze, Lesesteine, Mineralgefüge und kleinräumige Wasserreflexe veranschaulichen typische Eigenschaften. Die Position einzelner Pflanzen und die Formen einzelner Gesteinskörner sind illustrative Ergänzungen. Neue selbst erzeugte Materialfelder und Modellgeometrien dieser Phase sind für freie Weitergabe unter CC0 1.0 gewidmet. [CC0](https://creativecommons.org/publicdomain/zero/1.0/)
+
+Copernicus DEM GLO-30, GEBCO und lokale Geländemessungen sind mögliche zusätzliche Höhenquellen. Für diese Grafikphase werden die gesicherten Höhen des mechanischen Modells weiterverwendet. Eine fachliche Umstellung der Kontaktgeometrien oder der Küstenrechnung würde eine eigene Kalibrierung verlangen.
+
+Poly Haven veröffentlicht die Oberflächen unter CC0. Verwendet werden *Withered Grass*, *Dry Ground Rocks*, *Lichen Rock*, *Dark Rock*, *Rock Face 03*, *Sandstone Cracks*, *Brown Mud Dry* und *Forest Ground 04*. Der Import liest die 1K-Farb-, OpenGL-Normalen- und Rauheitsbilder, prüft die Anbieterprüfsummen und verpackt sie mit umlaufenden Randpixeln in zwei lokale Atlanten. Diese Aufnahmen liefern illustrative Nahtexturen für Gelände, Schutt und die geologischen Modellkörper. Anbieter-URLs, SHA-256 und Kanalbelegung sind im Assetverzeichnis dokumentiert. [Poly-Haven-Lizenz](https://polyhaven.com/license)
+
+## Lokale Bilddateien
+
+Dateiname | Byte | SHA-256 | Herkunft und Nutzung
+botany.webp | 216420 | 44d26d51a81ec9e3f6014c3155997626898ec3e0af15fb57cfef6ecbd2582967 | Eigene CC0-Modelle · acht Pflanzengruppen · scripts/g6/botany.py
+earth-day.webp | 1656068 | 23af54483de1954ba679c8fe56823895b904e04f1b607be51f5113f748557650 | NASA Blue Marble Next Generation · earth-source.json · heutiger Globus
+facies-relief.webp | 4698768 | 498656f877cd0344ea254439c6c662e7139462702453293010159ccb89337f1e | Poly Haven · CC0 · facies-source.json · Farbe bzw. Normalen-RG und Rauheit-B
+facies.webp | 2914764 | d083b8c1a7f900e050905a4a1e7b729d408fbccc2677fc7bf141b8f3e56dcbb1 | Poly Haven · CC0 · facies-source.json · Farbe bzw. Normalen-RG und Rauheit-B
+hawaii-relief.webp | 338666 | e97f8c67e562ee153395bdc678f14a4af9679eebee7248b9013ecf6f42eac2f4 | Mapzen/Terrarium · hawaii-source.json · Hangnormalen und Horizontverschattung
+himalaya-relief.webp | 892946 | 613e60a6f166b127dbc4d053b9a03c92c52fef805e1a2b70424c43687a88d80b | Mapzen/Terrarium · himalaya-source.json · Hangnormalen und Horizontverschattung
+island-context.webp | 430280 | a868fdea77a4084a67fc230b84e3ed69fd2bd9a0028f44f0721ecaee4ea955e6 | EOX Sentinel-2 Cloudless 2024 · CC BY-NC-SA 4.0 · island-context-source.json · Landschaft
+island-relief.webp | 181618 | e6dc94e1e211594a0031fb963559b12b9d9a5e6dc3072a795961827ef2b8dd77 | Mapzen/Terrarium · island-source.json · Hangnormalen und Horizontverschattung
+island-surface.webp | 423098 | aa846717c89aa5a672e9ad9a60b1fc153b3d028856f6e563b113c734e61ed411 | EOX Sentinel-2 Cloudless 2024 · CC BY-NC-SA 4.0 · island-source.json · Landschaft
+japan-context.webp | 350230 | f0bccaef1bae84ad948e9e1ab8d0d8aac3e11c280b479d7b61bcc96f69d466a2 | EOX Sentinel-2 Cloudless 2024 · CC BY-NC-SA 4.0 · japan-context-source.json · Landschaft
+japan-relief.webp | 249032 | dbaf9c6b3a402b8bd18090aeaee3e7fb56a1eb92ab3f8cf066f294732dbd65ce | Mapzen/Terrarium · japan-source.json · Hangnormalen und Horizontverschattung
+japan-surface.webp | 73686 | ab54803f5a74f91b6419a7b4c08b5175e742b3023ccf042728ea52bd5945b8de | EOX Sentinel-2 Cloudless 2024 · CC BY-NC-SA 4.0 · japan-source.json · Landschaft
+rift-relief.webp | 458866 | 9378204a780da884b60062629c6ab31d4f9f6b489ef0aa928dd854b1d053c489 | Mapzen/Terrarium · rift-source.json · Hangnormalen und Horizontverschattung
+san-context.webp | 2555932 | e4328efb10f67d30e55340058d479c67effe2a1184511238f54d2cf72f109fef | EOX Sentinel-2 Cloudless 2024 · CC BY-NC-SA 4.0 · san-context-source.json · Landschaft
+san-relief.webp | 794530 | 91675859fc5b5b783112e8fb6861263b126166367568c82fbf687bd4936e4bd2 | Mapzen/Terrarium · san-source.json · Hangnormalen und Horizontverschattung
+san-surface.webp | 2394308 | cede09cc28c200aee4e7998f3218dfaffcb59ab8600fb1eafad0f2daa893e06b | EOX Sentinel-2 Cloudless 2024 · CC BY-NC-SA 4.0 · san-source.json · Landschaft
+zao-relief.webp | 418464 | edc1913932771807e1099d4f933be7338280c28bfb1485c4b891c3a44c600365 | Mapzen/Terrarium · zao-source.json · Hangnormalen und Horizontverschattung

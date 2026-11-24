@@ -38,6 +38,17 @@ export function groundCover(r:RegionalScene,lib:Library,image:T.Texture){
   };
   let seed=94571;const random=()=>((seed=(Math.imul(seed,1664525)+1013904223)>>>0)/4294967296);
   const batches=new Map<string,Anchor[]>(),dummy=new T.Object3D(),v=new T.Vector3(),site=r.spec.site;
+  function species(y:number,lush:boolean,patch:number,bright:number,stoneChance:number){
+    if(random()<stoneChance)return 8;
+    switch(site){
+      case "island":return 4;
+      case "hawaii":return lush&&patch>.22?6:8;
+      case "rift":if(y<.06&&lush)return 7;if(lush&&random()<.17)return 5;return random()<.82?0:1;
+      case "himalaya":return bright>178||y>1.1||!lush?8:1;
+      case "japan":return lush?3:1;
+      default:if(lush&&patch>.32)return random()<.62?2:1;return random()<.8?0:1;
+    }
+  }
   const tri=new T.Triangle(),bary=new T.Vector3();
   for(const g of surfaces){
     const pos=g.attributes.position as T.BufferAttribute,index=g.index!,front=+g.userData.front;
@@ -52,7 +63,7 @@ export function groundCover(r:RegionalScene,lib:Library,image:T.Texture){
       const patch=.46+.26*Math.sin(x*3+Math.sin(z*4))+.28*Math.sin(z*2.3-x*.7);
       if(random()>.24+.72*patch||rr<16)continue;
       const slope=1-Math.abs(tri.getNormal(v).y),lush=green>rr*.91&&green>blue*1.13,stoneChance=slope>.23?.83:site==="island"?.50:.13;
-      let kind=random()<stoneChance?8:site==="island"?4:site==="hawaii"?(lush?6:8):site==="rift"?(lush&&random()<.17?5:0):site==="himalaya"?(rr>178||!lush?8:1):site==="japan"?(lush?3:1):lush&&patch>.32?(random()<.62?2:1):random()<.8?0:1;
+      const kind=species(y,lush,patch,rr,stoneChance);
       const size=[.032,.068,.16,.13,.038,.14,.073,.055,.027][kind]*(.55+random()**1.6*1.6);
       dummy.position.set(x,y-.001,z);dummy.scale.set(size*(kind===2?1.15:1),size*(.86+random()*.28),size*(.76+.48*random()));dummy.rotation.y=random()*Math.PI*2;dummy.updateMatrix();
       const color=new T.Color().setRGB(.66+random()*.32,.69+random()*.27,.63+random()*.29);
@@ -63,7 +74,7 @@ export function groundCover(r:RegionalScene,lib:Library,image:T.Texture){
   for(const [key,roots] of batches){
     const [front,kind]=key.split("-").map(Number);
     const near=kind===8?boulder():foliage(kind,3),far=kind===8?boulder(0):foliage(kind,2);
-    const mesh=new T.InstancedMesh(near,kind===8?stone:leaves,roots.length);mesh.name=kind===8?"Lesesteine und Blockschutt":"Standorttypischer Modellbewuchs";mesh.castShadow=mesh.receiveShadow=true;mesh.raycast=()=>{};mesh.frustumCulled=false;
+    const mesh=new T.InstancedMesh(near,kind===8?stone:leaves,roots.length);mesh.name=kind===8?"Lesesteine und Blockschutt":"Standorttypischer Modellbewuchs";mesh.castShadow=mesh.receiveShadow=true;mesh.raycast=()=>{};mesh.boundingSphere=new T.Sphere(new T.Vector3(0,0,front?2.25:-2.25),9);mesh.frustumCulled=true;
     roots.forEach((a,i)=>mesh.setColorAt(i,a.color));(front?r.front:r.scene).add(mesh);
     let last=-1,high=true;const matrix=new T.Matrix4();
     mesh.addEventListener("dispose",()=>{near.dispose();far.dispose();});
