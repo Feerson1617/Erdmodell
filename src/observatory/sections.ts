@@ -47,7 +47,7 @@ export function geologySolids(r:RegionalScene){
     for(const [kind,a,b] of [["basalt",0,.24],["mantle",.24,.85],["warm",.85,7]] as const)
       solid(r,kind,-f.dipSign,(u,v,z)=>{const x=across(u);return [x,slabTop(x,z)-T.MathUtils.lerp(a,b,v)];});
     const end=6*f.dipSign;
-    for(const [kind,a,b] of [["sediment",0,.10],["continental",.10,.65],["wedge",.65,1]] as const)
+    for(const [kind,a,b] of [["sediment",0,.10],[p==="arc"?"basalt":"continental",.10,.65],["wedge",.65,1]] as const)
       solid(r,kind,f.dipSign,(u,v,z)=>{const x=T.MathUtils.lerp(f.trace,end,u),surface=r.height(x,z),bottom=Math.min(surface,slabTop(x,z)),thickness=surface-bottom;
         const edge=(k:number)=>k===1?bottom:surface-Math.min(k,thickness*k/.65);
         return [x,T.MathUtils.lerp(edge(a),edge(b),v)];});

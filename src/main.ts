@@ -112,7 +112,7 @@ function warn(s: string) {
 }
 function infoPage() {
   if(observatory?.mode){
-    content.innerHTML=`<h2 id="dialogTitle">Daten und Modellgrenzen</h2><p>Die Ereignispunkte sind Beobachtungen. Historische Flächen sind Rekonstruktionen. Die Zukunftsmodelle zeigen mögliche Entwicklungen. Bruch, Wasserwellen und Siedlungen erklären Prozesse in vereinfachter Form.</p><p>Regionale Bilder: EOxCloudless 2024 by EOX, mit modifizierten Copernicus-Sentinel-Daten (CC BY-NC-SA 4.0). Weitere lokale Quellen, Rechte und Modellgrenzen stehen im Katalog.</p><a href="${localAsset("licenses/G5-Daten.md")}">Wissenschaftlicher Daten- und Quellenkatalog</a>`;
+    content.innerHTML=`<h2 id="dialogTitle">Daten und Modellgrenzen</h2><p>Die Ereignispunkte sind Beobachtungen. Historische Flächen sind Rekonstruktionen. Die Zukunftsmodelle zeigen mögliche Entwicklungen. Bruch, Wasserwellen und Siedlungen erklären Prozesse in vereinfachter Form.</p><p>Regionale Bilder: EOxCloudless 2024 by EOX, mit modifizierten Copernicus-Sentinel-Daten (CC BY-NC-SA 4.0). Das Profil vor Japan nutzt 13 seismische Tiefen aus USGS Slab2. Die Punkte im Tiefenschnitt sind 176 dokumentierte Erdbeben. GNSS-Stationen liefern Bewegungsraten im globalen Bezugssystem IGS14. Weitere Quellen und Rechte stehen im Katalog.</p><a href="${localAsset("licenses/G5-Daten.md")}">Wissenschaftlicher Daten- und Quellenkatalog</a>`;
     openDialog();return;
   }
   if (world?.mode === "nyos") {

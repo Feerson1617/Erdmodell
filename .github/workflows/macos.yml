@@ -6,7 +6,7 @@ jobs:
   mac:
     name: Apple Silicon · App, DMG und Offline-Prüfung
     runs-on: macos-26
-    timeout-minutes: 55
+    timeout-minutes: 85
     env:
       ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
       # Ad-hoc identity '-' uses no signing secrets or Developer ID.
@@ -29,7 +29,12 @@ jobs:
         env:
           TEST_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
         run: node tests/mac-abnahme.mjs
-      - run: python3 scripts/g5/report.py
+      - name: Fachliche Messprotokolle der exportierten HTML erzeugen
+        run: |
+          npx playwright install chromium
+          G51_PHYSICS_LOG=test-results/mac/G51/Mechanik.json node tests/g51-physics.mjs
+          node tests/g51-time.mjs > test-results/mac/G51/Zeitreise.log
+      - run: python3 scripts/g51/report.py
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           path: artifacts/GeoRisiko-G5.1-Sichtpruefung.zip

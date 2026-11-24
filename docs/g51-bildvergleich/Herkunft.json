@@ -1,0 +1,27 @@
+{
+  "commit": "747dfafc7f9e80eb888ad2ebb0148b19e7f83fba",
+  "run": "https://github.com/Feerson1617/Erdmodell/actions/runs/45335644560",
+  "viewport": [
+    1920,
+    1080
+  ],
+  "product": "Installierte Electron-App",
+  "sha256": {
+    "07-Pangaea.jpg": "f3ee2442dc5a562ec24047b61113eec07a293cf1a9e445b87d5e6626a90d1b8b",
+    "14-Kalifornien.jpg": "54f5e318701c5c04153bb76dfcc61c2de787f7bb635bb40593853816a8512071",
+    "15-Untergrund.jpg": "d730e332a7c922e206d03731c856690dc2ed8f20c4009a1b60f3dd640039b43e",
+    "16-Spannung.jpg": "db091a43396ecd23c195d48cfb1eeb35479e591dd3db35e70bce2f867955ddba",
+    "17-Bruch.jpg": "7288daa3f06b9b247b8cd46a10ce1b38954ff28e3a6760b7b841124e0a3f4467",
+    "18-Wellen.jpg": "36cb1100543ec5edf7062d10b1c357b846907d8a6c595591f24c2ebcd9b7bf2c",
+    "19-Japangraben.jpg": "46a16f69c2fcc38e94f36ec983a4e726d026a764f279a621a2e4d2d4663ea7ee",
+    "20-Seitlicher-Versatz.jpg": "663011fd60a890144764cebd4ce080763ca90f86bb62449b5c75e0499075b1d5",
+    "21-Wassersaeule.jpg": "e09ec9985fcd78a69f417ae996a28846bb3d1addd9d0a9029be1d7ec3856a899",
+    "22-Kuestenwelle.jpg": "21799244d6f2764e7305634bc6d1f4210612b278e200fbe7a827228dd426a360",
+    "23-Island.jpg": "3eff49dbf060819d48ca5d1448e4997176554dd6471c8c80e4c55c02afb2a416",
+    "24-Himalaya.jpg": "888fa0219ee017655d28ddcee0e9a012841691db9742d645f8340215d3eddfb1",
+    "25-Ostafrika.jpg": "e7c86f213b692cf28ffcd4f754d79cceda755f2a8ff06219d403a0f783c9f700",
+    "26-Hawaii.jpg": "06544c793b6bec58e13e6f31cb662891360dd74853a6333f8c8223771c2d54c4",
+    "28b-Dichte-Siedlung.jpg": "3bf649a149e1010783d4f4350afa1fd2629e85b98ec88664a517cf7515b7dc17",
+    "29-Vorsorge.jpg": "18bf80e83a9a8f85841ed16be8ebd6ae51b68fb675ddad14c1a5ba8b6cea7233"
+  }
+}

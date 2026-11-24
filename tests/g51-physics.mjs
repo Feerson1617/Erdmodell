@@ -34,14 +34,33 @@ try{
    assert.ok(f.maxPlaneError<2e-5,site+" Bruch auf der Kontaktfläche");assert.ok(f.focusError<1e-8);
    assert.ok(f.earlyShake===0 && f.lateShake===0);assert.ok(f.pArrival<f.sArrival);
    await progress(1);const end=await data();assert.notDeepEqual(end.physics.vertex.drawn,end.physics.vertex.rest);
-   await progress(0);assert.deepEqual((await data()).physics.vertex.drawn,initial.physics.vertex.drawn);
-   results.push([site,f.fault,f.maxPlaneError]);
+   const movement=end.physics.vertices.map(v=>({side:v.side,x:v.drawn[0]-v.rest[0],y:v.drawn[1]-v.rest[1],z:v.drawn[2]-v.rest[2]}));
+   for(const d of movement){
+     if(site==="san"){assert.ok(Math.abs(d.x)+Math.abs(d.y)<1e-5);assert.ok(d.z*d.side*f.sense>0);}
+     if(site==="rift"){assert.ok(d.side===0?d.y<0&&Math.abs(d.x)<1e-5:d.x*d.side>0&&Math.abs(d.y)<1e-5);}
+     if(site==="himalaya"){assert.ok(d.y*d.side*f.dipSign>0);assert.ok(Math.abs(d.x+f.dipSign*d.y/Math.tan(27*Math.PI/180))<2e-5);}
+     if(site==="japan"){assert.ok(d.y*d.side*f.dipSign>=-1e-6);assert.ok(Math.abs(d.z)<1e-5);}
+   }
+   if(site==="japan"){
+     assert.ok(f.profilePoints.every(v=>Math.abs(v.y+v.km*12*4.7/320)<.00001));
+     assert.ok(f.waterSignals.every(row=>row.every(Number.isFinite)));assert.ok(Math.max(...f.waterSignals.map(s=>Math.abs(s[1]-f.waterSignals[0][1])))>0.0001);
+   }
+   await progress(0);
+   const reset=await data();assert.deepEqual(reset.physics.vertices,initial.physics.vertices);
+   assert.deepEqual((await data()).physics.vertex.drawn,initial.physics.vertex.drawn);
+   results.push({site,fault:f.fault,maxPlaneError:f.maxPlaneError,focusError:f.focusError,pArrival:f.pArrival,sArrival:f.sArrival,movement,waterSignals:f.waterSignals});
    if(site==="japan"){
      await p.selectOption("#g-sea","flat");await ready();const flat=await data();assert.equal(flat.physics.fault,"strike");assert.equal(flat.physics.waterEvent,false);
      await p.selectOption("#g-sea","vertical");await ready();assert.equal((await data()).physics.fault,"interface");
    }
  }
+ for(const [nav,child] of [["nav-volcano",null],["nav-plates","g-forces"]]){
+   await p.click("#"+nav);if(child)await p.click("#"+child);await ready();await progress(.59);
+   const state=await data();assert.equal(state.physics.waterEvent,false);assert.equal(state.physics.rupture.length,0);assert.deepEqual(state.physics.waveFronts,[false,false]);
+ }
+ await p.click("#nav-plates");await p.click("#g-time");await p.waitForFunction(()=>window.geoObservatory().observatory.timeReady);
+ assert.equal((await data()).physics,undefined);
  assert.deepEqual(errors,[]);if(process.env.G51_PHYSICS_LOG)writeFileSync(process.env.G51_PHYSICS_LOG,JSON.stringify({sub,results,records},null,1));
- console.log("5.819 Regionen, 1.127 Polungen, vier gerenderte Störungsfamilien und zwei getrennte Meeresereignisse",results);
+ console.log("5.819 Regionen, 1.127 Polungen, vier gerenderte Störungsfamilien und zwei getrennte Meeresereignisse",results.map(r=>[r.site,r.maxPlaneError]));
 }finally{await browser.close();}
 

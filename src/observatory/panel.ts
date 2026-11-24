@@ -81,7 +81,7 @@ export class Observatory {
   }
   openBoundary(step:Step,theme:Theme="earthquake"){
     const g=geology(step),details=g.regionalDEM?reference(g.regionalDEM,theme):undefined;
-    const spec:RegionSpec=details??{lat:g.lat,lon:g.lon,name:processNames[g.model],strike:g.strike,process:g.model,theme};
+    const spec:RegionSpec=details??{lat:g.lat,lon:g.lon,name:(geographicExamples as Record<string,string>)[g.id]??(names[g.left]+" · "+names[g.right]),strike:g.strike,process:g.model,theme};
     spec.geology=g;spec.azimuth=g.relativeAzimuth;void this.openRegion(spec);
   }
   private pick(x:number,y:number){
@@ -139,7 +139,7 @@ export class Observatory {
     }else if(this.mode==="regional"&&this.region){
       const r=this.region,sp=r.spec;
       this.side.innerHTML='<p class="g-kicker">'+(sp.site?topicNames[sp.theme]:sp.theme==='forces'||sp.theme==='lithosphere'?'Schematisch vergrößerter Schnitt':'Vereinfachtes Modell dieser Grenzart')+'</p><h1>'+sp.name+'</h1><div class="g-stack">'+(sp.site?selectRegions(sp.theme,sp.site):'')+
-        (sp.geology?'<small>'+names[sp.geology.left]+' · '+names[sp.geology.right]+'</small>':'')+'<small>'+(sp.site?'Höhen aus Geodaten · Untergrund schematisch':(sp.coastLesson?'Schematischer Küstenraum · keine Gefahrenkarte':sp.theme==='forces'||sp.theme==='lithosphere'?'Schematische Größen und Tiefen':'Lage und Grenzrichtung aus PB2002 · Untergrund schematisch'))+'</small>'+
+        (sp.geology?'<small>'+names[sp.geology.left]+' · '+names[sp.geology.right]+' · '+processNames[sp.geology.model]+'</small>':'')+'<small>'+(sp.site?'Höhen aus Geodaten · Untergrund schematisch':(sp.coastLesson?'Schematischer Küstenraum · keine Gefahrenkarte':sp.theme==='forces'||sp.theme==='lithosphere'?'Schematische Größen und Tiefen':'Lage und Grenzrichtung aus PB2002 · Untergrund schematisch'))+'</small>'+
         (!r.ready?'<p role="status">'+(r.error||'Gelände wird geladen …')+'</p>':
         button("g-cut",r.cut?"An die Oberfläche":"Untergrund öffnen")+'<label>Ansicht<select id="g-view">'+opts({land:"Geländeübersicht",cut:"Geologischer Schnitt",fault:"Störungsdetail",focus:"Erdbebenherd",waves:"Wellenausbreitung",...(r.water?{water:"Wasseroberfläche",coast:"Küste"}:{})},r.cut?"cut":"land")+'</select></label>'+
         (sp.theme==='lithosphere'?'':'<label class="g-range"><span id="g-phase"></span><input id="g-progress" type="range" min="0" max="1" step=".001" value="'+r.progress+'"></label>'+

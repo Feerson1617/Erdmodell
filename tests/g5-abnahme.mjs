@@ -5,7 +5,7 @@ import {tmpdir} from "node:os";
 import {spawnSync} from "node:child_process";
 
 
-async function screencast(page,dir,name,perform) {
+export async function screencast(page,dir,name,perform) {
   const scratch=await mkdtemp(join(tmpdir(),"georisiko-film-")),cdp=await page.context().newCDPSession(page);
   const frames=[],writes=[];
   cdp.on("Page.screencastFrame",ev=>{const file=String(frames.length).padStart(6,"0")+".jpg";
@@ -92,17 +92,24 @@ export async function acceptG5(p,{dir,product,measure,films=true}){
   await click("nav-risk");await ready();await p.selectOption("#g-exposure","sparse");await range("g-progress",.51);await shot("28a-Einzelsiedlung");
   await p.selectOption("#g-exposure","dense");await shot("28b-Dichte-Siedlung");await p.check("#g-protect");await p.locator("details").filter({has:p.locator("#g-route")}).locator("summary").click();await p.check("#g-route");await p.check("#g-warning");await shot("29-Vorsorge");
   await click("nav-plates");await click("g-boundaries");await p.waitForFunction(()=>window.geoBoundaryModels().length===5819);
-  await film("Film-5-Grenzauswahl",async()=>{
-    const opts=await p.locator("#g-example option").evaluateAll(els=>els.map(e=>e.value).filter(Boolean));assert.equal(opts.length,12);
-    for(const [idx,id] of opts.entries()){
-      await p.selectOption("#g-example",id);await p.waitForFunction(()=>!window.geoObservatory().flying);await clickAtCenter();
-      assert.equal((await get()).selected,Number(id));await click("g-segment");await ready();await range("g-progress",.57);
-      if(idx===2)await shot("30a-Grenzauswahl");await click("nav-plates");await click("g-boundaries");
-    }
-  });
+  const options=await p.locator("#g-example option").evaluateAll(els=>els.filter(e=>e.value).map(e=>({id:e.value,label:e.textContent})));
+  assert.ok(options.length>=30);
+  result.boundaryTrials=[];
+  const trial=async({id,label})=>{
+    await p.selectOption("#g-example",id);await p.waitForFunction(()=>!window.geoObservatory().flying);await clickAtCenter();
+    assert.equal((await get()).selected,Number(id));await click("g-segment");await ready();await range("g-progress",.57);
+    const state=await get();assert.equal(state.geology.id,Number(id));
+    result.boundaryTrials.push({label,...state.geology});
+    if(product==="Electron")await shot("Grenzen-"+id);
+    await click("nav-plates");await click("g-boundaries");
+  };
+  await film("Film-5-Grenzauswahl",async()=>{for(const option of options.slice(0,3))await trial(option);});
+  for(const option of options.slice(3))await trial(option);
+  assert.equal(new Set(result.boundaryTrials.map(s=>s.category)).size,7);
+  assert.equal(new Set(result.boundaryTrials.map(s=>s.model)).size,9);
   // Native window fullscreen is tested separately; retain a real presentation capture.
   await click("home");await click("present");await p.waitForFunction(()=>document.body.classList.contains("present"));await shot("30-Praesentation");await click("present");await p.waitForFunction(()=>!document.body.classList.contains("present"));
   await perf("Wiederholter Modulwechsel",async()=>{for(let i=0;i<4;i++){await visit("japan");await time();await age(-100);await click("nav-volcano");await ready();await click("home");await p.waitForFunction(()=>!window.geoObservatory().flying);const s=await p.evaluate(()=>window.geoObservatory());result.cycles.push({geometries:s.geometries,textures:s.textures,programs:s.programs});}});
-  result.checks.push("697 reale Ereignisse","5819 eindeutige Grenzabschnitte","12 geografische Treffer in 9 Modelltypen","4 Zukunftsszenarien","Herd lotrecht unter Epizentrum","Siedlungsvergleich bei gleicher Quelle","Vollbild und Rückkehr");
+  result.checks.push("697 reale Ereignisse","5819 eindeutige Grenzabschnitte","Mindestens 30 geografische Treffer in neun Modelltypen","4 Zukunftsszenarien","Herd lotrecht unter Epizentrum","Siedlungsvergleich bei gleicher Quelle","Vollbild und Rückkehr");
   return result;
 }

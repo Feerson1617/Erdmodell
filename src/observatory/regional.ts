@@ -55,7 +55,11 @@ export class RegionalScene {
     const coords=this.rupture.geometry.attributes.position;
     let maxPlaneError=0;if(this.rupture.visible)for(let j=0;j<coords.count;j++)maxPlaneError=Math.max(maxPlaneError,Math.abs(coords.getX(j)-f.xAt(coords.getY(j))));
     const distance=Math.hypot(this.epicenter[1]-f.hy,this.epicenter[0]-f.hx);
-    return {maxPlaneError,focusError:Math.abs(f.hx-f.xAt(f.hy)),pArrival:onset+distance/pSpeed,sArrival:onset+distance/sSpeed,
+    const vertices=this.solids.map(({g,base,side})=>{
+      const k=Math.floor(base.length/6)*3,a=Array.from(base.slice(k,k+3)),b=Array.from(g.attributes.position.array.slice(k,k+3));
+      return {side,rest:a,drawn:b};
+    });
+    return {vertices,profilePoints:f.profile.map(([x,km])=>({x,km,y:f.interfaceY(x)})),sense:f.sense,maxPlaneError,focusError:Math.abs(f.hx-f.xAt(f.hy)),pArrival:onset+distance/pSpeed,sArrival:onset+distance/sSpeed,
       earlyShake:f.shaking(onset+distance/pSpeed-.002,f.hx,this.epicenter[1],0),lateShake:f.shaking(1,f.hx,this.epicenter[1],0),fault:f.kind,trace:f.trace,dipSign:f.dipSign,profile:f.profile.length,waterEvent:f.waterEvent,waterSurface:this.water?.sample(f.hx,this.progress)??0,waterSignals:this.water?[0,.48,.58,.72,.88,1].map(t=>[t,this.water!.sample(f.hx,t),this.water!.sample(-4,t)]):[],
       rupture:this.rupture.visible?Array.from(this.rupture.geometry.attributes.position.array):[],waveFronts:this.waves.map(w=>w.visible),
       vertex:sample?{rest:Array.from(sample.base.slice(i,i+3)),drawn:Array.from(sample.g.attributes.position.array.slice(i,i+3)),side:sample.side}:null};

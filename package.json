@@ -21,7 +21,7 @@
     "test:plattenatlas": "npm run standalone && node tests/plattengeometrie.mjs && node tests/plattenatlas.mjs && python3 scripts/atlas_film.py",
     "mac:package": "node scripts/stage-desktop.mjs && electron-builder --config desktop/builder.cjs --mac --arm64 --publish never",
     "mac:build": "npm run build && npm run standalone && npm run mac:package",
-    "test:g5": "npm run standalone && node tests/g5-erdbeben.mjs && node tests/g5-zeit.mjs && node tests/g5-fachmodelle.mjs"
+    "test:g5": "npm run standalone && node tests/g5-erdbeben.mjs && node tests/g5-zeit.mjs && node tests/g5-fachmodelle.mjs && node tests/g51-physics.mjs && node tests/g51-time.mjs"
   },
   "dependencies": {
     "@fontsource-variable/dm-sans": "5.2.8",

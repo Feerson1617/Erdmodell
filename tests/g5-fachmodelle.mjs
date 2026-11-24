@@ -11,7 +11,7 @@ await p.click('#nav-volcano');await p.click('#g-step');await p.locator('#g-progr
 await p.click('#nav-risk');await p.selectOption('#g-exposure','empty');await p.selectOption('#g-exposure','dense');await p.check('#g-protect');await p.locator('#g-progress').fill('0.54');await p.screenshot({path:'/tmp/g5-schutz.png'});
 await p.click('#nav-plates');await p.click('#g-boundaries');await p.waitForFunction(()=>window.geoBoundaryModels().length===5819);
 const coverage=await p.evaluate(()=>window.geoBoundaryModels());assert.equal(new Set(coverage.map(s=>s.id)).size,5819);assert.equal(new Set(coverage.map(s=>s.category)).size,7);assert.ok(coverage.every(s=>s.model&&Number.isFinite(s.strike)&&s.lon>=-180&&s.lon<=180));
-const ids=await p.locator('#g-example option').evaluateAll(els=>els.map(e=>e.value).filter(Boolean));assert.equal(ids.length,12);
+const ids=await p.locator('#g-example option').evaluateAll(els=>els.map(e=>e.value).filter(Boolean));assert.ok(ids.length>=30);
 for(const id of ids){
  await p.selectOption('#g-example',id);await p.waitForFunction(()=>!window.geoObservatory().flying);
  const box=await p.locator('#earth').boundingBox();await p.mouse.click(box.x+box.width/2,box.y+box.height/2);

@@ -17,16 +17,16 @@ export class Fault {
     this.sense=(g?.dextral??1)>=0?1:-1;
     this.profile=spec.site==="japan"&&this.kind==="interface"?sampled:[];
     this.trace=this.profile.length?this.profile[0][0]:this.kind==="normal"&&p==="rift"?-1.45:0;
-    this.top=height(this.trace,0);
+    this.top=this.profile.length?-this.profile[0][1]*12*4.7/320:height(this.trace,0);
     this.hy=this.top-(this.kind==="interface"?.64:1.06);this.hx=this.xAt(this.hy);
     this.slipSign=this.kind==="normal"?-1:1;
     this.waterEvent=(spec.theme==="earthquake"||Boolean(spec.coastLesson))&&this.kind==="interface"&&this.top<0;
   }
-  // Slab2 active-source transect, relative to its shallowest constraint.
+  // Slab2 profile depths below sea level; same vertical exaggeration as the Japan DEM.
   xAt(y:number){
     const depth=this.top-y;
     if(this.profile.length){
-      const km=this.profile[0][1]+depth*320/(12*2.4);
+      const km=-y*320/(12*4.7);
       let i=1;while(i<this.profile.length-1 && this.profile[i][1]<km)i++;
       const a=this.profile[i-1],b=this.profile[i];
       return a[0]+(b[0]-a[0])*(km-a[1])/(b[1]-a[1]);
@@ -37,7 +37,7 @@ export class Fault {
     if(this.profile.length){
       let i=1;while(i<this.profile.length-1&&this.profile[i][0]>x)i++;
       const a=this.profile[i-1],b=this.profile[i],km=a[1]+(b[1]-a[1])*(x-a[0])/(b[0]-a[0]);
-      return this.top-(km-this.profile[0][1])*12*2.4/320;
+      return -km*12*4.7/320;
     }
     return this.top-(x-this.trace)*this.dipSign*Math.tan(this.dip*Math.PI/180);
   }
@@ -54,7 +54,7 @@ export class Fault {
   shaking(t:number,x:number,y:number,z:number){
     const d=Math.hypot(x-this.hx,y-this.hy,z),a=t-onset-d/pSpeed,b=t-onset-d/sSpeed;
     const pulse=(v:number)=>v>0&&v<.35?Math.sin(v*117)*Math.exp(-v*15)*smooth(v/.018)*(1-smooth((v-.22)/.13)):0;
-    return (.035*pulse(a)+.069*pulse(b))/(1+.18*d);
+    return (.035*pulse(a)+.069*pulse(b))*(1-smooth((t-.88)/.12))/(1+.18*d);
   }
   offset(target:T.Vector3,x:number,y:number,z:number,side:number,t:number,theme=this.spec.theme){
     target.set(0,0,0);if(t===0||this.kind==="unknown")return target;

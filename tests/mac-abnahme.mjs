@@ -1,4 +1,5 @@
 // Exercises the executable copied off the ejected DMG and the single-file export on the same Mac.
+import {acceptG51,longClassroom} from "./g51-abnahme.mjs";
 import {acceptG5} from "./g5-abnahme.mjs";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
@@ -38,10 +39,10 @@ async function capture(p,name) {
   }
   assert.ok(colors.size>12,name+" gerenderte Farbwerte "+colors.size);
 }
-async function measure(p,root,name,actions) {
+async function measure(p,root,name,actions,milliseconds=3000) {
   const before=processes(root), from=performance.now();
   await p.evaluate(done=>{window.geoTestCycleDone=done;},!actions);
-  const sample=p.evaluate(()=>window.geoDeviceProbe(3000,()=>window.geoTestCycleDone));
+  const sample=p.evaluate(ms=>window.geoDeviceProbe(ms,()=>window.geoTestCycleDone),milliseconds);
   if(actions) {
     try {await actions();} finally {await p.evaluate(()=>{window.geoTestCycleDone=true;});}
   }
@@ -184,6 +185,10 @@ async function exercise(p,context,name,pid) {
     assert.ok(assets.has("/data/nyos/landscape.json") && assets.has("/data/relief.i16"));
   }
   row.g5=await acceptG5(p,{dir:join(out,"G5"),product:name,films:name==="Electron",measure:(label,actions)=>measure(p,pid,label,actions)});
+  if(name==="Electron"){
+    row.g51=await acceptG51(p,join(out,"G51"));
+    row.classroom=await longClassroom(p,(label,ms)=>measure(p,pid,label,undefined,ms));
+  }
   row.requestedAssets=[...assets].sort();
   assert.deepEqual(errors,[]);assert.deepEqual(network,[]);return row;
 }

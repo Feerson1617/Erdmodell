@@ -77,9 +77,11 @@ function settlements(r:RegionalScene){
   const walls=chips(0xd8cbb1),roof=chips(0x805643),brace=chips(0x508980);
   const wallGeo=new T.BoxGeometry(.20,.28,.2),roofGeo=new T.ConeGeometry(.18,.105,4),braceGeo=new T.BoxGeometry(.027,.33,.025);
   const buildings:T.Group[]=[],baseX:number[]=[];
-  const sediment=object(new T.BoxGeometry(6.8,.27,.56),chips(0xb49b68),"shelter");
+  const sediment=object(new T.BoxGeometry(6.8,.27,.56,44,2,4),chips(0xb49b68),"shelter");
   sediment.userData.explanation={name:"Lockerer Untergrund",answer:"Lockere Ablagerungen können die Erschütterung am Standort verstärken."};
-  sediment.position.set(0,r.height(0,0)-.15,.19);r.section.add(sediment);
+  const ground=sediment.geometry.attributes.position;
+  for(let i=0;i<ground.count;i++){const x=ground.getX(i),z=ground.getZ(i)+.19;ground.setXYZ(i,x,ground.getY(i)+r.height(x,z)-.15,z);}
+  sediment.geometry.computeVertexNormals();r.section.add(sediment);
   for(let i=0;i<30;i++){
     const col=i%6,row=Math.floor(i/6),x=r.spec.coastLesson?-3.6+col*.15:-3.4+col*1.23,z=-2.04+row*.43;
     const g=new T.Group();g.userData.explanation=text.shelter;g.position.set(x,r.height(x,z),z);
