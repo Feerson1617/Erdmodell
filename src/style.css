@@ -334,3 +334,6 @@ body[data-observatory=time] #observe-note,#g-age{font-size:clamp(1.08rem,1.75vw,
 #water-profile .rock{fill:#987959;}#water-profile .water{fill:#307f91;}#water-profile .inland{fill:#5bd6b4;}#water-profile .depth{stroke:#ffd381;stroke-width:4;}
 .profile-actions span:nth-child(2){margin-right:auto;}
 @media(max-height:720px){#water-profile{inset:4% 4% auto;}#water-profile svg{max-height:36vh;}}
+
+#water-profile .original-shore{stroke:#f4efe0;stroke-dasharray:3 4;stroke-width:1.6;fill:none;}
+#water-profile .advance{stroke:#72f4c8;stroke-width:7;fill:none;}

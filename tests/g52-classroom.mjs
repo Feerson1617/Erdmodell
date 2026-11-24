@@ -85,7 +85,9 @@ export async function classroom(p,dir,record=false){
       assert.equal(history[0].newlyWet,0);assert.ok(peak.newlyWet>0&&ebb.newlyWet<peak.newlyWet);log.coast={initial:history[0],peak,ebb,history};
       await fill("g-progress",0);await shot("12-Kueste-vorher");if(record)await showWave();await fill("g-progress",peak.t);await shot("13-Kueste-Ueberflutung");await fill("g-progress",ebb.t);await shot("14-Kueste-Rueckzug");
       for(const phase of ["before","peak","ebb"]){await click("profile-"+phase);await rest();const s=await state();assert.ok(!s.playing);const wet=await p.locator('[data-line="inland"]').getAttribute("d");
-        if(phase==="peak")assert.ok(s.physics.flood.newlyWet>0&&wet.includes("Z"));await shot("Profil-"+phase);}
+        const width=await p.locator('[data-line="advance"]').evaluate(path=>path.getTotalLength());(log.shoreline??={})[phase]=width;
+        if(phase==="peak")assert.ok(s.physics.flood.newlyWet>0&&wet.includes("Z")&&width>30);
+        if(phase==="before")assert.equal(width,0);if(phase==="ebb")assert.ok(width<log.shoreline.peak);await shot("Profil-"+phase);}
       await fill("g-progress",ebb.t);await choose("g-view","water");assert.equal((await at(ebb.t)).site,"japan");await click("profile-close");
     });
     await choose("g-view","coast");await rest();await profile("Kueste");await choose("g-view","water");await rest();

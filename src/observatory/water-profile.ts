@@ -5,22 +5,33 @@ const wet=.001;
 export class WaterProfile{
   readonly element=document.createElement("section");
   private previous=-1;private source?:WaterSection;
-  private maxWave=0;private minBed=0;private maxBed=0;private shore=0;
+  private initialWaterline=0;private maxWave=0;private minBed=0;private maxBed=0;private shore=0;
   private crest=0;private ebb=1;
   private paths:Record<string,SVGPathElement>={};
   constructor(parent:HTMLElement){
     const box=this.element;box.id="water-profile";box.hidden=true;box.setAttribute("aria-label","Tsunami im Profil");
     box.innerHTML='<div class="profile-heading"><strong>Wasser im Profil</strong><span data-site></span><button id="profile-close" aria-label="Profil schließen">Schließen</button></div>'+
-      '<svg viewBox="0 0 1000 380" role="img" aria-label="Zwei gekoppelte Ansichten der berechneten Wasserstände"><text x="26" y="32">Wasserstand gegenüber der Ruhelage · Höhe vergrößert</text><path d="M32 104H968" class="profile-reference"/><path data-line="wave" class="wave"/><text x="32" y="174">Landseite</text><text x="968" y="174" text-anchor="end">Meerseite</text><text x="26" y="213" data-section></text><path data-line="rock" class="rock"/><path data-line="water" class="water"/><path data-line="inland" class="inland"/><path data-line="still" class="profile-reference"/><path data-line="edge" class="edge"/><path data-line="depth" class="depth"/></svg>'+
+      '<svg viewBox="0 0 1000 380" role="img" aria-label="Zwei gekoppelte Ansichten der berechneten Wasserstände"><text x="26" y="32">Wasserstand gegenüber der Ruhelage · Höhe vergrößert</text><path d="M32 104H968" class="profile-reference"/><path data-line="wave" class="wave"/><text x="32" y="174">Landseite</text><text x="968" y="174" text-anchor="end">Meerseite</text><text x="26" y="213" data-section></text><path data-line="rock" class="rock"/><path data-line="water" class="water"/><path data-line="inland" class="inland"/><path data-line="still" class="profile-reference"/><path data-line="edge" class="edge"/><path data-line="depth" class="depth"/><path data-line="original-shore" class="original-shore"/><path data-line="advance" class="advance"/></svg>'+
       '<div class="profile-actions"><span>Gestrichelt · Ruhewasser<br>Gelb · Wassertiefe</span><span data-key></span><button id="profile-before">Vorher</button><button id="profile-peak">Welle</button><button id="profile-ebb">Später</button></div>';
     box.querySelectorAll<SVGPathElement>("[data-line]").forEach(p=>this.paths[p.dataset.line!]=p);parent.append(box);
+  }
+  // First wet/dry crossing on the coast profile, with the same interpolation as the filled polygons.
+  private waterline(w:WaterSection,t:number){
+    let previous=w.sample(-6,t,true);
+    if(previous>wet)return -6;
+    for(let i=1;i<w.cells;i++){
+      const x=-6+i*w.dx,depth=w.sample(x,t,true);
+      if(depth>wet)return x-w.dx+w.dx*(wet-previous)/(depth-previous);
+      previous=depth;
+    }
+    return 6;
   }
   hide(){this.element.hidden=true;this.source=undefined;this.previous=-1;}
   show(r:RegionalScene,close:()=>void){
     const w=r.water;if(!w||!r.analysis){if(!this.element.hidden)this.hide();return;}
     this.element.hidden=false;
     if(this.source!==w){
-      this.source=w;this.previous=-1;this.maxWave=.0001;this.minBed=0;this.maxBed=.015;this.shore=w.extent(0).shore;
+      this.source=w;this.previous=-1;this.maxWave=.0001;this.minBed=0;this.maxBed=.015;this.shore=w.extent(0).shore;this.initialWaterline=this.waterline(w,0);
       let peak=-1;
       for(let j=0;j<w.frames;j++){
         const t=j/(w.frames-1);let signal=0;
@@ -35,7 +46,7 @@ export class WaterProfile{
       const label=(key:string,s:string)=>this.element.querySelector(key)!.textContent=s;
       label("[data-site]",r.spec.coastLesson?"Schematisches Küstenprofil":"Japan · Tōhoku-Profil");
       label("[data-section]",r.spec.coastLesson?"Ausschnitt am ursprünglichen Ufer":"Wasser und bewegter Meeresboden");
-      label("[data-key]",r.spec.coastLesson?"Türkis · neu benetztes Land":"Eindimensionales Flachwassermodell");
+      label("[data-key]",r.spec.coastLesson?"Senkrechte · ursprüngliches Ufer | Türkis · neu benetzte Strecke":"Eindimensionales Flachwassermodell");
       for(const [id,t] of [["before",0],["peak",this.crest],["ebb",this.ebb]] as const)this.element.querySelector<HTMLButtonElement>("#profile-"+id)!.onclick=()=>{r.playing=false;r.progress=t;};
       this.element.querySelector<HTMLButtonElement>("#profile-close")!.onclick=close;
     }
@@ -63,6 +74,13 @@ export class WaterProfile{
     }
     const probe=r.spec.coastLesson?this.shore+.44:2.4;
     path("rock",rock+"L968 362H32Z");path("wave",wave);path("water",water);path("inland",inland);path("edge",edge);
+    let origin="",advance="";
+    if(r.spec.coastLesson){
+      const start=X(this.initialWaterline),front=X(this.waterline(w,t));
+      origin="M"+point(start,231)+"V355";
+      if(front<start-.25)advance="M"+point(front,235)+"H"+start;
+    }
+    path("original-shore",origin);path("advance",advance);
     path("still","M32 "+Y(0)+"H968");path("depth","M"+point(X(probe),Y(w.bed(probe,t)))+"V"+Y(w.sample(probe,t)));
   }
 }
