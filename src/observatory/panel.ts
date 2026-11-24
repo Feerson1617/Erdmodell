@@ -1,3 +1,4 @@
+import { depthSection } from "./depth-section";
 import underwater from "./transform-sea.json";
 import * as T from "three";
 import { addTeachingModels,topicNames,explanations } from "./teaching-models";
@@ -120,7 +121,7 @@ export class Observatory {
       this.side.innerHTML='<p class="g-kicker">Beobachtungen · heute</p><h1>'+(this.mapPurpose==="events"?"Erdbeben der Erde":"Plattengrenzen")+'</h1>'+
         '<div class="g-stack"><label><input id="g-quakes" type="checkbox" '+(m.events.visible?"checked":"")+'> Erdbeben zeigen</label><label><input id="g-lines" type="checkbox" '+(m.boundaries.visible?"checked":"")+'> Plattengrenzen zeigen</label>'+
         (m.events.visible?'<label><input id="g-depth" type="checkbox" '+(m.depth?"checked":"")+'> Tiefe unterscheiden</label><small>USGS · 2019–2023 · Magnitude ab 6</small>'+(m.depth?'<div class="g-legend"><span>Flach</span><span>Mitteltief</span><span>Tief</span></div>':''):'')+
-        (ev?'<h2>Beobachtetes Erdbeben</h2><p>'+ev[1]+' · Magnitude '+ev[5]+' · '+Math.round(ev[4])+' km tief</p>':'')+
+        (ev?'<h2>Beobachtetes Erdbeben</h2><p>'+ev[1]+' · Magnitude '+ev[5]+' ('+ev[6]+') · '+Math.round(ev[4])+' km tief</p>':'')+
         (s?'<h2>'+m.pair+'</h2><p>'+explain[classify(s)]+'</p>'+button("g-segment","Prozess ansehen")+button("g-quake-explain",["subduction","arc","oceanTransform"].includes(classify(s))?"Seebeben erklären":"Erdbeben erklären")+(["ridge","subduction","arc"].includes(classify(s))?button("g-segment-volcano","Vulkanismus ansehen"):''):'')+
         (this.mapPurpose==="boundaries"?'<label>Grenzbeispiele<select id="g-example"><option value="">Ort auf dem Globus finden …</option>'+opts(this.examples(),"")+'</select></label>':'')+
         '<label>Referenzregion<select id="g-launch"><option value="">Region wählen …</option>'+opts(Object.fromEntries(Object.entries(sites).filter(([k])=>k!=="hawaii").map(([k,v])=>[k,v.name])),"")+'</select></label>'+
@@ -135,12 +136,12 @@ export class Observatory {
       this.side.innerHTML='<p class="g-kicker">'+(sp.site?topicNames[sp.theme]:sp.theme==='forces'||sp.theme==='lithosphere'?'Schematisch vergrößerter Schnitt':'Vereinfachtes Modell dieser Grenzart')+'</p><h1>'+sp.name+'</h1><div class="g-stack">'+(sp.site?selectRegions(sp.theme,sp.site):'')+
         (sp.geology?'<small>'+names[sp.geology.left]+' · '+names[sp.geology.right]+'</small>':'')+'<small>'+(sp.site?'Höhen aus Geodaten · Untergrund schematisch':(sp.theme==='forces'||sp.theme==='lithosphere'?'Schematische Größen und Tiefen':'Lage und Grenzrichtung aus PB2002 · Untergrund schematisch'))+'</small>'+
         (!r.ready?'<p role="status">'+(r.error||'Gelände wird geladen …')+'</p>':
-        button("g-cut",r.cut?"An die Oberfläche":"Untergrund öffnen")+
+        button("g-cut",r.cut?"An die Oberfläche":"Untergrund öffnen")+'<label>Ansicht<select id="g-view">'+opts({land:"Geländeübersicht",cut:"Geologischer Schnitt",fault:"Störungsdetail",focus:"Erdbebenherd",waves:"Wellenausbreitung",...(r.water?{water:"Wasseroberfläche",coast:"Küste"}:{})},r.cut?"cut":"land")+'</select></label>'+
         (sp.theme==='lithosphere'?'':'<label class="g-range"><span id="g-phase"></span><input id="g-progress" type="range" min="0" max="1" step=".001" value="'+r.progress+'"></label>'+
         '<div class="g-buttons">'+button("g-play","Abspielen")+button("g-step","Einzelschritt")+button("g-reset","Zurücksetzen")+'</div>')+
         '<label><input type="checkbox" id="g-names" '+(r.names?"checked":"")+'> Namen zeigen</label>'+
         (sp.theme==="earthquake"&&(sp.comparison||r.faultModel.waterEvent||sp.process==="oceanTransform"&&sp.geology?.elevation!<0)?'<label>Zwei Modellereignisse vergleichen<select id="g-sea">'+opts({vertical:"B · Überschiebung in Japan",flat:"A · Untermeerischer Seitenversatz"},r.vertical?"vertical":"flat")+'</select></label>':'')+
-        this.extraControls(r)+'<div id="g-object" aria-live="polite"></div>'+
+        this.extraControls(r)+(sp.site==="japan"?depthSection():"")+'<div id="g-object" aria-live="polite"></div>'+
         '<details><summary>Modell steuern</summary><label><input type="checkbox" id="g-slow" '+(r.slow?"checked":"")+'> Zeitlupe</label><label><input type="checkbox" id="g-stress" '+(r.stress?"checked":"")+'> Spannung im Modell</label></details>'+
         item("Was geschieht hier?",explain[sp.process])+this.extraInfo(r))+
         button("g-map","Zur Weltkarte")+back+'</div>';
@@ -192,7 +193,7 @@ export class Observatory {
   private extraControls(r:RegionalScene){
     if(r.spec.theme==="risk")return '<label>Raumnutzung<select id="g-exposure">'+opts({empty:"Unbesiedelt",sparse:"Einzelne Häuser",dense:"Dichte Siedlung"},r.exposure)+'</select></label><label><input type="checkbox" id="g-protect" '+(r.protection?"checked":"")+'> Bauweise verstärken</label><details><summary>Weitere Schutzmaßnahmen</summary><label><input type="checkbox" id="g-route" '+(r.safeRoute?"checked":"")+'> Fluchtweg markieren</label><label><input type="checkbox" id="g-warning" '+(r.warning?"checked":"")+'> Warnung und Evakuierung üben</label><label><input type="checkbox" id="g-relocate" '+(r.relocate?"checked":"")+'> Siedlung verlagern</label></details>';
     if(r.spec.theme==="process")return button("g-quake-from-process","Erdbeben erklären");
-    if(r.spec.theme==="earthquake")return button("g-risk","Folgen am Standort vergleichen");
+    if(r.spec.theme==="earthquake")return '<details id="g-analysis"><summary>Vorgang untersuchen</summary><label>Zustand<select id="g-stage">'+opts({"0":"Ausgangszustand",".30":"Spannung aufbauen",".42":"Erdbeben auslösen",".53":"Wellen untersuchen","1":"Nach dem Beben"},"")+'</select></label><label><input id="g-p" type="checkbox" '+(r.showP?"checked":"")+'> P-Welle · Gold</label><label><input id="g-s" type="checkbox" '+(r.showS?"checked":"")+'> S-Welle · Türkis</label><label><input id="g-detail" type="checkbox" '+(r.detail?"checked":"")+'> Gesteinspunkte vergrößern</label></details>'+button("g-risk","Folgen am Standort vergleichen");
     return "";
   }
   private extraInfo(r:RegionalScene){
@@ -203,6 +204,10 @@ export class Observatory {
     if(r.spec.theme==="risk")return item("Magnitude und Intensität","Die Magnitude beschreibt die Größe des Bebens an der Quelle. Die Intensität beschreibt, wie stark die Erschütterung an einem Ort erlebt wird. Im Modell schwingen die Häuser rechts auf lockerem Boden stärker.")+item("Was bedeutet Momenten-Magnitude?","Forschende schätzen die Größe des Bebens aus der gebrochenen Fläche, dem Versatz und der Steifigkeit des Gesteins. Das Modell berechnet keinen Zahlenwert.")+item("Wie können wir vorsorgen?","Bauweise, erreichbare Fluchtwege und geübte Abläufe können die Folgen mindern. Warnungen müssen die Menschen auch erreichen.")+item("Was ist abzuwägen?","Umbau kostet Geld. Freie Fluchtwege benötigen Platz. Betroffene Menschen können mitentscheiden, wo gebaut und wie der Wiederaufbau vorbereitet wird.");
     return r.spec.theme==="earthquake"?item("Was sind P- und S-Wellen?","Goldene Punkte schwingen vor und zurück. Das zeigt die schnellere P-Welle. Türkise Punkte schwingen quer zur Laufrichtung. Diese S-Welle läuft nur durch festes Material.")+item("Was zeigen die zwei Orte?","Der Bruch beginnt im Erdbebenherd. Direkt darüber liegt an der Oberfläche das Epizentrum.")+item("Wann entsteht ein Tsunami?","Wenn sich ein großer Teil des Meeresbodens hebt oder senkt, bewegt er die Wassersäule. Lange Wasserwellen laufen zur Küste und können dort höher werden."):"";}
   private bindExtra(r:RegionalScene){
+    this.change("g-view",v=>r.cameraView(v));this.change("g-stage",v=>{r.playing=false;r.progress=Number(v);r.reframe(true);});
+    this.change("g-p",()=>{r.showP=!r.showP;});this.change("g-s",()=>{r.showS=!r.showS;});
+    this.change("g-detail",()=>{r.detail=!r.detail;if(r.detail){r.cameraView("waves");r.progress=.49;r.playing=false;}});
+
     this.change("g-route",()=>{r.safeRoute=!r.safeRoute;});this.change("g-warning",()=>{r.warning=!r.warning;});this.change("g-relocate",()=>{r.relocate=!r.relocate;});
     this.change("g-exposure",v=>{r.exposure=v;});this.change("g-protect",()=>{r.protection=!r.protection;});
     this.action("g-quake-from-process",()=>void this.openRegion({...r.spec,theme:"earthquake"}));
