@@ -23,25 +23,6 @@ jobs:
       - run: npm ci
       - run: npm run mac:build
       - run: bash scripts/mount-macos.sh
-      - name: Gesicherten G6-Stand auf demselben Mac bauen
-        uses: actions/checkout@v4
-        with:
-          ref: 0ba4a6cca3e8acca2452692bc18c652e7eabc6ce
-          path: .scratch/g6-reference
-          persist-credentials: false
-      - name: Vergleich der Originalbilder, Modellphasen und Grafikprofile
-        env:
-          G6_CHROME: '1'
-          G6_PERF: '1'
-        run: |
-          npm --prefix .scratch/g6-reference run build
-          npm --prefix .scratch/g6-reference run standalone
-          G6_OUT=test-results/mac/G6/Vorher node tests/g6-gallery.mjs .scratch/g6-reference/artifacts/GeoRisiko-G6-Web-Test.html
-          G6_OUT=test-results/mac/G6/Nachher node tests/g6-gallery.mjs artifacts/GeoRisiko-G6.1-Web-Test.html
-          G6_STAGE=Profile G6_PROFILE=classroom G6_OUT=test-results/mac/G6/Vorher-Unterricht node tests/g6-gallery.mjs .scratch/g6-reference/artifacts/GeoRisiko-G6-Web-Test.html
-          G6_STAGE=Profile G6_PROFILE=maximum G6_OUT=test-results/mac/G6/Vorher-Maximal node tests/g6-gallery.mjs .scratch/g6-reference/artifacts/GeoRisiko-G6-Web-Test.html
-          G6_STAGE=Profile G6_PROFILE=classroom G6_OUT=test-results/mac/G6/Unterricht node tests/g6-gallery.mjs artifacts/GeoRisiko-G6.1-Web-Test.html
-          G6_STAGE=Profile G6_PROFILE=maximum G6_OUT=test-results/mac/G6/Maximal node tests/g6-gallery.mjs artifacts/GeoRisiko-G6.1-Web-Test.html
       - name: Bedienfilm vorbereiten
         run: command -v ffmpeg || brew install ffmpeg
       - name: Installierte App und Einzeldatei am selben Mac bedienen und messen
@@ -52,7 +33,7 @@ jobs:
         env:
           G6_NATIVE_GPU: '1'
         run: |
-          python3 scripts/g52/product-check.py artifacts/macos/GeoRisiko-G6.1-macOS-arm64-app.zip artifacts/GeoRisiko-G6.1-Web-Test.html test-results/mac/G52/Ressourcen.json
+          python3 scripts/g52/product-check.py artifacts/macos/GeoRisiko-G6.2-macOS-arm64-app.zip artifacts/GeoRisiko-G6.2-Web-Test.html test-results/mac/G52/Ressourcen.json
           npx playwright install chromium
           G51_PHYSICS_LOG=test-results/mac/G51/Mechanik.json node tests/g51-physics.mjs
           node tests/g51-time.mjs > test-results/mac/G51/Zeitreise.log
@@ -61,25 +42,19 @@ jobs:
           G521_OUT=test-results/mac/G521 node tests/g521-water.mjs
           G521_OUT=test-results/mac/G521 node tests/g521-geometry.mjs
           G61_OUT=test-results/mac/G61 node tests/g61-process.mjs
-      - run: python3 scripts/g61/report.py
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
-          path: artifacts/GeoRisiko-G6.1-Sichtpruefung.zip
+          path: artifacts/macos/GeoRisiko-G6.2-macOS-arm64.dmg
           archive: false
           if-no-files-found: error
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
-          path: artifacts/macos/GeoRisiko-G6.1-macOS-arm64.dmg
+          path: artifacts/macos/GeoRisiko-G6.2-macOS-arm64-app.zip
           archive: false
           if-no-files-found: error
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
-          path: artifacts/macos/GeoRisiko-G6.1-macOS-arm64-app.zip
-          archive: false
-          if-no-files-found: error
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
-        with:
-          path: artifacts/GeoRisiko-G6.1-Web-Test.html
+          path: artifacts/GeoRisiko-G6.2-Web-Test.html
           archive: false
           if-no-files-found: error
       - if: always()
@@ -89,7 +64,77 @@ jobs:
           path: |
             test-results/mac/*.log
             test-results/mac/*.json
-            test-results/mac/G5/*.json
+            test-results/mac/SHA256.txt
+            test-results/mac/G51/*.json
+            test-results/mac/G51/Zeitreise.log
             test-results/mac/G52/*.json
             test-results/mac/G521/*.json
-            test-results/mac/G6/*/*.json
+            test-results/mac/G61/*.json
+  classroom:
+    name: Unterricht und Originalaufnahmen · G6.1 und G6.2
+    runs-on: macos-26
+    timeout-minutes: 75
+    env:
+      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+      G6_NATIVE_GPU: '1'
+      G62_BENCH: '1'
+      G62_OUT: test-results/mac/G62
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - uses: actions/checkout@v4
+        with:
+          ref: d4b45df81be8567f4c7b54acdda8802f272f818e
+          path: .scratch/g61-reference
+          persist-credentials: false
+      - run: command -v ffmpeg || brew install ffmpeg
+      - name: Beide versandfertigen Einzeldateien bilden
+        run: |
+          npm --prefix .scratch/g61-reference run build
+          npm --prefix .scratch/g61-reference run standalone
+          npm run build
+          npm run standalone
+      - run: node tests/g62-boundaries.mjs
+      - name: Vier Unterrichtsabläufe mit identischem Grafikprofil bedienen
+        run: |
+          node tests/g62-learning.mjs .scratch/g61-reference/artifacts/GeoRisiko-G6.1-Web-Test.html --before
+          node tests/g62-learning.mjs artifacts/GeoRisiko-G6.2-Web-Test.html
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Unterrichtsprotokoll
+          path: |
+            test-results/mac/G62/**/*.json
+            test-results/mac/G62/**/*.jpg
+            !test-results/mac/G62/**/frames-*/**
+            test-results/mac/G62/**/*.mp4
+  package:
+    name: Fachbericht und Sichtprüfung
+    runs-on: ubuntu-24.04
+    needs: [mac, classroom]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: mac-protokoll
+          path: test-results/mac
+      - uses: actions/download-artifact@v4
+        with:
+          name: Unterrichtsprotokoll
+          path: test-results/mac/G62
+      - run: python3 scripts/g62/report.py
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          path: artifacts/GeoRisiko-G6.2-Sichtpruefung.zip
+          archive: false
+          if-no-files-found: error
