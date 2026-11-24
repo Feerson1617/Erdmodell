@@ -1,3 +1,4 @@
+import {channels,disclosed,nextLabel,resetReveals,reveal,revealAll,type Channel} from "./reveal";
 const el=(id:string)=>document.getElementById(id);
 const neutral=["Erde","Inneres","Karte","Ereignis","Berg","Siedlung","See","Orte"];
 const buttons:Record<string,string>={
@@ -19,7 +20,7 @@ export class Observation{
     document.querySelector(".view")!.append(this.toggle,this.controls);this.toggle.onclick=()=>this.set(!this.active);
   }
   set(value:boolean){
-    this.active=value;document.body.classList.toggle("observing",value);this.controls.hidden=!value;
+    resetReveals();this.active=value;document.body.classList.toggle("observing",value);this.controls.hidden=!value;
     this.toggle.setAttribute("aria-pressed",String(value));this.toggle.textContent=value?"Zum Erklären":"Beobachten";
     this.nav.forEach((s,i)=>{s.textContent=value?neutral[i]:this.original[i];});el("sidebar")!.inert=value;this.root=null;this.update();
   }
@@ -43,19 +44,31 @@ export class Observation{
       control.id=id==="g-launch"?"observe-region":id==="g-year"||id==="g-progress"?"observe-progress":"observe-"+id.slice(id.startsWith("g-")?2:0);
       control.dataset.from=id;this.controls.append(control);this.bindings.push({source,control});
     }
+    const tools=document.createElement("details");tools.id="observe-release";
+    tools.innerHTML='<summary>Informationen freigeben</summary><div class="reveal-actions">'+Object.entries(channels).map(([key,label])=>'<button data-channel="'+key+'">'+label+'</button>').join("")+'<button data-release="one">Ein Name mehr</button><button data-release="pick">Objekt antippen</button><button data-release="all">Alles zeigen</button><button data-release="none">Alles verbergen</button></div>';
+    tools.onclick=e=>{const b=(e.target as Element).closest("button");if(!b)return;
+      if(b.dataset.channel)reveal(b.dataset.channel as Channel);
+      else if(b.dataset.release==="one")nextLabel();
+      else if(b.dataset.release==="pick")document.body.setAttribute("data-choose-object","");
+      else if(b.dataset.release==="all")revealAll();else resetReveals();this.update();};
+    const insight=document.createElement("div");insight.id="observe-insight";this.controls.append(tools,insight);
     const note=document.createElement("small");note.id="observe-note";this.controls.append(note);
   }
   update(){
     if(!this.active)return;
     const sidebar=el("sidebar")!,root=sidebar.firstChild;if(root!==this.root||!this.controls.childElementCount){this.root=root;this.build();}
     for(const {source,control} of this.bindings){
+      if(control.disabled!==source.disabled)control.disabled=source.disabled;
       if(source instanceof HTMLInputElement&&source.type==="checkbox")control.setAttribute("aria-pressed",String(source.checked));
       else if(control instanceof HTMLSelectElement||control instanceof HTMLInputElement){if(control.value!==source.value)control.value=source.value;}
       else if(source.id==="g-cut")control.textContent=source.textContent;
       else if(source.id.endsWith("play")||source.id==="atlasPlay"||source.id==="playProcess")control.textContent=/Pause|Anhalten/.test(source.textContent??"")?"Pause":"Abspielen";
     }
     const mode=document.body.dataset.observatory,nav=el("desk")?.dataset.mode;
-    const text=mode==="time"?[el("g-age")?.textContent,el("g-certainty")?.textContent].join(" · "):mode==="regional"?el("g-model-note")?.textContent??"Schematisches Modell · Modellzeit verkürzt":mode==="map"?(el("g-depth")?"Beobachtete Erdbeben · USGS 2019–2023":"Plattengrenzen · PB2002"):nav==="inside"?((el("scale") as HTMLInputElement)?.checked?"Äußere Schicht überhöht":"Radien im Referenzmaßstab"):nav==="nyos"?"Geländedaten · schematischer Ablauf":"";
+    const text=mode==="time"?[el("g-age")?.textContent,el("g-certainty")?.textContent].join(" · "):mode==="regional"?el("g-model-note")?.textContent??"Schematisches Modell · Modellzeit verkürzt":mode==="map"?(el("g-depth")?"Beobachtete Erdbeben · USGS 2019–2023":"Plattengrenzen · PB2002"):nav==="inside"?((el("scale") as HTMLInputElement)?.checked?"Äußere Schicht überhöht":"Radien im Referenzmaßstab"):nav==="nyos"?"Geländedaten · schematischer Ablauf":el("pair-process")?"Starre Ausschnitte · Bewegung und Zeit schematisch":"";
+    for(const btn of this.controls.querySelectorAll<HTMLButtonElement>("[data-channel]")){const on=String(disclosed(btn.dataset.channel as Channel));if(btn.getAttribute("aria-pressed")!==on)btn.setAttribute("aria-pressed",on);}
+    const readings=Array.from(sidebar.querySelectorAll<HTMLElement>("[data-teach]")).filter(e=>disclosed(e.dataset.teach as Channel)).map(e=>e.textContent?.trim()).filter(Boolean);
+    const insight=el("observe-insight"),reading=readings.join(" · ");if(insight&&insight.textContent!==reading)insight.textContent=reading;
     const note=el("observe-note");if(note&&note.textContent!==text)note.textContent=text;
   }
 }

@@ -104,10 +104,10 @@ export class RegionalScene {
   facies=false;readonly sectionColor={value:0};
   analysis=false;readonly timings:Record<string,number>={};
   view="land";vectors=false;riskSite="near";markerEnds:number[][]=[];
-  showP=true;showS=true;detail=false;phasesShown=false;water?:WaterSection;private waves:T.Mesh[]=[];private fault!:T.Line;private rupture!:T.Line;
+  showP=true;showS=true;detail=false;phasesShown=true;water?:WaterSection;private waves:T.Mesh[]=[];private fault!:T.Line;private rupture!:T.Line;
   private waterColumn?:T.Mesh; private nearSurface=0;private rockMaterial:T.Material[]=[];
   private people:T.Mesh[]=[];private route?:T.Line;private motion:((t:number)=>void)[]=[];
-  progress=0;playing=false;slow=false;cut=false;names=false;vertical=true;stress=false;
+  progress=0;playing=false;slow=false;cut=false;names=true;moreNames=false;vertical=true;stress=false;
   soil="rock";eruption="effusive";coastal=false;protection=false;safeRoute=false;warning=false;relocate=false;exposure="dense";ready=false;error="";private disposed=false;private age=0;
   constructor(readonly spec:RegionSpec,canvas:HTMLCanvasElement){
     this.orbit=new OrbitControls(this.camera,canvas);this.orbit.target.set(0,0,0);
@@ -428,7 +428,7 @@ export class RegionalScene {
       const tr=this.transition;tr.fraction=Math.min(1,tr.fraction+dt*1.55);const v=T.MathUtils.smoothstep(tr.fraction,0,1);
       this.camera.position.lerpVectors(tr.from,tr.to,v);this.orbit.target.lerpVectors(tr.look,tr.goal,v);if(tr.fraction===1)this.transition=undefined;
     }
-    this.labels.visible=this.names && this.spec.theme==="earthquake"&&this.faultModel.kind!=="unknown"&&!document.body.classList.contains("observing");
+    this.labels.visible=this.names && this.spec.theme==="earthquake"&&this.faultModel.kind!=="unknown";
     const quake=(this.spec.theme==="earthquake"||this.spec.theme==="risk")&&this.faultModel.kind!=="unknown"&&this.view!=="coast"&&this.view!=="ocean";this.fault.visible=quake;
     const f=this.faultModel;
     if((t!==this.lastT||this.lastSection!==this.section.visible) && (this.lastT<0||!["volcano","lithosphere"].includes(this.spec.theme))){

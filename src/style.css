@@ -354,3 +354,13 @@ body:not(.observing) #desk.pair-layout[data-mode=plates] .view{grid-column:1;gri
 body:not(.observing) #desk.pair-layout[data-mode=plates] #sidebar{position:static;grid-column:2;grid-row:1;margin:0;border-radius:0;width:auto;max-height:100%;padding:clamp(16px,2vw,38px);background:#22392e;overflow-y:auto}
 body:not(.observing) #desk.pair-layout[data-mode=plates] #modelnote{left:16px;max-width:85%}
 }
+#observatory-labels .annotation-anchor,#observatory-labels button span{background:transparent;padding:0;transform:none;border-radius:0}
+#observatory-labels button span{position:static;color:inherit;font:inherit}
+.annotations button[aria-pressed=true]{outline:3px solid #efcd76}
+#observe-release{padding:3px 7px}#observe-release summary{cursor:pointer}
+.reveal-actions{display:flex;flex-wrap:wrap;gap:4px;padding-top:6px}
+#observe-insight:empty,#g-object:empty{display:none}
+#observe-insight{flex-basis:100%;max-height:22vh;overflow:auto}
+.observing:is(.show-labels,.show-some-labels) :is(#pins,#platePins,#observatory-labels){display:block!important}
+#g-object:not(:empty){padding:.65em;border-left:3px solid #dbbf75;background:#22392e}
+.boundary-legend{display:flex;gap:.55em;flex-wrap:wrap;color:#d0e1d8;font-size:.92em}.boundary-legend span{display:inline-flex;align-items:center;gap:4px}

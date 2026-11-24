@@ -31,6 +31,6 @@ export function readableView(e:unknown){
     (h.selected===null||Number.isInteger(h.selected)&&number(h.selected,0,3))&&Array.isArray(h.visible)&&h.visible.length===4&&h.visible.every(flag)&&Array.isArray(h.opacity)&&h.opacity.length===4&&h.opacity.every(unit)&&flag(b.labels)&&Array.isArray(b.released)&&b.released.every(i=>Number.isInteger(i)&&number(i,0,3));}
   if(b.mode==="nyos"){const n=b.nyos;return record(n)&&one(n.view,"lake|section|event|protection")&&one(n.measure,"pipe|monitor|settlements")&&unit(n.progress)&&flags(n,"playing slow dissolved air")&&flag(b.nyosDetail);}
   if(b.mode==="plates"){const q=b.process,o=b.plates;return record(q)&&record(o)&&flags(o,"boundaries names types")&&typeof o.category==="string"&&typeof o.plate==="string"&&
-    (q.processSite===null||one(q.processSite,"island|japan|san"))&&unit(q.processProgress)&&flags(q,"processPlaying processSlow processLoop processDetail singlePlateName smallPlateNames")&&unit(b.pairTime)&&flags(b,"pair pairPlaying")&&typeof b.profile==="string";}
+    (q.processSite===null||one(q.processSite,"island|japan|san"))&&unit(q.processProgress)&&flags(q,"processPlaying processSlow processLoop processDetail singlePlateName smallPlateNames")&&(b.pairStep===undefined||Number.isInteger(b.pairStep)&&number(b.pairStep,1,5819))&&unit(b.pairTime)&&flags(b,"pair pairPlaying")&&typeof b.profile==="string";}
   return b.mode==="globe"||typeof b.site==="string";
 }

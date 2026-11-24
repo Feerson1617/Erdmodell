@@ -104,6 +104,7 @@ export function plateControls(world: World) {
   return `${title}${start}${card}
     <div class="plateChecks">${check("boundaries", "Plattengrenzen zeigen", options.boundaries)}
     ${check("plateNames", "Namen zeigen", options.names || world.singlePlateName)}</div>
+    ${options.types?'<p class="boundary-legend"><span><i class="swatchDot divergent"></i>Divergenz</span><span><i class="swatchDot convergent"></i>Konvergenz</span><span><i class="swatchDot transform"></i>Transformbewegung</span></p>':""}
     ${picker}
     ${options.boundaries && !options.names && options.plate ? check("onePlateName", "Gewählten Namen zeigen", world.singlePlateName) : ""}
     <details id="plateSettings"><summary>Weitere Einstellungen</summary>

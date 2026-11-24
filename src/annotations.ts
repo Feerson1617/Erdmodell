@@ -95,6 +95,7 @@ export class AnnotationLayer {
       }
       const { anchor, button, line } = node;
       node.label = label;
+      if(button.firstElementChild?.textContent!==label.name)button.firstElementChild!.textContent=label.name;
       let size = this.sizes.get(label.name);
       if (!size) {
         if (!button.isConnected) this.host.append(anchor);

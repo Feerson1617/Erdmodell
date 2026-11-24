@@ -122,13 +122,13 @@ function settlements(r:RegionalScene){
     const col=i%6,row=Math.floor(i/6),x=r.spec.coastLesson?-3.6+col*.15:-3.4+col*1.23,z=-2.04+row*.43;
     const g=new T.Group();g.userData.explanation=text.shelter;g.position.set(x,r.height(x,z),z);
     const wall=object(wallGeo,walls,"shelter"),cap=object(roofGeo,roof,"shelter");wall.position.y=.14;cap.position.y=.33;cap.rotation.y=Math.PI/4;
-    const beam=object(braceGeo,brace,"shelter");beam.position.set(0,.15,.105);beam.rotation.z=.48;g.add(wall,cap,beam);r.settlement.add(g);buildings.push(g);baseX.push(x);
+    const beam=object(braceGeo,brace,"shelter");beam.userData.explanation={name:"Erdbebengerechte Bauweise",answer:"Verstrebungen können ein Gebäude bei Erschütterungen stabilisieren."};beam.position.set(0,.15,.105);beam.rotation.z=.48;g.add(wall,cap,beam);r.settlement.add(g);buildings.push(g);baseX.push(x);
   }
   const routeStart=r.spec.coastLesson?-3.12:-1.5,routeEnd=r.spec.coastLesson?-5.03:-3.6;
   const way=(t:number)=>{const x=T.MathUtils.lerp(routeStart,routeEnd,t),z=-1.35+.24*Math.sin(t*Math.PI);return vec(x,r.height(x,z)+.09,z);};
   const route=line(Array.from({length:28},(_,i)=>way(i/27)),0xffde72,"route");r.settlement.add(route);
-  const beacon=object(new T.ConeGeometry(.12,.45,6),chips(0xe3a349),"route");beacon.position.copy(way(0));beacon.position.y+=.16;r.settlement.add(beacon);
-  const walkers=new T.InstancedMesh(new T.SphereGeometry(.052,7,5),chips(0xffdf85),10);r.settlement.add(walkers);const dummy=new T.Object3D();
+  const beacon=object(new T.ConeGeometry(.12,.45,6),chips(0xe3a349),"route");beacon.userData.explanation={name:"Warnsystem",answer:"Eine rechtzeitige Warnung hilft, wenn Menschen sie erhalten und den Fluchtweg kennen."};beacon.position.copy(way(0));beacon.position.y+=.16;r.settlement.add(beacon);
+  const walkers=new T.InstancedMesh(new T.SphereGeometry(.052,7,5),chips(0xffdf85),10);walkers.name="Gefährdete Menschen";r.settlement.add(walkers);const dummy=new T.Object3D();
   const service=object(new T.BoxGeometry(.35,.10,.19),chips(0x5e9771),"shelter");service.userData.explanation={name:"Versorgung wiederherstellen",answer:"Mit Vorbereitung kann die Versorgung nach dem Ereignis früher wieder funktionieren."};service.position.copy(way(1));r.settlement.add(service);
   r.onAnimate(t=>{sediment.visible=r.soil==="loose"&&!r.spec.coastLesson;route.visible=r.safeRoute&&r.exposure!=="empty";beacon.visible=r.warning&&r.exposure!=="empty";walkers.visible=route.visible&&r.warning;
     const available=t<.49||t>(r.warning&&r.safeRoute?.77:.94);service.visible=r.exposure!=="empty";(service.material as T.MeshStandardMaterial).color.setHex(available?0x729f71:0x655d55);

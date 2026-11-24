@@ -1,3 +1,4 @@
+import {claimObject} from "./observatory/reveal";
 import {observeFrame,graphics,cadence} from "./observatory/graphics";
 import * as T from "three";
 import { CameraController, HOME, type Pose } from "./camera";
@@ -213,7 +214,7 @@ export class World {
           this.selectBoundary(boundary);
           if (!boundary && !this.processSite) {
             const hit = this.mosaic?.pick(ray);
-            if (hit) { this.inspectPlate(hit.object.name, hit.point); this.mosaic!.track(hit); }
+            if (hit) { claimObject(hit.object.name);this.inspectPlate(hit.object.name, hit.point); this.mosaic!.track(hit); }
           }
           this.onBoundary?.();
         }
@@ -389,6 +390,7 @@ export class World {
   selectPairBody(code:string){
     const pair=this.mosaic?.pair;
     if(!pair)return;
+    claimObject(code);
     for(const body of pair.bodies)(body.material as T.MeshStandardMaterial).emissive.setHex(body.name===code?0x302817:0);
     const area=document.getElementById("pair-object");
     if(area){area.hidden=false;area.textContent=names[code]+" · "+this.profiles[code].place;}

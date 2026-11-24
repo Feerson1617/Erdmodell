@@ -1,3 +1,4 @@
+import {allowsLabel,claimObject} from "./observatory/reveal";
 import {installProfiles} from "./observatory/graphics";
 import {classroomViews} from "./observatory/classroom-views";
 import {fields,lessonKeys} from "./observatory/saved-state";
@@ -56,7 +57,7 @@ const desk = $("desk"),
   status = $("status");
 let observatory: Observatory;
 let world: World,
-  labels = false,
+  labels = !friday,
   present = false,
   alertText = "";
 const released = new Set<number>();
@@ -157,8 +158,8 @@ function renderShellControls() {
   ${selected === null ? "" : labels || released.has(selected) ? '<div class="nameActions"><button id="explainLayer">Erklärung öffnen</button><button id="hideOne">Diesen Namen verbergen</button></div>' : '<button id="revealOne">Einzelnen Namen zeigen</button>'}
   ${!labels && released.size ? '<button id="allNames">Alle Namen zeigen</button>' : ""}
   ${friday
-    ? `<div class="options">${scale}</div><details id="shellOptions"><summary>Weitere Modelloptionen</summary>${actions}<div class="options">${cut}${lithosphere}</div>${waves}</details>`
-    : `${actions}<div class="options">${cut}${scale}${lithosphere}</div>${waves}`}`;
+    ? `<div class="options">${scale}</div><details id="shellOptions"><summary>Weitere Modelloptionen</summary>${(labels||released.has(selected??-1))&&selected!==null?"<p>"+layers[selected].text+"</p>":""}${actions}<div class="options">${cut}${lithosphere}</div>${waves}</details>`
+    : `${(labels||released.has(selected??-1))&&selected!==null?"<p>"+layers[selected].text+"</p>":""}${actions}<div class="options">${cut}${scale}${lithosphere}</div>${waves}`}`;
 }
 function siteInfo() {
   const r = world.region;
@@ -353,7 +354,7 @@ function navigate(mode: World["mode"]) {
 }
 function reset() {
   observatory?.close();
-  labels = false;
+  labels = !friday;
   released.clear();
   world.shell.setComparison("reference");
   world.region = firstRegion;
@@ -361,7 +362,7 @@ function reset() {
   world.shell.cut = true;
   world.smallPlateNames = false;
   world.globe(true);
-  world.setPlateOptions({ boundaries:false, names:false, types:false, category:"all", plate:"" });
+  world.setPlateOptions({ boundaries:!friday, names:!friday, types:!friday, category:"all", plate:"" });
   renderSide();
 }
 function setPresentation(value: boolean) {
@@ -386,16 +387,16 @@ function updatePins() {
   const dimensions = $("earth");
   const key = [world.mode,p.lat,p.lon,p.d,p.tilt,p.bearing,dimensions.clientWidth,dimensions.clientHeight,
     labels,released.size,s.cut,s.expanded,s.lithosphere,s.group.visible,s.visible.join(),o.boundaries,o.names,o.plate,world.singlePlateName,
-    world.processDetail,world.processSite,world.processChoice,world.smallPlateNames,world.atlasReady,world.processProgress,world.annotationTransition,present,layoutRevision].join("/");
+    document.body.dataset.reveal,world.processDetail,world.processSite,world.processChoice,world.smallPlateNames,world.atlasReady,world.processProgress,world.annotationTransition,present,layoutRevision].join("/");
   if (annotationKey === key) return;
   annotationKey = key;
   const obstacles = pinObstacles;
-  shellPins.draw(world.mode === "inside" && (labels || released.size) ? world.layerMarkers(released,labels) : [],obstacles,layoutRevision);
+  shellPins.draw(world.mode === "inside" && (labels || released.size) ? world.layerMarkers(released,labels).filter((a,i)=>allowsLabel(a.id,i)) : [],obstacles,layoutRevision);
   const plates = world.mode === "plates" && (o.names || world.singlePlateName || world.mosaic?.pair)
     ? world.processDetail ? world.processLabels() : world.plateLabels().map(p => ({
       ...p,id:p.code,text:"Zu dieser Platte gehören die Erdkruste und der starre oberste Erdmantel. Sie bewegt sich langsam gegenüber anderen Platten."
     })) : [];
-  tectonicPins.draw(plates,[...obstacles,side],layoutRevision);
+  tectonicPins.draw(plates.filter((a,i)=>allowsLabel(a.id,i)),[...obstacles,side],layoutRevision);
 }
 $("info").onclick = infoPage;
 // Keep local source notices readable inside the packaged window.
@@ -438,6 +439,7 @@ async function boot() {
   installProfiles(document.querySelector(".headTools")!);
   try {
     world = new World(canvas, warn);
+    world.setPlateOptions({names:!friday,boundaries:!friday,types:!friday});
   } catch {
     desk.dataset.mode = "fallback";
     side.hidden = false;
@@ -479,6 +481,7 @@ async function boot() {
   }
   renderSide();
   world.onLayer = i => {
+    if(observation.active&&claimObject("shell-"+i)){annotationKey="";return;}
     if (!observation.active && (labels || released.has(i))) showDefinition(layers[i]);
     else select(i);
   };

@@ -58,7 +58,7 @@ export class LocalLandscape{
         const k=j*n+i;if(j+1<axis.length&&i+1<n)idx.push(k,k+n,k+1,k+1,k+n,k+n+1);
       }
       const g=new T.BufferGeometry();g.setAttribute("position",new T.Float32BufferAttribute(p,3));g.setIndex(idx);g.computeVertexNormals();
-      const mesh=new T.Mesh(g,ground);mesh.name="Nahgelände";mesh.receiveShadow=true;this.halves[half].add(mesh);
+      const mesh=new T.Mesh(g,ground);mesh.name=site==="island"&&half===0?"Basaltspalte":"Nahgelände";mesh.userData.lessonAnchor=()=>{const x=site==="island"?-.7:half?5:-5,z=-8;return new T.Vector3(x,this.surface(x,z),z);};mesh.receiveShadow=true;this.halves[half].add(mesh);
     }
     if(site==="island"){
       this.lava=lavaTongue(3.9);this.lava.build(-2,-16,Math.PI*.49,52,0,(x,z)=>this.surface(x,z));this.root.add(this.lava.mesh);
@@ -68,7 +68,7 @@ export class LocalLandscape{
       const pos=water.attributes.position,wet=[];
       for(let j=0;j<axis.length;j++)for(let i=0;i<axis.length;i++){pos.setXYZ(j*axis.length+i,axis[i],0,axis[j]);wet.push(-this.terrain[j][i]);}
       water.setAttribute("depthWet",new T.Float32BufferAttribute(wet,1));water.computeBoundingSphere();
-      const sea=new T.Mesh(water,seaMaterial({value:0},1,5.5));sea.renderOrder=2;this.root.add(sea);
+      const sea=new T.Mesh(water,seaMaterial({value:0},1,5.5));sea.name="Uferwasser";sea.userData.lessonAnchor=()=>new T.Vector3(17,0,-12);sea.renderOrder=2;this.root.add(sea);
     }
     this.plant();
   }
