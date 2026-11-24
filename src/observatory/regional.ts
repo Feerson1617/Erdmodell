@@ -302,7 +302,7 @@ export class RegionalScene {
   }
   private groundDetails(){
     if(!this.colorMap||!this.spec.site)return;
-    const c=document.createElement("canvas");c.width=96;c.height=72;const ctx=c.getContext("2d")!;
+    const c=document.createElement("canvas");c.width=96;c.height=72;const ctx=c.getContext("2d",{willReadFrequently:true})!;
     ctx.drawImage(this.colorMap.image,0,0,96,72);const pixels=ctx.getImageData(0,0,96,72).data;
     let state=72417;const rand=()=>((state=(1664525*state+1013904223)>>>0)/4294967296);
     for(const vegetation of [true,false]){

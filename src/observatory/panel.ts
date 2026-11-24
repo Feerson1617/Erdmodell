@@ -74,7 +74,11 @@ export class Observatory {
     this.world.nav.minimumDistance=.06;this.world.nav.fly({lat:spec.lat,lon:spec.lon,d:Math.max(3600,(spec.site?sites[spec.site].width:110)*3.2),tilt:12,bearing:0},true,1150);
     const reg=new RegionalScene(spec,$("earth") as HTMLCanvasElement);this.region=reg;reg.orbit.enabled=false;
     this.enrich(reg);const rev=this.revision;this.draw();
-    try{await reg.init();if(rev===this.revision)this.draw();}
+    try{
+      await reg.init();if(rev!==this.revision)return;
+      reg.ready=false;const start=performance.now();await this.world.gl.compileAsync(reg.scene,reg.camera);
+      if(rev!==this.revision)return;reg.timings.warmShaderMs=performance.now()-start;reg.ready=true;this.draw();
+    }
     catch{if(rev===this.revision){reg.error="Das lokale Gelände konnte nicht geladen werden.";this.draw();}}
   }
   private horizontalSeabed():RegionSpec{

@@ -24,7 +24,7 @@ assert len(lesson['movies']) == 2 and all(v['frames'] >= 5 for v in lesson['movi
 files = {}
 for f in ['Pruefung.json','installation.log','G52/Ressourcen.json','G51/Mechanik.json','G51/Zeitreise.log','G521/Kontakte.json','G521/Wasserbilanz.json','G521/Speicher.json','G521/Bedienung.json','SHA256.txt']:
     files[f] = out / f
-for f in ['g521-unterricht.md','curriculum-coverage.md','g51-quellen.md','mac-installation.md']:
+for f in ['g521-unterricht.md','g521-kaltstart.json','curriculum-coverage.md','g51-quellen.md','mac-installation.md']:
     files['Dokumentation/'+f] = root / 'docs' / f
 for p in (root / 'docs/g521-vergleich').iterdir(): files['Vorher/'+p.name] = p
 for p in (out/'G521').glob('*.jpg'): files['Aktuell/'+p.name] = p
@@ -51,7 +51,7 @@ text+=['','Die Oberfläche in Parkfield zeigt den lokalen Spannungsaufbau vor de
 text+=table(['Modellhandlung','Bedienelemente','ms'],[[v['label'],', '.join(v['actions']) or 'Beobachtungszeit',v['ms']] for v in lesson['steps']+lesson['transfer']])
 text+=['','Die gemessenen Zeiten enthalten das tatsächliche Bedienen, Rendern und Abwarten des Kamerastillstands. Der Test erfasst technische Zustände. Lernerfolg und Schülerreaktionen wurden nicht erhoben.','']
 text+=table(['Lokales Ereignis','Phase','Ressourcen ms','Solver ms','Geometrie ms','Kompilierung ms','Wechsel ms','Cache'],[[t['event'],t['progress']]+[round(t.get(k,0),1) for k in ['dataMs','solverMs','geometryMs','warmShaderMs','localSwitchMs','reused']] for t in lesson['switches']])
-text+=['','## Leistung','']
+text+=['','## Leistung','','Im getrennten Linux-Vergleich dauerte das synchrone Auslesen der 96 × 72 Farbproben zur Platzierung der Geländedetails beim kalten Öffnen Japans 2.014 und 2.192 ms. Mit CPU-gestütztem Lesecanvas waren es 6,6 und 9,0 ms. Vier unabhängige Browserstarts, unveränderte Textur und Probenzahl, Chromium 141 mit SwiftShader. Die App bereitet außerdem die Shader vor dem ersten regionalen Bild vor. Die folgenden Werte stammen aus den beiden ausgelieferten Produkten auf dem virtuellen Mac.','']
 text+=table(['Produkt','Kurzes Messfenster','FPS','P95 ms','Längste Pause ms'],[[r['name'],s['scene'],round(s['fps'],1),round(s['p95'],1),round(s['max'],1)] for r in raw['runs'] for s in r['g5']['measurements']])
 long=app['classroom']['samples']
 text+=['','15-Minuten-Durchlauf mit wechselnden Szenen. Einzelne lange Frames können weiterhin auftreten.','']

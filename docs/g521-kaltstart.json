@@ -1,0 +1,43 @@
+{
+  "system": "Linux-Cloud, Chromium 141, SwiftShader, 1000 × 740 CSS-Pixel",
+  "scene": "Tōhoku, Erdbeben, kaltes Öffnen über die Weltkarte",
+  "method": "Vier unabhängige Browserstarts in der Reihenfolge Standard, CPU, CPU, Standard. Instrumentiert wurde ausschließlich die 96 × 72 Pixel große Farbabtastung für die Platzierung von Vegetation und Gestein. Zeiten in Millisekunden.",
+  "runs": [
+    {
+      "cpu": false,
+      "dataMs": 71.80000000074506,
+      "solverMs": 37.29999999701977,
+      "geometryMs": 2319,
+      "firstDrawMs": 187.30000000074506,
+      "drawImage": 0.19999999925494194,
+      "getImageData": 2191.900000002235
+    },
+    {
+      "cpu": true,
+      "dataMs": 61.70000000298023,
+      "solverMs": 32.69999999925494,
+      "geometryMs": 129.89999999850988,
+      "firstDrawMs": 204.19999999925494,
+      "drawImage": 0.09999999776482582,
+      "getImageData": 9
+    },
+    {
+      "cpu": true,
+      "dataMs": 45,
+      "solverMs": 25.899999998509884,
+      "geometryMs": 114.80000000074506,
+      "firstDrawMs": 169.10000000149012,
+      "drawImage": 0.19999999925494194,
+      "getImageData": 6.600000001490116
+    },
+    {
+      "cpu": false,
+      "dataMs": 55.69999999925494,
+      "solverMs": 35.400000002235174,
+      "geometryMs": 2112.099999997765,
+      "firstDrawMs": 150.30000000074506,
+      "drawImage": 0.19999999925494194,
+      "getImageData": 2013.8999999985099
+    }
+  ]
+}
