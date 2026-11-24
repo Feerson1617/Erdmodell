@@ -1,0 +1,26 @@
+# GeoRisiko G6 im Unterricht
+
+Die Landschaft öffnet mit dem vorhandenen Modellzustand. **Untergrund öffnen** zeigt dieselbe Region in derselben Modellzeit. Für einen Vergleich eignen sich in Parkfield der schematische Weg und seine Unterbrechung nach dem Bruch, in Tōhoku das Wasserprofil und auf Reykjanes der Übergang zwischen Schlot und Oberfläche. **Beobachten** blendet Erläuterungen aus. Die acht Unterrichtsansichten und gespeicherten Favoriten rufen weiterhin Kamera und Modellzustand auf.
+
+## Was die Bilder zeigen
+
+| Ansicht | Bildbefund und Modellgrenze |
+|---|---|
+| Parkfield | In der Ausgangsversion verlor die landwirtschaftlich genutzte Ebene beim Annähern ihre Konturen. Das feinere Satellitenmosaik erfasst Feldgrenzen und Hangrinnen auch im Umfeld. Gräser, Gehölze und Lesesteine stehen auf den Dreiecken der bewegten Oberfläche. Der deutlich erkennbare Vergleichsweg bleibt ein schematischer Marker. |
+| Tōhoku | Der Übergang zwischen lokalem Meer und Umgebung verwendet eine gemeinsame Wasserhöhe in Ruhe und dieselbe optische Behandlung. Farbe und Durchsicht hängen von der Wassertiefe ab. Im Schnitt bleiben Meeresboden und Wellenfronten sichtbar. Das Küstenprofil zeigt die aus den Zellen des Flachwassermodells berechnete Benetzung und den Rückzug. Es dient der Erklärung, eine örtliche Gefahrenprognose würde zusätzliche Daten und Validierung erfordern. |
+| Reykjanes, Hawaii, Zaozan | Unregelmäßige Kraterränder, Basaltschutt, eine karge Moosdecke in Island und dichterer Bewuchs auf geeigneten hawaiianischen Flächen machen Unterschiede sichtbar. Auf Zaozan trägt das vorhandene Höhenmodell den Vulkan. Die Schmelzlinsen zwischen Kristallen, die Fließwege der Lava und die Aschewolke sind qualitative Modelle. Die Kamera kann auf Schlot, Flanke und Untergrund gerichtet werden. |
+| Himalaya und Ostafrika | Schutt und Fels dominieren die hohen und hellen Bereiche in Nepal. Im Graben wechseln trockener Bewuchs, Schirmbaumgruppen und niedrig gelegene Ufervegetation. Lage und Farbe der größeren Flächen stammen aus den Geländedaten und Satellitenbildern. Allgemeine Grenzmodelle bleiben ausdrücklich schematisch. |
+| Geologischer Schnitt | Sieben Gesteinsmaterialien variieren in Schichtung, Körnung, Klüftung und Rauheit. Materialkoordinaten bewegen sich mit dem Gestein. Die Dicke, der Kontakt und die Bewegung stammen aus den G5.2.1-Körpern. Modellfarben unterstützen die Unterscheidung. Die zuschaltbare Spannungsfarbe zeigt qualitativ die Beanspruchung des Gesteins. |
+| Globus | Die heutige Tagseite verwendet ein lokales Blue-Marble-Mosaik. Reliefbeleuchtung, Meer und atmosphärischer Rand unterstützen die räumliche Orientierung. Historische Geometrien und Zukunftsszenarien verwenden ihre eigenen Darstellungen. |
+
+## Grafikqualität
+
+Das Reglersymbol in der Kopfleiste öffnet die Grafikqualität. **Automatisch** beginnt in Unterrichtsqualität und senkt bei wiederholt langen Bildabständen die Detailstufe. **Unterricht** hält die mittlere Materialstufe, zwei oder drei gekreuzte Pflanzenflächen je nach Entfernung und einen Schattenatlas mit 1024 Pixeln je Seite. **Maximal** verwendet dichteren Bewuchs, feinere Geländeindizes, zusätzliche Materialprojektionen, stärkere anisotrope Filterung und 2048-Pixel-Schatten. Die automatische Sparstufe verwendet Horizontverschattung aus den Geländedaten, gröbere Mipstufen und weniger Pflanzen. Der physikalische Zustand und die Beschriftungen funktionieren in allen Profilen gleich. Die tatsächlichen Leistungskosten pro Szene stehen im Abnahmebericht.
+
+Die App lädt lokale Bildressourcen beim Eintritt in eine Region. Die gemeinsam genutzten Materialatlanten verbleiben im Speicher. Die Anwendung gibt regionale Geometrien und Texturen beim Verlassen frei, mit einem warm gehaltenen Gegenereignis für den Seebebenvergleich. In einer pausierten, unveränderten Region behält die App das letzte Bild und prüft weiter Eingaben. Kamerabewegung, Animation, Größenwechsel und neue Einstellungen lösen sofort einen neuen Zeichenvorgang aus. Die reguläre Auflösung folgt der Bildrate. Der gepaarte Leistungstest verwendet einen festen Skalierungsfaktor, damit beide Produktstände dieselbe Pixelzahl zeichnen.
+
+## Verbleibende Grenzen
+
+Ein regionales Modellfenster umfasst mehrere Dutzend bis Hunderte Kilometer. Beim sehr nahen Heranzoomen werden die Auflösung der gemessenen Oberfläche und die stilisierte Vergrößerung einzelner Pflanzen und Steine sichtbar. Das ferne Umfeld nutzt gröbere Geländegeometrie. Der Vulkanismus kombiniert gemessenes Landschaftsrelief und vereinfachte Aufbauten. Oberflächenglanz und feine Wasserreflexe entstehen ohne zusätzliche Spiegelkamera. Weder Wassertropfen noch einzelne Bäume, Gesteinsfragmente und Schmelzgänge sind an ihrem gezeigten Ort vermessen.
+
+Der macOS-Build wird lokal ad hoc signiert. Bei erstmaligem Öffnen kann Gatekeeper eine ausdrückliche Freigabe in **Datenschutz & Sicherheit** verlangen. Die Messwerte des virtuellen Apple-Silicon-Macs und die Vollbildprobe ersetzen keine Messung am physischen Schulgerät. [Installation](mac-installation.md)

@@ -7,7 +7,7 @@ import {chromium,webkit} from "playwright";
 import {Vector3} from "three";
 import {PNG} from "pngjs";
 
-const out=resolve("test-results/plattenatlas"), html=resolve("artifacts/GeoRisiko-G5.2.1-Web-Test.html");
+const out=resolve("test-results/plattenatlas"), html=resolve("artifacts/GeoRisiko-G6-Web-Test.html");
 const fallback=resolve("ausgabe/GeoRisiko-Erdmodell-G4.3.html");
 const hash=async file=>createHash("sha256").update(await readFile(file)).digest("hex");
 const surfaces=JSON.parse(await readFile("src/tectonics/mosaic.json","utf8"));
@@ -206,7 +206,7 @@ for(const engine of [chromium,webkit]){
     }
     for(const key of ["geometries","textures","programs"])assert.equal(run.resources[1][key],run.resources.at(-1)[key],key);
     assert.deepEqual(run.requests,[]);assert.deepEqual(run.errors,[]);
-    assert.deepEqual(run.files,["GeoRisiko-G5.2.1-Web-Test.html"]);
+    assert.deepEqual(run.files,["GeoRisiko-G6-Web-Test.html"]);
     report.runs.push(run);console.log(run.engine,"52 Flächen, acht Antworten, Offline-Betrieb geprüft");
     if(engine===chromium){
       const film=await browser.newContext({viewport:{width:1024,height:680},recordVideo:{dir:out,size:{width:960,height:638}}});

@@ -63,7 +63,7 @@ export function eruption(r:RegionalScene,x:number,top:number){
         float u=channel.x,v=channel.y,age=max(0.,front-u);
         vec2 p=vec2(u*33.,v*3.+sin(u*19.));
         float cracks=abs(sin(p.x+.7*sin(p.y*3.1))*cos(p.y*2.+p.x*.29));
-        float molten=(1.-smoothstep(.03,.21,cracks))*(1.-.69*smoothstep(.08,.84,age));
+        float molten=max(.32*(1.-smoothstep(.02,.13,age)),1.-smoothstep(.05,.32,cracks))*(1.-.57*smoothstep(.08,.84,age));
         float edge=smoothstep(0.,.17,min(v,1.-v));
         vec3 crust=mix(vec3(.066,.042,.034),vec3(.16,.093,.063),.5+.5*sin(p.x*2.3+p.y));
         diffuseColor.rgb=mix(crust,vec3(1.,.28,.032),molten*edge);
@@ -73,13 +73,13 @@ export function eruption(r:RegionalScene,x:number,top:number){
     let px=x,pz=z,prev=0;
     const surface=(xx:number,zz:number)=>Math.max(r.height(xx,zz),...centres.filter(m=>m.visible).map(m=>m.position.y+mountain(hotspot,(xx-m.position.x)/m.scale.x,(zz-m.position.z)/m.scale.z)*m.scale.y));
     // Begin at a low notch of the crater rim, then trace a downhill channel.
-    let head=0,min=Infinity;for(let j=-11;j<=-1;j++){const a=j*.08,xx=x+.22*Math.cos(a),zz=z+.155*Math.sin(a),h=mountain(hotspot,xx-x,zz-z)+r.height(xx,zz);if(h<min){head=a;min=h;}}
+    let head=0,min=Infinity;for(let j=3;j<=10;j++){const a=j*.08,xx=x+.22*Math.cos(a),zz=z+.155*Math.sin(a),h=mountain(hotspot,xx-x,zz-z)+r.height(xx,zz);if(h<min){head=a;min=h;}}
     for(let i=0;i<=rows;i++){
       const u=i/rows;
       if(i===0){px=x+(r.spec.arcTransect?0:.22)*Math.cos(head);pz=z+(r.spec.arcTransect?0:.155)*Math.sin(head);prev=head;}
-      path.push({x:px,z:pz});let angle=-.22,best=Infinity,step=length/rows;
-      for(let k=-3;k<=3;k++){const a=prev+k*.18,xx=px+step*Math.cos(a),zz=pz+step*Math.sin(a);
-        if(zz>-.045||Math.cos(a)<.36)continue;
+      path.push({x:px,z:pz});let angle=.015,best=Infinity,step=length/rows;
+      for(let k=-3;k<=3;k++){const a=T.MathUtils.clamp(prev+k*.18,-.20,.38),xx=px+step*Math.cos(a),zz=pz+step*Math.sin(a);
+        if(!r.spec.arcTransect&&zz>-.075)continue;
         const h=r.height(xx,zz)+(r.spec.arcTransect?0:mountain(hotspot,xx-x,zz-z))+.009*Math.abs(k)+.006*Math.abs(a-head-(branch&&u>.26?.66:0)-.24*Math.sin(u*12.));if(h<best){angle=a;best=h;}}
       prev=angle+(branch&&i===16?.62:0);px+=step*Math.cos(angle);pz+=step*Math.sin(angle);
     }
@@ -87,8 +87,8 @@ export function eruption(r:RegionalScene,x:number,top:number){
     return (t:number)=>{const f=T.MathUtils.smoothstep(t,branch?.66:.55,.96);lava.visible=r.eruption==="effusive"&&f>0;
       if(!lava.visible||last===t)return;last=t;progress.value=f;const p=g.attributes.position as T.BufferAttribute;
       for(let i=0;i<=rows;i++){const a=path[i],b=path[Math.min(rows,i+1)],c=path[Math.max(0,i-1)],dx=b.x-c.x,dz=b.z-c.z,n=Math.hypot(dx,dz)||1;
-        for(let j=0;j<=cols;j++){const v=j/cols,w=(v-.5)*(branch?.062:.121)*(.85+.16*Math.sin(i*.49)),xx=a.x-w*dz/n,zz=a.z+w*dx/n;
-          p.setXYZ(i*(cols+1)+j,xx,surface(xx,zz)+.006+.014*Math.sin(v*Math.PI),zz);}}
+        for(let j=0;j<=cols;j++){const v=j/cols,w=(v-.5)*(branch?.079:.155)*(.85+.16*Math.sin(i*.49)),xx=a.x-w*dz/n,zz=a.z+w*dx/n;
+          p.setXYZ(i*(cols+1)+j,xx,surface(xx,zz)+.013+.018*Math.sin(v*Math.PI),zz);}}
       p.needsUpdate=true;g.computeVertexNormals();g.setDrawRange(0,Math.floor(rows*f)*cols*6);
     };
   });

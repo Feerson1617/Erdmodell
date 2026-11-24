@@ -8,7 +8,13 @@ import {execFileSync} from "node:child_process";
 const out=resolve(process.env.G6_OUT??"test-results/g6"),group=process.env.G6_GROUP;
 await mkdir(out,{recursive:true});
 const server=await chromium.launchServer({headless:!process.env.G6_CHROME,...(process.env.G6_CHROME?{channel:"chrome"}:{args:["--use-angle=swiftshader","--enable-unsafe-swiftshader"]})});
-const browser=await chromium.connect(server.wsEndpoint()),ctx=await browser.newContext({viewport:{width:1920,height:1080},deviceScaleFactor:1,reducedMotion:"reduce"});
+const viewport=process.env.G6_STAGE&&process.env.G6_STAGE!=="Profile"?{width:1280,height:720}:{width:1920,height:1080};
+const browser=await chromium.connect(server.wsEndpoint()),ctx=await browser.newContext({viewport,deviceScaleFactor:1,reducedMotion:"reduce"});
+// On the paired measurement bench lock CSS-to-framebuffer scale before first draw.
+if(process.env.G6_CHROME)await ctx.addInitScript(()=>{
+  window.__THREE_DEVTOOLS__=new EventTarget();
+  window.__THREE_DEVTOOLS__.addEventListener("observe",({detail:r})=>{if(r.isWebGLRenderer){const original=r.setPixelRatio.bind(r);r.setPixelRatio=()=>original(1);}});
+});
 const p=await ctx.newPage();p.setDefaultTimeout(110000);const errors=[],network=[],rows=[];
 p.on("pageerror",e=>{errors.push(e.message);console.error(e.message);});p.on("console",m=>{if(m.type()==="error"){errors.push(m.text());console.error(m.text());}});p.on("request",r=>{if(/^https?:/.test(r.url()))network.push(r.url());});
 await ctx.route(/^https?:/,route=>route.abort());
@@ -25,13 +31,24 @@ const shot=async(name,measure=false)=>{
  if(process.env.G6_KEEP&&!process.env.G6_KEEP.split(",").some(key=>name.startsWith(key+"-")))return;
  await rest();console.log("capture",name);const w=await state(),s=w.observatory;await p.screenshot({path:join(out,name+".jpg"),type:"jpeg",quality:86});
  const data=measure&&process.env.G6_PERF?await p.evaluate(()=>window.geoDeviceProbe(2500)):undefined;
- rows.push({name,camera:s.camera??[w.lat,w.lon,w.d,w.tilt,w.bearing],region:s.site??w.mode,phase:s.progress??s.year,cut:s.cut,playing:s.playing,viewport:[1920,1080],resolution:w.resolution,draws:w.draws,triangles:w.triangles,geometries:w.geometries,textures:w.textures,loadMs,warm:s.timings,profile:s.graphics,rssMiB:rss(),data});loadMs=0;
+ let animation;
+ if(data&&s.mode==="regional"){
+   const startPhase=s.progress;await p.evaluate(()=>document.querySelector("#g-play").click());
+   animation=await p.evaluate(()=>window.geoDeviceProbe(2500));
+   await p.evaluate(()=>{if(window.geoObservatory().observatory.playing)document.querySelector("#g-play").click();});
+   await phase(startPhase);await rest();
+ }
+ rows.push({name,camera:s.camera??[w.lat,w.lon,w.d,w.tilt,w.bearing],region:s.site??w.mode,phase:s.progress??s.year,cut:s.cut,playing:s.playing,viewport:[viewport.width,viewport.height],resolution:w.resolution,draws:w.draws,triangles:w.triangles,geometries:w.geometries,textures:w.textures,loadMs,warm:s.timings,profile:s.graphics,rssMiB:rss(),data,animation});loadMs=0;
 };
 const zoom=async()=>{const box=await p.locator("#earth").boundingBox();await p.mouse.move(box.x+box.width*.63,box.y+box.height*.44);await p.mouse.wheel(0,-850);await p.waitForTimeout(400);};
 const stage=process.env.G6_STAGE;const groupIs=k=>!stage&&(!group||group===k);
 try{
  const start=performance.now();await p.goto(pathToFileURL(resolve(process.argv[2])).href);await rest();loadMs=performance.now()-start;
  if(process.env.G6_PROFILE){await p.click("#g6-quality-menu summary");await p.selectOption("#graphics-profile",process.env.G6_PROFILE);await rest();}
+ if(stage==="Profile"){
+   await visit("san");await shot("03-Parkfield",true);await visit("japan");await view("ocean");await phase(.63);await shot("14-Offenes-Meer",true);
+   await visit("island",true);await view("vent");await phase(.82);await shot("19-Lava",true);
+ }
  if(stage==="B"){for(const site of ["san","japan","island"]){await visit(site,site==="island");await view("cut");await phase(.49);await shot(site+"-Schnitt");}}
  if(stage==="C"){await visit("japan");await view("land");await phase(.55);await shot("Meer");await view("coast");await phase(.658);await shot("Ufer");}
  if(stage==="D"){await visit("island",true);await view("vent");await phase(.82);await shot("Lavastrom");await select("g-eruption","explosive");await phase(.76);await shot("Aschesaeule");}
@@ -43,5 +60,6 @@ try{
  if(groupIs("island")){await visit("island",true);await shot("16-Reykjanes",true);await zoom();await shot("17-Basalt");await view("cut");await phase(.46);await shot("17a-Schmelze");await view("vent");await shot("18-Schlot");await phase(.82);await shot("19-Lava",true);await select("g-eruption","explosive");await phase(.76);await shot("20-Asche");}
  if(groupIs("other")){await visit("hawaii",true);await phase(.81);await shot("21-Hawaii");await visit("himalaya");await view("cut");await phase(.74);await shot("22-Himalaya");await visit("rift");await view("cut");await phase(.74);await shot("23-Graben");await visit("japan",true);await view("vent");await phase(.78);await shot("23a-Zaozan");}
  if(groupIs("global")){await click("nav-plates");await click("g-time");await rest();await p.locator("#g-year").fill("-125");await shot("24-Zeitreise");await select("g-scenario","aurica");await p.locator("#g-year").fill("160");await p.check("#g-compare");await select("g-second","amasia");await shot("25-Zukunft");await click("nav-nyos");await p.waitForFunction(()=>window.geoObservatory().nyos.terrainVisible&&!window.geoObservatory().flying);await shot("26-Nyos");await click("saved-views");await select("saved-list","p3");await click("view-apply");await p.waitForSelector(".classroom-views",{state:"hidden"});await click("present");await shot("27-Smartboard");}
+ if(!stage&&!group){await visit("san");await shot("28-Warmstart",true);}
  assert.deepEqual(errors,[]);assert.deepEqual(network,[]);await writeFile(join(out,"Aufnahmen.json"),JSON.stringify(rows,null,2));console.log(out,rows.length);
 }catch(e){console.error(await p.evaluate(()=>({body:document.body.innerText.slice(0,900),ready:window.geoObservatory?.()?.ready})).catch(()=>({})));throw e;}finally{await browser.close();await server.close();}

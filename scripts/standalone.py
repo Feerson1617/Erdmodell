@@ -8,7 +8,7 @@ from pathlib import Path
 
 root = Path(__file__).resolve().parents[1]
 dist = root / "dist"
-output = root / "artifacts/GeoRisiko-G5.2.1-Web-Test.html"
+output = root / "artifacts/GeoRisiko-G6-Web-Test.html"
 (js_file,) = (dist / "assets").glob("*.js")
 (css_file,) = (dist / "assets").glob("*.css")
 assets = {}

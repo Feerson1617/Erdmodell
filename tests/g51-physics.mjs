@@ -4,11 +4,11 @@ import { pathToFileURL } from "node:url";
 import { resolve } from "node:path";
 import { readFileSync, writeFileSync } from "node:fs";
 const samples=JSON.parse(readFileSync("src/tectonics/steps.json"));
-const browser=await chromium.launch({args:["--use-angle=swiftshader","--enable-unsafe-swiftshader"]});
+const browser=await chromium.launch(process.env.G6_NATIVE_GPU?{channel:"chrome",headless:false}:{args:["--use-angle=swiftshader","--enable-unsafe-swiftshader"]});
 try{
  const p=await browser.newPage({viewport:{width:1440,height:900},reducedMotion:"reduce"});
  const errors=[];p.on("pageerror",e=>errors.push(e.message));
- await p.goto(pathToFileURL(resolve(process.env.G51_HTML||"artifacts/GeoRisiko-G5.2.1-Web-Test.html")).href);
+ await p.goto(pathToFileURL(resolve(process.env.G51_HTML||"artifacts/GeoRisiko-G6-Web-Test.html")).href);
  await p.waitForFunction(()=>window.geoObservatory?.().ready);
  await p.click("#nav-earthquake");await p.waitForFunction(()=>window.geoBoundaryModels().length===5819);
  const records=await p.evaluate(()=>window.geoBoundaryModels());
