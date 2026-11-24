@@ -1,4 +1,5 @@
 import * as T from "three";
+import {seaMaterial} from "./sea-material";
 import {lavaTongue} from "./lava-flow";
 import {localAsset} from "../assets";
 import {libraryGLSL,type Library} from "./graphics";
@@ -62,12 +63,26 @@ export class LocalLandscape{
     if(site==="island"){
       this.lava=lavaTongue(3.4);this.lava.build(-2,-16,Math.PI*.49,52,0,(x,z)=>this.surface(x,z));this.root.add(this.lava.mesh);
     }
+    if(site==="japan"){
+      const water=new T.PlaneGeometry(axis.length-1,axis.length-1,axis.length-1,axis.length-1);water.rotateX(-Math.PI/2);
+      const pos=water.attributes.position,wet=[];
+      for(let j=0;j<axis.length;j++)for(let i=0;i<axis.length;i++){pos.setXYZ(j*axis.length+i,axis[i],0,axis[j]);wet.push(-this.terrain[j][i]);}
+      water.setAttribute("depthWet",new T.Float32BufferAttribute(wet,1));water.computeBoundingSphere();
+      const sea=new T.Mesh(water,seaMaterial({value:0},1,5.5));sea.renderOrder=2;this.root.add(sea);
+    }
     this.plant();
   }
   private height(x:number,z:number){
     const broad=noise(x*.023,z*.023),fine=noise(x*.41,z*.41),grain=noise(x*.12,z*.12);
     const gully=Math.exp(-((x-7-3*Math.sin(z*.065))**2)/7);
     const outside=Math.max(0,Math.hypot(x,z)-400);
+    if(this.site==="japan"){
+      const headland=79*Math.exp(-((z+92)**2)/1150)+42*Math.exp(-((z-103)**2)/670);
+      const shore=x-headland+2.7*Math.sin(z*.061)+3.1*Math.sin(z*.031+.8)+1.2*noise(z*.11,3);
+      const inland=Math.max(0,-shore-4);
+      return -64*Math.tanh(shore*.19/64)+.39*(grain-.5)+.32*(broad-.5)+Math.min(inland,180)*.17*noise(x*.026,z*.024)+
+        Math.min(260,Math.max(0,Math.abs(z)-90))*.12*noise(x*.005,z*.007)*T.MathUtils.smoothstep(-shore,0,88);
+    }
     if(this.site==="island"){
       const fissure=x+2-1.9*Math.sin((z+16)*.045),cross=Math.abs(fissure);
       const shoulder=1.2*Math.exp(-((cross-3.3)**2)/3.4);
@@ -89,21 +104,22 @@ export class LocalLandscape{
     if(this.site==="san")new T.TextureLoader().load(localAsset("data/g61/parkfield.webp"),tex=>{
       if(this.disposed){tex.dispose();return;}this.photo=tex;tex.colorSpace=T.SRGBColorSpace;tex.anisotropy=4;imagery.value=tex;hasPhoto.value=1;this.revision++;
     });
-    const basalt=this.site==="island";
+    const basalt=this.site==="island",coast=this.site==="japan";
     m.onBeforeCompile=s=>{
       Object.assign(s.uniforms,{faciesColor:{value:this.lib.color},faciesRelief:{value:this.lib.relief},detailGrade:this.grade,ortho:imagery,hasPhoto});
       s.vertexShader="varying vec3 metres;varying float incline;\n"+s.vertexShader.replace("#include <begin_vertex>","#include <begin_vertex>\nmetres=position;incline=1.-normal.y;");
       s.fragmentShader=libraryGLSL+"varying vec3 metres;varying float incline;uniform sampler2D ortho;uniform float hasPhoto;\n"+s.fragmentShader.replace("#include <color_fragment>",`#include <color_fragment>
         vec2 p=metres.xz;vec2 warp=vec2(sin(p.y*.082+p.x*.035),cos(p.x*.103-p.y*.027))*.10;
         vec2 first=p*.22+warp,second=mat2(.83,.55,-.55,.83)*p*.41+.27;
-        vec3 soil=fieldSample(faciesColor,first,${basalt?"3.":"0."}).rgb,grit=fieldSample(faciesColor,second,${basalt?"2.":"1."}).rgb;
+        vec3 soil=fieldSample(faciesColor,first,${basalt?"3.":coast?"7.":"0."}).rgb,grit=fieldSample(faciesColor,second,${basalt?"2.":coast?"1.":"1."}).rgb;
         float soilMix=smoothstep(-.65,.69,sin(p.x*.16+sin(p.y*.24))*.61+cos(p.y*.19+p.x*.15)*.42+incline*2.);
-        vec3 grain=mix(soil,grit,soilMix*.73);vec3 micro=fieldSample(faciesRelief,first,${basalt?"3.":"0."}).rgb;
+        vec3 grain=mix(soil,grit,soilMix*.73);vec3 micro=fieldSample(faciesRelief,first,${basalt?"3.":coast?"7.":"0."}).rgb;
         vec3 geo=texture2D(ortho,clamp(vec2(.5+(p.x-90.)/1800.,.5-(p.y-155.)/1800.),.001,.999)).rgb;
         float distanceM=length(vViewPosition)*10.;
         vec3 dryBase=mix(vec3(.28,.198,.102),vec3(.40,.31,.16),soilMix);
         vec3 base=mix(dryBase,geo,hasPhoto*mix(.26,.91,smoothstep(28.,155.,distanceM)));
         diffuseColor.rgb=mix(base*clamp(.30+2.5*luma6(grain),.33,1.65),grain*vec3(1.04,.85,.62),.73*(1.-smoothstep(22.,110.,distanceM)));
+        ${coast?"float beach=1.-smoothstep(.2,3.1,metres.y);vec3 sand=fieldSample(faciesColor,second*.62,5.).rgb;diffuseColor.rgb=mix(grain*vec3(.71,.84,.58),sand*vec3(.78,.83,.80),beach)*mix(.55,1.,smoothstep(-.6,.75,metres.y));":""}
         ${basalt?"float ledge=smoothstep(.11,.45,incline);vec3 stoneColor=mix(grain*vec3(.83,.87,.90),grit*vec3(.61,.74,.48),.32*soilMix*(1.-ledge));float distant=smoothstep(45.,210.,distanceM);diffuseColor.rgb=mix(stoneColor,vec3(.084,.088,.083)*(.89+.13*cos(p.x*.013+sin(p.y*.019))),distant);":""}
       `).replace("#include <normal_fragment_maps>","#include <normal_fragment_maps>\nnormal=normalize(normal+mat3(viewMatrix)*vec3(micro.r-.5,0.,micro.g-.5)*.61);")
       .replace("#include <roughnessmap_fragment>","#include <roughnessmap_fragment>\nroughnessFactor=clamp(.65+.29*micro.b,.64,.99);");
@@ -127,7 +143,13 @@ export class LocalLandscape{
       o.position.set(x,this.surface(x,z)-(kind==="rock"?.12*size:0),z);o.rotation.set(0,rng()*Math.PI*2,0);o.scale.set(size*(.87+.26*rng()),size,size*(.87+.25*rng()));o.updateMatrix();
       if(!batches.has(key))batches.set(key,[]);batches.get(key)!.push(o.matrix.clone());
     };
-    if(this.site==="island"){
+    if(this.site==="japan"){
+      for(let i=0;i<7300;i++){const x=(rng()-.56)*170,z=(rng()-.50)*200,h=this.surface(x,z);if(h<.20)continue;
+        if(h<2.2){if(rng()<.32)place("rock",x,z,.11+1.5*rng()**3);}
+        else if(i<860&&h>2.5&&noise(x*.069,z*.067)>.31&&Math.hypot(x+8,z-9)>5)place(rng()<.64?"conifer":"oak",x,z,.63+.75*rng());
+        else if(i<2200)place("shrub",x,z,.55+.72*rng());else place("grass",x,z,.42+.66*rng());
+      }
+    }else if(this.site==="island"){
       for(let i=0;i<5200;i++){const x=(rng()-.5)*140,z=(rng()-.53)*170,fissure=Math.abs(x+2-1.9*Math.sin((z+16)*.045)),patch=noise(x*.096,z*.086);
         if(fissure<1.55||rng()>.21+.72*patch)continue;
         if(fissure<7||patch<.47)place("rock",x,z,.08+1.08*rng()**3);
@@ -165,7 +187,7 @@ export class LocalLandscape{
     }
   }
   pose(view:string){
-    const [x,z,tx,tz,eye]=this.site==="island"?(view==="local"?[17,26,-1,-10,7.2]:[5,5,-2,-13,2.5]):view===positions[0]?[22,37,0,-10,9]:[5,9,0,-7,1.9];
+    const [x,z,tx,tz,eye]=this.site==="japan"?(view==="local"?[-12,32,12,-31,11.5]:[-4,11,13,-14,2.25]):this.site==="island"?(view==="local"?[17,26,-1,-10,7.2]:[5,5,-2,-13,2.5]):view===positions[0]?[22,37,0,-10,9]:[5,9,0,-7,1.9];
     return {position:new T.Vector3(x,this.surface(x,z)+eye,z).multiplyScalar(.1),target:new T.Vector3(tx,this.surface(tx,tz)+2.4,tz).multiplyScalar(.1)};
   }
   update(camera:T.PerspectiveCamera,t:number,grade:number){
