@@ -47,7 +47,7 @@ export async function acceptG51(p,dir,films=true){
   await select("g-eruption","effusive");await phase(.69);await shot("19-Lavastrom");
   await select("g-site","japan");await ready();await select("g-eruption","explosive");await view("vent");await phase(.75);await shot("20-Ascheausbruch");
   await time();await range("g-year",-170);await shot("21-Kontinentalbewegung");
-  await p.locator("#g-tracking summary").click();await select("g-track","501");await p.check("#g-trail");await p.check("#g-follow");await range("g-year",-70);await shot("22-Indien-verfolgen");
+  if(!await p.locator("#g-track").isVisible())await p.locator("#g-tracking summary").click();await select("g-track","501");await p.check("#g-trail");await p.check("#g-follow");await range("g-year",-70);await shot("22-Indien-verfolgen");
   await select("g-scenario","aurica");await range("g-year",165);await p.check("#g-compare");await select("g-second","amasia");await p.check("#g-future-lines");await shot("23-Zukunftsvergleich");
   await click("nav-earthquake");await shot("24-Ereigniskarte");
   await select("g-launch","japan");await ready();await view("cut");await p.locator("#g-depth-section summary").click();
@@ -82,6 +82,7 @@ export async function longClassroom(p,measure,readMemory){
             else{await p.selectOption("#saved-list",localFavorite);await click("view-apply");await p.waitForSelector(".classroom-views",{state:"hidden"});await ready();assert.equal(await p.locator("#g-view").inputValue(),"ground");}
           }
         }
+        if(await p.locator("#g-play").isDisabled()){await click("g-local-process");await ready();}
         await click("g-play");}
       samples.push({width,height,readyMs:performance.now()-loadStart,futureComparison:n%8===6,...await measure(label,15000)});
       if(n%4===2)await click("g-time-play");

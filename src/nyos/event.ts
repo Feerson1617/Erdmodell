@@ -190,6 +190,8 @@ export class NyosEvent {
     this.bubbles.instanceMatrix.setUsage(T.DynamicDrawUsage);
     this.bubbles.frustumCulled = false;
     this.bubbles.renderOrder = 5;
+    this.bubbles.name = "Nyos-Gasblasen";
+    this.relief.name = "Nyos-Gasstrom";
     this.group.name = "Nyos · historisch orientiertes Erklärungsmodell";
     this.group.add(this.flow, this.bubbles, this.waves, this.relief);
     this.update(0, false, false);

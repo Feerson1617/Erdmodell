@@ -1,3 +1,5 @@
+import {nyosLabels} from "./nyos/labels";
+import {allowsLabel,claimObject} from "./observatory/reveal";
 import {installProfiles} from "./observatory/graphics";
 import {classroomViews} from "./observatory/classroom-views";
 import {fields,lessonKeys} from "./observatory/saved-state";
@@ -56,7 +58,7 @@ const desk = $("desk"),
   status = $("status");
 let observatory: Observatory;
 let world: World,
-  labels = false,
+  labels = !friday,
   present = false,
   alertText = "";
 const released = new Set<number>();
@@ -107,7 +109,8 @@ function showDefinition(item: Pick<Annotation,"name"|"text">) {
 const shellPins = new AnnotationLayer($("pins"),showDefinition);
 const tectonicPins = new AnnotationLayer($("platePins"), item => {
   if (world.processSite) showDefinition(item);
-  else { const comparing=!!world.mosaic?.pair; world.inspectPlate(item.id); if(comparing)world.locatePlate(); renderSide(); }
+  else if(world.mosaic?.pair)world.selectPairBody(item.id);
+  else {world.inspectPlate(item.id);renderSide();}
 });
 function warn(s: string) {
   alertText = s;
@@ -151,13 +154,13 @@ function renderShellControls() {
   <label class="range" for="opacity">Deckkraft<input id="opacity" type="range" min="15" max="100" ${disabled} value="${selected === null ? 100 : shell.opacity[selected]*100}" aria-label="Deckkraft der gewählten Schale"></label>`;
   const cut = `<label><input id="cut" type="checkbox" ${shell.cut ? "checked" : ""}> Keilschnitt</label>`, scale = `<label><input id="scale" type="checkbox" ${shell.expanded ? "checked" : ""}> ${labels ? "Kruste" : "Außenschale"} verbreitern</label>`, lithosphere = `<label><input id="lithosphere" type="checkbox" ${shell.lithosphere ? "checked" : ""} ${shell.cut && shell.visible[0] && shell.visible[1] ? "" : "disabled"}> ${labels ? "Lithosphäre vergleichen" : "Starren Außenbereich vergleichen"}</label>`;
   const waves = `<button id="evidence">${icon("waves")} P- und S-Wellen</button>`;
-  return `<div class="panelHead"><h1>Schalen</h1><button id="labels" title="Beschriftungen durch die Lehrkraft umschalten" aria-pressed="${labels ? "true" : anyNames ? "mixed" : "false"}">${icon(anyNames ? "eye-off" : "eye")}${anyNames ? "Namen verbergen" : "Namen zeigen"}</button></div>
+  return `<div class="panelHead"><h1 data-teach="terms">Schalenbau</h1><button id="labels" title="Beschriftungen durch die Lehrkraft umschalten" aria-pressed="${labels ? "true" : anyNames ? "mixed" : "false"}">${icon(anyNames ? "eye-off" : "eye")}${anyNames ? "Namen verbergen" : "Namen zeigen"}</button></div>
   <div class="layerlist">${layers.map((l,i) => `<div class="layer ${selected === i ? "chosen" : ""}" style="--rock:#${l.color.toString(16)}"><button data-layer="${i}" aria-pressed="${selected === i}"><span class="swatch" aria-hidden="true">${labels ? i+1 : ""}</span>${layerName(i)}</button><button class="eye" data-eye="${i}" aria-label="${layerName(i)} ${shell.visible[i] ? "ausblenden" : "einblenden"}" aria-pressed="${shell.visible[i]}">${icon(shell.visible[i] ? "eye" : "eye-off")}</button></div>`).join("")}</div>
   ${selected === null ? "" : labels || released.has(selected) ? '<div class="nameActions"><button id="explainLayer">Erklärung öffnen</button><button id="hideOne">Diesen Namen verbergen</button></div>' : '<button id="revealOne">Einzelnen Namen zeigen</button>'}
   ${!labels && released.size ? '<button id="allNames">Alle Namen zeigen</button>' : ""}
   ${friday
-    ? `<div class="options">${scale}</div><details id="shellOptions"><summary>Weitere Modelloptionen</summary>${actions}<div class="options">${cut}${lithosphere}</div>${waves}</details>`
-    : `${actions}<div class="options">${cut}${scale}${lithosphere}</div>${waves}`}`;
+    ? `<div class="options">${scale}</div><details id="shellOptions"><summary>Weitere Modelloptionen</summary>${(labels||released.has(selected??-1))&&selected!==null?"<p>"+layers[selected].text+"</p>":""}${actions}<div class="options">${cut}${lithosphere}</div>${waves}</details>`
+    : `${(labels||released.has(selected??-1))&&selected!==null?"<p>"+layers[selected].text+"</p>":""}${actions}<div class="options">${cut}${scale}${lithosphere}</div>${waves}`}`;
 }
 function siteInfo() {
   const r = world.region;
@@ -170,6 +173,7 @@ function renderSide() {
   layoutRevision++;
   const mode = world.mode;
   desk.dataset.mode = mode;
+  desk.classList.toggle("pair-layout",mode==="plates"&&!!world.mosaic?.pair);
   for (const id of ["globe", "inside", "plates", "nyos", "place"]) {
     $("nav-" + id).setAttribute("aria-current", mode === id ? "page" : "false");
   }
@@ -186,7 +190,8 @@ function renderSide() {
     bindPlateControls(side, world, renderSide);
     const extra=document.createElement("div");extra.className="g-atlas-tools";
     extra.innerHTML='<button id="g-time">Zeitreise</button><button id="g-forces">Plattenantrieb</button><button id="g-boundaries">Grenze untersuchen</button>'+(world.selectedBoundary?'<button id="g-selected">Prozess ansehen</button>':'');
-    side.querySelector("h1")?.after(extra);
+    if(world.mosaic?.pair){extra.hidden=true;side.append(extra);}else side.querySelector("h1")?.after(extra);
+    if($("pair-process"))$("pair-process").onclick=()=>observatory.openBoundary(world.mosaic!.pair!.step,"process");
     $("g-forces").onclick=()=>observatory.openConcept("forces");
     $("g-time").onclick=()=>observatory.openTime();
     $("g-boundaries").onclick=()=>void observatory.openMap("boundaries");
@@ -197,6 +202,7 @@ function renderSide() {
   if (mode === "nyos") {
     side.dataset.nyosError = String(!!world.nyos.error);
     side.innerHTML = nyosControls(world);
+    const nyosHeading=side.querySelector("h1");if(nyosHeading)nyosHeading.dataset.teach="terms";
     bindNyosControls(side, world, renderSide);
   }
   if (mode === "place") {
@@ -217,7 +223,7 @@ function renderSide() {
     ($("shellOptions")??side).append(detail);detail.onclick=()=>observatory.openConcept("lithosphere");
     if (optionsOpen) $<HTMLDetailsElement>("shellOptions").open = true;
   }
-  if (mode === "inside" || mode === "plates") {
+  if (mode === "inside" || mode === "plates" || mode === "nyos") {
     const area = document.createElement("section");
     area.id = "definition"; area.hidden = true; area.setAttribute("aria-live","polite");
     (side.querySelector(".panelHead") ?? side.querySelector("h1"))?.after(area);
@@ -350,7 +356,7 @@ function navigate(mode: World["mode"]) {
 }
 function reset() {
   observatory?.close();
-  labels = false;
+  labels = !friday;
   released.clear();
   world.shell.setComparison("reference");
   world.region = firstRegion;
@@ -358,7 +364,7 @@ function reset() {
   world.shell.cut = true;
   world.smallPlateNames = false;
   world.globe(true);
-  world.setPlateOptions({ boundaries:false, names:false, types:false, category:"all", plate:"" });
+  world.setPlateOptions({ boundaries:!friday, names:!friday, types:!friday, category:"all", plate:"" });
   renderSide();
 }
 function setPresentation(value: boolean) {
@@ -383,16 +389,17 @@ function updatePins() {
   const dimensions = $("earth");
   const key = [world.mode,p.lat,p.lon,p.d,p.tilt,p.bearing,dimensions.clientWidth,dimensions.clientHeight,
     labels,released.size,s.cut,s.expanded,s.lithosphere,s.group.visible,s.visible.join(),o.boundaries,o.names,o.plate,world.singlePlateName,
-    world.processDetail,world.processSite,world.processChoice,world.smallPlateNames,world.atlasReady,world.processProgress,world.annotationTransition,present,layoutRevision].join("/");
+    world.mode==="nyos"?[world.nyos.localWeight,world.nyosLesson.view,world.nyosLesson.measure,world.nyosLesson.dissolved,world.nyosLesson.air,Math.round(world.nyosLesson.progress*100)].join():null,document.body.dataset.reveal,world.processDetail,world.processSite,world.processChoice,world.smallPlateNames,world.atlasReady,world.processProgress,world.annotationTransition,present,layoutRevision].join("/");
   if (annotationKey === key) return;
   annotationKey = key;
   const obstacles = pinObstacles;
-  shellPins.draw(world.mode === "inside" && (labels || released.size) ? world.layerMarkers(released,labels) : [],obstacles,layoutRevision);
-  const plates = world.mode === "plates" && (o.names || world.singlePlateName)
-    ? world.processDetail ? world.processLabels() : world.plateLabels().map(p => ({
+  const inLesson=document.body.classList.contains("observing")&&!friday;
+  shellPins.draw(world.mode==="nyos"?nyosLabels(world,dimensions.clientWidth,dimensions.clientHeight).filter((a,i)=>allowsLabel(a.id,i)):world.mode === "inside" && (labels || released.size || inLesson) ? world.layerMarkers(released,labels||inLesson).filter((a,i)=>allowsLabel(a.id,i)) : [],obstacles,layoutRevision);
+  const plates = world.mode === "plates" && (o.names || inLesson || world.singlePlateName || world.mosaic?.pair)
+    ? world.processDetail ? world.processLabels() : world.plateLabels(inLesson).map(p => ({
       ...p,id:p.code,text:"Zu dieser Platte gehören die Erdkruste und der starre oberste Erdmantel. Sie bewegt sich langsam gegenüber anderen Platten."
     })) : [];
-  tectonicPins.draw(plates,[...obstacles,side],layoutRevision);
+  tectonicPins.draw(plates.filter((a,i)=>allowsLabel(a.id,i)),[...obstacles,side],layoutRevision);
 }
 $("info").onclick = infoPage;
 // Keep local source notices readable inside the packaged window.
@@ -435,6 +442,7 @@ async function boot() {
   installProfiles(document.querySelector(".headTools")!);
   try {
     world = new World(canvas, warn);
+    world.setPlateOptions({names:!friday,boundaries:!friday,types:!friday});
   } catch {
     desk.dataset.mode = "fallback";
     side.hidden = false;
@@ -453,7 +461,7 @@ async function boot() {
   const baseView=()=>({
     mode:world.mode,site:world.region.id,style:world.style,labels,released:[...released],
     shell:{...fields(world.shell,["cut","selected","subdued"]),visible:[...world.shell.visible],opacity:[...world.shell.opacity],comparison:world.shell.expanded?"expanded" as const:world.shell.lithosphere?"lithosphere" as const:"reference" as const},
-    plates:{...world.plateOptions},profile:world.profileCode,pair:Boolean(world.mosaic?.pair),pairTime:world.mosaic?.progress??0,pairPlaying:world.mosaic?.playing??false,
+    plates:{...world.plateOptions},profile:world.profileCode,pair:Boolean(world.mosaic?.pair),pairStep:world.mosaic?.pair?.step[0],pairTime:world.mosaic?.progress??0,pairPlaying:world.mosaic?.playing??false,
     process:fields(world,["processDetail","processSite","processProgress","processPlaying","processLoop","processSlow","singlePlateName","smallPlateNames"]),
     nyos:fields(world.nyosLesson,lessonKeys),nyosDetail:world.nyosDetail
   });
@@ -466,7 +474,7 @@ async function boot() {
     if(b.mode==="plates"){
       await world.loadClassroomAtlas(Boolean(b.process.processSite));world.setPlateOptions(b.plates);
       if(b.process.processSite)world.visit(b.process.processSite,!b.process.processDetail);
-      else if(b.profile&&world.profiles[b.profile]){world.inspectPlate(b.profile);if(b.pair){world.comparePlates(false);if(world.mosaic){world.mosaic.progress=b.pairTime;world.mosaic.playing=b.pairPlaying;}}}
+      else if(b.profile&&world.profiles[b.profile]){world.inspectPlate(b.profile);if(b.pair){world.comparePlates(false,b.pairStep);if(world.mosaic){world.mosaic.progress=b.pairTime;world.mosaic.playing=b.pairPlaying;}}}
       Object.assign(world,fields(b.process,["processProgress","processPlaying","processLoop","processSlow","singlePlateName","smallPlateNames"]));
     }
     renderSide();
@@ -475,7 +483,12 @@ async function boot() {
     $("nav-"+id).classList.add("obsNav");$("nav-"+id).onclick=run;
   }
   renderSide();
+  world.onNyosObject=label=>{
+    if(observation.active)claimObject(label.id,label.name+" · "+label.text);
+    else showDefinition(label);
+  };
   world.onLayer = i => {
+    if(observation.active&&claimObject("shell-"+i,layers[i].name+" · "+layers[i].text)){annotationKey="";return;}
     if (!observation.active && (labels || released.has(i))) showDefinition(layers[i]);
     else select(i);
   };
@@ -530,7 +543,7 @@ async function boot() {
   world.onFrame = () => {
     observation.update();
     if(observatory.mode){if(status.textContent)status.textContent="";return;}
-    if ((world.mode==="inside" && (labels || released.size)) || (world.mode==="plates" && (world.plateOptions.names || world.singlePlateName))) updatePins();
+    if (world.mode==="inside"||world.mode==="plates") updatePins();
     const now = performance.now();
     if (now - lastHud < 55) return;
     lastHud = now;
@@ -542,7 +555,7 @@ async function boot() {
     if (world.mode === "plates") { syncPlayback(world); }
     if (world.mode === "nyos") {
       if (side.dataset.nyosError !== String(!!world.nyos.error)) renderSide();
-      syncNyos(world);
+      syncNyos(world);updatePins();
     }
     const message = world.nyosWarning || (world.mode === "place" && world.local.warning) || alertText || "";
     if (status.textContent !== message) status.textContent = message;

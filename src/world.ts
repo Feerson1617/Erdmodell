@@ -1,3 +1,5 @@
+import {nyosLabels,pickNyos} from "./nyos/labels";
+import {claimObject} from "./observatory/reveal";
 import {observeFrame,graphics,cadence} from "./observatory/graphics";
 import * as T from "three";
 import { CameraController, HOME, type Pose } from "./camera";
@@ -81,6 +83,7 @@ export class World {
   private air: T.Mesh;
   private marker = position(firstRegion.target.lat, firstRegion.target.lon, 10);
   onFrame?: () => void;
+  onNyosObject?: (label:Annotation)=>void;
   onLayer?: (i: number) => void;
   onBoundary?: () => void;
   plateOptions: PlateOptions = { boundaries: false, names: false, types: false, category: "all", plate: "" };
@@ -189,7 +192,7 @@ export class World {
     this.scene.fog = new T.FogExp2(0xb6cfd0, 0);
     this.nav.onPick = (x, y) => {
       if(this.customPick?.(x,y))return;
-      if (this.mode !== "inside" && !(this.mode === "plates" && !this.processDetail && this.atlas)) return;
+      if (this.mode !== "inside" && this.mode !== "nyos" && !(this.mode === "plates" && !this.processDetail && this.atlas)) return;
       const b = canvas.getBoundingClientRect(),
         ray = new T.Raycaster();
       ray.setFromCamera(
@@ -199,10 +202,15 @@ export class World {
         ),
         this.nav.camera,
       );
+      if(this.mode==="nyos"){
+        const id=pickNyos(this,ray),label=id&&nyosLabels(this,b.width,b.height).find(s=>s.id===id);
+        if(label)this.onNyosObject?.(label);
+        return;
+      }
       if (this.mode === "plates") {
         if (this.mosaic?.pair) {
           const sample=ray.intersectObjects(this.mosaic.pair.bodies,false)[0];
-          if (sample) { this.inspectPlate(sample.object.name); this.locatePlate(); this.onBoundary?.(); }
+          if (sample) this.selectPairBody(sample.object.name);
           return;
         }
         const point = ray.ray.intersectSphere(new T.Sphere(new T.Vector3(), R), new T.Vector3());
@@ -213,7 +221,7 @@ export class World {
           this.selectBoundary(boundary);
           if (!boundary && !this.processSite) {
             const hit = this.mosaic?.pick(ray);
-            if (hit) { this.inspectPlate(hit.object.name, hit.point); this.mosaic!.track(hit); }
+            if (hit) { claimObject(hit.object.name,names[hit.object.name]+" · "+(this.profiles[hit.object.name]?.place??""));this.inspectPlate(hit.object.name, hit.point); this.mosaic!.track(hit); }
           }
           this.onBoundary?.();
         }
@@ -386,14 +394,23 @@ export class World {
     const halfHeight=Math.max(60,view.height/2-62);
     return 2*Math.min(halfWidth,halfHeight)*Math.tan(this.nav.camera.fov*RAD/2)/view.height;
   }
+  selectPairBody(code:string){
+    const pair=this.mosaic?.pair;
+    if(!pair)return;
+    claimObject(code,names[code]+" · "+this.profiles[code].place);
+    for(const body of pair.bodies)(body.material as T.MeshStandardMaterial).emissive.setHex(body.name===code?0x302817:0);
+    const area=document.getElementById("pair-object");
+    if(area){area.hidden=false;area.textContent=names[code]+" · "+this.profiles[code].place;}
+  }
   get pairKind() { return this.mosaic?.pair && typeOf(this.mosaic.pair.step[2]); }
-  comparePlates(autoplay:boolean) {
+  comparePlates(autoplay:boolean, stepId?:number) {
     if (!this.atlas || !this.mosaic) return;
-    if (!this.mosaic.pair) {
-      const code=this.profileCode || "EU";
+    if (!this.mosaic.pair || stepId) {
+      const step=stepId?this.atlas.steps[stepId-1]:this.selectedStep;
+      const code=step?.[1].slice(0,2)||this.profileCode || "EU";
       const profile=this.profiles[code];
       this.inspectPlate(code);
-      const pair=this.mosaic.beginPair(this.atlas.steps[profile.step-1]);
+      const pair=this.mosaic.beginPair(step??this.atlas.steps[profile.step-1]);
       this.updatePlateLayers();
       const d=Math.max(180,pair.span/(.86*this.fitSlope()));
       this.nav.fly({...pair.site,d,tilt:32,bearing:pair.heading},true);
@@ -412,11 +429,11 @@ export class World {
   async loadClassroomAtlas(regional:boolean){await this.loadPlates();if(regional)await this.loadRegionalImages();}
   get atlasReady() { return !!this.atlas; }
   get annotationTransition() { return this.processSite ? this.processReveal : this.mosaic?.annotationPose ?? 0; }
-  plateLabels() {
+  plateLabels(lesson = false) {
     if (this.mosaic?.pair && this.mode==="plates")
       return this.mosaic.pair.labels(this.nav.camera,this.canvas.clientWidth,this.canvas.clientHeight);
-    if (!this.atlas || this.mode !== "plates" || !(this.plateOptions.names || this.singlePlateName) || this.processReveal > 0.5) return [];
-    return this.atlas.labels(this.nav.camera, this.canvas.clientWidth, this.canvas.clientHeight, this.nav.pose.d, this.processSite ?? undefined,this.plateOptions.plate,this.mosaic?.anchor() ?? this.pickedPlatePoint,this.singlePlateName && !this.plateOptions.names,this.smallPlateNames);
+    if (!this.atlas || this.mode !== "plates" || !(lesson || this.plateOptions.names || this.singlePlateName) || this.processReveal > 0.5) return [];
+    return this.atlas.labels(this.nav.camera, this.canvas.clientWidth, this.canvas.clientHeight, this.nav.pose.d, this.processSite ?? undefined,this.plateOptions.plate,this.mosaic?.anchor() ?? this.pickedPlatePoint,this.singlePlateName && !lesson && !this.plateOptions.names,this.smallPlateNames);
   }
   plates() {
     this.nyosLesson.playing = false;

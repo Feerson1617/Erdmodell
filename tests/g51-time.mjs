@@ -10,11 +10,11 @@ const b=await chromium.launch(process.env.G6_NATIVE_GPU?{channel:"chrome",headle
 try{
  const page=await b.newPage({viewport:{width:1440,height:900},reducedMotion:"reduce"});
  const errors=[];page.on("pageerror",e=>errors.push(String(e)));page.on("console",m=>{if(m.type()==="error")errors.push(m.text());});
- await page.goto(pathToFileURL(resolve(process.env.G51_HTML||"artifacts/GeoRisiko-G6.1-Web-Test.html")).href);
+ await page.goto(pathToFileURL(resolve(process.env.G51_HTML||"artifacts/GeoRisiko-G6.2-Web-Test.html")).href);
  await page.click("#nav-plates");await page.click("#g-time");
  const get=()=>page.evaluate(()=>window.geoObservatory().observatory);
  await page.waitForFunction(()=>window.geoObservatory().observatory.rigid);
- await page.locator("#g-tracking summary").click();await page.selectOption("#g-track","501");await page.check("#g-trail");
+ if(!await page.locator("#g-track").isVisible())await page.locator("#g-tracking summary").click();await page.selectOption("#g-track","501");await page.check("#g-trail");
  const age=async years=>{await page.locator("#g-year").fill(String(years));await page.waitForFunction(y=>{const s=window.geoObservatory().observatory;return s.year===y && s.timeReady;},years);};
  const coords=[];for(let y=-250;y<=0;y+=5){await age(y);coords.push((await get()).tracked);}
  assert.ok(new Set(coords.map(v=>v.join(","))).size>45);

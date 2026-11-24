@@ -1,3 +1,4 @@
+import {names} from "../tectonics/atlas";
 import {seaMaterial,waterSection,seabed} from "./sea-material";
 import {LocalLandscape,localView} from "./local-landscape";
 import {loadTexture,materials,decorateTerrain,quality,graphics,type Library} from "./graphics";
@@ -39,13 +40,14 @@ function indexed(rows:number,cols:number,vertex:(i:number,j:number)=>number[],re
 export class RegionalScene {
   local?:LocalLandscape;
   get localActive(){return localView(this.view)&&!!this.local;}
+  get localStill(){return this.localActive&&!(this.spec.site==="san"&&this.spec.theme==="earthquake"||this.spec.site==="island"&&this.spec.theme==="volcano"&&this.eruption==="effusive");}
   get renderScene(){return this.localActive?this.local!.scene:this.scene;}
   lib?:Library;readonly grade={value:quality()};private relief?:T.Texture;
   private sunlight=new T.DirectionalLight(0xffe9d0,2.17);private shadowState="";private terrainLOD:((distance:number,grade:number)=>void)[]=[];
   prepareRender(renderer:T.WebGLRenderer){
     if(!this.lib)return;
     const q=this.grade.value=quality();
-    if(this.localActive){this.local!.update(this.camera,this.progress,q);renderer.shadowMap.needsUpdate=true;return;}
+    if(this.localActive){this.local!.update(this.camera,this.progress,q,this.eruption==="effusive",this.faultModel.release(this.progress,this.faultModel.hx,this.faultModel.hy,0));renderer.shadowMap.needsUpdate=true;return;}
     this.sunlight.castShadow=q>0;const size=[512,1024,2048][q],shadow=this.sunlight.shadow;
     const samples=4;for(const tex of [this.lib.color,this.lib.relief,this.colorMap,this.relief,this.contextMap]){
       if(tex&&tex.anisotropy!==samples){tex.anisotropy=samples;tex.needsUpdate=true;}
@@ -104,10 +106,10 @@ export class RegionalScene {
   facies=false;readonly sectionColor={value:0};
   analysis=false;readonly timings:Record<string,number>={};
   view="land";vectors=false;riskSite="near";markerEnds:number[][]=[];
-  showP=true;showS=true;detail=false;phasesShown=false;water?:WaterSection;private waves:T.Mesh[]=[];private fault!:T.Line;private rupture!:T.Line;
+  showP=true;showS=true;detail=false;phasesShown=true;water?:WaterSection;private waves:T.Mesh[]=[];private fault!:T.Line;private rupture!:T.Line;
   private waterColumn?:T.Mesh; private nearSurface=0;private rockMaterial:T.Material[]=[];
   private people:T.Mesh[]=[];private route?:T.Line;private motion:((t:number)=>void)[]=[];
-  progress=0;playing=false;slow=false;cut=false;names=false;vertical=true;stress=false;
+  progress=0;playing=false;slow=false;cut=false;names=true;moreNames=false;vertical=true;stress=false;
   soil="rock";eruption="effusive";coastal=false;protection=false;safeRoute=false;warning=false;relocate=false;exposure="dense";ready=false;error="";private disposed=false;private age=0;
   constructor(readonly spec:RegionSpec,canvas:HTMLCanvasElement){
     this.orbit=new OrbitControls(this.camera,canvas);this.orbit.target.set(0,0,0);
@@ -266,7 +268,20 @@ export class RegionalScene {
         const columns=this.water?120:64;const g=indexed(36,columns,(i,j)=>{const z=(front?0:-4.5)+j/8;
           let range=bounds.get(j);if(!range){range=this.water?[-6,6]:f.horizonRange(side,x=>this.height(x,z));bounds.set(j,range);}
           const x=T.MathUtils.lerp(range[0],range[1],i/columns);return [x,this.height(x,z),z,x/12+.5,.5-z/9];});
-        this.bindRock(g,side);g.userData.surface=true;g.userData.front=front;const land=mesh(g,terrain,"Gelände");land.receiveShadow=true;this.scene.add(land);
+        this.bindRock(g,side);g.userData.surface=true;g.userData.front=front;const land=mesh(g,terrain,"Gelände");land.receiveShadow=true;
+        // Anchor to a vertex in the same deforming buffer as the surface.
+        const row=18*(columns+1);
+        const coastIndex=this.spec.coastLesson?Array.from({length:columns+1},(_,i)=>row+i).reduce((a,b)=>Math.abs(g.attributes.position.getY(a)-.075)<Math.abs(g.attributes.position.getY(b)-.075)?a:b):undefined;
+        const idx=coastIndex??row+Math.floor(columns*.46);
+        land.userData.lessonAnchor=()=>new T.Vector3().fromBufferAttribute(g.attributes.position,idx);
+        const geology=this.spec.geology;
+        Object.defineProperty(land.userData,"explanation",{get:()=>{
+          if(this.water)return {name:this.spec.coastLesson?"Küstengelände":"Meeresboden",answer:"Der Boden trägt das Wasser. Seine Verlagerung kann die Wassersäule in Bewegung setzen."};
+          if(this.stress&&this.spec.site==="san"&&this.progress>0&&this.progress<onset)return {name:"Elastisch verformtes Gestein",answer:"Der farbig hervorgehobene Bereich speichert Spannung, solange die Störung festhält."};
+          if(!geology||!side)return {name:"Geländeoberfläche",answer:"Die Oberfläche begrenzt den dargestellten Gesteinskörper."};
+          const leftOnMinus=Math.cos((geology.strike-this.spec.strike)*Math.PI/180)>=0;
+          return {name:names[(side<0)===leftOnMinus?geology.left:geology.right],answer:"Dieser Ausschnitt gehört zur beschrifteten Platte. Er bewegt sich gegenüber der Nachbarplatte."};
+        }});this.scene.add(land);
       }
     }
     geologySolids(this);
@@ -286,7 +301,34 @@ export class RegionalScene {
           for(let j=0;j<=120;j++){const a=Math.max(0,j-1),b=Math.min(120,j+1),slope=(levels[b]-levels[a])/((b-a)*.1),inv=1/Math.hypot(1,slope);
             for(let i=j;i<pos.count;i+=121)normals.setXYZ(i,-slope*inv,inv,0);}
           normals.needsUpdate=true;});
-        (front?this.front:this.scene).add(mesh(g,water,"Wasseroberfläche"));
+        const surface=mesh(g,water,"Wasseroberfläche");
+        if(this.water){
+          const solver=this.water,probe=new T.Vector3();
+          let name="Wasseroberfläche",chosen=-1,last="";
+          // Select only vertices of the drawn wet mask inside the current view. The shore camera
+          // can show a fraction of one grid row; a far-off global maximum has no visible anchor.
+          const findPoint=()=>{
+            const key=[this.progress,this.camera.aspect,...this.camera.matrixWorld.elements].join("|");
+            if(key===last)return;last=key;chosen=-1;name="Wasseroberfläche";let best=-Infinity;
+            for(const j of (front?[1,4,12,21]:[41,38,30,21]))for(let i=1;i<120;i++){
+              const k=j*121+i;if(wet.getX(k)<=.002)continue;
+              probe.fromBufferAttribute(pos,k).project(this.camera);
+              if(Math.max(Math.abs(probe.x),Math.abs(probe.y),Math.abs(probe.z))>=1)continue;
+              const newlyWet=this.spec.coastLesson&&solver.depths[i]<=.001&&terrain[k]>=-.001;
+              const change=Math.abs(levels[i]-solver.surfaces[i]);
+              const feature=front||this.cut;
+              const term=feature&&newlyWet?"Überfluteter Bereich":feature&&change>.006?"Wasserwelle":"Wasseroberfläche";
+              const priority=term==="Überfluteter Bereich"?3:term==="Wasserwelle"?2:0;
+              const score=priority+Math.min(change,.5)-.45*probe.x**2-.6*probe.y**2;
+              if(score>best){best=score;chosen=k;name=term;}
+            }
+          };
+          surface.userData.lessonAnchor=()=>{findPoint();return chosen<0?undefined:new T.Vector3().fromBufferAttribute(pos,chosen);};
+          Object.defineProperty(surface.userData,"explanation",{get:()=>{
+            findPoint();return {name,answer:name==="Überfluteter Bereich"?"Dieses Gelände lag anfangs trocken. Hier bedeckt es jetzt Wasser aus dem Küstenmodell.":name==="Wasserwelle"?"An dieser Stelle unterscheidet sich die Wasserhöhe vom Ruhezustand. Die Wasserwelle bewegt sich durch das Meer.":"Die Wasserhöhe stammt aus der Flachwasserberechnung."};
+          }});
+        }
+        (front?this.front:this.scene).add(surface);
       }
       const curtain=indexed(1,120,(i,j)=>{const x=-6+i*.1;return [x,j?0:Math.min(0,this.height(x,0)),.011,i/120,j];});
       const glass=waterSection();
@@ -318,7 +360,7 @@ export class RegionalScene {
   private setCameraView(view:string){
     if(localView(view)&&this.spec.site&&this.lib){
       this.local??=new LocalLandscape(this.spec.site,this.lib,this.grade,(x,z)=>{const unit=(this.spec.width??sites[this.spec.site!].width)*1000/12;return (this.height(x/unit,z/unit)-this.height(0,0))*unit/(this.spec.site==="japan"?4.7:2.4);},this.spec.theme==="volcano");
-      this.view=view;this.cut=false;this.transition=undefined;this.camera.far=240;this.orbit.minDistance=.23;this.orbit.maxDistance=12;
+      this.view=view;if(this.localStill)this.playing=false;this.cut=false;this.transition=undefined;this.camera.far=240;this.orbit.minDistance=.23;this.orbit.maxDistance=12;
       const pose=this.local.pose(view);this.orbit.target.copy(pose.target);this.camera.position.copy(pose.position);this.orbit.update();return;
     }
     this.orbit.minDistance=view==="coast"?2.1:4;
@@ -339,7 +381,7 @@ export class RegionalScene {
     this.reframe(true);this.view=view;if(view==="cut")return;
     if(view==="vent"){
       const x=this.spec.arcTransect?zao.vent:0,y=this.height(x,-.08),goal=new T.Vector3(x,y+.48,-.12);
-      this.transition=undefined;this.camera.position.copy(goal).add(new T.Vector3(1,1.05,5.5));this.orbit.target.copy(goal);this.orbit.update();return;
+      this.transition=undefined;this.camera.position.copy(goal).add((this.spec.site==="island"?new T.Vector3(1.55,2.35,2.95):new T.Vector3(1,1.05,5.5)));this.orbit.target.copy(goal);this.orbit.update();return;
     }
     const f=this.faultModel,x=view==="coast"?(this.spec.coastLesson?-2.98:-4.65):view==="ocean"?0:view==="water"?f.hx:Math.max(-3.9,Math.min(3.9,f.hx));
     const y=view==="waves"||view==="focus"?f.hy:view==="coast"||view==="water"||view==="ocean"?0:f.top-.35;
@@ -357,7 +399,8 @@ export class RegionalScene {
     const total=to(g.relativeAzimuth);const left=to(g.strike-90).multiplyScalar(2);const source=left.setY(this.height(left.x,left.z)+.32);
     const along=to(g.strike),cross=to(g.strike+90);
     // PB2002 describes the left plate relative to the right, in directed line coordinates.
-    const add=(vec:T.Vector3,start:T.Vector3,color:number)=>{const len=vec.length();if(len>.035)group.add(new T.ArrowHelper(vec.clone().normalize(),start,len,color,Math.min(.24,len*.3),.14));};
+    const add=(vec:T.Vector3,start:T.Vector3,color:number)=>{const len=vec.length();if(len<=.035)return;
+      const arrow=new T.ArrowHelper(vec.clone().normalize(),start,len,color,Math.min(.24,len*.3),.14);arrow.userData.explanation={name:color===0xffdd88?"Relative Bewegungsrichtung":color===0x86e8df?"Bewegung längs der Grenze":"Bewegung quer zur Grenze",answer:names[g.left]+" bewegt sich relativ zur "+names[g.right]+". Gold zeigt die gesamte Bewegung."};group.add(arrow);};
     const v=total.multiplyScalar(2),a=along.multiplyScalar(v.dot(along)),b=cross.multiplyScalar(v.dot(cross));
     add(v,source,0xffdd88);add(a,source.clone().add(new T.Vector3(0,.035,0)),0x86e8df);add(b,source.clone().add(a),0xbfb5ff);
     this.onAnimate(()=>{group.visible=this.vectors&&!this.cut;});
@@ -407,6 +450,7 @@ export class RegionalScene {
     const f=this.faultModel;
     const points=Array.from({length:64},(_,i)=>f.point(f.top-i*.075,.018));
     this.fault=path(points,0x463e36,"Störungsfläche");this.section.add(this.fault);
+    Object.defineProperty(this.fault.userData,"explanation",{get:()=>this.progress<onset?{name:"Blockierter Kontakt",answer:"Hier hält ein Teil der Störung fest. Umgebendes Gestein kann sich elastisch verformen."}:{name:"Störungsfläche",answer:"Auf dieser Fläche hat sich das Gestein gegeneinander verschoben."}});
     this.rupture=path(Array.from({length:49},()=>origin.clone()),0xffcf89,"Bruchfront");this.section.add(this.rupture);
     this.waves=waveAnalysis(this);
   }
@@ -417,7 +461,7 @@ export class RegionalScene {
   onAnimate(fn:(progress:number)=>void){this.motion.push(fn);}
   step(direction=1){this.playing=false;this.progress=direction>0?(phases.find(v=>v>this.progress+.002)??1):([...phases].reverse().find(v=>v<this.progress-.002)??0);}
   update(dt:number){
-    this.age+=dt;if(this.playing){this.progress=Math.min(1,this.progress+dt/(this.slow?32:14));if(this.progress===1)this.playing=false;}
+    this.age+=dt;if(this.localStill)this.playing=false;if(this.playing){this.progress=Math.min(1,this.progress+dt/(this.slow?32:14));if(this.progress===1)this.playing=false;}
     if(!this.ready)return;
     const t=this.progress;this.sectionColor.value=+!!this.facies;this.stressSignals.phase.value=t;this.stressSignals.show.value=+(this.stress&&this.spec.theme==="earthquake");this.ui.t.value=t;this.ui.clock.value=this.age;this.ui.stress.value=+this.stress;
     this.ui.vertical.value=+this.vertical;
@@ -428,7 +472,7 @@ export class RegionalScene {
       const tr=this.transition;tr.fraction=Math.min(1,tr.fraction+dt*1.55);const v=T.MathUtils.smoothstep(tr.fraction,0,1);
       this.camera.position.lerpVectors(tr.from,tr.to,v);this.orbit.target.lerpVectors(tr.look,tr.goal,v);if(tr.fraction===1)this.transition=undefined;
     }
-    this.labels.visible=this.names && this.spec.theme==="earthquake"&&this.faultModel.kind!=="unknown"&&!document.body.classList.contains("observing");
+    this.labels.visible=this.names && this.spec.theme==="earthquake"&&this.faultModel.kind!=="unknown"&&(!document.body.classList.contains("observing")||document.body.classList.contains("show-labels")||document.body.classList.contains("show-some-labels")||document.body.hasAttribute("data-choose-object"));
     const quake=(this.spec.theme==="earthquake"||this.spec.theme==="risk")&&this.faultModel.kind!=="unknown"&&this.view!=="coast"&&this.view!=="ocean";this.fault.visible=quake;
     const f=this.faultModel;
     if((t!==this.lastT||this.lastSection!==this.section.visible) && (this.lastT<0||!["volcano","lithosphere"].includes(this.spec.theme))){

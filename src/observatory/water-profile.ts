@@ -12,7 +12,7 @@ export class WaterProfile{
     const box=this.element;box.id="water-profile";box.hidden=true;box.setAttribute("aria-label","Tsunami im Profil");
     box.innerHTML='<div class="profile-heading"><strong>Wasser im Profil</strong><span data-site></span><button id="profile-close" aria-label="Profil schließen">Schließen</button></div>'+
       '<svg viewBox="0 0 1000 380" role="img" aria-label="Zwei gekoppelte Ansichten der berechneten Wasserstände"><text x="26" y="32">Wasserstand gegenüber der Ruhelage · Höhe vergrößert</text><path d="M32 104H968" class="profile-reference"/><path data-line="wave" class="wave"/><text x="32" y="174">Landseite</text><text x="968" y="174" text-anchor="end">Meerseite</text><text x="26" y="213" data-section></text><path data-line="rock" class="rock"/><path data-line="water" class="water"/><path data-line="inland" class="inland"/><path data-line="still" class="profile-reference"/><path data-line="edge" class="edge"/><path data-line="depth" class="depth"/><path data-line="original-shore" class="original-shore"/><path data-line="advance" class="advance"/></svg>'+
-      '<div class="profile-actions"><span>Gestrichelt · Ruhewasser<br>Gelb · Wassertiefe</span><span data-key></span><button id="profile-before">Vorher</button><button id="profile-peak">Welle</button><button id="profile-ebb">Später</button></div>';
+      '<div class="profile-actions"><span>Gestrichelt · ursprünglicher Wasserstand<br>Türkis · aktueller Wasserstand · Gelb · Wassertiefe</span><span data-key></span><button id="profile-before">Vorher</button><button id="profile-peak">Welle</button><button id="profile-ebb">Später</button></div>';
     box.querySelectorAll<SVGPathElement>("[data-line]").forEach(p=>this.paths[p.dataset.line!]=p);parent.append(box);
   }
   // First wet/dry crossing on the coast profile, with the same interpolation as the filled polygons.
@@ -51,7 +51,11 @@ export class WaterProfile{
       this.element.querySelector<HTMLButtonElement>("#profile-close")!.onclick=close;
     }
     if(this.previous===r.progress)return;this.previous=r.progress;
-    const t=r.progress,lo=r.spec.coastLesson?this.shore-.85:-6,hi=r.spec.coastLesson?this.shore+1.45:6;
+    const t=r.progress;
+    const now=w.extent(t),before=w.extent(Math.max(0,t-.018));
+    const description=r.spec.coastLesson?(now.newlyWet>0?(now.newlyWet<before.newlyWet||now.newlyWet===before.newlyWet&&now.deepest<before.deepest?"Rückzug · zuvor trockener Boden ist noch benetzt":"Überflutung · Wasser über der ursprünglichen Uferlinie"):"Ursprüngliches Ufer · noch kein neu benetzter Boden"):"Profil vom flacheren Ufer zum tiefen Wasser · die Höhe folgt der Berechnung";
+    const key=this.element.querySelector("[data-key]");if(key&&key.textContent!==description)key.textContent=description;
+    const lo=r.spec.coastLesson?this.shore-.85:-6,hi=r.spec.coastLesson?this.shore+1.45:6;
     const X=(x:number)=>32+936*(x-lo)/(hi-lo),Y=(h:number)=>354-115*(h-this.minBed)/(this.maxBed-this.minBed);
     const point=(x:number,y:number)=>x.toFixed(2)+" "+y.toFixed(2);
     let wave="",rock="",water="",inland="",edge="",pen=false;

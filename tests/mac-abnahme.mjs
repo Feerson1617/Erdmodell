@@ -1,3 +1,4 @@
+import {shellNames,plainAtlas} from "./lesson-controls.mjs";
 import {classroom} from "./g52-classroom.mjs";
 // Exercises the executable copied off the ejected DMG and the single-file export on the same Mac.
 import {acceptG51,longClassroom} from "./g51-abnahme.mjs";
@@ -13,7 +14,7 @@ import { PNG } from "pngjs";
 const out=resolve("test-results/mac"), film=join(out,"film");
 await mkdir(film,{recursive:true});
 const executablePath=(await readFile(join(out,"executable-path.txt"),"utf8")).trim();
-const html=pathToFileURL(resolve("artifacts/GeoRisiko-G6.1-Web-Test.html")).href;
+const html=pathToFileURL(resolve("artifacts/GeoRisiko-G6.2-Web-Test.html")).href;
 const cases=JSON.parse(await readFile("src/tectonics/examples.json","utf8"));
 const report={commit:process.env.TEST_COMMIT, run:process.env.GITHUB_RUN_ID, platform:process.platform, arch:process.arch, runs:[]};
 const runCmd=(name,args)=>{const r=spawnSync(name,args,{encoding:"utf8"});assert.equal(r.status,0,r.stderr);return r.stdout.trim();};
@@ -73,7 +74,7 @@ async function scenarios(p,name,pid,row) {
   const pose=await read(p);await p.locator("#earth").focus();await p.keyboard.press("ArrowRight");
   await p.waitForFunction(lon=>Math.abs(window.geoObservatory().lon-lon)>.01,pose.lon);
   await p.click("#home");await p.click("#nav-inside");await rest(p);
-  assert.equal(await p.locator("#pins button").count(),0);await record("02-Schalenschnitt");
+  await p.waitForSelector('#pins [data-object="shell-3"]');await shellNames(p,false);assert.equal(await p.locator("#pins button").count(),0);await record("02-Schalenschnitt");
   await p.click('[data-layer="1"]');await p.click("#revealOne");
   await p.waitForFunction(()=>document.querySelectorAll("#pins button").length===1);
   await p.click("#hideOne");await p.click("#labels");
@@ -120,6 +121,7 @@ async function scenarios(p,name,pid,row) {
 }
 async function allPairs(p) {
   await p.click("#nav-plates");await p.waitForFunction(()=>window.geoObservatory().tectonics.mosaic?.opening===1);
+  await plainAtlas(p);
   const checked=[];
   for(const code of Object.keys(cases)){
     await selectPlate(p,code);await p.click("#atlasLocate");await rest(p);
@@ -148,7 +150,7 @@ async function recordFilm(p,context) {
   });
   await p.click("#home");await rest(p);await p.emulateMedia({reducedMotion:"no-preference"});
   await cdp.send("Page.startScreencast",{format:"jpeg",quality:82,maxWidth:1152,maxHeight:648,everyNthFrame:2});
-  await p.waitForTimeout(600);await p.click("#nav-inside");await p.click("#labels");await p.waitForTimeout(800);
+  await p.waitForTimeout(600);await p.click("#nav-inside");await shellNames(p,true);await p.waitForTimeout(800);
   await p.click("#nav-plates");await p.waitForFunction(()=>window.geoObservatory().tectonics.mosaic?.opening===1);
   await compare(p,"NA");await p.waitForFunction(()=>window.geoObservatory().tectonics.mosaic.progress>.57);
   await p.click("#atlasPlay");await p.waitForTimeout(500);await cdp.send("Page.stopScreencast");await cdp.detach();await Promise.all(writes);

@@ -15,7 +15,7 @@ export function waveAnalysis(r:RegionalScene){
     const m=new T.Mesh(g,mat);m.name=n?"S-Wellenfront":"P-Wellenfront";m.userData.explanation={name:m.name,answer:n?"Gestein bewegt sich quer zur Laufrichtung.":"Das Gestein wird zusammengedrückt und gedehnt."};m.material.onBeforeCompile=s=>{s.vertexShader="attribute float edge;varying float faceEdge;\n"+s.vertexShader.replace("#include <begin_vertex>","#include <begin_vertex>\nfaceEdge=edge;");s.fragmentShader="varying float faceEdge;\n"+s.fragmentShader.replace("#include <color_fragment>","#include <color_fragment>\ndiffuseColor.a*=.22+.78*smoothstep(.0,.75,faceEdge);");};m.frustumCulled=false;
     r.section.add(m);fronts.push(m);
     const beads=new T.InstancedMesh(new T.SphereGeometry(.069,10,7),new T.MeshStandardMaterial({color,emissive:color,emissiveIntensity:.22}),14);
-    beads.frustumCulled=false;detail.add(beads);markers.push(beads);
+    beads.name=n?"S-Gesteinspunkte":"P-Gesteinspunkte";beads.frustumCulled=false;detail.add(beads);markers.push(beads);
   }
   const fluid=new T.Line(new T.BufferGeometry().setAttribute("position",new T.Float32BufferAttribute(new Float32Array(61*3),3)),new T.LineBasicMaterial({color:colors[0]}));
   fluid.name="Druckwelle im Wasser";fluid.frustumCulled=false;r.section.add(fluid);

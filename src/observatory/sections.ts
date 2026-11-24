@@ -38,7 +38,7 @@ function material(kind:Rock,r:RegionalScene,accreted=false){
         float broken=smoothstep(.63,.99,lock.x)*smoothstep(.58,.85,mineral(stone*vec3(9.,4.,11.)));
         diffuseColor.rgb*=1.-.25*broken;
         float seam=min(bedContact,1.-bedContact);
-        float contact=mix(.63,1.,smoothstep(.0,.075,seam+.015*(coarse-.35)));
+        float contact=mix(.65,1.04,smoothstep(.0,.083,seam+.012*(coarse-.35)));
         float joint=${kind==="basalt"||kind==="fault"?"1.-smoothstep(.025,.115,abs(sin(stone.x*21.+2.4*a+stone.y*.71)))":kind==="sediment"?"1.-smoothstep(.035,.17,abs(sin(stone.y*31.+a*2.1)))":"smoothstep(.63,.90,b)*.6"};
         diffuseColor.rgb*=contact*(1.-joint*.18);
         vec3 keyColor=vec3(${{sediment:".68,.53,.28",continental:".59,.29,.26",basalt:".16,.42,.58",mantle:".26,.46,.30",warm:".72,.34,.13",wedge:".52,.56,.22",fault:".49,.30,.52"}[kind]});
@@ -64,7 +64,7 @@ function solid(r:RegionalScene,kind:Rock,side:number,point:(u:number,v:number,z:
   const g=new T.BufferGeometry();g.setIndex(indices);g.setAttribute("position",new T.Float32BufferAttribute(pos,3));g.computeVertexNormals();
   g.setAttribute("bedFraction",new T.Float32BufferAttribute(parameters.filter((_,i)=>i%2===1),1));
   g.setAttribute("geologyCoord",g.attributes.position.clone());
-  const m=new T.Mesh(g,material(kind,r,Boolean(label)));m.name=label??palette[kind][1];m.userData.explanation={name:m.name,answer:palette[kind][2]};r.section.add(m);
+  const m=new T.Mesh(g,material(kind,r,Boolean(label)));m.name=label??(kind==="basalt"&&r.faultModel.kind==="interface"&&side===-r.faultModel.dipSign?"Abtauchende ozeanische Kruste":palette[kind][1]);m.userData.explanation={name:m.name,answer:palette[kind][2]};r.section.add(m);
   if(label&&r.spec.process==="ridge"){g.setAttribute("sectionU",new T.Float32BufferAttribute(parameters.filter((_,i)=>i%2===0),1));g.setAttribute("coupling",new T.Float32BufferAttribute(new Float32Array(pos.length/3*2),2));m.frustumCulled=false;}
   else r.bindRock(g,side,(i,z)=>point(parameters[i*2],parameters[i*2+1],z)[1]);
   return m;
@@ -95,7 +95,7 @@ export function geologySolids(r:RegionalScene){
     }
     return;
   }
-  const ocean=["ridge","oceanTransform"].includes(p),root=T.MathUtils.clamp((f.top-f.riftRoot)/(f.top-floor),.05,.95);
+  const ocean=(["ridge","oceanTransform"].includes(p)||p==="hotspot"&&r.spec.site==="hawaii"),root=T.MathUtils.clamp((f.top-f.riftRoot)/(f.top-floor),.05,.95);
   const horizon=(x:number,z:number,d:number)=>{
     const h=r.height(x,z);
     if(p==="rift")return d<=root?T.MathUtils.lerp(h,f.riftRoot,d/root):T.MathUtils.lerp(f.riftRoot,floor,(d-root)/(1-root));

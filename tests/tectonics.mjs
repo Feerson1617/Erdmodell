@@ -1,3 +1,4 @@
+import {plainAtlas,shellNames} from "./lesson-controls.mjs";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -43,6 +44,7 @@ async function boundaryCycle(page, navigation = false) {
   // Compare finished views. During the atlas reveal the cover changes independently
   // of the boundary lines. Pixel differences from that transition cannot test them.
   if (!navigation) await page.waitForFunction(() => window.geoObservatory().tectonics.mosaic?.opening === 1);
+  let lastDrift;
   for (let attempt=0; attempt<4; attempt++) {
     const frames = await page.evaluate(async navigation => {
       const surface=document.getElementById("earth"), image=document.createElement("canvas");
@@ -60,6 +62,9 @@ async function boundaryCycle(page, navigation = false) {
             }
           }
         }
+        // Read a completed draw after the checkbox's immediate DOM update,
+        // including when this suite is running in the software-rendered browser.
+        await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
         const frame=await new Promise(resolve=>requestAnimationFrame(() => {
           const w=window.geoObservatory();
           ctx.drawImage(surface,0,0,image.width,image.height);
@@ -77,11 +82,14 @@ async function boundaryCycle(page, navigation = false) {
     assert.deepEqual(frames.map(f=>f.boundaries),[false,true,false]);
     assert.ok(frames[1].draws-frames[1].uploadedTiles > frames[2].draws-frames[2].uploadedTiles,
       "Der Renderer zeichnet nach Ausblenden weiter die Grenzgeometrie");
-    assert.ok(added>0.0007 && removed>0.0007 && drift<Math.min(added,removed)*0.6,
+    // An independently streaming base map can change even without a change in tile count.
+    // Only a reproducible off/on/off raster triple can measure the overlay itself.
+    if(drift>=Math.min(added,removed)*.6){lastDrift={added,removed,drift};continue;}
+    assert.ok(added>0.0007 && removed>0.0007,
       `Sichtbarkeit im gerenderten Bild: ein ${added}, aus ${removed}, Abweichung vom Ausgangsbild ${drift}`);
     return {added,removed,drift, frames:frames.map(({png,...metrics})=>metrics)};
   }
-  throw new Error("Innerhalb von vier Bildtripeln keine konstante Renderpuffergröße und Kachelzahl");
+  throw new Error("Kein stabiles Aus–Ein–Aus-Bildtripel bei gleicher Renderpuffergröße und Kachelzahl: "+JSON.stringify(lastDrift));
 }
 function changed(a, b) {
   assert.equal(a.width, b.width);
@@ -236,7 +244,7 @@ async function exercise(browser, engine) {
     await page.tap("#nav-plates");
     await page.waitForFunction(() => window.geoObservatory().tectonics.ready);
     assert.deepEqual(pose(await diagnostics(page)), pose(before), "Kamerapose beim Aktivieren der Ebene");
-    assert.equal((await diagnostics(page)).tectonics.boundaries, false);
+    await plainAtlas(page);assert.equal((await diagnostics(page)).tectonics.boundaries, false);
     run.boundaryFrames = await boundaryCycle(page);
     await page.tap("#boundaries");
     await painted(page);
@@ -383,6 +391,7 @@ async function exercise(browser, engine) {
       s.geometries-s.uploadedTiles <= first.geometries-first.uploadedTiles+12), "Wachstum bei warmen Wiederholungen");
     await page.tap("#nav-inside");
     await settled(page);
+    await shellNames(page,false);
     assert.doesNotMatch(await page.locator("#sidebar").innerText(), /Erdkern|Erdkruste|Erdmantel/i);
     assert.equal((await diagnostics(page)).tectonics.processVisible,false);
     await snap("10-schalenschnitt");
@@ -418,7 +427,7 @@ async function recordDemo(browser) {
     const video = p.video();
     await p.goto(url); await settled(p);
     await p.tap("#nav-plates");
-    await p.tap("#boundaries");
+    await plainAtlas(p);await p.tap("#boundaries");
     await p.tap("#plateSettings summary");
     await p.tap("#boundaryTypes");
     await p.tap("#plateNames");

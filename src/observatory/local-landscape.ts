@@ -58,7 +58,14 @@ export class LocalLandscape{
         const k=j*n+i;if(j+1<axis.length&&i+1<n)idx.push(k,k+n,k+1,k+1,k+n,k+n+1);
       }
       const g=new T.BufferGeometry();g.setAttribute("position",new T.Float32BufferAttribute(p,3));g.setIndex(idx);g.computeVertexNormals();
-      const mesh=new T.Mesh(g,ground);mesh.name="Nahgelände";mesh.receiveShadow=true;this.halves[half].add(mesh);
+      const mesh=new T.Mesh(g,ground);mesh.name="Nahgelände";if(site==="island"&&half===0)mesh.userData.explanation={name:"Basaltische Spalte",answer:"Der Bruch öffnet einen Weg zur Oberfläche. Bei einem effusiven Ausbruch kann dünnflüssige Lava austreten."};mesh.userData.lessonAnchor=()=>{const z=-8,x=site==="island"&&half===0?-2+1.9*Math.sin((z+16)*.045):half?5:-5;return new T.Vector3(x,this.surface(x,z),z);};mesh.receiveShadow=true;this.halves[half].add(mesh);
+    }
+    if(site==="san"){
+      // Survey-style wooden stakes form one transverse line at rest. Each is attached to its own block.
+      for(const [i,x] of [-2.2,2.2].entries()){
+        const marker=new T.Mesh(new T.CylinderGeometry(.065,.09,.98,7),new T.MeshStandardMaterial({color:0xebb870,roughness:.95}));
+        marker.position.set(x,this.surface(x,-6)+.47,-6);marker.name="Geländemarker";this.halves[i].add(marker);
+      }
     }
     if(site==="island"){
       this.lava=lavaTongue(3.9);this.lava.build(-2,-16,Math.PI*.49,52,0,(x,z)=>this.surface(x,z));this.root.add(this.lava.mesh);
@@ -68,7 +75,7 @@ export class LocalLandscape{
       const pos=water.attributes.position,wet=[];
       for(let j=0;j<axis.length;j++)for(let i=0;i<axis.length;i++){pos.setXYZ(j*axis.length+i,axis[i],0,axis[j]);wet.push(-this.terrain[j][i]);}
       water.setAttribute("depthWet",new T.Float32BufferAttribute(wet,1));water.computeBoundingSphere();
-      const sea=new T.Mesh(water,seaMaterial({value:0},1,5.5));sea.renderOrder=2;this.root.add(sea);
+      const sea=new T.Mesh(water,seaMaterial({value:0},1,5.5));sea.name="Uferwasser";sea.userData.lessonAnchor=()=>new T.Vector3(17,0,-12);sea.renderOrder=2;this.root.add(sea);
     }
     this.plant();
   }
@@ -119,7 +126,7 @@ export class LocalLandscape{
         vec2 p=metres.xz;vec2 warp=vec2(sin(p.y*.082+p.x*.035),cos(p.x*.103-p.y*.027))*.10;
         vec2 first=p*.22+warp,second=mat2(.83,.55,-.55,.83)*p*.41+.27;
         vec3 soil=fieldSample(faciesColor,first,${basalt?"3.":coast?"7.":"0."}).rgb,grit=fieldSample(faciesColor,second,${basalt?"2.":coast?"1.":"1."}).rgb;
-        float soilMix=smoothstep(-.65,.69,sin(p.x*.16+sin(p.y*.24))*.61+cos(p.y*.19+p.x*.15)*.42+incline*2.);
+        float strata=sin(dot(p,vec2(.036,.057))+.85*cos(p.y*.092));float soilMix=smoothstep(-.7,.79,.48*sin(p.x*.16+sin(p.y*.24))+.32*cos(p.y*.19+p.x*.15)+.33*strata+incline*2.);
         vec3 grain=mix(soil,grit,soilMix*.73);vec3 micro=fieldSample(faciesRelief,first,${basalt?"3.":coast?"7.":"0."}).rgb;
         vec3 geo=texture2D(ortho,clamp(vec2(.5+(p.x-90.)/1800.,.5-(p.y-155.)/1800.),.001,.999)).rgb;
         float distanceM=length(vViewPosition)*10.;
@@ -183,7 +190,11 @@ export class LocalLandscape{
     }
     for(let j=0;j<254;j++){
       const x=(rng()-.5)*410,z=(rng()-.6)*360;
-      if(Math.hypot(x,z)>18&&noise(x*.018,z*.018)>.52)place("oak",x,z,.68+.67*rng());
+      const cover=.64*noise(x*.018,z*.018)+.36*noise(x*.059+7,z*.047);
+      if(Math.hypot(x,z)>18&&rng()<T.MathUtils.smoothstep(cover,.37,.68)*.86){
+        place("oak",x,z,.68+.67*rng());
+        if(cover>.56){place("shrub",x+3.5*rng(),z-3*rng(),.55+.62*rng());}
+      }
     }
     place("oak",-8,-12,1.16);place("oak",12,-25,.86);place("shrub",5,-1,1);
     place("rock",2,0,1.32);place("rock",3,.8,.64);
@@ -213,9 +224,9 @@ export class LocalLandscape{
     const [x,z,tx,tz,eye]=this.site==="japan"?(view==="local"?[-12,32,12,-31,11.5]:[-4,11,13,-14,2.25]):this.site==="island"?(view==="local"?[17,26,-1,-10,7.2]:[5,5,-2,-13,2.5]):view===positions[0]?[22,37,0,-10,9]:[5,9,0,-7,1.9];
     return {position:new T.Vector3(x,this.surface(x,z)+eye,z).multiplyScalar(.1),target:new T.Vector3(tx,this.surface(tx,tz)+2.4,tz).multiplyScalar(.1)};
   }
-  update(camera:T.PerspectiveCamera,t:number,grade:number){
-    this.lava?.phase(this.volcanic?T.MathUtils.smoothstep(t,.53,.96):0);
-    const slip=this.site==="san"?T.MathUtils.smoothstep(t,.35,.51)*.35:0;
+  update(camera:T.PerspectiveCamera,t:number,grade:number,effusive:boolean,release:number){
+    this.lava?.phase(this.volcanic&&effusive?T.MathUtils.smoothstep(t,.53,.96):0);
+    const slip=this.site==="san"?release*.35:0;
     this.halves[0].position.z=-slip;this.halves[1].position.z=slip;
     const cx=camera.position.x*10,cz=camera.position.z*10,key=[Math.round(cx/3),Math.round(cz/3),grade].join("/");
     if(key===this.lastZone)return;this.lastZone=key;this.sun.castShadow=grade>0;

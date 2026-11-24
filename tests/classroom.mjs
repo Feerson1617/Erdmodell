@@ -1,3 +1,4 @@
+import {shellNames} from "./lesson-controls.mjs";
 import assert from "node:assert/strict";
 import { mkdir, writeFile, mkdtemp, rm } from "node:fs/promises";
 import { join } from "node:path";
@@ -93,7 +94,7 @@ async function exercise(browser, engine) {
     await p.tap("#present");
     await p.tap("#nav-inside");
     await wait(p);
-    await anonymous(p);
+    await shellNames(p,false);await anonymous(p);
     run.smartboardArea = await area();
     assert.ok(run.smartboardArea >= 0.74);
     assert.ok(await p.locator("#isolate").isDisabled());
@@ -296,7 +297,7 @@ async function exercise(browser, engine) {
       assert.deepEqual(w.shell.opacity, [1, 1, 1, 1]);
       await p.tap("#nav-inside");
       await wait(p);
-      await anonymous(p);
+      await shellNames(p,false);await anonymous(p);
     }
     pass(
       "Schalenrotation, wiederholtes Rücksetzen und stabile warme Ressourcen bei Schnitt- und Maßstabswechseln",

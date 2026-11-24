@@ -1,5 +1,6 @@
 import type { World } from "../world";
 
+import {comparisonLesson,teachingSteps,boundaryLesson} from "./learning";
 import { names } from "./atlas";
 
 const sites = {
@@ -25,12 +26,6 @@ export function isProcessSite(id: string): id is SiteKey {
   return Object.hasOwn(sites, id);
 }
 
-const movement = {
-  divergent: "Zwei Platten bewegen sich voneinander weg.",
-  convergent:
-    "Zwei Platten bewegen sich aufeinander zu. An manchen Grenzen taucht eine Platte unter die andere ab.",
-  transform: "Zwei Platten bewegen sich seitlich aneinander vorbei.",
-};
 const swatches = {
   divergent: "Auseinander",
   convergent: "Aufeinander zu",
@@ -91,20 +86,21 @@ export function plateControls(world: World) {
     ${check("atlasSlow","Langsamer",world.mosaic?.slow ?? false)}`;
   const pair=world.mosaic?.pair;
   if (pair && profile) {
-    return `<h1>Grenzvergleich</h1><section class="scienceCard"><h2>${profile.where}</h2>
-      <p>${names[pair.bodies[0].name]} und ${names[pair.bodies[1].name]}</p>
-      <strong>${swatches[world.pairKind!]}</strong><p>Beobachte den hellen Streifen im Gestein.</p></section>
-      ${playback}<button id="atlasWorld" class="atlasReturn">Zur Weltansicht</button>${picker}`;
+    return `<div class="pair-navigation"><label>Grenzvergleich<select id="pair-examples">${Object.entries({...teachingSteps,[pair.step[0]]:boundaryLesson(pair.step).place}).map(([id,text])=>`<option value="${id}" ${Number(id)===pair.step[0]?"selected":""}>${text}</option>`).join("")}</select></label>${playback}</div>${comparisonLesson(pair.step)}<div id="pair-object" hidden></div><button id="atlasWorld" class="atlasReturn">Zur Weltansicht</button><div hidden>${picker}</div>`;
+
   }
-  const title=profile ? `<div class="panelHead"><h1>Plattentektonik</h1><button id="atlasAll" aria-label="Steckbrief schließen" title="Schließen">×</button></div>` : "<h1>Plattentektonik</h1>";
+  const title=profile ? `<div class="panelHead"><h1 data-teach="terms">Plattentektonik</h1><button id="atlasAll" aria-label="Steckbrief schließen" title="Schließen">×</button></div>` : '<h1 data-teach="terms">Plattentektonik</h1>';
   const card = profile ? `<section class="scienceCard" id="plateProfile" aria-live="polite">
     <h2>${names[world.profileCode]}</h2><dl><dt>Lage</dt><dd>${profile.place}</dd>
-    <dt>Bewegung</dt><dd>${profile.motion}</dd><dt>Beispiel an einer Plattengrenze</dt><dd>${profile.boundary}</dd></dl>
+    <dt>Bewegung</dt><dd data-teach="phase">${profile.motion}</dd><dt>Beispiel an einer Plattengrenze</dt><dd data-teach="effects">${profile.boundary}</dd></dl>
     <details><summary>Nachbarplatten</summary><p>${profile.neighbours}</p></details><div class="profileActions"><button id="atlasLocate">Zentrieren</button><button id="atlasCompare">Grenze ansehen</button><button id="atlasWorld">Weltansicht</button></div></section>` : "";
-  const start=`<div class="playback"><button id="atlasPlay" class="playButton" ${world.mosaic?"":"disabled"}>Platten bewegen</button></div>`;
-  return `${title}${start}${card}
+  const note=boundary?boundaryLesson(boundary.step):undefined;
+  const selected=note&&boundary?`<section class="scienceCard boundaryHint" aria-live="polite"><h2 data-teach="terms">${note.term}</h2><small>${note.place}</small><p data-teach="phase">${note.motion}</p>${options.names?`<p data-teach="labels">${note.plates.join(" · ")}</p>`:""}<p data-teach="cause">${note.cause} ${options.names?note.polarity:""}</p><button id="compare-selected">Bewegung dieser Grenze ansehen</button></section>`:"";
+  const start=`<label class="siteSelect">Grenzvergleich auswählen<select id="pair-examples"><option value="">Grenze wählen</option>${Object.entries(teachingSteps).map(([id,text])=>`<option value="${id}">${text}</option>`).join("")}</select></label><div class="playback"><button id="atlasPlay" class="playButton" ${world.mosaic?"":"disabled"}>Platten bewegen</button></div>`;
+  return `${title}${selected}${start}${card}
     <div class="plateChecks">${check("boundaries", "Plattengrenzen zeigen", options.boundaries)}
     ${check("plateNames", "Namen zeigen", options.names || world.singlePlateName)}</div>
+    ${options.types?'<p class="boundary-legend"><span><i class="swatchDot divergent"></i>Divergenz</span><span><i class="swatchDot convergent"></i>Konvergenz</span><span><i class="swatchDot transform"></i>Transformbewegung</span></p>':""}
     ${picker}
     ${options.boundaries && !options.names && options.plate ? check("onePlateName", "Gewählten Namen zeigen", world.singlePlateName) : ""}
     <details id="plateSettings"><summary>Weitere Einstellungen</summary>
@@ -113,7 +109,7 @@ export function plateControls(world: World) {
     ${options.names ? check("smallPlates", "Auch kleinere Platten im Fernblick benennen", world.smallPlateNames) : ""}
     ${`<label class="siteSelect">Platte auswählen<select id="plateSelect"><option value="">Keine</option></select></label>`}
     </details>
-    ${options.boundaries ? `<p class="boundaryHint" aria-live="polite">${boundary ? `<strong>${swatches[boundary.kind]}</strong><br>${movement[boundary.kind]}${options.names ? "<br>" + boundary.plates.join(" · ") : ""}` : "Eine Fläche oder Grenze auf dem Globus antippen."}</p>` : ""}`;
+    ${!boundary&&options.boundaries ? `<p class="boundaryHint" aria-live="polite">Eine Fläche oder Grenze auf dem Globus antippen.</p>` : ""}`;
 }
 
 export function bindPlateControls(
@@ -189,6 +185,8 @@ export function bindPlateControls(
       world.inspectPlate(select.value);
       refresh("plateSelect");
     };
+  const pairs = side.querySelector<HTMLSelectElement>("#pair-examples");
+  if(pairs)pairs.onchange=()=>{if(pairs.value){world.comparePlates(false,Number(pairs.value));refresh("pair-examples");}};
   const region = side.querySelector<HTMLSelectElement>("#tectonicSite")!;
   region.onchange = () => {
     if (isProcessSite(region.value)) world.visit(region.value);
@@ -203,6 +201,7 @@ export function bindPlateControls(
     if (!wasOpen) refresh("atlasPlay");
     syncPlayback(world);
   });
+  click("compare-selected",()=>{const step=world.selectedBoundary?.step;if(step){world.comparePlates(false,step[0]);refresh("atlasPlay");}});
   click("atlasCompare", () => { world.comparePlates(false); refresh("atlasPlay"); });
   click("atlasReset", () => { world.mosaic?.reset(); syncPlayback(world); });
   click("atlasAll", () => { world.inspectPlate(""); refresh("atlasPlay"); });
