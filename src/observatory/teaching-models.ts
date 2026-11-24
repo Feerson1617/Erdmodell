@@ -39,6 +39,11 @@ function ribbon(r:RegionalScene,lo:(x:number)=>number,hi:(x:number)=>number,colo
   const mat=chips(color);mat.side=T.DoubleSide;const m=object(g,mat,id);r.section.add(m);return m;
 }
 function flow(r:RegionalScene,c:T.CatmullRomCurve3,color:number,id:string,count:number,start:number,end:number){
+  if(id==="melt"||id==="hotspot"){
+    const tube=new T.TubeGeometry(c,64,.046,7,false),mat=new T.MeshStandardMaterial({color,emissive:0xa64219,emissiveIntensity:.53,roughness:.72});
+    const vein=object(tube,mat,id);r.section.add(vein);
+    r.onAnimate(t=>{const extent=T.MathUtils.smoothstep(t,start,end);vein.visible=extent>0;tube.setDrawRange(0,Math.floor(64*extent)*42);});return;
+  }
   const geo=new T.SphereGeometry(.075,9,7),mat=chips(color);
   const m=new T.InstancedMesh(geo,mat,count);m.userData.explanation=text[id];m.frustumCulled=false;r.section.add(m);
   const dummy=new T.Object3D();r.onAnimate(t=>{const f=T.MathUtils.clamp((t-start)/(end-start),0,1);m.visible=t>=start&&t<=end;
@@ -98,7 +103,7 @@ function settlements(r:RegionalScene){
   r.onAnimate(t=>{sediment.visible=r.soil==="loose"&&!r.spec.coastLesson;route.visible=r.safeRoute&&r.exposure!=="empty";beacon.visible=r.warning&&r.exposure!=="empty";walkers.visible=route.visible&&r.warning;
     const available=t<.49||t>(r.warning&&r.safeRoute?.77:.94);service.visible=r.exposure!=="empty";(service.material as T.MeshStandardMaterial).color.setHex(available?0x729f71:0x655d55);
     for(let i=0;i<10;i++){dummy.position.copy(way(T.MathUtils.clamp((t-.36)*2.3+i*.016,0,1)));dummy.updateMatrix();walkers.setMatrixAt(i,dummy.matrix);}walkers.instanceMatrix.needsUpdate=true;
-    buildings.forEach((g,i)=>{const x=baseX[i]-(r.relocate&&r.spec.coastLesson?1.55:0),z=g.position.z,h=r.height(x,z);
+    buildings.forEach((g,i)=>{const x=baseX[i]+(!r.spec.coastLesson&&r.riskSite==="far"?1.35:0)-(r.relocate&&r.spec.coastLesson?1.55:0),z=g.position.z,h=r.height(x,z);
       const d=r.faultModel.offset(r.deformed,x,h,z,x>r.faultModel.trace?1:-1,t);
       g.position.set(x+d.x,h+d.y,z);g.visible=r.exposure==="dense"||(r.exposure==="sparse"&&i%5===0);
       g.children[2].visible=r.protection;
@@ -107,11 +112,20 @@ function settlements(r:RegionalScene){
   });
 }
 function witness(r:RegionalScene){
-  for(const s of [-1,1]){
-    const p=Array.from({length:40},(_,i)=>{const x=s*(i/13+.012),z=-.80+.07*Math.sin(x*2);return vec(x,r.height(x,z)+.022,z);});
-    const seam=line(p,0xe7dfae,"marker");r.witnesses.add(seam);
-    r.onAnimate(t=>{const vals=seam.geometry.attributes.position as T.BufferAttribute;
-      for(let i=0;i<p.length;i++){const pt=p[i],y=r.height(pt.x,pt.z),d=r.faultModel.offset(r.deformed,pt.x,y,pt.z,s,t);vals.setXYZ(i,pt.x+d.x,y+.025+d.y,pt.z+d.z);}vals.needsUpdate=true;});
+  r.markerEnds=[[0,0,0],[0,0,0]];
+  for(const [index,side] of [-1,1].entries()){
+    for(const stripe of [false,true]){
+      const coords:number[]=[],indices:number[]=[],half=stripe?.011:.078;
+      for(let i=0;i<=72;i++){
+        const x=side*i*.055,center=-.42+.12*Math.sin(x*.9);
+        for(const edge of [-1,1]){const z=center+edge*half;coords.push(x,r.height(x,z)+(stripe?.032:.026),z);}
+        if(i<72){const k=i*2;indices.push(k,k+1,k+2,k+1,k+3,k+2);}
+      }
+      const g=new T.BufferGeometry();g.setAttribute("position",new T.Float32BufferAttribute(coords,3));g.setIndex(indices);g.computeVertexNormals();
+      const mat=new T.MeshStandardMaterial({color:stripe?0xffe9ae:0x4a4237,roughness:.92,side:T.DoubleSide});
+      const road=object(g,mat,"marker");road.name="Schematischer Vergleichsweg";r.witnesses.add(road);r.bindRock(g,side);
+      if(stripe)r.onAnimate(()=>{const p=g.attributes.position;r.markerEnds[index]=[p.getX(0),p.getY(0),(p.getZ(0)+p.getZ(1))/2];});
+    }
   }
 }
 export function addTeachingModels(r:RegionalScene){

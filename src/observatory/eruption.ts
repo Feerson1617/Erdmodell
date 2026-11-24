@@ -11,7 +11,7 @@ function ashMaterial(){
   for(let j=0;j<96;j++)for(let i=0;i<96;i++){const x=i/47.5-1,y=j/47.5-1;
     const n=.58*noise(x*3.4+4,y*3.4+5)+.29*noise(x*8+11,y*8)+.13*noise(x*19,y*19);
     const density=T.MathUtils.smoothstep(1-Math.hypot(x,y)*1.2+(n-.55)*.82,0,.75);
-    const value=72+68*n+16*(1-y),k=4*(j*96+i);
+    const value=67+75*n+12*(1-y)+10*(1-x),k=4*(j*96+i);
     img.data.set([value+5,value+2,value,206*density],k);
   }
   ctx.putImageData(img,0,0);const map=new T.CanvasTexture(canvas);map.colorSpace=T.SRGBColorSpace;
@@ -19,21 +19,24 @@ function ashMaterial(){
 }
 
 function edifice(shield:boolean){
-  const p:number[]=[],indices:number[]=[],rings=13,sectors=64;
+  const p:number[]=[],colors:number[]=[],indices:number[]=[],rings=24,sectors=64;
   for(let j=0;j<=rings;j++)for(let i=0;i<=sectors;i++){
     const a=2*Math.PI*i/sectors,u=j/rings,channel=.08*Math.sin(5*a+.8)+.04*Math.sin(11*a-2*u)+.03*Math.sin(21*a+3*u);
     const radius=u*(shield?1.13:.76)*(1+channel*(.4+.6*u));
     const profile=u<.16?.62+u*1.9:Math.pow((1-u)/.84,shield?1.7:1.15);
     const h=(shield?.54:1.05)*profile*(1+channel*.19);
     p.push(radius*Math.cos(a),h,radius*Math.sin(a));
+    const rubble=.5+.5*Math.sin(13*a+u*5)*Math.cos(7*a-u*11),rim=T.MathUtils.smoothstep(u,.04,.16);
+    const tone=(.50+.31*rim+.14*rubble)*(1+.07*Math.sin(u*39+channel*9));
+    colors.push(tone,tone*(.91+.08*u),tone*(.83+.09*u));
     if(j<rings&&i<sectors){const k=j*(sectors+1)+i,l=k+sectors+1;indices.push(k,k+1,l,k+1,l+1,l);}
   }
-  const g=new T.BufferGeometry();g.setAttribute("position",new T.Float32BufferAttribute(p,3));g.setIndex(indices);g.computeVertexNormals();return g;
+  const g=new T.BufferGeometry();g.setAttribute("position",new T.Float32BufferAttribute(p,3));g.setAttribute("color",new T.Float32BufferAttribute(colors,3));g.setIndex(indices);g.computeVertexNormals();return g;
 }
 export function eruption(r:RegionalScene,x:number,top:number){
   const hotspot=r.spec.process==="hotspot",z=r.spec.arcTransect?0:-.33;const centres:T.Mesh[]=[];
   if(!r.spec.arcTransect){
-  const shape=edifice(hotspot),rock=material(0x726352);rock.side=T.DoubleSide;
+  const shape=edifice(hotspot),rock=material(0x82746a);rock.vertexColors=true;rock.side=T.DoubleSide;
   for(let i=0;i<(hotspot?5:1);i++){
     const m=new T.Mesh(shape,rock);m.userData.explanation={name:"Vulkanbau",answer:"Viele Ausbrüche können einen Vulkan aufbauen. Über der Quelle entsteht ein neuer Vulkan."};
     centres.push(m);r.scene.add(m);
@@ -41,7 +44,19 @@ export function eruption(r:RegionalScene,x:number,top:number){
   }
   const hot=new T.MeshStandardMaterial({color:0xca5728,emissive:0x93270e,emissiveIntensity:.62,roughness:.72});
   const curve=new T.CatmullRomCurve3(r.spec.arcTransect?Array.from({length:17},(_,i)=>{const xx=x+i*.033,zz=z-.08*Math.sin(i*.15);return new T.Vector3(xx,r.height(xx,zz)+.015,zz);}):[new T.Vector3(x,top+(hotspot?.45:.86),z),new T.Vector3(x+.19,top+(hotspot?.46:.93),z),new T.Vector3(x+.48,top+.29,z-.14),new T.Vector3(x+.91,top+.06,z-.08),new T.Vector3(x+1.47,r.height(x+1.47,z-.34)+.04,z-.34)]);
-  const lava=new T.Mesh(new T.TubeGeometry(curve,54,.065,7,false),hot);lava.userData.explanation={name:"Lavafluss",answer:"Gas kann entweichen. Die fließfähige Lava bewegt sich hangabwärts."};r.scene.add(lava);
+  const flow=new T.TubeGeometry(curve,54,.065,7,false),color=new T.Color(),tones=[];
+  for(let i=0;i<=54;i++){
+    const center=curve.getPointAt(i/54);
+    for(let j=0;j<=7;j++){
+      const k=i*8+j,positions=flow.attributes.position;
+      const ry=positions.getY(k)-center.y;positions.setY(k,center.y+ry*.43);
+      const crust=.5+.5*Math.sin(i*.86+j*1.57)*Math.cos(i*.24-j);
+      color.setHex(crust>.64?0x513931:crust>.42?0xad5836:0xffb36c);tones.push(color.r,color.g,color.b);
+    }
+  }
+  flow.setAttribute("color",new T.Float32BufferAttribute(tones,3));flow.computeVertexNormals();
+  hot.color.setHex(0xffffff);hot.vertexColors=true;hot.emissiveIntensity=.23;
+  const lava=new T.Mesh(flow,hot);lava.userData.explanation={name:"Lavafluss",answer:"Gas kann entweichen. Die fließfähige Lava bewegt sich hangabwärts."};r.scene.add(lava);
   const ash=new T.InstancedMesh(new T.PlaneGeometry(2,2),ashMaterial(),64);
   const clasts=new T.InstancedMesh(new T.IcosahedronGeometry(1,0),material(0x564138),26);ash.frustumCulled=clasts.frustumCulled=false;ash.material.addEventListener("dispose",()=>ash.material.map?.dispose());
   ash.userData.explanation={name:"Asche und Gas",answer:"Aufsteigendes Gas dehnt sich aus. Es kann zähe Schmelze zerreißen."};clasts.userData.explanation=ash.userData.explanation;r.scene.add(ash,clasts);

@@ -1,3 +1,4 @@
+import {classroom} from "./g52-classroom.mjs";
 // Exercises the executable copied off the ejected DMG and the single-file export on the same Mac.
 import {acceptG51,longClassroom} from "./g51-abnahme.mjs";
 import {acceptG5} from "./g5-abnahme.mjs";
@@ -12,7 +13,7 @@ import { PNG } from "pngjs";
 const out=resolve("test-results/mac"), film=join(out,"film");
 await mkdir(film,{recursive:true});
 const executablePath=(await readFile(join(out,"executable-path.txt"),"utf8")).trim();
-const html=pathToFileURL(resolve("artifacts/GeoRisiko-G5.1-Web-Test.html")).href;
+const html=pathToFileURL(resolve("artifacts/GeoRisiko-G5.2-Web-Test.html")).href;
 const cases=JSON.parse(await readFile("src/tectonics/examples.json","utf8"));
 const report={commit:process.env.TEST_COMMIT, run:process.env.GITHUB_RUN_ID, platform:process.platform, arch:process.arch, runs:[]};
 const runCmd=(name,args)=>{const r=spawnSync(name,args,{encoding:"utf8"});assert.equal(r.status,0,r.stderr);return r.stdout.trim();};
@@ -164,9 +165,9 @@ async function exercise(p,context,name,pid) {
   p.on("request",r=>{const u=new URL(r.url());if(u.protocol==="georisiko:")assets.add(u.pathname);if(/^https?:$/.test(u.protocol))network.push(r.url());});
   p.on("response",r=>{if(r.status()>=400)errors.push(r.url()+": "+r.status());});
   await context.route(/^https?:/,route=>route.abort());
-  if(name==="Electron")await p.reload();else await p.goto(html);
+  const launchStart=performance.now();if(name==="Electron")await p.reload();else await p.goto(html);
   await rest(p);await p.emulateMedia({reducedMotion:"reduce"});
-  const row={name,viewport:await p.evaluate(()=>[innerWidth,innerHeight,devicePixelRatio]),
+  const row={name,initialPageReadyMs:performance.now()-launchStart,viewport:await p.evaluate(()=>[innerWidth,innerHeight,devicePixelRatio]),
     gpu:await p.evaluate(()=>{const gl=document.querySelector("#earth").getContext("webgl2"),ext=gl.getExtension("WEBGL_debug_renderer_info");return ext?gl.getParameter(ext.UNMASKED_RENDERER_WEBGL):gl.getParameter(gl.RENDERER);}),
     scenes:[],errors,network};
   report.runs.push(row);
@@ -185,9 +186,10 @@ async function exercise(p,context,name,pid) {
     assert.ok(assets.has("/data/nyos/landscape.json") && assets.has("/data/relief.i16"));
   }
   row.g5=await acceptG5(p,{dir:join(out,"G5"),product:name,films:name==="Electron",measure:(label,actions)=>measure(p,pid,label,actions)});
+  row.g52=await classroom(p,join(out,"G52"),name==="Electron");
   if(name==="Electron"){
     row.g51=await acceptG51(p,join(out,"G51"));
-    row.classroom=await longClassroom(p,(label,ms)=>measure(p,pid,label,undefined,ms));
+    row.classroom=await longClassroom(p,(label,ms)=>measure(p,pid,label,undefined,ms),()=>processes(pid).rssMiB);
   }
   row.requestedAssets=[...assets].sort();
   assert.deepEqual(errors,[]);assert.deepEqual(network,[]);return row;

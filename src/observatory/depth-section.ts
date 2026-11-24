@@ -1,11 +1,22 @@
 import events from "./japan-events.json";
 import miyagi from "./miyagi.json";
 
+function diagram(profile:boolean,depths:boolean){
+  const X=(km:number)=>54+(km+410)/560*836,Y=(km:number)=>34+km*2.5;
+  const grid=depths?[0,40,80,120,160].map(k=>'<path d="M54 '+Y(k)+'h836" stroke="#425858"/><text x="44" y="'+(Y(k)+5)+'" text-anchor="end">'+k+'</text>').join(""):"";
+  const dots=events.map(r=>'<circle cx="'+X(Number(r[1])).toFixed(2)+'" cy="'+Y(Number(r[2])).toFixed(2)+'" r="4.8" fill="#ffd17b" stroke="#65492b" stroke-width=".8"><title>'+r[5]+' · '+r[2]+' km</title></circle>').join("");
+  const line=profile?'<polyline fill="none" stroke="#6edacf" stroke-width="4" points="'+miyagi.map(([x,km])=>X(x*320/12).toFixed(1)+','+Y(km).toFixed(1)).join(' ')+'"/>':"";
+  return '<svg viewBox="0 0 930 486" role="img" aria-label="Gemessene Erdbeben im Tiefenschnitt von West nach Ost" fill="#e4ece2" font-size="20">'+grid+dots+line+'<text x="54" y="473">West · Honshū</text><text x="890" y="473" text-anchor="end">Ost · Pazifik</text></svg>';
+}
 export function depthSection(){
-  const left=-480,right=160,bottom=160;
-  const X=(km:number)=>44+(km-left)/(right-left)*420,Y=(km:number)=>18+km/bottom*220;
-  const dots=events.map(row=>'<circle cx="'+X(Number(row[1])).toFixed(2)+'" cy="'+Y(Number(row[2])).toFixed(2)+'" r="2.7" fill="#ffd599"><title>'+row[5]+' · '+row[2]+' km · '+row[0]+'</title></circle>').join("");
-  const line=miyagi.map(([x,z])=>X(x*320/12).toFixed(1)+','+Y(z).toFixed(1)).join(' ');
-  const depths=[0,40,80,120,160].map(k=>'<path d="M44 '+Y(k)+'h420" stroke="#49615e"/><text x="38" y="'+(Y(k)+5)+'" text-anchor="end">'+k+'</text>').join("");
-  return '<details id="g-depth-section"><summary>Gemessene Beben im Tiefenschnitt</summary><figure><svg viewBox="0 0 480 267" role="img" aria-label="Japan. Gefüllte Punkte sind gemessene Erdbeben. Nach Westen liegen viele Herde tiefer." fill="#e1e8db" font-size="13">'+depths+dots+'<polyline points="'+line+'" stroke="#76d5c6" stroke-width="2.5" fill="none"/><text x="44" y="258">Landseite · West</text><text x="464" y="258" text-anchor="end">Meer · Ost</text></svg><figcaption>Tiefe in km. Punkte sind gemessene Erdbeben. Die türkise Linie folgt einem seismischen Profil. Blick quer zum Graben.</figcaption></figure><small>USGS · 2019–2023 · Magnitude ab 4,5. '+events.length+' Herde aus einem 200 km breiten Streifen sind auf eine Ebene projiziert.</small></details>';
+  return '<button id="g-depth-open">Tiefenschnitt groß zeigen</button><details id="g-depth-section"><summary>Gemessene Beben im Tiefenschnitt</summary><figure>'+diagram(false,false)+'<figcaption>Jeder Punkt steht für ein gemessenes Beben.</figcaption></figure></details>';
+}
+export function openDepthSection(compare:()=>void){
+  const dialog=document.createElement("dialog");dialog.className="depth-analysis";dialog.setAttribute("aria-label","Erdbeben vor Japan");
+  dialog.innerHTML='<header><div><small>Messdaten · Tōhoku</small><h2>Erdbeben vor Japan</h2></div><button id="depth-close" aria-label="Schließen">Schließen</button></header><div class="depth-plot"></div><div class="depth-key"><span>● Katalogbeben</span><label><input id="depth-line" type="checkbox"> Seismisches Profil</label><label><input id="depth-values" type="checkbox"> Tiefe in km</label><button id="depth-model">Zum 3D-Schnitt</button></div><p>176 USGS-Katalogbeben aus den Jahren 2019–2023, auf einen 200 km breiten Streifen projiziert. Die zuschaltbare Linie verbindet 13 unabhängige Tiefenmessungen aus dem Miyagi-Profil.</p>';
+  document.body.append(dialog);
+  const plot=()=>{dialog.querySelector(".depth-plot")!.innerHTML=diagram(dialog.querySelector<HTMLInputElement>("#depth-line")!.checked,dialog.querySelector<HTMLInputElement>("#depth-values")!.checked);};
+  dialog.onchange=plot;dialog.querySelector<HTMLButtonElement>("#depth-close")!.onclick=()=>dialog.close();
+  dialog.querySelector<HTMLButtonElement>("#depth-model")!.onclick=()=>{dialog.close();compare();};
+  dialog.onclose=()=>dialog.remove();plot();dialog.showModal();
 }

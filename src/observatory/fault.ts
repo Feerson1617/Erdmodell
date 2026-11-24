@@ -19,9 +19,9 @@ export class Fault {
     this.profile=spec.site==="japan"&&!spec.arcTransect&&this.kind==="interface"?sampled:[];
     this.trace=spec.arcTransect?zao.trench:this.profile.length?this.profile[0][0]:this.kind==="normal"&&p==="rift"?-1.45:0;
     this.top=this.profile.length?-this.profile[0][1]*12*4.7/320:height(this.trace,0);
-    this.hy=this.top-(this.kind==="interface"?.64:1.06);this.hx=this.xAt(this.hy);
+    this.hy=this.top-(spec.event==="buried"?1.6:this.kind==="interface"?.64:1.06);this.hx=this.xAt(this.hy);
     this.slipSign=this.kind==="normal"?-1:1;
-    this.waterEvent=(spec.theme==="earthquake"||Boolean(spec.coastLesson))&&this.kind==="interface"&&this.top<0;
+    this.waterEvent=(spec.event==="uplift"||Boolean(spec.coastLesson))&&this.kind==="interface"&&this.top<0;
   }
   // Slab2 profile depths below sea level; same vertical exaggeration as the Japan DEM.
   xAt(y:number){
@@ -64,7 +64,8 @@ export class Fault {
     const lock=Math.exp(-Math.abs(x-this.xAt(y))*.94-z*z*.029);
     const strain=quake?smooth(t/onset)*(1-lock+lock*this.release(t,x,y,z)):t;
     const taper=quake&&this.waterEvent?Math.exp(-Math.pow((x-this.hx)/2.4,2)):1;
-    const slip=side*.38*strain*taper;
+    const buried=this.spec.event==="buried"?smooth((this.top-y)/1.6):1;
+    const slip=side*.38*strain*taper*buried;
     if(this.kind==="strike")target.z=this.sense*slip;
     else if(this.kind==="interface"||this.kind==="thrust"||this.kind==="normal"){
       const dy=slip*this.slipSign*this.dipSign*Math.sin(this.dip*Math.PI/180);
@@ -83,6 +84,8 @@ export class Fault {
       target.x-=.736*t*h;target.y+=(y+.85)*(1/jacobian-1);
     }
     if(quake)target.y+=this.shaking(t,x,y,z);
+    // The regional block meets a stationary geographic context at its far edges.
+    if(this.kind==="strike"&&Math.abs(z)>3.5)target.multiplyScalar(smooth(4.5-Math.abs(z)));
     return target;
   }
   uplift(x:number,t:number){

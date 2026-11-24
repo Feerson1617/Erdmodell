@@ -6,7 +6,7 @@ export function waveAnalysis(r:RegionalScene){
   const f=r.faultModel;
   const colors=[0xf5bd67,0x58dadd],fronts:T.Mesh[]=[],markers:T.InstancedMesh[]=[];
   const detail=new T.Group();r.section.add(detail);detail.name="Gesteinspunkte im Detail";
-  const dummy=new T.Object3D(),probe=new T.Vector3();
+  const dummy=new T.Object3D();
   for(const [n,color] of colors.entries()){
     const points=160,positions=new T.Float32BufferAttribute(new Float32Array((points+1)*6),3);
     const g=new T.BufferGeometry();g.setAttribute("position",positions);
@@ -20,8 +20,8 @@ export function waveAnalysis(r:RegionalScene){
   const fluid=new T.Line(new T.BufferGeometry().setAttribute("position",new T.Float32BufferAttribute(new Float32Array(61*3),3)),new T.LineBasicMaterial({color:colors[0]}));
   fluid.name="Druckwelle im Wasser";fluid.frustumCulled=false;r.section.add(fluid);
   let last="";r.onAnimate(t=>{
-    const state=[t,r.showP,r.showS,r.detail,r.cut].join("/");if(state===last)return;last=state;
-    const quake=r.spec.theme==="earthquake"||r.spec.theme==="risk";
+    const state=[t,r.showP,r.showS,r.detail,r.cut,r.view].join("/");if(state===last)return;last=state;
+    const quake=(r.spec.theme==="earthquake"||r.spec.theme==="risk")&&f.kind!=="unknown"&&r.view!=="coast"&&r.view!=="ocean";
     detail.visible=quake&&r.detail;
     for(const [n,front] of fronts.entries()){
       const speed=n?sSpeed:pSpeed,rad=(t-onset)*speed;front.visible=quake&&(n?r.showS:r.showP)&&rad>0&&t<.99;
@@ -35,10 +35,10 @@ export function waveAnalysis(r:RegionalScene){
         if(previous&&visible){const k=(i-1)*2;for(const vertex of [k,k+1,k+2,k+1,k+3,k+2])indices.setX(count++,vertex);}
         previous=visible;
         for(let j=0;j<2;j++){
-          const radius=Math.max(0,rad+(j-.5)*.095),x=f.hx+radius*cs;
+          const radius=Math.max(0,rad+(j-.5)*.12),x=f.hx+radius*cs;
           const y=Math.min(r.height(x,0),f.hy+radius*sn);
-          const d=f.offset(probe,x,y,0,x>=f.xAt(y)?1:-1,t);
-          pos.setXYZ(i*2+j,Math.max(-6,Math.min(6,x)),Math.max(-5.5,y),.036+d.z);
+
+          pos.setXYZ(i*2+j,Math.max(-6,Math.min(6,x)),Math.max(-5.5,y),.044);
         }
       }
       front.geometry.setDrawRange(0,count);indices.needsUpdate=true;pos.needsUpdate=true;const beads=markers[n];beads.visible=(n?r.showS:r.showP);
@@ -59,4 +59,3 @@ export function waveAnalysis(r:RegionalScene){
   });
   return fronts;
 }
-

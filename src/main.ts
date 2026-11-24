@@ -1,3 +1,5 @@
+import {classroomViews} from "./observatory/classroom-views";
+import {fields,lessonKeys} from "./observatory/saved-state";
 import {Observation} from "./observatory/observation";
 import { Observatory } from "./observatory/panel";
 import { reference } from "./observatory/regional";
@@ -12,7 +14,7 @@ import { AnnotationLayer, type Annotation } from "./annotations";
 import { siteCatalog, firstRegion } from "./regions";
 import "@fontsource-variable/dm-sans/wght.css";
 import "./style.css";
-import { createIcons, Globe2, Layers3, MapPin, Maximize, Minimize, Info, Plus, Minus, RotateCcw, Waypoints, Orbit, Compass, X, Eye, EyeOff, Navigation2, Waves } from "lucide";
+import { createIcons, Globe2, Layers3, MapPin, Maximize, Minimize, Info, Plus, Minus, RotateCcw, Waypoints, Orbit, Compass, X, Eye, EyeOff, Navigation2, Waves, Bookmark } from "lucide";
 import { World } from "./world";
 import { layers } from "./model";
 import { waveModel } from "./knowledge";
@@ -20,7 +22,7 @@ import { nyosContext } from "./nyos/context";
 import { nyosControls, bindNyosControls, syncNyos } from "./nyos/controls";
 import { plateControls, bindPlateControls, syncPlayback } from "./tectonics/controls";
 
-const icons = { Globe2, Layers3, MapPin, Maximize, Minimize, Info, Plus, Minus, RotateCcw, Waypoints, Orbit, Compass, X, Eye, EyeOff, Navigation2, Waves };
+const icons = { Globe2, Layers3, MapPin, Maximize, Minimize, Info, Plus, Minus, RotateCcw, Waypoints, Orbit, Compass, X, Eye, EyeOff, Navigation2, Waves, Bookmark };
 const icon = (n: string) => `<i data-lucide="${n}" aria-hidden="true"></i>`;
 const paint = () => createIcons({ icons, attrs: { "stroke-width": 1.65 } });
 const button = (id: string, label: string, glyph: string) =>
@@ -32,7 +34,7 @@ const $ = <T extends HTMLElement = HTMLElement>(id: string) =>
 $("app").innerHTML =
   `<header><div class="brand">${brand}<span>GeoRisiko <b>3D</b></span></div>
   <nav aria-label="Modellansicht">${[["globe","Globus","globe-2"],["inside","Schalenschnitt","layers-3"],["plates","Plattentektonik","waypoints"],["earthquake","Erdbeben","navigation-2"],["volcano","Vulkanismus","compass"],["risk","Schutz","eye"],["nyos","Nyos-See","waves"],["place","Orte","map-pin"]].map(([id,label,glyph]) => `<button id="nav-${id}">${icon(glyph)}<span>${label}</span></button>`).join("")}</nav>
-  <div class="headTools">${button("info","Modellhinweise und Quellen","info")}<button id="present" aria-label="Präsentieren" aria-pressed="false">${icon("maximize")}<span>Präsentieren</span></button></div></header>
+  <div class="headTools">${button("saved-views","Unterrichtsansichten","bookmark")}${button("info","Modellhinweise und Quellen","info")}<button id="present" aria-label="Präsentieren" aria-pressed="false">${icon("maximize")}<span>Präsentieren</span></button></div></header>
   <main id="desk" data-mode="globe"><aside id="sidebar" hidden aria-label="Modellsteuerung"></aside>
   <section class="view" aria-label="Interaktive 3D-Ansicht"><canvas id="earth" tabindex="0" aria-label="Drehbares Erdmodell. Pfeiltasten drehen, Plus und Minus zoomen."></canvas>
   <div class="orientation" title="Geografischer Norden">${icon("navigation-2")} N</div>
@@ -442,6 +444,27 @@ async function boot() {
   }
   const observation=new Observation();
   observatory=new Observatory(world,side,navigate);
+  const baseView=()=>({
+    mode:world.mode,site:world.region.id,style:world.style,labels,released:[...released],
+    shell:{...fields(world.shell,["cut","selected","subdued"]),visible:[...world.shell.visible],opacity:[...world.shell.opacity],comparison:world.shell.expanded?"expanded" as const:world.shell.lithosphere?"lithosphere" as const:"reference" as const},
+    plates:{...world.plateOptions},profile:world.profileCode,pair:Boolean(world.mosaic?.pair),pairTime:world.mosaic?.progress??0,pairPlaying:world.mosaic?.playing??false,
+    process:fields(world,["processDetail","processSite","processProgress","processPlaying","processLoop","processSlow","singlePlateName","smallPlateNames"]),
+    nyos:fields(world.nyosLesson,lessonKeys),nyosDetail:world.nyosDetail
+  });
+  classroomViews(observatory,observation,baseView,async b=>{
+    if(b.mode==="nyos")await world.nyos.load();
+    navigate(b.mode);world.setStyle(b.style);
+    if(b.mode==="inside"){world.shell.cut=b.shell.cut;world.shell.visible=[...b.shell.visible];world.shell.opacity=[...b.shell.opacity];world.shell.selected=b.shell.selected;world.shell.subdued=b.shell.subdued;world.shell.setComparison(b.shell.comparison);labels=b.labels;released.clear();b.released.forEach(i=>released.add(i));}
+    if(b.mode==="place"&&siteCatalog.some(site=>site.id===b.site))world.visit(b.site);
+    if(b.mode==="nyos"){if(b.nyos.view==="protection")world.showNyosMeasure(b.nyos.measure);else world.showNyos(b.nyos.view);Object.assign(world.nyosLesson,fields(b.nyos,lessonKeys));world.nyosDetail=b.nyosDetail;}
+    if(b.mode==="plates"){
+      await world.loadClassroomAtlas(Boolean(b.process.processSite));world.setPlateOptions(b.plates);
+      if(b.process.processSite)world.visit(b.process.processSite,!b.process.processDetail);
+      else if(b.profile&&world.profiles[b.profile]){world.inspectPlate(b.profile);if(b.pair){world.comparePlates(false);if(world.mosaic){world.mosaic.progress=b.pairTime;world.mosaic.playing=b.pairPlaying;}}}
+      Object.assign(world,fields(b.process,["processProgress","processPlaying","processLoop","processSlow","singlePlateName","smallPlateNames"]));
+    }
+    renderSide();
+  });
   for(const [id,run] of [["earthquake",()=>observatory.openMap()],["volcano",()=>observatory.openRegion(reference("hawaii","volcano"))],["risk",()=>observatory.openRegion(reference("san","risk"))]] as const){
     $("nav-"+id).classList.add("obsNav");$("nav-"+id).onclick=run;
   }

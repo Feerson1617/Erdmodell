@@ -27,8 +27,9 @@ function createWindow() {
   win.webContents.on("will-frame-navigate", event => {
     if (!event.isMainFrame || event.url !== origin + "/") event.preventDefault();
   });
-  for (const event of ["enter-full-screen", "leave-full-screen"]) win.on(event, () =>
-    win.webContents.send("presentation:state", win.isFullScreen()));
+  const syncPresentation = () => win.webContents.send("presentation:state", win.isFullScreen());
+  win.webContents.on("did-finish-load", syncPresentation);
+  for (const event of ["enter-full-screen", "leave-full-screen"]) win.on(event, syncPresentation);
   win.once("ready-to-show", () => win.show());
   win.on("closed", () => { if (window === win) window = undefined; });
   win.loadURL(origin + "/").catch(error => dialog.showErrorBox("GeoRisiko konnte nicht starten", error.message));
@@ -70,7 +71,7 @@ function menu() {
   ]));
 }
 app.whenReady().then(async () => {
-  localSession = session.fromPartition("georisiko-local");
+  localSession = session.fromPartition("persist:georisiko-classroom",{cache:false});
   localSession.setPermissionRequestHandler((_wc,_p,callback)=>callback(false));
   localSession.setPermissionCheckHandler(()=>false);
   localSession.webRequest.onBeforeRequest({urls:["http://*/*","https://*/*","ws://*/*","wss://*/*","file://*/*"]}, (_r,done)=>done({cancel:true}));

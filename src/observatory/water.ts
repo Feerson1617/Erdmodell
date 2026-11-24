@@ -41,6 +41,13 @@ export class WaterSection{
       }
     }
   }
+  extent(t:number){
+    let newlyWet=0,shore=6,deepest=0;
+    for(let i=0;i<this.cells;i++){const x=-6+i*this.dx,depth=this.sample(x,t,true);
+      if(depth>.001){shore=Math.min(shore,x);if(this.depths[i]<=.001){newlyWet++;deepest=Math.max(deepest,depth);}}
+    }
+    return {newlyWet,shore,deepest};
+  }
   sample(x:number,t:number,depth=false){
     const a=Math.min(this.cells-1,Math.max(0,(x+6)/this.dx)),b=Math.max(0,Math.min(1,t))*(this.frames-1);
     const i=Math.min(this.cells-2,Math.floor(a)),j=Math.min(this.frames-2,Math.floor(b)),u=a-i,v=b-j,buf=depth?this.depths:this.surfaces,k=j*this.cells+i;

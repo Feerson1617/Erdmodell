@@ -291,3 +291,33 @@ body[data-observatory] .orientation,body[data-observatory="regional"] .tools but
 #observation-controls input{width:150px;min-height:38px;}
 #g-depth-section figure{margin:6px 0;}#g-depth-section svg{width:100%;background:#192e2e;border-radius:6px;}#g-depth-section figcaption{font-size:.92rem;}
 @media(min-width:1600px){.g-stack{font-size:1.05rem;}.g-stack button,.g-stack select{min-height:46px;}.g-stack small{font-size:.9rem;}}
+
+.depth-analysis{width:min(1160px,94vw);padding:clamp(16px,2vw,30px);background:#142924;}
+.depth-analysis header{display:flex;justify-content:space-between;align-items:center;background:none;height:auto;padding:0 0 .8rem;border:0;}
+.depth-analysis h2,.classroom-views h2{margin:.2rem 0 .65rem;}
+.depth-analysis small{color:#a6c7bc;}
+.depth-plot{background:#102325;border-radius:8px;}
+.depth-plot svg{display:block;width:100%;max-height:55svh;}
+.depth-key,.wave-key{display:flex;align-items:center;flex-wrap:wrap;gap:.7rem 1.2rem;}
+.depth-key{margin-top:.8rem;}.depth-key span{color:#ffd17b;}
+.depth-key label,.wave-key label{display:inline-flex;align-items:center;gap:.35rem;}
+.wave-key label:first-child{color:#ffe29b;}.wave-key label:last-child{color:#81e8df;}
+.depth-analysis p{color:#c9d8d0;line-height:1.45;margin-bottom:0;}
+.classroom-views{max-width:32rem;}
+.classroom-views label{display:grid;gap:.45rem;margin:.8rem 0;}
+.classroom-views select,.classroom-views input{width:100%;font:inherit;}
+.classroom-views input{padding:.55rem;}
+.classroom-views select option{padding:.34rem;}
+.classroom-views small{display:block;margin-top:.8rem;}
+#observation-controls{max-width:min(92%,1050px);gap:5px;padding:7px 10px;}
+#observation-controls select{width:auto;max-width:190px;min-height:40px;}
+#observation-controls button{min-height:40px;padding:4px 11px;}
+#observation-controls [aria-pressed=true]{background:#35594d;border-color:#a4cdb8;color:white;}
+#observation-controls input[type=range],#g-year{accent-color:#e7cc82;min-height:42px;}
+#observe-progress{flex:1 1 190px;max-width:470px;}
+#observe-note{font-size:1rem;color:#e3eddf;}
+body[data-observatory=time] #observe-note,#g-age{font-size:clamp(1.08rem,1.75vw,1.75rem);font-weight:650;}
+@media(max-height:650px){#observation-controls{max-width:96%;bottom:5px;gap:3px;}#observation-controls :is(button,select){min-height:34px;} .depth-plot svg{max-height:45svh;}}
+
+.present dialog.depth-analysis{width:min(1280px,94vw);}
+@media (min-width:1100px) and (max-width:1340px){.headTools #present span{display:none;}header nav button{padding-inline:4px;}}

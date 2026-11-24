@@ -6,7 +6,7 @@ Die private Entwicklungsfassung benötigt Apple Silicon und mindestens macOS 13 
 
  Der Build und der Test dokumentieren die tatsächlich verwendete macOS-Version und die vom Bundle deklarierte Mindestversion im Installationsprotokoll. Für das Öffnen der fertigen App sind ein Mac mit kompatiblem macOS und ein funktionierender WebGL-2-Grafikpfad erforderlich. Electron, Programmcode, Geodaten, Schriften und Texturen sind im Bundle enthalten.
 
-1. Im erfolgreichen macOS-Lauf **GeoRisiko-G5.1-macOS-arm64.dmg** herunterladen. Die SHA-256-Prüfsummen der Installationsdateien und der HTML stehen im Abnahmepaket.
+1. Im erfolgreichen macOS-Lauf **GeoRisiko-G5.2-macOS-arm64.dmg** herunterladen. Die SHA-256-Prüfsummen der Installationsdateien und der HTML stehen im Abnahmepaket.
 2. Das DMG doppelklicken und **GeoRisiko** über die Verknüpfung in **Programme** ziehen. Das Volume auswerfen.
 3. **GeoRisiko** im Finder unter Programme doppelklicken. Beim App-ZIP das Archiv im Finder entpacken und die vollständige GeoRisiko.app nach Programme ziehen.
 4. Für das Smartboard den gewünschten Bildschirm in den macOS-Displays auswählen. Das Fenster auf diesen Bildschirm ziehen. „Präsentieren“ oder **Control–Command–F** schaltet die Präsentation um. Der grüne macOS-Fensterknopf funktioniert ebenfalls. **⌘M**, **⌘W**, **⌘O** und **⌘Q** dienen zum Minimieren, Schließen, Öffnen des Modellfensters und Beenden.

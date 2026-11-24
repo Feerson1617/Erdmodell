@@ -6,7 +6,7 @@ import {join} from "node:path";
 export async function fullHDPhoto(page,session,dir,name){
   const width=1920,height=1080;
   for(let attempt=0;attempt<3;attempt++){
-    await session.send("Emulation.setDeviceMetricsOverride",{width,height,deviceScaleFactor:1,mobile:false});
+    await session.send("Emulation.setDeviceMetricsOverride",{width,height,screenWidth:width,screenHeight:height,deviceScaleFactor:1,mobile:false});
     await page.waitForFunction(()=>innerWidth===1920&&innerHeight===1080);
     await page.evaluate(()=>new Promise(done=>requestAnimationFrame(()=>requestAnimationFrame(done))));
     const data=await page.screenshot({type:"jpeg",quality:85});

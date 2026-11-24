@@ -8,7 +8,7 @@ const browser=await chromium.launch({args:["--use-angle=swiftshader","--enable-u
 try{
  const p=await browser.newPage({viewport:{width:1440,height:900},reducedMotion:"reduce"});
  const errors=[];p.on("pageerror",e=>errors.push(e.message));
- await p.goto(pathToFileURL(resolve(process.env.G51_HTML||"artifacts/GeoRisiko-G5.1-Web-Test.html")).href);
+ await p.goto(pathToFileURL(resolve(process.env.G51_HTML||"artifacts/GeoRisiko-G5.2-Web-Test.html")).href);
  await p.waitForFunction(()=>window.geoObservatory?.().ready);
  await p.click("#nav-earthquake");await p.waitForFunction(()=>window.geoBoundaryModels().length===5819);
  const records=await p.evaluate(()=>window.geoBoundaryModels());
