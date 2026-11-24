@@ -38,7 +38,7 @@ function material(kind:Rock,r:RegionalScene,accreted=false){
         float broken=smoothstep(.63,.99,lock.x)*smoothstep(.58,.85,mineral(stone*vec3(9.,4.,11.)));
         diffuseColor.rgb*=1.-.25*broken;
         float seam=min(bedContact,1.-bedContact);
-        float contact=mix(.63,1.,smoothstep(.0,.075,seam+.015*(coarse-.35)));
+        float contact=mix(.65,1.04,smoothstep(.0,.083,seam+.012*(coarse-.35)));
         float joint=${kind==="basalt"||kind==="fault"?"1.-smoothstep(.025,.115,abs(sin(stone.x*21.+2.4*a+stone.y*.71)))":kind==="sediment"?"1.-smoothstep(.035,.17,abs(sin(stone.y*31.+a*2.1)))":"smoothstep(.63,.90,b)*.6"};
         diffuseColor.rgb*=contact*(1.-joint*.18);
         vec3 keyColor=vec3(${{sediment:".68,.53,.28",continental:".59,.29,.26",basalt:".16,.42,.58",mantle:".26,.46,.30",warm:".72,.34,.13",wedge:".52,.56,.22",fault:".49,.30,.52"}[kind]});

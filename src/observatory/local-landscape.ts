@@ -126,7 +126,7 @@ export class LocalLandscape{
         vec2 p=metres.xz;vec2 warp=vec2(sin(p.y*.082+p.x*.035),cos(p.x*.103-p.y*.027))*.10;
         vec2 first=p*.22+warp,second=mat2(.83,.55,-.55,.83)*p*.41+.27;
         vec3 soil=fieldSample(faciesColor,first,${basalt?"3.":coast?"7.":"0."}).rgb,grit=fieldSample(faciesColor,second,${basalt?"2.":coast?"1.":"1."}).rgb;
-        float soilMix=smoothstep(-.65,.69,sin(p.x*.16+sin(p.y*.24))*.61+cos(p.y*.19+p.x*.15)*.42+incline*2.);
+        float strata=sin(dot(p,vec2(.036,.057))+.85*cos(p.y*.092));float soilMix=smoothstep(-.7,.79,.48*sin(p.x*.16+sin(p.y*.24))+.32*cos(p.y*.19+p.x*.15)+.33*strata+incline*2.);
         vec3 grain=mix(soil,grit,soilMix*.73);vec3 micro=fieldSample(faciesRelief,first,${basalt?"3.":coast?"7.":"0."}).rgb;
         vec3 geo=texture2D(ortho,clamp(vec2(.5+(p.x-90.)/1800.,.5-(p.y-155.)/1800.),.001,.999)).rgb;
         float distanceM=length(vViewPosition)*10.;
@@ -190,7 +190,11 @@ export class LocalLandscape{
     }
     for(let j=0;j<254;j++){
       const x=(rng()-.5)*410,z=(rng()-.6)*360;
-      if(Math.hypot(x,z)>18&&noise(x*.018,z*.018)>.52)place("oak",x,z,.68+.67*rng());
+      const cover=.64*noise(x*.018,z*.018)+.36*noise(x*.059+7,z*.047);
+      if(Math.hypot(x,z)>18&&rng()<T.MathUtils.smoothstep(cover,.37,.68)*.86){
+        place("oak",x,z,.68+.67*rng());
+        if(cover>.56){place("shrub",x+3.5*rng(),z-3*rng(),.55+.62*rng());}
+      }
     }
     place("oak",-8,-12,1.16);place("oak",12,-25,.86);place("shrub",5,-1,1);
     place("rock",2,0,1.32);place("rock",3,.8,.64);

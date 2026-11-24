@@ -340,7 +340,7 @@ export class RegionalScene {
     this.reframe(true);this.view=view;if(view==="cut")return;
     if(view==="vent"){
       const x=this.spec.arcTransect?zao.vent:0,y=this.height(x,-.08),goal=new T.Vector3(x,y+.48,-.12);
-      this.transition=undefined;this.camera.position.copy(goal).add(new T.Vector3(1,1.05,5.5));this.orbit.target.copy(goal);this.orbit.update();return;
+      this.transition=undefined;this.camera.position.copy(goal).add((this.spec.site==="island"?new T.Vector3(1.55,2.35,2.95):new T.Vector3(1,1.05,5.5)));this.orbit.target.copy(goal);this.orbit.update();return;
     }
     const f=this.faultModel,x=view==="coast"?(this.spec.coastLesson?-2.98:-4.65):view==="ocean"?0:view==="water"?f.hx:Math.max(-3.9,Math.min(3.9,f.hx));
     const y=view==="waves"||view==="focus"?f.hy:view==="coast"||view==="water"||view==="ocean"?0:f.top-.35;

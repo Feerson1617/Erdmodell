@@ -28,6 +28,7 @@ export function regionalReading(r:RegionalScene):string[]{
  if(theme==="volcano"){
    const source=site==="hawaii"?"Über einer länger beständigen Schmelzquelle entstehen nacheinander Schildvulkane. Die Platte trägt ältere Vulkane fort.":process==="arc"||process==="subduction"?"Wasserhaltige Stoffe aus der abtauchenden Platte begünstigen das teilweise Schmelzen im Mantelkeil.":"Am Rücken steigt heißes Mantelgestein auf. Sinkender Druck lässt einen Teil schmelzen."+(site==="island"?" Auf Island verstärkt ein Hotspot die Schmelzbildung.":"");
    const explosive=r.eruption==="explosive";
+   if(site==="hawaii"&&t<=.53)return ["Hotspot-Vulkankette","Eine Vulkankette entsteht",source,"Die lange Phase des Inselwachstums endet vor dem kurzen Modellausbruch."];
    return ["Vulkanismus",t> (explosive?.54:.53)?explosive?"Asche und Gas steigen auf":"Lava fließt aus":t>.12?"Magma steigt im Modell auf":"Schmelzbereich im Untergrund",source,explosive?"Bei diesem Vergleichsausbruch zerreißt Gas die Schmelze.":"An der Oberfläche heißt die austretende Schmelze Lava."];
  }
  if(theme==="risk")return ["Naturgefahr und Risiko",r.exposure==="empty"?"Unbesiedelter Standort":t<onset?"Exposition vor dem Ereignis":t<.49?"Erschütterung am Standort":t>(r.warning&&r.safeRoute?.77:.94)?"Versorgung wiederhergestellt":"Unterbrochene Versorgung",

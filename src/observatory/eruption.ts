@@ -87,16 +87,29 @@ export function eruption(r:RegionalScene,x:number,top:number){
   rock.addEventListener("dispose",()=>depth.dispose());
   for(let i=0;i<(hotspot?5:1);i++){
     const m=new T.Mesh(shape,rock);m.userData.explanation={name:"Vulkanbau",answer:"Viele Ausbrüche können einen Vulkan aufbauen. Über der Quelle entsteht ein neuer Vulkan."};
+    // Match the vertex shader for picking. The proxy is evaluated only on an actual pick.
+    let picking:T.Mesh|undefined,pose="";
+    const bed=(xx:number,zz:number)=>{const u=T.MathUtils.clamp((xx+6)*16,0,191.999),v=T.MathUtils.clamp((zz+4.5)*16,0,143.999),a=Math.floor(u),b=Math.floor(v),h=r.rockCeiling.image.data as Float32Array;
+      return T.MathUtils.lerp(T.MathUtils.lerp(h[b*193+a],h[b*193+a+1],u-a),T.MathUtils.lerp(h[(b+1)*193+a],h[(b+1)*193+a+1],u-a),v-b);};
+    m.userData.lessonAnchor=()=>new T.Vector3(.03,mountain(hotspot,.03,0)+(bed(m.position.x+.03*m.scale.x,m.position.z)-m.position.y-.002)/m.scale.y,0);
+    m.raycast=(ray,hits)=>{
+      picking??=new T.Mesh(shape.clone(),rock);const next=m.matrixWorld.elements.join(",");
+      if(next!==pose){pose=next;const drawn=picking.geometry.attributes.position,rest=shape.attributes.position;
+        for(let k=0;k<rest.count;k++){const xx=m.position.x+rest.getX(k)*m.scale.x,zz=m.position.z+rest.getZ(k)*m.scale.z;drawn.setY(k,rest.getY(k)+(bed(xx,zz)-m.position.y-.002)/m.scale.y);}
+        picking.geometry.computeBoundingSphere();picking.matrixWorld.copy(m.matrixWorld);}
+      const found:T.Intersection[]=[];picking.raycast(ray,found);for(const h of found){h.object=m;hits.push(h);}
+    };
+    rock.addEventListener("dispose",()=>picking?.geometry.dispose());
     m.customDepthMaterial=depth;m.castShadow=m.receiveShadow=true;centres.push(m);r.scene.add(m);
   }
   }
   const surface=(xx:number,zz:number)=>Math.max(r.height(xx,zz),...centres.filter(m=>m.visible).map(m=>r.height(xx,zz)-.002+mountain(hotspot,(xx-m.position.x)/m.scale.x,(zz-m.position.z)/m.scale.z)*m.scale.y));
   const channels=[0,1].map(branch=>{
-    const tongue=lavaTongue(branch?.117:.21);r.scene.add(tongue.mesh);tongue.mesh.userData.explanation={name:"Lavafluss",answer:"Das Gefälle bestimmt den Weg. An einer Senke endet diese modellierte Lavazunge."};
+    const tongue=lavaTongue((branch?.117:.21)*(r.spec.site==="island"?1.32:1));r.scene.add(tongue.mesh);tongue.mesh.userData.explanation={name:"Lavafluss",answer:"Das Gefälle bestimmt den Weg. An einer Senke endet diese modellierte Lavazunge."};
     let last=-1;
     return (t:number)=>{
       const phase=T.MathUtils.smoothstep(t,branch?.65:.53,.96);
-      if(phase>0&&(last<0||hotspot&&t!==last)){
+      if(phase>0&&last<0){
         const active=centres.filter(m=>m.visible).at(-1),cx=active?.position.x??x,cz=active?.position.z??z;
         const scale=active?.scale.x??1,xx=cx+(r.spec.arcTransect?0:hotspot?.31:branch?.22:-.12)*scale,zz=cz+(r.spec.arcTransect?0:hotspot?.09:-.071)*scale;
         tongue.build(xx,zz,hotspot?.26:-1.2,branch?1.13:1.64,branch,surface);last=t;
@@ -112,7 +125,7 @@ export function eruption(r:RegionalScene,x:number,top:number){
   const tint=new T.Color();
   const dummy=new T.Object3D();
   r.onAnimate(t=>{
-    centres.forEach((m,i)=>{const age=hotspot?t*4+.92-i:1;const growth=T.MathUtils.clamp(age*1.6,.02,1);
+    centres.forEach((m,i)=>{const age=hotspot?T.MathUtils.smoothstep(t,0,.53)*4+.92-i:1;const growth=T.MathUtils.clamp(age*1.6,.02,1);
       m.visible=age>0;const travel=hotspot?Math.max(0,age-1)*.92:0;
       const px=x-.64*travel,pz=z-.59*travel;m.position.set(px,r.height(px,pz)-.018,pz);m.scale.set(growth,growth*(1-.045*travel),growth);});
     channels.forEach(draw=>draw(t));
