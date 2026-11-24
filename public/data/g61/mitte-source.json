@@ -1,0 +1,48 @@
+{
+  "source": "Chromium / Three.js orthographic renders of the CC0 specimens listed in specimens.json",
+  "license": "CC0-1.0",
+  "cells": [
+    [
+      153,
+      248
+    ],
+    [
+      232,
+      248
+    ],
+    [
+      117,
+      248
+    ],
+    [
+      125,
+      248
+    ],
+    [
+      246,
+      218
+    ],
+    [
+      246,
+      207
+    ],
+    [
+      246,
+      209
+    ],
+    [
+      246,
+      213
+    ],
+    [
+      218,
+      196
+    ],
+    [
+      246,
+      111
+    ]
+  ],
+  "bytes": 189048,
+  "sha256": "e9a548d518f197a068ec91610d03d957692531976f34bf6d6ef74dba9e7b460c"
+}

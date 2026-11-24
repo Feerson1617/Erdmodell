@@ -3,7 +3,7 @@ import {seaMaterial} from "./sea-material";
 import {lavaTongue} from "./lava-flow";
 import {localAsset} from "../assets";
 import {libraryGLSL,type Library} from "./graphics";
-import {scannedSpecimen} from "./local-specimens";
+import {scannedSpecimen,distantSpecimen} from "./local-specimens";
 import {randomSequence,specimen} from "./local-plants";
 import measured from "./parkfield-relief.json";
 import type {Site} from "./boundaries";
@@ -89,6 +89,11 @@ export class LocalLandscape{
       return -.078*z-2.15*Math.exp(-cross*cross/3.8)+shoulder+.85*(broad-.5)+.33*grain+.22*fine+
         outside*(.07+.13*noise(x*.003,z*.004))+this.regionalRise(x,z)*T.MathUtils.smoothstep(Math.hypot(x,z),72,480);
     }
+    if(this.site!=="san"){
+      const h=this.regionalRise(x,z),erosion=noise(x*.040,z*.040)+.35*grain;
+      const ridge=this.site==="himalaya"?4.9:this.site==="rift"?2.2:1.5;
+      return h+ridge*(broad-.5)+.58*erosion+.14*fine-.63*gully+outside*.09*noise(x*.003,z*.003);
+    }
     return relief(x-90,z-155)-relief(-90,-155)+.62*(broad-.5)+.31*(grain-.5)+.12*(fine-.5)-.44*gully+
       outside*.115*noise(x*.003,z*.003);
   }
@@ -104,7 +109,7 @@ export class LocalLandscape{
     if(this.site==="san")new T.TextureLoader().load(localAsset("data/g61/parkfield.webp"),tex=>{
       if(this.disposed){tex.dispose();return;}this.photo=tex;tex.colorSpace=T.SRGBColorSpace;tex.anisotropy=4;imagery.value=tex;hasPhoto.value=1;this.revision++;
     });
-    const basalt=this.site==="island",coast=this.site==="japan";
+    const basalt=this.site==="island"||this.site==="hawaii",coast=this.site==="japan";
     m.onBeforeCompile=s=>{
       Object.assign(s.uniforms,{faciesColor:{value:this.lib.color},faciesRelief:{value:this.lib.relief},detailGrade:this.grade,ortho:imagery,hasPhoto});
       s.vertexShader="varying vec3 metres;varying float incline;\n"+s.vertexShader.replace("#include <begin_vertex>","#include <begin_vertex>\nmetres=position;incline=1.-normal.y;");
@@ -146,7 +151,7 @@ export class LocalLandscape{
     if(this.site==="japan"){
       for(let i=0;i<7300;i++){const x=(rng()-.56)*170,z=(rng()-.50)*200,h=this.surface(x,z);if(h<.20)continue;
         if(h<2.2){if(rng()<.32)place("rock",x,z,.11+1.5*rng()**3);}
-        else if(i<860&&h>2.5&&noise(x*.069,z*.067)>.31&&Math.hypot(x+8,z-9)>5)place(rng()<.64?"conifer":"oak",x,z,.63+.75*rng());
+        else if(i<560&&h>2.5&&noise(x*.069,z*.067)>.31&&Math.hypot(x+8,z-9)>5)place(rng()<.64?"conifer":"oak",x,z,.63+.75*rng());
         else if(i<2200)place("shrub",x,z,.55+.72*rng());else place("grass",x,z,.42+.66*rng());
       }
     }else if(this.site==="island"){
@@ -154,6 +159,14 @@ export class LocalLandscape{
         if(fissure<1.55||rng()>.21+.72*patch)continue;
         if(fissure<7||patch<.47)place("rock",x,z,.08+1.08*rng()**3);
         else place(rng()<.93?"moss":"grass",x,z,.19+.65*rng());
+      }
+    }else if(this.site!=="san"){
+      const lava=this.site==="hawaii",alpine=this.site==="himalaya";
+      for(let i=0;i<5900;i++){
+        const x=(rng()-.5)*160,z=(rng()-.53)*175,patch=noise(x*.027,z*.027);
+        if(patch<.38||alpine&&this.surface(x,z)>6){if(rng()<.45)place("rock",x,z,.14+1.3*rng()**2);continue;}
+        if(i<160&&patch>.58&&!alpine)place(lava?"palm":"oak",x,z,.64+.7*rng());
+        else if(i<610&&patch>.58)place("shrub",x,z,.43+.67*rng());else place(lava?"moss":"grass",x,z,.48+.63*rng());
       }
     }else{
     for(let i=0;i<14600;i++){
@@ -171,11 +184,11 @@ export class LocalLandscape{
     place("rock",2,0,1.32);place("rock",3,.8,.64);
     }
     for(const [key,matrices] of batches){
-      const [kind,side,variant]=key.split("/"),near=specimen(kind as Kind,29+Number(variant)*31),mid=specimen(kind as Kind,29+Number(variant)*31,true);
+      const [kind,side,variant]=key.split("/"),near=specimen(kind as Kind,29+Number(variant)*31),impostor=distantSpecimen(kind,()=>this.revision++),mid=impostor?.geom??specimen(kind as Kind,29+Number(variant)*31,true);
       const material=kind==="rock"||kind==="moss"?this.stoneMaterial(kind==="moss"):mat;
       const group=new T.InstancedMesh(near,material,matrices.length);
       matrices.forEach((m,i)=>group.setMatrixAt(i,m));group.castShadow=kind!=="grass";group.receiveShadow=true;group.name=kind;
-      const middle=new T.InstancedMesh(mid,material,matrices.length);middle.castShadow=kind==="oak";middle.receiveShadow=true;
+      const middle=new T.InstancedMesh(mid,impostor?.material??material,matrices.length);middle.castShadow=kind==="oak";middle.receiveShadow=true;
       this.halves[Number(side)].add(group,middle);const scans:T.InstancedMesh[]=[];this.sets.push({group,near,mid,matrices,middle,scans,type:kind});
       scannedSpecimen(kind)?.then(parts=>{
         if(this.disposed)return;
@@ -199,7 +212,7 @@ export class LocalLandscape{
     for(const set of this.sets){
       const max=set.type==="grass"?[22,38,50][grade]:set.type==="rock"?[53,85,110][grade]:set.type==="shrub"?[50,84,110][grade]:220;
       let near=0,mid=0;
-      const high=set.type==="grass"?[7,12,17][grade]:set.type==="oak"||set.type==="conifer"?[38,60,85][grade]:[14,27,38][grade];
+      const high=set.type==="grass"?[7,12,17][grade]:set.type==="oak"||set.type==="conifer"?[22,37,52][grade]:[14,27,38][grade];
       for(const m of set.matrices){
         const distance=Math.hypot(m.elements[12]-cx,m.elements[14]-cz);
         if(distance<high){for(const scan of set.scans)scan.setMatrixAt(near,m);set.group.setMatrixAt(near++,m);}else if(distance<max)set.middle.setMatrixAt(mid++,m);

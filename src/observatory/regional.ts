@@ -41,7 +41,7 @@ export class RegionalScene {
   get localActive(){return localView(this.view)&&!!this.local;}
   get renderScene(){return this.localActive?this.local!.scene:this.scene;}
   lib?:Library;readonly grade={value:quality()};private relief?:T.Texture;
-  private sunlight=new T.DirectionalLight(0xffdec0,2.25);private shadowState="";private terrainLOD:((distance:number,grade:number)=>void)[]=[];
+  private sunlight=new T.DirectionalLight(0xffe9d0,2.17);private shadowState="";private terrainLOD:((distance:number,grade:number)=>void)[]=[];
   prepareRender(renderer:T.WebGLRenderer){
     if(!this.lib)return;
     const q=this.grade.value=quality();
@@ -100,6 +100,7 @@ export class RegionalScene {
       rupture:this.rupture.visible?Array.from(this.rupture.geometry.attributes.position.array):[],waveFronts:this.waves.map(w=>w.visible),
       vertex:sample?{rest:Array.from(sample.base.slice(i,i+3)),drawn:Array.from(sample.g.attributes.position.array.slice(i,i+3)),side:sample.side}:null};
   }
+  facies=false;readonly sectionColor={value:0};
   analysis=false;readonly timings:Record<string,number>={};
   view="land";vectors=false;riskSite="near";markerEnds:number[][]=[];
   showP=true;showS=true;detail=false;phasesShown=false;water?:WaterSection;private waves:T.Mesh[]=[];private fault!:T.Line;private rupture!:T.Line;
@@ -114,7 +115,7 @@ export class RegionalScene {
     const ctx=sky.getContext("2d")!,grad=ctx.createLinearGradient(0,0,0,256);
     grad.addColorStop(0,"#48769c");grad.addColorStop(.43,"#b6d1da");grad.addColorStop(.64,"#d8d7be");grad.addColorStop(1,"#829b9b");ctx.fillStyle=grad;ctx.fillRect(0,0,2,256);
     this.sky=new T.CanvasTexture(sky);this.sky.colorSpace=T.SRGBColorSpace;this.scene.background=this.sky;this.scene.fog=new T.FogExp2(0xacc5cb,.026);
-    this.scene.add(new T.HemisphereLight(0xdbe9ff,0x93806a,1.48));
+    this.scene.add(new T.HemisphereLight(0xf0f5ff,0xa69a83,1.79));
     const sun=this.sunlight;sun.position.set(-7,6,3);Object.assign(sun.shadow.camera,{left:-8,right:8,top:7,bottom:-7,near:.1,far:26});sun.shadow.camera.updateProjectionMatrix();sun.shadow.normalBias=.008;sun.shadow.bias=-.0003;this.scene.add(sun,this.front,this.section,this.witnesses,this.settlement,this.mechanisms);
     if(spec.azimuth!==undefined)this.ui.sense.value=Math.cos((spec.azimuth-spec.strike)*Math.PI/180)>=0?1:-1;
     this.vertical=["arc","subduction"].includes(spec.process);this.reframe(false);
@@ -411,7 +412,7 @@ export class RegionalScene {
   update(dt:number){
     this.age+=dt;if(this.playing){this.progress=Math.min(1,this.progress+dt/(this.slow?32:14));if(this.progress===1)this.playing=false;}
     if(!this.ready)return;
-    const t=this.progress;this.stressSignals.phase.value=t;this.stressSignals.show.value=+(this.stress&&this.spec.theme==="earthquake");this.ui.t.value=t;this.ui.clock.value=this.age;this.ui.stress.value=+this.stress;
+    const t=this.progress;this.sectionColor.value=+!!this.facies;this.stressSignals.phase.value=t;this.stressSignals.show.value=+(this.stress&&this.spec.theme==="earthquake");this.ui.t.value=t;this.ui.clock.value=this.age;this.ui.stress.value=+this.stress;
     this.ui.vertical.value=+this.vertical;
     const motion=matchMedia("(prefers-reduced-motion: reduce)").matches;
     this.reveal=motion?+this.cut:T.MathUtils.damp(this.reveal,+this.cut,9,dt);
