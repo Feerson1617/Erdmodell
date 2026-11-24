@@ -29,6 +29,11 @@ export async function acceptG5(p,{dir,product,measure,films=true}){
   const range=(id,v)=>p.locator("#"+id).fill(String(v));
   const ready=()=>p.waitForFunction(()=>{const g=window.geoObservatory();return !g.flying&&g.observatory.ready&&g.observatory.mode==="regional";});
   const shot=async name=>{
+    await p.waitForFunction(()=>{
+      const state=window.geoObservatory();
+      return !state.flying && (state.observatory.mode!=="regional" || state.observatory.viewSettled) &&
+        (state.observatory.mode!=="time" || state.observatory.timeReady);
+    });
     if(product!=="Electron")return;
     await p.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
     await p.screenshot({path:join(dir,name+".jpg"),type:"jpeg",quality:85});
@@ -98,6 +103,6 @@ export async function acceptG5(p,{dir,product,measure,films=true}){
   // Native window fullscreen is tested separately; retain a real presentation capture.
   await click("home");await click("present");await p.waitForFunction(()=>document.body.classList.contains("present"));await shot("30-Praesentation");await click("present");await p.waitForFunction(()=>!document.body.classList.contains("present"));
   await perf("Wiederholter Modulwechsel",async()=>{for(let i=0;i<4;i++){await visit("japan");await time();await age(-100);await click("nav-volcano");await ready();await click("home");await p.waitForFunction(()=>!window.geoObservatory().flying);const s=await p.evaluate(()=>window.geoObservatory());result.cycles.push({geometries:s.geometries,textures:s.textures,programs:s.programs});}});
-  result.checks.push("697 reale Ereignisse","5819 eindeutige Grenzabschnitte","9 geografische Treffer","4 Zukunftsszenarien","Herd lotrecht unter Epizentrum","Siedlungsvergleich bei gleicher Quelle","Vollbild und Rückkehr");
+  result.checks.push("697 reale Ereignisse","5819 eindeutige Grenzabschnitte","12 geografische Treffer in 9 Modelltypen","4 Zukunftsszenarien","Herd lotrecht unter Epizentrum","Siedlungsvergleich bei gleicher Quelle","Vollbild und Rückkehr");
   return result;
 }

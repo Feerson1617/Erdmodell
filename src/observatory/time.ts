@@ -27,18 +27,23 @@ export class TimeGlobe {
   primary=globe();other=globe();markers=new T.Group();private evidence:Evidence[]=[];
   private cache=new Map<string,{used:number;promise:Promise<T.Texture>;texture?:T.Texture}>();private stamp=0;private disposed=false;
   private channels=["",""];private displayed=["",""];private previousMarks="";
-  year=-250;scenario:Scenario="past";compare=false;direction=1;speed=7;playing=false;layer="";error="";ready=false;
+  year=-250;scenario:Scenario="past";compare=false;direction=1;speed=7;playing=false;layer="";error="";
+  get ready(){return Boolean(this.displayed[0] && this.displayed[0]===this.channels[0] && (this.model==="past" || this.models) && (!this.compare || (this.displayed[1] && this.displayed[1]===this.channels[1])));}
   constructor(){this.primary.scene.add(this.markers);void fetch(localAsset("data/g5/evidence.json")).then(r=>r.json()).then(data=>{this.evidence=data;this.previousMarks="";}).catch(()=>{this.error="Belegorte konnten nicht geladen werden.";});}
   private rotating?:Promise<void>;private models?:Record<string,number[][][]>;private continents=[new T.Group(),new T.Group()];
   private async buildContinents(){
     const [data,angles]=await Promise.all([fetch(localAsset("data/g5/time/future.i16")),fetch(localAsset("data/g5/time/future-rotations.json"))]);
     if(!data.ok||!angles.ok)throw Error("Kontinentdaten fehlen");
-    const coords=new Int16Array(await data.arrayBuffer()),def=await angles.json() as {index:{start:number;count:number}[];models:Record<string,number[][][]>};
+    const coords=new Int16Array(await data.arrayBuffer()),def=await angles.json() as {index:{pid:number;start:number;count:number}[];models:Record<string,number[][][]>};
     if(this.disposed)return;this.models=def.models;
-    const mat=new T.ShaderMaterial({side:T.DoubleSide,vertexShader:"varying vec3 n;void main(){n=normalize(normalMatrix*normal);gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}",fragmentShader:"varying vec3 n;void main(){float light=clamp(dot(normalize(n),normalize(vec3(-.4,.6,1.))),0.,1.);gl_FragColor=vec4(vec3(.70,.59,.40)*(.74+.33*light),1.);}"});
+    // Cartographic identifiers follow the ten rigid bodies in the rotation file.
+    const tones:Record<number,number[]>={101:[.78,.61,.43],102:[.88,.75,.52],201:[.61,.68,.47],301:[.71,.66,.51],302:[.71,.52,.42],701:[.85,.68,.42],702:[.58,.67,.57],801:[.78,.64,.54],802:[.62,.58,.47],803:[.86,.78,.62]};
     for(const entry of def.index){const a=[],ns=[];for(let i=entry.start;i<entry.start+entry.count;i++){
       const v=position(coords[2*i+1]/100,coords[i*2]/100,27);a.push(v.x,v.y,v.z);v.normalize();ns.push(v.x,v.y,v.z);}
       const g=new T.BufferGeometry();g.setAttribute("position",new T.Float32BufferAttribute(a,3));g.setAttribute("normal",new T.Float32BufferAttribute(ns,3));
+      const mat=new T.ShaderMaterial({side:T.DoubleSide,uniforms:{tone:{value:new T.Vector3().fromArray(tones[entry.pid])}},
+        vertexShader:"varying vec3 n;void main(){n=normalize(normalMatrix*normal);gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}",
+        fragmentShader:"uniform vec3 tone;varying vec3 n;void main(){float light=clamp(dot(normalize(n),normalize(vec3(-.4,.6,1.))),0.,1.);gl_FragColor=vec4(tone*(.72+.34*light),1.);}"});
       for(const group of this.continents)group.add(new T.Mesh(g,mat));
     }
     this.primary.scene.add(this.continents[0]);this.other.scene.add(this.continents[1]);
@@ -63,7 +68,7 @@ export class TimeGlobe {
     void Promise.all([this.load(model+"-"+lo),this.load(model+"-"+hi)]).then(([a,b])=>{
       if(this.disposed||this.channels[idx]!==key)return;
       Object.assign(view.material.uniforms.first,{value:a});view.material.uniforms.second.value=b;view.material.uniforms.future.value=+(model!=="past");
-      view.material.uniforms.blend.value=T.MathUtils.clamp((Math.abs(this.year)-lo)/5,0,1);view.sphere.visible=true;this.displayed[idx]=key;this.ready=true;
+      view.material.uniforms.blend.value=T.MathUtils.clamp((Math.abs(this.year)-lo)/5,0,1);view.sphere.visible=true;this.displayed[idx]=key;
       const retain=new Set([...this.displayed,...this.channels].flatMap(s=>s.split(":")));
       for(const [k,e] of [...this.cache].sort((a,b)=>a[1].used-b[1].used)){if(this.cache.size<=8)break;if(!retain.has(k)&&e.texture){e.texture.dispose();this.cache.delete(k);}}
       const ahead=lo+5*(this.year<0?-this.direction:this.direction);if(ahead>=0&&ahead<=scenarios[model].end)void this.load(model+"-"+ahead).catch(()=>{});
@@ -72,6 +77,13 @@ export class TimeGlobe {
   setYear(y:number){const max=this.scenario==="past"?0:scenarios[this.scenario].end;this.year=T.MathUtils.clamp(y,-250,max);if(this.year<=0)this.compare=false;}
   get model():Scenario{return this.year<=0?"past":this.scenario;}
   get second():Scenario{return this.scenario==="novo"?"ultima":"novo";}
+  evidenceCentre(){
+    const points=this.evidence.filter(item=>item.kind===this.layer);
+    if(!points.length)return;
+    const centre=new T.Vector3(),slice=Math.round(Math.abs(this.year)/5);
+    for(const item of points)centre.add(position(...item.coords[slice]));
+    return {lat:T.MathUtils.radToDeg(Math.atan2(centre.y,Math.hypot(centre.x,centre.z))),lon:T.MathUtils.radToDeg(Math.atan2(centre.x,centre.z))};
+  }
   private updateMarkers(){
     const slice=Math.round(Math.abs(this.year)/5),key=[this.layer,this.year>0,slice,this.evidence.length].join("/");
     if(key===this.previousMarks)return;this.previousMarks=key;this.markers.clear();
