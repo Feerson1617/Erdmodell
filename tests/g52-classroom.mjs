@@ -37,12 +37,12 @@ export async function classroom(p,dir,record=false){
       const start=await at(0);
       await step("Spannungsaufbau anhalten",async()=>{await choose("observe-stage",".30");await click("observe-stress");});
       const strain=await at(.30);assert.ok(strain.settings.stress);await shot("04-Spannungsaufbau");
-      await step("Bruch und Versatz aufrufen",()=>choose("observe-stage",".42"));const rupture=await at(.42);assert.ok(rupture.physics.rupture.length>0);await shot("05-Versatz");
+      await step("Bruch und Versatz aufrufen",()=>choose("observe-stage",".49"));const rupture=await at(.49);assert.ok(rupture.physics.rupture.length>0);await shot("05-Versatz");
       await step("Vorher und nachher vergleichen",async()=>{await click("observe-before");await at(0);await click("observe-after");});
       const end=await at(1);await shot("06-Weg-nachher");
       const offset=s=>Math.abs(s.physics.markerEnds[0][2]-s.physics.markerEnds[1][2]);
       log.marker={start:offset(start),strain:offset(strain),rupture:offset(rupture),end:offset(end)};
-      assert.ok(log.marker.start<.001&&log.marker.end>.25);
+      assert.ok(log.marker.start<.001&&log.marker.rupture>.2&&log.marker.end>.25);
       await step("Untergrund und Wellen untersuchen",async()=>{await choose("observe-stage",".53");await choose("observe-view","waves");});
       assert.ok((await at(.53)).cut);await shot("07-Wellen");
       for(const id of ["p","s"]){await click("observe-"+id);await rest();assert.equal((await state()).physics.waveFronts[id==="p"?0:1],false);await click("observe-"+id);}
@@ -83,13 +83,31 @@ export async function classroom(p,dir,record=false){
     const box=await p.locator("#earth").boundingBox();await p.mouse.click(box.x+box.width/2,box.y+box.height/2);assert.equal(await p.locator("#g-quake-explain").count(),0);assert.match(await p.locator("#sidebar").innerText(),/genaue Störung/);
     await click("g-segment");await rest();await choose("g-view","cut");await fill("g-progress",.53);actual=await at(.53);
     assert.equal(actual.focus,undefined);assert.equal(actual.epicenter,undefined);assert.equal(actual.physics.rupture.length,0);assert.deepEqual(actual.physics.waveFronts,[false,false]);assert.equal(await p.locator("#g-quake-from-process").count(),0);
+    const selectBoundary=async id=>{
+      await click("nav-plates");await click("g-boundaries");await choose("g-example",String(id));await rest();
+      const box=await p.locator("#earth").boundingBox();await p.mouse.click(box.x+box.width/2,box.y+box.height/2);
+      assert.equal((await state()).selected,id);
+    };
+    await selectBoundary(1438);assert.equal(await p.locator("#g-quake-explain").innerText(),"Erdbeben erklären");
+    await click("g-quake-explain");await rest();assert.match(await p.locator("#sidebar").textContent(),/keine sichere Zuordnung/);
+    await selectBoundary(3757);assert.equal(await p.locator("#g-quake-explain").innerText(),"Seebeben erklären");await click("g-quake-explain");await rest();
+    assert.equal((await state()).physics.waterEvent,false);assert.equal(await p.locator("#g-sea").count(),0);
+    await click("g-vectors");await rest();assert.equal((await state()).view,"overhead");assert.match(await p.locator("#sidebar").textContent(),/längs der Grenze/);
+    await click("nav-risk");await rest();await fill("g-progress",.54);const risk=await at(.54);
+    await choose("g-risk-site","far");const riskB=await at(.54);assert.deepEqual(risk.focus,riskB.focus);assert.equal(riskB.settings.riskSite,"far");
+    log.contrasts={unknown:false,uncertainLandSea:"Alpine Fault",oblique:"Sumatra",sumatraTsunami:false,riskSource:[risk.focus,riskB.focus]};
     await click("nav-plates");await click("g-time");await click("obswitch");await choose("observe-station","-100");await rest();assert.match(await p.locator("#observe-note").innerText(),/100.*Rekonstruktion/);
     await choose("observe-track","501");await click("observe-trail");await shot("17-Zeitreise-Beobachten");
     const timeKey=await save("Zeitreise · Prüfung");await recall("p0");const mapKey=await save("Karte · Prüfung");await recall(timeKey);
     assert.equal((await state()).tracking,"501");assert.equal((await state()).year,-100);await recall(mapKey);assert.deepEqual((await state()).mapLayers,{events:true,lines:false,depth:false});
     log.favorites.push("Historischer Zeitpunkt und Verfolgung","Globale Karte und Datenebenen");
+    await recall("p2");await click("observe-play");const running=await save("Wiedergabe · Prüfung");await recall("p0");
+    await recall(running);assert.ok((await state()).playing);await click("observe-play");
+    await p.reload();await p.waitForFunction(()=>window.geoObservatory?.().ready);await recall(key);
+    assert.equal((await state()).site,"san");assert.deepEqual((await state()).camera,expected.camera);
+    log.favorites.push("Laufende Wiedergabe und Abruf nach Neuladen");
     // Remove only the three temporary scenes created during this test.
-    for(const id of [mapKey,timeKey,key]){await click("saved-views");await choose("saved-list",id);await click("view-remove");await click("view-close");}
+    for(const id of [running,mapKey,timeKey,key]){await click("saved-views");await choose("saved-list",id);await click("view-remove");await click("view-close");}
     await click("obswitch");await click("home");if(await p.locator("body.present").count())await click("present");
     await writeFile(join(dir,record?"Unterricht-App.json":"Unterricht-HTML.json"),JSON.stringify(log,null,2));return log;
   }finally{await display.detach();}

@@ -18,6 +18,8 @@ def evidence(root, out, raw):
         assert movie["frames"] >= 5 and (out/"G52"/(movie["name"]+".mp4")).is_file()
     for name in lesson["pictures"]:
         assert (out/"G52"/(name+".jpg")).stat().st_size > 1000
+    resources=json.loads((out/"G52/Ressourcen.json").read_text())
+    assert resources["resources"]==len(resources["sha256"])>=348
     previous = root/"docs/g52-bildvergleich"
     files = {"Vergleich/G5.1/"+p.relative_to(previous).as_posix():p for p in previous.rglob("*") if p.is_file()}
     pairs = []
@@ -46,6 +48,7 @@ def evidence(root, out, raw):
             "Die aus dem ausgeworfenen DMG kopierte ARM64-App und die eigenständig geöffnete HTML wurden offline bedient. Die Rohdaten stehen in Pruefung.json und G52. Der Vergleich mit G5.1 lässt sich über Bildvergleich.html offline öffnen.","",
             "## Unterrichtsfolge für Klasse 9","","Leitfrage der 45-Minuten-Stunde: Warum bebt die Erde plötzlich, obwohl sich die Erdplatten nur sehr langsam bewegen? Die technische Probe fährt die Bedienfolge komprimiert ab. Eine Beobachtung von Lernenden liegt nicht vor.","",
             "|Schritt|Bedienhandlungen|Zeit bis zum stabilen Bild inkl. Bedienung|Ansicht|","|---|---|---:|---|"]
+    report.insert(5,f"App und HTML enthalten {resources['resources']} bytegleiche eingebettete Ressourcen. Auch Renderer und Stylesheet stimmen nach der für die Einzeldatei nötigen URL-Einbettung überein.")
     for step in lesson["steps"]:
         report.append(f"|{step['label']}|{', '.join(step['actions']) or 'Beobachtung'}|{step['ms']} ms|{step.get('view') or step['mode'] or 'Globus'}|")
     report.extend(["","Kamera, Wiedergabe, Ereigniszeit und offene Antworten sind pro Schritt protokolliert. Die Kameravorgaben wechseln bei ausdrücklicher Ansichts- oder Regionswahl. Die acht Vorbereitungsszenen bleiben frei wählbar.","",

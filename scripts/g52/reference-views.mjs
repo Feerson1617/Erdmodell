@@ -21,7 +21,7 @@ try{
   const now=await page(current);await now.selectOption("#g-view","overhead");const camera=await now.evaluate(()=>window.geoObservatory().observatory.camera);await now.close();
   const old=await page(base),cdp=await old.context().newCDPSession(old);
   await old.evaluate(pose=>window.matchedPose=pose,camera);await old.click("#obswitch");await old.waitForFunction(()=>window.poseFrames>=2);
-  for(const [phase,name] of [[0,"03-Weg-vorher"],[.3,"04-Spannungsaufbau"],[.42,"05-Versatz"],[1,"06-Weg-nachher"]]){
+  for(const [phase,name] of [[0,"03-Weg-vorher"],[.3,"04-Spannungsaufbau"],[.49,"05-Versatz"],[1,"06-Weg-nachher"]]){
     if(phase===.3){await old.click("#obswitch");await old.locator("details").filter({has:old.locator("#g-stress")}).locator("summary").click();await old.check("#g-stress");await old.click("#obswitch");}
     await old.locator("#observe-progress").fill(String(phase));await fullHDPhoto(old,cdp,output,name);
   }

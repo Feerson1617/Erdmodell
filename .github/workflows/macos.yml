@@ -31,6 +31,7 @@ jobs:
         run: node tests/mac-abnahme.mjs
       - name: Fachliche Messprotokolle der exportierten HTML erzeugen
         run: |
+          python3 scripts/g52/product-check.py artifacts/macos/GeoRisiko-G5.2-macOS-arm64-app.zip artifacts/GeoRisiko-G5.2-Web-Test.html test-results/mac/G52/Ressourcen.json
           npx playwright install chromium
           G51_PHYSICS_LOG=test-results/mac/G51/Mechanik.json node tests/g51-physics.mjs
           node tests/g51-time.mjs > test-results/mac/G51/Zeitreise.log

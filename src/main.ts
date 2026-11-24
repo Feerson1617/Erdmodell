@@ -452,12 +452,13 @@ async function boot() {
     nyos:fields(world.nyosLesson,lessonKeys),nyosDetail:world.nyosDetail
   });
   classroomViews(observatory,observation,baseView,async b=>{
+    if(b.mode==="nyos")await world.nyos.load();
     navigate(b.mode);world.setStyle(b.style);
     if(b.mode==="inside"){world.shell.cut=b.shell.cut;world.shell.visible=[...b.shell.visible];world.shell.opacity=[...b.shell.opacity];world.shell.selected=b.shell.selected;world.shell.subdued=b.shell.subdued;world.shell.setComparison(b.shell.comparison);labels=b.labels;released.clear();b.released.forEach(i=>released.add(i));}
     if(b.mode==="place"&&siteCatalog.some(site=>site.id===b.site))world.visit(b.site);
     if(b.mode==="nyos"){if(b.nyos.view==="protection")world.showNyosMeasure(b.nyos.measure);else world.showNyos(b.nyos.view);Object.assign(world.nyosLesson,fields(b.nyos,lessonKeys));world.nyosDetail=b.nyosDetail;}
     if(b.mode==="plates"){
-      await world.loadClassroomAtlas();world.setPlateOptions(b.plates);
+      await world.loadClassroomAtlas(Boolean(b.process.processSite));world.setPlateOptions(b.plates);
       if(b.process.processSite)world.visit(b.process.processSite,!b.process.processDetail);
       else if(b.profile&&world.profiles[b.profile]){world.inspectPlate(b.profile);if(b.pair){world.comparePlates(false);if(world.mosaic){world.mosaic.progress=b.pairTime;world.mosaic.playing=b.pairPlaying;}}}
       Object.assign(world,fields(b.process,["processProgress","processPlaying","processLoop","processSlow","singlePlateName","smallPlateNames"]));

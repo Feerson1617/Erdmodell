@@ -208,7 +208,8 @@ export class RegionalScene {
         const water=this.water,cell=Math.round((water.extent(0).shore+6)/water.dx),x0=-6+(cell-1)*water.dx;
         const a=this.height(x0,0),b=this.height(x0+water.dx,0),shore=x0+water.dx*a/(a-b);
         const line=path([new T.Vector3(shore,0,-4.5),new T.Vector3(shore,0,0)],0xefdb9d,"Ursprüngliche Uferlinie");
-        this.scene.add(line);this.onAnimate(t=>{line.position.y=water.sample(shore,t)-water.sample(shore,t,true)+.016;});
+        const foreground=path([new T.Vector3(shore,0,0),new T.Vector3(shore,0,4.5)],0xefdb9d,"Ursprüngliche Uferlinie");
+        this.front.add(foreground);this.scene.add(line);this.onAnimate(t=>{line.position.y=foreground.position.y=water.sample(shore,t)-water.sample(shore,t,true)+.016;});
       }
       let previous=-1;this.onAnimate(t=>{if(t===previous)return;previous=t;const pos=curtain.attributes.position as T.BufferAttribute;
         for(let i=0;i<=120;i++){const x=-6+i*.1,y=this.height(x,0),top=this.waterHeight(x,t),d=f.offset(this.deformed,x,y,0,x>=f.trace?1:-1,t);
@@ -219,6 +220,10 @@ export class RegionalScene {
   waterHeight(x:number,t:number){if(!this.water)return 0;return this.water.sample(x,t);}
   cameraView(view:string){
     this.orbit.minDistance=view==="coast"?2.1:4;
+    if(view==="coast"&&this.spec.coastLesson){
+      this.reframe(false);this.view=view;this.transition=undefined;
+      this.orbit.target.set(-3.05,.012,-.35);this.camera.position.copy(this.orbit.target).add(new T.Vector3(-.45,2.25,1.64));this.orbit.update();return;
+    }
     if(view==="land"||view==="overhead"){
       this.reframe(false);this.view=view;
       if(view==="overhead"){this.transition=undefined;this.orbit.target.set(0,this.height(0,-.35),-.35);this.camera.position.copy(this.orbit.target).add(new T.Vector3(1.7,6.2,3.2));this.orbit.update();}return;
@@ -339,7 +344,7 @@ export class RegionalScene {
       for(let i=0;i<pos.count;i++){const a=2*Math.PI*i/(pos.count-1),radius=Math.min(1.45,(t-onset)*16),y=Math.min(f.top-.02,f.hy+radius*.7*Math.cos(a)),v=f.point(y,-Math.abs(radius*Math.sin(a)));pos.setXYZ(i,v.x,v.y,v.z);}
       pos.needsUpdate=true;this.rupture.frustumCulled=false;
     }
-    if(this.waterColumn){const x=f.hx,h=this.height(x,0),top=this.waterHeight(x,t);this.waterColumn.visible=f.waterEvent&&t>=onset&&t<.67;
+    if(this.waterColumn){const x=f.hx,h=this.height(x,0),top=this.waterHeight(x,t);this.waterColumn.visible=f.waterEvent&&t>=onset&&t<.67&&this.view!=="coast"&&this.view!=="ocean";
       const dy=f.offset(this.deformed,x,h,0,x>=f.trace?1:-1,t).y;this.waterColumn.scale.y=Math.max(.03,top-h-dy);this.waterColumn.position.set(x,h+dy+this.waterColumn.scale.y/2,.065);}
     for(const fn of this.motion)fn(t);this.orbit.update();this.lastCamera.copy(this.camera.position);
   }
