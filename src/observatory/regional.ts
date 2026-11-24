@@ -1,3 +1,4 @@
+import {seaMaterial,waterSection} from "./sea-material";
 import {groundCover} from "./landscape-details";
 import {loadTexture,materials,decorateTerrain,quality,graphics,type Library} from "./graphics";
 import {coastalSand,coastalGrass} from "./coast-appearance";
@@ -183,17 +184,17 @@ export class RegionalScene {
     if(h.length!==145*109)throw Error("Das Landschaftsumfeld fehlt.");
     const gain=(this.spec.site==="japan"?4.7:2.4)*.012/(this.spec.width??sites[this.spec.site!].width);
     const terrain=new T.MeshStandardMaterial({map:image,roughness:.94,side:T.DoubleSide});
-    const water=new T.MeshStandardMaterial({color:0x39818a,roughness:.33,metalness:.12,transparent:true,opacity:.72,side:T.DoubleSide});
+    const water=seaMaterial(this.ui.t);
     for(const front of [false,true])for(const [x0,x1,z0,z1] of [[-24,-6,0,18],[6,24,0,18],[-6,6,4.5,18]]){
       const parent=front?this.front:this.scene,cols=Math.ceil((x1-x0)*3),rows=Math.ceil((z1-z0)*4);
-      const geometry=(sea:boolean)=>indexed(rows,cols,(i,j)=>{
+      const geometry=()=>indexed(rows,cols,(i,j)=>{
         const x=x0+i/cols*(x1-x0),z=(front?1:-1)*(z0+j/rows*(z1-z0)),u=x/48+.5,v=z/36+.5;
         const fx=u*144,fy=v*108,a=Math.min(143,Math.floor(fx)),b=Math.min(107,Math.floor(fy)),dx=fx-a,dy=fy-b;
         let y=gain*((1-dy)*((1-dx)*h[b*145+a]+dx*h[b*145+a+1])+dy*((1-dx)*h[(b+1)*145+a]+dx*h[(b+1)*145+a+1]));
         if(Math.abs(x)<=6.001&&Math.abs(z)<=4.501)y=this.height(x,z);
-        return [x,sea?-.006:y,z,u,1-v];
+        return [x,y,z,u,1-v];
       },!front);
-      const geom=geometry(false),land=mesh(geom,terrain,"Landschaftsumfeld");land.receiveShadow=true;parent.add(land);
+      const geom=geometry(),land=mesh(geom,terrain,"Landschaftsumfeld");land.receiveShadow=true;parent.add(land);
       if(this.lib){
         const make=(step:number)=>{const idx:number[]=[];
           for(let j=0;j<rows;j+=step)for(let i=0;i<cols;i+=step){
@@ -213,7 +214,11 @@ export class RegionalScene {
           if(level!==next){geom.setIndex(indices[next]);level=next;}
         });
       }
-      if(["japan","hawaii","island"].includes(this.spec.site!))parent.add(mesh(geometry(true),water,"Offenes Meer"));
+      if(["japan","hawaii","island"].includes(this.spec.site!)){
+        const sea=geom.clone(),p=sea.attributes.position as T.BufferAttribute,d=new Float32Array(p.count);
+        for(let i=0;i<p.count;i++){d[i]=-p.getY(i);p.setY(i,.002);}
+        sea.setAttribute("depthWet",new T.BufferAttribute(d,1));sea.computeVertexNormals();parent.add(mesh(sea,water,"Offenes Meer"));
+      }
     }
   }
   private buildSurface(){
@@ -250,12 +255,8 @@ export class RegionalScene {
     if(!["forces","lithosphere"].includes(this.spec.theme)&&(this.spec.coastLesson||this.groundData?.some(h=>h<0)||this.windows?.some(h=>h<0))){
       for(const front of [false,true]){
         const g=indexed(42,120,(i,j)=>{const x=-6+12*i/120,z=(front?0:-4.5)+4.5*j/42;return [x,0,z,i/120,j/42];});
-        const water=new T.MeshStandardMaterial({color:0x408f9b,roughness:.24,metalness:.20,transparent:true,opacity:.83,side:T.DoubleSide,depthWrite:false});
+        const water=seaMaterial(this.ui.t);
         const pos=g.attributes.position as T.BufferAttribute,wet=new T.Float32BufferAttribute(new Float32Array(pos.count),1);g.setAttribute("depthWet",wet);
-        water.onBeforeCompile=shader=>{
-          shader.vertexShader="attribute float depthWet;varying float depthAt;\n"+shader.vertexShader.replace("#include <begin_vertex>","#include <begin_vertex>\ndepthAt=depthWet;");
-          shader.fragmentShader="varying float depthAt;\n"+shader.fragmentShader.replace("#include <color_fragment>","#include <color_fragment>\nif(depthAt<=.001)discard;float deep=smoothstep(.0,.8,depthAt);diffuseColor.rgb=mix(vec3(.12,.65,.60),diffuseColor.rgb,deep);diffuseColor.a*=mix(.78,1.,deep);");
-        };
         const levels=new Float32Array(121),depths=new Float32Array(121),terrain=Float32Array.from({length:pos.count},(_,i)=>this.height(pos.getX(i),pos.getZ(i)));
         const crossRelief=Float32Array.from(terrain,(h,i)=>h-this.height(pos.getX(i),0));
         let previous=-1;this.onAnimate(t=>{if(t===previous||(!this.water&&previous>=0))return;previous=t;
@@ -270,7 +271,7 @@ export class RegionalScene {
         (front?this.front:this.scene).add(mesh(g,water,"Wasseroberfläche"));
       }
       const curtain=indexed(1,120,(i,j)=>{const x=-6+i*.1;return [x,j?0:Math.min(0,this.height(x,0)),.011,i/120,j];});
-      const glass=new T.MeshBasicMaterial({color:0x438f99,transparent:true,opacity:.28,depthWrite:false,side:T.DoubleSide});
+      const glass=waterSection();
       this.section.add(mesh(curtain,glass,"Wassersäule im Schnitt"));
       if(this.spec.coastLesson&&this.water){
         const water=this.water,cell=Math.round((water.extent(0).shore+6)/water.dx),x0=-6+(cell-1)*water.dx;
