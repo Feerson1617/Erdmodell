@@ -1,4 +1,5 @@
 // Exercises the executable copied off the ejected DMG and the single-file export on the same Mac.
+import {acceptG5} from "./g5-abnahme.mjs";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
@@ -10,7 +11,7 @@ import { PNG } from "pngjs";
 const out=resolve("test-results/mac"), film=join(out,"film");
 await mkdir(film,{recursive:true});
 const executablePath=(await readFile(join(out,"executable-path.txt"),"utf8")).trim();
-const html=pathToFileURL(resolve("artifacts/GeoRisiko-Web-Test.html")).href;
+const html=pathToFileURL(resolve("artifacts/GeoRisiko-G5-Web-Test.html")).href;
 const cases=JSON.parse(await readFile("src/tectonics/examples.json","utf8"));
 const report={commit:process.env.TEST_COMMIT, run:process.env.GITHUB_RUN_ID, platform:process.platform, arch:process.arch, runs:[]};
 const runCmd=(name,args)=>{const r=spawnSync(name,args,{encoding:"utf8"});assert.equal(r.status,0,r.stderr);return r.stdout.trim();};
@@ -180,6 +181,7 @@ async function exercise(p,context,name,pid) {
     await recordFilm(p,context);
     assert.ok(assets.has("/data/nyos/landscape.json") && assets.has("/data/relief.i16"));
   }
+  row.g5=await acceptG5(p,{dir:join(out,"G5"),product:name,films:name==="Electron",measure:label=>measure(p,pid,label)});
   row.requestedAssets=[...assets].sort();
   assert.deepEqual(errors,[]);assert.deepEqual(network,[]);return row;
 }

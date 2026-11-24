@@ -80,15 +80,19 @@ function volcano(r:RegionalScene){
 function settlements(r:RegionalScene){
   const walls=chips(0xd8cbb1),roof=chips(0x805643),brace=chips(0x508980);
   const wallGeo=new T.BoxGeometry(.20,.28,.2),roofGeo=new T.ConeGeometry(.18,.105,4),braceGeo=new T.BoxGeometry(.027,.33,.025);
-  const buildings:T.Group[]=[];
+  const buildings:T.Group[]=[],baseX:number[]=[];
   for(let i=0;i<30;i++){
     const col=i%6,row=Math.floor(i/6);const x=-3.4+col*1.23,z=-2.02+row*.72;
     const g=new T.Group();g.userData.explanation=text.shelter;g.position.set(x,r.height(x,z),z);
     const wall=object(wallGeo,walls,"shelter"),cap=object(roofGeo,roof,"shelter");wall.position.y=.14;cap.position.y=.33;cap.rotation.y=Math.PI/4;
-    const beam=object(braceGeo,brace,"shelter");beam.position.set(0,.15,.105);beam.rotation.z=.48;g.add(wall,cap,beam);r.settlement.add(g);buildings.push(g);
+    const beam=object(braceGeo,brace,"shelter");beam.position.set(0,.15,.105);beam.rotation.z=.48;g.add(wall,cap,beam);r.settlement.add(g);buildings.push(g);baseX.push(x);
   }
   const route=line(Array.from({length:28},(_,i)=>{const x=1-i*.16,z=-1.1+Math.sin(i/7)*.38;return vec(x,r.height(x,z)+.14,z);}),0xffde72,"route");r.settlement.add(route);
-  r.onAnimate(t=>{route.visible=r.protection&&r.exposure!=="empty";buildings.forEach((g,i)=>{
+  const beacon=object(new T.ConeGeometry(.12,.45,6),chips(0xe3a349),"route");beacon.position.set(1,r.height(1,-1.1)+.22,-1.1);r.settlement.add(beacon);
+  const walkers=new T.InstancedMesh(new T.SphereGeometry(.045,6,5),chips(0xf5d78a),10);r.settlement.add(walkers);const dummy=new T.Object3D();
+  r.onAnimate(t=>{route.visible=r.safeRoute&&r.exposure!=="empty";beacon.visible=r.warning&&r.exposure!=="empty";walkers.visible=route.visible&&r.warning;
+    for(let i=0;i<10;i++){const phase=T.MathUtils.clamp((t-.38)*1.8+i*.026,0,1),x=1-phase*4.32,z=-1.1+Math.sin(phase*27/7)*.38;dummy.position.set(x,r.height(x,z)+.17,z);dummy.updateMatrix();walkers.setMatrixAt(i,dummy.matrix);}walkers.instanceMatrix.needsUpdate=true;
+    buildings.forEach((g,i)=>{g.position.x=r.relocate?baseX[i]*.62-1.7:baseX[i];g.position.y=r.height(g.position.x,g.position.z);
     const x=g.position.x;g.visible=r.exposure==="dense"||(r.exposure==="sparse"&&i%5===0);g.children[2].visible=r.protection;
     const rel=(t-.42)*17.-Math.abs(x)*.69,shaking=rel>0?Math.sin(rel*13)*Math.exp(-rel*1.22):0;
     const ground=x>0?1.65:.77;g.rotation.z=shaking*.13*ground*(r.protection?.44:1);});});

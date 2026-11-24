@@ -29,25 +29,25 @@ jobs:
         env:
           TEST_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
         run: node tests/mac-abnahme.mjs
-      - run: python3 scripts/mac_evidence.py
+      - run: python3 scripts/g5/report.py
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
-          path: artifacts/GeoRisiko-Mac-Abnahme.zip
+          path: artifacts/GeoRisiko-G5-Sichtpruefung.zip
           archive: false
           if-no-files-found: error
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
-          path: artifacts/macos/GeoRisiko-macOS-arm64.dmg
+          path: artifacts/macos/GeoRisiko-G5-macOS-arm64.dmg
           archive: false
           if-no-files-found: error
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
-          path: artifacts/macos/GeoRisiko-macOS-arm64-app.zip
+          path: artifacts/macos/GeoRisiko-G5-macOS-arm64-app.zip
           archive: false
           if-no-files-found: error
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
-          path: artifacts/GeoRisiko-Web-Test.html
+          path: artifacts/GeoRisiko-G5-Web-Test.html
           archive: false
           if-no-files-found: error
       - if: always()
@@ -57,3 +57,4 @@ jobs:
           path: |
             test-results/mac/*.log
             test-results/mac/*.json
+            test-results/mac/G5/*.json

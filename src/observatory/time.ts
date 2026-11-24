@@ -8,13 +8,13 @@ type Evidence={name:string;kind:string;coords:[number,number][]};
 const fragment=`
 uniform sampler2D first,second;uniform float blend,future;varying vec2 coord;varying vec3 norm;
 void main(){
- vec2 a=texture2D(first,coord).rg,b=texture2D(second,coord).rg;
+ vec3 a=texture2D(first,coord).rgb,b=texture2D(second,coord).rgb;
  float land=mix(a.x,b.x,blend),boundary=mix(a.y,b.y,blend);
  float lat=abs(coord.y-.5)*2.;float light=clamp(dot(normalize(norm),normalize(vec3(-.4,.6,1.))),0.,1.);
  vec3 sea=mix(vec3(.048,.17,.22),vec3(.11,.27,.32),light);
  vec3 earth=mix(vec3(.57,.53,.355),vec3(.68,.72,.52),lat*.57+light*.36);
  earth=mix(earth,earth*vec3(1.10,.91,.78),future);
- vec3 col=mix(sea,earth,land*(1.-future));col=mix(col,vec3(.89,.74,.51),boundary*.88);
+ vec3 col=mix(sea,earth,land*(1.-future));col=mix(col,vec3(.66,.48,.33),mix(a.b,b.b,blend)*.23*(1.-future));col=mix(col,vec3(.89,.74,.51),boundary*.88);
  float rim=pow(1.-abs(normalize(norm).z),4.);
  gl_FragColor=vec4(col*(.72+.32*light)+vec3(.11,.21,.24)*rim,1.);
 }`;
@@ -58,7 +58,7 @@ export class TimeGlobe {
   private prepare(model:Scenario,idx:number){
     const year=Math.min(Math.abs(this.year),scenarios[model].end),lo=Math.floor(year/5)*5,hi=Math.min(scenarios[model].end,lo+5),key=model+"-"+lo+":"+model+"-"+hi;
     const view=idx?this.other:this.primary;
-    if(this.displayed[idx]===key){view.material.uniforms.blend.value=(year-lo)/5;return;}
+    if(this.displayed[idx]===key){this.channels[idx]=key;view.material.uniforms.blend.value=(year-lo)/5;return;}
     if(this.channels[idx]===key)return;this.channels[idx]=key;
     void Promise.all([this.load(model+"-"+lo),this.load(model+"-"+hi)]).then(([a,b])=>{
       if(this.disposed||this.channels[idx]!==key)return;

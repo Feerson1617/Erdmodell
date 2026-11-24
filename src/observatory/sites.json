@@ -1,10 +1,10 @@
 {
   "san": {
     "name": "Kalifornien \u00b7 Parkfield",
-    "lat": 35.9,
-    "lon": -120.43,
+    "lat": 35.8773145,
+    "lon": -120.43046799999999,
     "width": 38,
-    "strike": 138,
+    "strike": 139.863,
     "process": "transform"
   },
   "japan": {

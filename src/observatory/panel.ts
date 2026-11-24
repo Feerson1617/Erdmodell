@@ -4,6 +4,7 @@ import type { World } from "../world";
 import { R } from "../geo";
 import {center, type Step} from "../tectonics/atlas";
 import {classify,localStrike,processNames,sites,type Site} from "./boundaries";
+import viewCentres from "./time-focus.json";
 import {TimeGlobe,scenarios,type Scenario} from "./time";
 import { MapLayers } from "./globe";
 import { RegionalScene, reference, type RegionSpec, type Theme } from "./regional";
@@ -52,6 +53,7 @@ export class Observatory {
   }
   async openMap(purpose:"events"|"boundaries"="events"){
     this.base();this.mode="map";this.mapPurpose=purpose;this.theme="earthquake";this.mark();
+    if(purpose==="events")this.world.nav.fly({lat:12,lon:-146,d:15300,tilt:0,bearing:0},true);
     this.maps.group.visible=true;this.maps.events.visible=purpose==="events";this.maps.boundaries.visible=true;
     this.maps.event=undefined;this.maps.selectedStep=undefined;this.draw();
     const rev=this.revision;
@@ -151,16 +153,25 @@ export class Observatory {
     const byTheme:Partial<Record<Theme,string[]>>={process:["Ausgangszustand","Langsame Plattenbewegung","Gestein verformt sich","Grenzbereich verändert sich","Zustände vergleichen"],volcano:["Ausgangszustand","Material steigt auf","Gestein schmilzt teilweise","Magma steigt auf","Vulkanbildung"],magnet:["Rücken","Neuer Boden entsteht","Gestein kühlt ab","Magnetfeld wird aufgezeichnet","Älterer Boden wandert nach außen"],forces:["Wärme im Inneren","Mantelgestein bewegt sich","Dichte Lithosphäre sinkt","Zug an der Platte","Kräfte wirken zusammen"],risk:["Gleiches Modellbeben","Spannung steigt","Bruch am Herd","Erschütterung am Standort","Folgen vergleichen"]};
     if(byTheme[r.spec.theme])return byTheme[r.spec.theme]![Math.min(4,Math.floor(r.progress*5))];return r.progress<.05?"Ausgangszustand":r.progress<.35?"Spannung baut sich auf":r.progress<.47?"Bruch und Versatz":r.progress<.85?"Wellen breiten sich aus":"Nach dem Ereignis";}
   private updateLabels(r:RegionalScene){
-    const visible=r.names&&r.cut&&r.spec.theme==="earthquake";
-    if(!visible){if(this.labels.childElementCount)this.labels.replaceChildren();return;}
-    const b=$("earth").getBoundingClientRect();
-    if(!this.labels.childElementCount){for(const name of ["Erdbebenherd","Epizentrum"]) {const el=document.createElement("span");el.textContent=name;this.labels.append(el);}}
-    [r.focus,r.epicenter].forEach((a,i)=>{const v=new T.Vector3(a[0],a[1],.085).project(r.camera),el=this.labels.children[i] as HTMLElement;el.style.left=((1+v.x)*b.width/2)+"px";el.style.top=((1-v.y)*b.height/2)+"px";});
+    if(!r.names){if(this.labels.childElementCount)this.labels.replaceChildren();return;}
+    const positions:{name:string;p:T.Vector3}[]=[];
+    if(r.cut&&r.spec.theme==="earthquake"){
+      for(const [name,coords] of [["Erdbebenherd",r.focus],["Epizentrum",r.epicenter]] as const)positions.push({name,p:new T.Vector3(coords[0],coords[1],.085)});
+    }else{
+      const ids:Partial<Record<Theme,string[]>>={forces:["Wärme aus dem Erdinneren","Kraft am Rücken","Zug der absinkenden Platte"],lithosphere:["Erdkruste","Starrer oberster Mantel","Langsam verformbarer Mantel"],volcano:["Magmareservoir","Lava und Eruption"],risk:["Gebäude","Evakuierungsweg"],magnet:["Magnetstreifen"]};
+      for(const name of ids[r.spec.theme]??[]){
+        let match:T.Object3D|undefined;r.scene.traverseVisible(o=>{if(!match&&o.userData.explanation?.name===name)match=o;});
+        if(!match)continue;const box=new T.Box3().setFromObject(match),v=box.getCenter(new T.Vector3());if(!box.isEmpty())positions.push({name,p:v});
+      }
+    }
+    const b=$("earth").getBoundingClientRect(),key=positions.map(v=>v.name).join("|");
+    if(this.labels.dataset.key!==key||this.labels.childElementCount!==positions.length){this.labels.dataset.key=key;this.labels.replaceChildren();for(const a of positions){const el=document.createElement("span");el.textContent=a.name;this.labels.append(el);}}
+    positions.forEach(({p},i)=>{const v=p.project(r.camera),el=this.labels.children[i] as HTMLElement;el.style.left=((1+v.x)*b.width/2)+"px";el.style.top=((1-v.y)*b.height/2)+"px";});
   }
   diagnostics(){const r=this.region;return {mode:this.mode,site:r?.spec.site,process:r?.spec.process,theme:this.theme,ready:r?.ready??(this.maps.steps.length>0),progress:r?.progress,cut:r?.cut,focus:r?.focus,epicenter:r?.epicenter,events:this.maps.rows.length,steps:this.maps.steps.length,selected:this.maps.selectedStep?.[0],...this.timeDiagnostics()};}
   private enrich(r:RegionalScene){addTeachingModels(r);}
   private extraControls(r:RegionalScene){
-    if(r.spec.theme==="risk")return '<label>Raumnutzung<select id="g-exposure">'+opts({empty:"Unbesiedelt",sparse:"Einzelne Häuser",dense:"Dichte Siedlung"},r.exposure)+'</select></label><label><input type="checkbox" id="g-protect" '+(r.protection?"checked":"")+'> Bauweise und Wege verbessern</label>';
+    if(r.spec.theme==="risk")return '<label>Raumnutzung<select id="g-exposure">'+opts({empty:"Unbesiedelt",sparse:"Einzelne Häuser",dense:"Dichte Siedlung"},r.exposure)+'</select></label><label><input type="checkbox" id="g-protect" '+(r.protection?"checked":"")+'> Bauweise verstärken</label><details><summary>Weitere Schutzmaßnahmen</summary><label><input type="checkbox" id="g-route" '+(r.safeRoute?"checked":"")+'> Fluchtweg markieren</label><label><input type="checkbox" id="g-warning" '+(r.warning?"checked":"")+'> Warnung und Evakuierung üben</label><label><input type="checkbox" id="g-relocate" '+(r.relocate?"checked":"")+'> Siedlung verlagern</label></details>';
     if(r.spec.theme==="process")return button("g-quake-from-process","Erdbeben erklären");
     if(r.spec.theme==="earthquake")return button("g-risk","Folgen am Standort vergleichen");
     return "";
@@ -173,6 +184,7 @@ export class Observatory {
     if(r.spec.theme==="risk")return item("Magnitude und Intensität","Die Magnitude beschreibt die Größe des Bebens an der Quelle. Die Intensität beschreibt, wie stark die Erschütterung an einem Ort erlebt wird. Im Modell schwingen die Häuser rechts auf lockerem Boden stärker.")+item("Was bedeutet Momenten-Magnitude?","Forschende schätzen die Größe des Bebens aus der gebrochenen Fläche, dem Versatz und der Steifigkeit des Gesteins. Das Modell berechnet keinen Zahlenwert.")+item("Wie können wir vorsorgen?","Bauweise, erreichbare Fluchtwege und geübte Abläufe können die Folgen mindern. Warnungen müssen die Menschen auch erreichen.")+item("Was ist abzuwägen?","Umbau kostet Geld. Freie Fluchtwege benötigen Platz. Betroffene Menschen können mitentscheiden, wo gebaut und wie der Wiederaufbau vorbereitet wird.");
     return r.spec.theme==="earthquake"?item("Was sind P- und S-Wellen?","Goldene Punkte schwingen vor und zurück. Das zeigt die schnellere P-Welle. Türkise Punkte schwingen quer zur Laufrichtung. Diese S-Welle läuft nur durch festes Material.")+item("Was zeigen die zwei Orte?","Der Bruch beginnt im Erdbebenherd. Direkt darüber liegt an der Oberfläche das Epizentrum.")+item("Wann entsteht ein Tsunami?","Wenn sich ein großer Teil des Meeresbodens hebt oder senkt, bewegt er die Wassersäule. Lange Wasserwellen laufen zur Küste und können dort höher werden."):"";}
   private bindExtra(r:RegionalScene){
+    this.change("g-route",()=>{r.safeRoute=!r.safeRoute;});this.change("g-warning",()=>{r.warning=!r.warning;});this.change("g-relocate",()=>{r.relocate=!r.relocate;});
     this.change("g-exposure",v=>{r.exposure=v;});this.change("g-protect",()=>{r.protection=!r.protection;});
     this.action("g-quake-from-process",()=>void this.openRegion({...r.spec,theme:"earthquake"}));
     this.action("g-risk",()=>void this.openRegion({...r.spec,theme:"risk"}));
@@ -194,13 +206,18 @@ export class Observatory {
     const b=$("earth").getBoundingClientRect(),ray=new T.Raycaster();ray.setFromCamera(new T.Vector2((x-b.x)/b.width*2-1,1-(y-b.y)/b.height*2),this.world.nav.camera);
     const name=this.timeline?.pick(ray);if(name)$("g-evidence-name").textContent=name;
   }
+  private focusTime(){
+    const t=this.timeline;if(!t)return;
+    const [lat,lon]=viewCentres[t.model][Math.round(Math.abs(t.year)/5)];
+    this.world.nav.fly({lat,lon,d:15500,tilt:0,bearing:0},true);
+  }
   private closeTime(){this.timeline?.dispose();this.timeline=undefined;$("g-split-caption")?.remove();}
   private drawTime(){
     const t=this.timeline;if(!t)return;
     const labels={past:"Vergangenheit bis heute",ultima:"Pangaea Ultima",novo:"Novopangaea",aurica:"Aurica",amasia:"Amasia"};
     this.side.innerHTML='<p class="g-kicker">Plattentektonik</p><h1>Zeitreise</h1><div class="g-stack"><h2 id="g-age"></h2><small id="g-certainty"></small>'+
       '<label>Zeit wählen<input type="range" min="-250" max="'+(t.scenario==="past"?0:scenarios[t.scenario].end)+'" step=".1" id="g-year" value="'+t.year+'"></label>'+
-      '<div class="g-buttons">'+button("g-reverse","Rückwärts")+button("g-time-play","Abspielen")+button("g-today","Heute")+'</div>'+
+      '<div class="g-buttons">'+button("g-reverse","Rückwärts")+button("g-time-play","Abspielen")+button("g-today","Heute")+button("g-time-focus","Flächen zentrieren")+'</div>'+
       '<label>Station<select id="g-station">'+opts({"-250":"Pangäa","-200":"Beginnende Aufspaltung","-150":"Weitere Trennung","-100":"Atlantik öffnet sich","-50":"Indien nähert sich Eurasien","0":"Gegenwart"},String(t.year))+'</select></label>'+
       '<label>Zeitmodell<select id="g-scenario">'+opts(labels,t.scenario)+'</select></label>'+
       (t.scenario!=="past"?'<label><input id="g-compare" type="checkbox" '+(t.compare?"checked":"")+'> Zwei Möglichkeiten vergleichen</label>':'')+
@@ -213,10 +230,11 @@ export class Observatory {
     const age=$<HTMLInputElement>("g-year");age.oninput=()=>{t.playing=false;t.setYear(Number(age.value));};
     this.action("g-reverse",()=>{if(t.year<=-250)t.setYear(0);t.direction=-1;t.playing=true;});
     this.action("g-time-play",()=>{if(t.playing){t.playing=false;return;}t.direction=1;if(t.year===(t.scenario==="past"?0:scenarios[t.scenario].end))t.setYear(t.scenario==="past"?-250:0);t.playing=true;});
+    this.action("g-time-focus",()=>this.focusTime());
     this.action("g-today",()=>{t.playing=false;t.setYear(0);this.draw();});
     this.change("g-speed",v=>{t.speed=Number(v);});
     this.change("g-station",v=>{t.playing=false;t.setYear(Number(v));this.draw();});
-    this.change("g-scenario",v=>{t.playing=false;t.scenario=v as Scenario;t.setYear(v==="past"?Math.min(0,t.year):Math.min(Math.max(5,t.year),scenarios[t.scenario].end));this.draw();});
+    this.change("g-scenario",v=>{t.playing=false;t.scenario=v as Scenario;t.setYear(v==="past"?Math.min(0,t.year):Math.min(Math.max(5,t.year),scenarios[t.scenario].end));this.focusTime();this.draw();});
     this.change("g-compare",()=>{if(t.year<=0)t.setYear(5);t.compare=!t.compare;this.draw();});
     const text:Record<string,string>={margin:"Die Ränder Südamerikas und Afrikas liegen in der Rekonstruktion näher beieinander. Auch überflutete Teile gehören zum Kontinent.",fossil:"Reste des Süßwasserreptils Mesosaurus finden sich im Paraná- und im Karoo-Becken. Die Punkte markieren Fundregionen. Die Tiere lebten vor der hier gezeigten Zeit.",rock:"In den Appalachen und im kaledonischen Gebirgsgürtel finden sich Spuren einer gemeinsamen alten Gebirgsbildung. Die Punkte markieren Untersuchungsregionen.",india:"Indien wandert im Modell nach Norden.",australia:"Australien trennt sich von der Antarktis."};
     this.change("g-evidence-kind",v=>{t.layer=v;if(t.year>0)t.setYear(0);$("g-evidence-info").textContent=text[v]||"";$("g-evidence-name").textContent="";});

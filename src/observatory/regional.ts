@@ -1,5 +1,6 @@
 import * as T from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import traces from "./traces.json";
 import { localAsset } from "../assets";
 import { sites, type Process, type Site } from "./boundaries";
 
@@ -50,12 +51,12 @@ export class RegionalScene {
   readonly front=new T.Group();readonly section=new T.Group();readonly labels=new T.Group();
   readonly witnesses=new T.Group();readonly settlement=new T.Group();readonly mechanisms=new T.Group();
   private ui={t:{value:0},kind:{value:0},focus:{value:-1},vertical:{value:1},clock:{value:0},stress:{value:0},sense:{value:1},opening:{value:0}};
-  private groundData?:Int16Array;private colorMap?:T.Texture;private normalMap?:T.Texture;private roughMap?:T.Texture;private sky:T.CanvasTexture;private reveal=0;private transition?:{from:T.Vector3;to:T.Vector3;look:T.Vector3;goal:T.Vector3;fraction:number};
+  private groundData?:Int16Array;private colorMap?:T.Texture;private normalMap?:T.Texture;private roughMap?:T.Texture;private sky:T.CanvasTexture;private contextMap?:T.Texture;private reveal=0;private transition?:{from:T.Vector3;to:T.Vector3;look:T.Vector3;goal:T.Vector3;fraction:number};
   private waves:T.Line[]=[];private particles:T.InstancedMesh[]=[];private fault!:T.Line;private rupture!:T.Line;
   private waterColumn?:T.Mesh; private nearSurface=0;private rockMaterial:T.Material[]=[];
   private people:T.Mesh[]=[];private route?:T.Line;private motion:((t:number)=>void)[]=[];
   progress=0;playing=false;slow=false;cut=false;names=false;vertical=true;stress=false;
-  protection=false;exposure="dense";ready=false;error="";private disposed=false;private age=0;
+  protection=false;safeRoute=false;warning=false;relocate=false;exposure="dense";ready=false;error="";private disposed=false;private age=0;
   constructor(readonly spec:RegionSpec,canvas:HTMLCanvasElement){
     this.orbit=new OrbitControls(this.camera,canvas);this.orbit.target.set(0,0,0);
     this.orbit.enablePan=false;this.orbit.minDistance=4;this.orbit.maxDistance=22;this.orbit.maxPolarAngle=1.49;
@@ -88,14 +89,31 @@ export class RegionalScene {
   async init(){
     if(this.spec.site){
       const base="data/g5/terrain/"+this.spec.site;
-      const [response,tex,normal,rough]=await Promise.all([fetch(localAsset(base+".i16")),new T.TextureLoader().loadAsync(localAsset(base+"-surface.webp")),new T.TextureLoader().loadAsync(localAsset(base+"-normal.webp")),new T.TextureLoader().loadAsync(localAsset(base+"-rough.webp"))]);
-      if(this.disposed){tex.dispose();normal.dispose();rough.dispose();return;}
+      const [response,tex,normal,rough,farHeight,farImage]=await Promise.all([fetch(localAsset(base+".i16")),new T.TextureLoader().loadAsync(localAsset(base+"-surface.webp")),new T.TextureLoader().loadAsync(localAsset(base+"-normal.webp")),new T.TextureLoader().loadAsync(localAsset(base+"-rough.webp")),fetch(localAsset(base+"-context.i16")),new T.TextureLoader().loadAsync(localAsset(base+"-context.webp"))]);
+      if(this.disposed){tex.dispose();normal.dispose();rough.dispose();farImage.dispose();return;}
       if(!response.ok)throw Error("Höhendaten fehlen");
-      const heights=new Int16Array(await response.arrayBuffer());if(heights.length!==193*145)throw Error("Höhenraster unvollständig");
-      if(this.disposed){tex.dispose();normal.dispose();rough.dispose();return;}this.groundData=heights;this.colorMap=tex;this.normalMap=normal;this.roughMap=rough;normal.anisotropy=4;tex.colorSpace=T.SRGBColorSpace;tex.anisotropy=4;
+      const [heightBytes,contextBytes]=await Promise.all([response.arrayBuffer(),farHeight.arrayBuffer()]);const heights=new Int16Array(heightBytes);if(heights.length!==193*145)throw Error("Höhenraster unvollständig");
+      if(this.disposed){tex.dispose();normal.dispose();rough.dispose();farImage.dispose();return;}this.groundData=heights;this.colorMap=tex;this.normalMap=normal;this.roughMap=rough;normal.anisotropy=4;tex.colorSpace=T.SRGBColorSpace;tex.anisotropy=4;this.contextMap=farImage;farImage.colorSpace=T.SRGBColorSpace;this.surround(new Int16Array(contextBytes),farImage);
     }
     this.nearSurface=this.height(0,0);this.ui.focus.value=this.nearSurface-1.18;
-    this.buildSurface();this.groundDetails();this.buildQuake();this.buildExtras();this.ready=true;this.update(0);
+    this.buildSurface();this.addTrace();this.groundDetails();this.buildQuake();this.buildExtras();this.ready=true;this.update(0);
+  }
+  private surround(h:Int16Array,image:T.Texture){
+    if(h.length!==145*109)throw Error("Das Landschaftsumfeld fehlt.");
+    const gain=(this.spec.site==="japan"?4.7:2.4)*.012/sites[this.spec.site!].width;
+    const terrain=new T.MeshStandardMaterial({map:image,roughness:.94,side:T.DoubleSide});
+    const water=new T.MeshStandardMaterial({color:0x39818a,roughness:.33,metalness:.12,transparent:true,opacity:.72,side:T.DoubleSide});
+    for(const front of [false,true])for(const [x0,x1,z0,z1] of [[-24,-6,0,18],[6,24,0,18],[-6,6,4.5,18]]){
+      const parent=front?this.front:this.scene,cols=Math.ceil((x1-x0)*3),rows=Math.ceil((z1-z0)*4);
+      const geometry=(sea:boolean)=>indexed(rows,cols,(i,j)=>{
+        const x=x0+i/cols*(x1-x0),z=(front?1:-1)*(z0+j/rows*(z1-z0)),u=x/48+.5,v=z/36+.5;
+        const fx=u*144,fy=v*108,a=Math.min(143,Math.floor(fx)),b=Math.min(107,Math.floor(fy)),dx=fx-a,dy=fy-b;
+        let y=gain*((1-dy)*((1-dx)*h[b*145+a]+dx*h[b*145+a+1])+dy*((1-dx)*h[(b+1)*145+a]+dx*h[(b+1)*145+a+1]));
+        if(Math.abs(x)<=6.001&&Math.abs(z)<=4.501)y=this.height(x,z);
+        return [x,sea?-.006:y,z,u,1-v];
+      },!front);
+      parent.add(mesh(geometry(false),terrain,"Landschaftsumfeld"));if(["japan","hawaii","island"].includes(this.spec.site!))parent.add(mesh(geometry(true),water,"Offenes Meer"));
+    }
   }
   private rock(surface:boolean,side:number){
     const mat=new T.MeshStandardMaterial({color:surface?(this.colorMap?0xffffff:0x87936e):0xcb9873,
@@ -131,7 +149,7 @@ export class RegionalScene {
         return [x,y,0,i/96,j/36];},true);
       this.section.add(mesh(wall,section,"Geologischer Schnitt"));
     }
-    if(this.spec.site==="japan"||this.spec.site==="hawaii"||this.spec.site==="island"||["oceanTransform","subduction","arc","ridge"].includes(this.spec.process)){
+    if(!["forces","lithosphere"].includes(this.spec.theme)&&(this.spec.site==="japan"||this.spec.site==="hawaii"||this.spec.site==="island"||["oceanTransform","subduction","arc","ridge"].includes(this.spec.process))){
       for(const front of [false,true]){
         const g=indexed(42,112,(i,j)=>{const x=-6+12*i/112,z=(front?0:-4.5)+4.5*j/42;return [x,0,z,i/112,j/42];});
         const water=new T.MeshStandardMaterial({color:0x287a88,roughness:.29,metalness:.16,transparent:true,opacity:.78,side:T.DoubleSide,depthWrite:false});
@@ -148,6 +166,19 @@ export class RegionalScene {
       }
       this.waterColumn=mesh(new T.CylinderGeometry(.22,.22,1,24),new T.MeshBasicMaterial({color:0x66dacf,transparent:true,opacity:.36}),"Verdrängte Wassersäule");this.section.add(this.waterColumn);
     }
+  }
+  private addTrace(){
+    const site=this.spec.site;if(site!=="san"&&site!=="japan")return;
+    const s=sites[site],angle=s.strike*Math.PI/180,trace=traces[site],points:T.Vector3[]=[];
+    const rows=trace.points;
+    for(let i=1;i<rows.length;i++){const a=rows[i-1],b=rows[i];
+      for(let j=0;j<=20;j++){const f=j/20,lon=a[0]+f*(b[0]-a[0]),lat=a[1]+f*(b[1]-a[1]);
+        const east=(lon-s.lon)*111.195*Math.cos(s.lat*Math.PI/180)*12/s.width,north=(lat-s.lat)*111.195*12/s.width;
+        const x=east*Math.cos(angle)-north*Math.sin(angle),z=-east*Math.sin(angle)-north*Math.cos(angle);
+        if(Math.abs(x)<6&&Math.abs(z)<4.5)points.push(new T.Vector3(x,this.height(x,z)+.034,z));}}
+    if(points.length<2)return;
+    const m=path(points,site==="san"?0xe7c38e:0x88d6ce,trace.name);m.userData.explanation={name:trace.name,answer:site==="san"?"Die Linie folgt dem kartierten Parkfield-Abschnitt der San-Andreas-Störung.":"Die Linie folgt der Lage des Japangrabens im USGS-Datensatz. Die tiefere Bruchfläche bleibt ein Modell."};
+    this.scene.add(m);this.onAnimate(()=>{m.visible=this.names&&!this.cut;});
   }
   private groundDetails(){
     if(!this.colorMap||!this.spec.site)return;
@@ -226,6 +257,6 @@ export class RegionalScene {
   dispose(){
     this.disposed=true;this.orbit.dispose();const gs=new Set<T.BufferGeometry>(),ms=new Set<T.Material>();
     this.scene.traverse(o=>{const m=o as T.Mesh;if(m.geometry)gs.add(m.geometry);if(m.material)for(const a of Array.isArray(m.material)?m.material:[m.material])ms.add(a);});
-    for(const g of gs)g.dispose();for(const m of ms)m.dispose();this.colorMap?.dispose();this.normalMap?.dispose();this.roughMap?.dispose();this.sky.dispose();
+    for(const g of gs)g.dispose();for(const m of ms)m.dispose();this.colorMap?.dispose();this.normalMap?.dispose();this.roughMap?.dispose();this.sky.dispose();this.contextMap?.dispose();
   }
 }
