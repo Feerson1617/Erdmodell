@@ -1,4 +1,5 @@
 import * as T from "three";
+import {lavaTongue} from "./lava-flow";
 import {localAsset} from "../assets";
 import {libraryGLSL,type Library} from "./graphics";
 import {scannedSpecimen} from "./local-specimens";
@@ -27,6 +28,7 @@ export class LocalLandscape{
   readonly scene=new T.Scene();
   private readonly root=new T.Group();
   private readonly halves=[new T.Group(),new T.Group()];
+  private lava?:ReturnType<typeof lavaTongue>;
   private readonly sun=new T.DirectionalLight(0xffe7c6,2.15);
   private terrain:number[][]=[];
   private photo?:T.Texture;
@@ -34,7 +36,7 @@ export class LocalLandscape{
   revision=0;
   private sets:{group:T.InstancedMesh;near:T.BufferGeometry;mid:T.BufferGeometry;matrices:T.Matrix4[];middle:T.InstancedMesh;scans:T.InstancedMesh[];type:string}[]=[];
   private lastZone="";
-  constructor(readonly site:Site,private lib:Library,private grade:{value:number}){
+  constructor(readonly site:Site,private lib:Library,private grade:{value:number},private regionalRise:(x:number,z:number)=>number,private volcanic:boolean){
     this.scene.background=new T.Color(0xb8cfda);this.scene.fog=new T.FogExp2(0xb9cbd1,.010);
     this.scene.add(new T.HemisphereLight(0xe9f2ff,0xab9978,1.68),this.sun,this.sun.target,this.root);
     this.root.scale.setScalar(.1);this.root.add(...this.halves);this.sun.position.set(-12,17,8);
@@ -57,12 +59,21 @@ export class LocalLandscape{
       const g=new T.BufferGeometry();g.setAttribute("position",new T.Float32BufferAttribute(p,3));g.setIndex(idx);g.computeVertexNormals();
       const mesh=new T.Mesh(g,ground);mesh.receiveShadow=true;this.halves[half].add(mesh);
     }
+    if(site==="island"){
+      this.lava=lavaTongue(3.4);this.lava.build(-2,-16,Math.PI*.49,52,0,(x,z)=>this.surface(x,z));this.root.add(this.lava.mesh);
+    }
     this.plant();
   }
   private height(x:number,z:number){
     const broad=noise(x*.023,z*.023),fine=noise(x*.41,z*.41),grain=noise(x*.12,z*.12);
     const gully=Math.exp(-((x-7-3*Math.sin(z*.065))**2)/7);
     const outside=Math.max(0,Math.hypot(x,z)-400);
+    if(this.site==="island"){
+      const fissure=x+2-1.9*Math.sin((z+16)*.045),cross=Math.abs(fissure);
+      const shoulder=1.2*Math.exp(-((cross-3.3)**2)/3.4);
+      return -.078*z-2.15*Math.exp(-cross*cross/3.8)+shoulder+.85*(broad-.5)+.33*grain+.22*fine+
+        outside*(.07+.13*noise(x*.003,z*.004))+this.regionalRise(x,z)*T.MathUtils.smoothstep(Math.hypot(x,z),72,480);
+    }
     return relief(x-90,z-155)-relief(-90,-155)+.62*(broad-.5)+.31*(grain-.5)+.12*(fine-.5)-.44*gully+
       outside*.115*noise(x*.003,z*.003);
   }
@@ -78,23 +89,35 @@ export class LocalLandscape{
     if(this.site==="san")new T.TextureLoader().load(localAsset("data/g61/parkfield.webp"),tex=>{
       if(this.disposed){tex.dispose();return;}this.photo=tex;tex.colorSpace=T.SRGBColorSpace;tex.anisotropy=4;imagery.value=tex;hasPhoto.value=1;this.revision++;
     });
+    const basalt=this.site==="island";
     m.onBeforeCompile=s=>{
       Object.assign(s.uniforms,{faciesColor:{value:this.lib.color},faciesRelief:{value:this.lib.relief},detailGrade:this.grade,ortho:imagery,hasPhoto});
       s.vertexShader="varying vec3 metres;varying float incline;\n"+s.vertexShader.replace("#include <begin_vertex>","#include <begin_vertex>\nmetres=position;incline=1.-normal.y;");
       s.fragmentShader=libraryGLSL+"varying vec3 metres;varying float incline;uniform sampler2D ortho;uniform float hasPhoto;\n"+s.fragmentShader.replace("#include <color_fragment>",`#include <color_fragment>
         vec2 p=metres.xz;vec2 warp=vec2(sin(p.y*.082+p.x*.035),cos(p.x*.103-p.y*.027))*.10;
         vec2 first=p*.22+warp,second=mat2(.83,.55,-.55,.83)*p*.41+.27;
-        vec3 soil=fieldSample(faciesColor,first,0.).rgb,grit=fieldSample(faciesColor,second,1.).rgb;
+        vec3 soil=fieldSample(faciesColor,first,${basalt?"3.":"0."}).rgb,grit=fieldSample(faciesColor,second,${basalt?"2.":"1."}).rgb;
         float soilMix=smoothstep(-.65,.69,sin(p.x*.16+sin(p.y*.24))*.61+cos(p.y*.19+p.x*.15)*.42+incline*2.);
-        vec3 grain=mix(soil,grit,soilMix*.73);vec3 micro=fieldSample(faciesRelief,first,0.).rgb;
+        vec3 grain=mix(soil,grit,soilMix*.73);vec3 micro=fieldSample(faciesRelief,first,${basalt?"3.":"0."}).rgb;
         vec3 geo=texture2D(ortho,clamp(vec2(.5+(p.x-90.)/1800.,.5-(p.y-155.)/1800.),.001,.999)).rgb;
         float distanceM=length(vViewPosition)*10.;
         vec3 dryBase=mix(vec3(.28,.198,.102),vec3(.40,.31,.16),soilMix);
         vec3 base=mix(dryBase,geo,hasPhoto*mix(.26,.91,smoothstep(28.,155.,distanceM)));
         diffuseColor.rgb=mix(base*clamp(.30+2.5*luma6(grain),.33,1.65),grain*vec3(1.04,.85,.62),.73*(1.-smoothstep(22.,110.,distanceM)));
+        ${basalt?"float ledge=smoothstep(.11,.45,incline);vec3 stoneColor=mix(grain*vec3(.83,.87,.90),grit*vec3(.61,.74,.48),.32*soilMix*(1.-ledge));float distant=smoothstep(45.,210.,distanceM);diffuseColor.rgb=mix(stoneColor,vec3(.084,.088,.083)*(.89+.13*cos(p.x*.013+sin(p.y*.019))),distant);":""}
       `).replace("#include <normal_fragment_maps>","#include <normal_fragment_maps>\nnormal=normalize(normal+mat3(viewMatrix)*vec3(micro.r-.5,0.,micro.g-.5)*.61);")
       .replace("#include <roughnessmap_fragment>","#include <roughnessmap_fragment>\nroughnessFactor=clamp(.65+.29*micro.b,.64,.99);");
     };return m;
+  }
+  private stoneMaterial(moss:boolean){
+    const mat=new T.MeshStandardMaterial({side:T.DoubleSide,roughness:.93,flatShading:!moss});const tile=moss?2:this.site==="island"?3:1;
+    mat.onBeforeCompile=s=>{Object.assign(s.uniforms,{faciesColor:{value:this.lib.color},faciesRelief:{value:this.lib.relief},detailGrade:this.grade});
+      s.vertexShader="varying vec3 mineralPoint;\n"+s.vertexShader.replace("#include <begin_vertex>","#include <begin_vertex>\nmineralPoint=position;");
+      s.fragmentShader=libraryGLSL+"varying vec3 mineralPoint;\n"+s.fragmentShader.replace("#include <color_fragment>",`#include <color_fragment>
+        vec2 extract=mineralPoint.xz*.87+mineralPoint.y*vec2(.47,.83);
+        vec3 rock=fieldSample(faciesColor,extract,${tile}.).rgb;
+        diffuseColor.rgb=rock*${moss?"vec3(.61,.82,.39)":"vec3(.91,.91,.92)"}*(.48+.58*smoothstep(-.13,.33,mineralPoint.y));
+      `);};mat.customProgramCacheKey=()=>"local-stone-"+tile;return mat;
   }
   private plant(){
     const rng=randomSequence(64119),mat=new T.MeshStandardMaterial({vertexColors:true,side:T.DoubleSide,roughness:.91});
@@ -104,6 +127,13 @@ export class LocalLandscape{
       o.position.set(x,this.surface(x,z)-(kind==="rock"?.12*size:0),z);o.rotation.set(0,rng()*Math.PI*2,0);o.scale.set(size*(.87+.26*rng()),size,size*(.87+.25*rng()));o.updateMatrix();
       if(!batches.has(key))batches.set(key,[]);batches.get(key)!.push(o.matrix.clone());
     };
+    if(this.site==="island"){
+      for(let i=0;i<5200;i++){const x=(rng()-.5)*140,z=(rng()-.53)*170,fissure=Math.abs(x+2-1.9*Math.sin((z+16)*.045)),patch=noise(x*.096,z*.086);
+        if(fissure<1.55||rng()>.21+.72*patch)continue;
+        if(fissure<7||patch<.47)place("rock",x,z,.08+1.08*rng()**3);
+        else place(rng()<.93?"moss":"grass",x,z,.19+.65*rng());
+      }
+    }else{
     for(let i=0;i<14600;i++){
       const span=i%3===0?58:154,x=(rng()-.5)*span,z=(rng()-.53)*span,moist=noise(x*.068,z*.068);
       const outcrop=1-Math.min(1,Math.abs(x-6-4*Math.sin(z*.084))/5);
@@ -117,11 +147,13 @@ export class LocalLandscape{
     }
     place("oak",-8,-12,1.16);place("oak",12,-25,.86);place("shrub",5,-1,1);
     place("rock",2,0,1.32);place("rock",3,.8,.64);
+    }
     for(const [key,matrices] of batches){
       const [kind,side,variant]=key.split("/"),near=specimen(kind as Kind,29+Number(variant)*31),mid=specimen(kind as Kind,29+Number(variant)*31,true);
-      const group=new T.InstancedMesh(near,mat,matrices.length);
+      const material=kind==="rock"||kind==="moss"?this.stoneMaterial(kind==="moss"):mat;
+      const group=new T.InstancedMesh(near,material,matrices.length);
       matrices.forEach((m,i)=>group.setMatrixAt(i,m));group.castShadow=kind!=="grass";group.receiveShadow=true;group.name=kind;
-      const middle=new T.InstancedMesh(mid,mat,matrices.length);middle.castShadow=kind==="oak";middle.receiveShadow=true;
+      const middle=new T.InstancedMesh(mid,material,matrices.length);middle.castShadow=kind==="oak";middle.receiveShadow=true;
       this.halves[Number(side)].add(group,middle);const scans:T.InstancedMesh[]=[];this.sets.push({group,near,mid,matrices,middle,scans,type:kind});
       scannedSpecimen(kind)?.then(parts=>{
         if(this.disposed)return;
@@ -133,10 +165,11 @@ export class LocalLandscape{
     }
   }
   pose(view:string){
-    const [x,z,tx,tz,eye]=view===positions[0]?[22,37,0,-10,9]:[5,9,0,-7,1.9];
+    const [x,z,tx,tz,eye]=this.site==="island"?(view==="local"?[17,26,-1,-10,7.2]:[5,5,-2,-13,2.5]):view===positions[0]?[22,37,0,-10,9]:[5,9,0,-7,1.9];
     return {position:new T.Vector3(x,this.surface(x,z)+eye,z).multiplyScalar(.1),target:new T.Vector3(tx,this.surface(tx,tz)+2.4,tz).multiplyScalar(.1)};
   }
   update(camera:T.PerspectiveCamera,t:number,grade:number){
+    this.lava?.phase(this.volcanic?T.MathUtils.smoothstep(t,.53,.96):0);
     const slip=this.site==="san"?T.MathUtils.smoothstep(t,.35,.51)*.35:0;
     this.halves[0].position.z=-slip;this.halves[1].position.z=slip;
     const cx=camera.position.x*10,cz=camera.position.z*10,key=[Math.round(cx/3),Math.round(cz/3),grade].join("/");

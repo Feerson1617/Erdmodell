@@ -315,7 +315,7 @@ export class RegionalScene {
   }
   private setCameraView(view:string){
     if(localView(view)&&this.spec.site&&this.lib){
-      this.local??=new LocalLandscape(this.spec.site,this.lib,this.grade);
+      this.local??=new LocalLandscape(this.spec.site,this.lib,this.grade,(x,z)=>{const unit=(this.spec.width??sites[this.spec.site!].width)*1000/12;return (this.height(x/unit,z/unit)-this.height(0,0))*unit/(this.spec.site==="japan"?4.7:2.4);},this.spec.theme==="volcano");
       this.view=view;this.cut=false;this.transition=undefined;this.camera.far=240;this.orbit.minDistance=.23;this.orbit.maxDistance=12;
       const pose=this.local.pose(view);this.orbit.target.copy(pose.target);this.camera.position.copy(pose.position);this.orbit.update();return;
     }
