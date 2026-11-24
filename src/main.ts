@@ -78,7 +78,7 @@ function showDefinition(item: Pick<Annotation,"name"|"text">) {
     questions.className = "shellQuestions";
     answer.hidden = true;
     answer.id = "shellAnswer";
-    for (const [label, detail] of [[`Woraus besteht ${pronoun}?`,layer.material],[`Wie ist ${pronoun} entstanden?`,layer.origin]]) {
+    for (const [label, detail] of [["Was ist das?",layer.text],["Welche besondere Eigenschaft hat diese Schale?",["Die Kruste ist unter Kontinenten meist dicker als unter dem Ozean.","Über sehr lange Zeit kann sich das feste Gestein verformen.","Direkte S-Wellen können diese flüssige Schale nicht durchlaufen.","Der große Druck hält den inneren Kern fest."][shellIndex]],["Woher wissen wir das?",["Gesteinsproben und seismische Messungen zeigen den Aufbau der Kruste.","Der Verlauf von Erdbebenwellen gibt Hinweise auf das Gestein im Mantel.","Das Muster vieler Erdbebenaufzeichnungen zeigt einen flüssigen äußeren Kern.","Veränderte Wege von Erdbebenwellen weisen auf einen festen inneren Kern hin."][shellIndex]],[`Woraus besteht ${pronoun}?`,layer.material],[`Wie ist ${pronoun} entstanden?`,layer.origin]]) {
       const question = document.createElement("button");
       question.textContent = label;
       question.setAttribute("aria-expanded","false");
@@ -173,8 +173,9 @@ function renderSide() {
     if (advancedOpen && $("plateSettings")) $<HTMLDetailsElement>("plateSettings").open = true;
     bindPlateControls(side, world, renderSide);
     const extra=document.createElement("div");extra.className="g-atlas-tools";
-    extra.innerHTML='<button id="g-time">Zeitreise</button><button id="g-boundaries">Grenze untersuchen</button>'+(world.selectedBoundary?'<button id="g-selected">Prozess ansehen</button>':'');
+    extra.innerHTML='<button id="g-time">Zeitreise</button><button id="g-forces">Plattenantrieb</button><button id="g-boundaries">Grenze untersuchen</button>'+(world.selectedBoundary?'<button id="g-selected">Prozess ansehen</button>':'');
     side.querySelector("h1")?.after(extra);
+    $("g-forces").onclick=()=>observatory.openConcept("forces");
     $("g-time").onclick=()=>observatory.openTime();
     $("g-boundaries").onclick=()=>void observatory.openMap("boundaries");
     if($("g-selected"))$("g-selected").onclick=()=>observatory.openBoundary(world.selectedBoundary!.step);
@@ -200,6 +201,8 @@ function renderSide() {
   if (mode === "inside") {
     const optionsOpen = !!side.querySelector("#shellOptions[open]");
     side.innerHTML = renderShellControls();
+    const detail=document.createElement("button");detail.id="g-litho";detail.textContent="Außenschichten vergrößern";
+    ($("shellOptions")??side).append(detail);detail.onclick=()=>observatory.openConcept("lithosphere");
     if (optionsOpen) $<HTMLDetailsElement>("shellOptions").open = true;
   }
   if (mode === "inside" || mode === "plates") {
@@ -508,6 +511,7 @@ async function boot() {
   };
   await world.init();
   Object.defineProperty(window, "geoDeviceProbe", {value: deviceProbe});
+  Object.defineProperty(window,"geoBoundaryModels",{value:()=>observatory.coverage()});
   Object.defineProperty(window,"geoAtlasCoverage",{value:()=>world.atlasCoverage()});
   Object.defineProperty(window, "geoObservatory", {
     value: () => ({...world.diagnostics(), observatory:observatory.diagnostics(), annotationDom:{...tectonicPins.work}, shellAnnotationDom:{...shellPins.work}}),

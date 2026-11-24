@@ -1,4 +1,5 @@
 import * as T from "three";
+import { addTeachingModels,topicNames,explanations } from "./teaching-models";
 import type { World } from "../world";
 import { R } from "../geo";
 import {center, type Step} from "../tectonics/atlas";
@@ -29,6 +30,9 @@ export class Observatory {
   constructor(private world:World,private side:HTMLElement,private navigateBase:(mode:"globe"|"plates")=>void){
     world.scene.add(this.maps.group);this.maps.group.visible=false;
     this.labels=document.createElement("div");this.labels.id="observatory-labels";$("earth").parentElement!.append(this.labels);
+    let down=[0,0];const canvas=$("earth");
+    canvas.addEventListener("pointerdown",e=>{down=[e.clientX,e.clientY];});
+    canvas.addEventListener("pointerup",e=>{if(this.mode==="regional"&&Math.hypot(e.clientX-down[0],e.clientY-down[1])<5)this.pickRegion(e.clientX,e.clientY);});
     world.customPick=(x,y)=>this.pick(x,y);
     world.customRender=(dt)=>this.frame(dt);
   }
@@ -61,9 +65,12 @@ export class Observatory {
     try{await reg.init();if(rev===this.revision)this.draw();}
     catch{if(rev===this.revision){reg.error="Das lokale Gelände konnte nicht geladen werden.";this.draw();}}
   }
+  openConcept(theme:"forces"|"lithosphere"){
+    void this.openRegion({name:topicNames[theme],lat:0,lon:-24,strike:0,process:theme==="forces"?"subduction":"convergence",theme});
+  }
   openBoundary(step:Step,theme:Theme="earthquake"){
     const {lat,lon}=center(step),process=classify(step);
-    const spec:RegionSpec={lat,lon,name:processNames[process],strike:localStrike(step),process,theme};
+    const spec:RegionSpec={lat,lon,name:processNames[process],strike:localStrike(step),azimuth:step[8],process,theme};
     for(const key of Object.keys(sites) as Site[]){const s=sites[key];if(s.process===process && Math.hypot(lat-s.lat,(lon-s.lon)*Math.cos(lat*Math.PI/180))<.7){void this.openRegion(reference(key,theme));return;}}
     void this.openRegion(spec);
   }
@@ -76,6 +83,17 @@ export class Observatory {
       this.maps.pick(hit.normalize(),(this.world.nav.pose.d/R)*.018,this.mapPurpose==="events");this.draw();}
     return true;
   }
+  private examples(){
+    const distances:Record<string,[number,number]>={ridge:[-28,-13],transform:[36,-120],oceanTransform:[-55,0],subduction:[38,143],arc:[19,145],collision:[28,85],rift:[-3,36],convergence:[-2,137],complex:[34,70]};
+    const result:Record<string,string>={};
+    for(const [kind,[lat,lon]] of Object.entries(distances)){
+      let d=Infinity,nearest:Step|undefined;
+      for(const s of this.maps.steps){if(classify(s)!==kind)continue;const c=center(s),dl=(c.lon-lon+540)%360-180,dd=(c.lat-lat)**2+(dl*Math.cos(lat*Math.PI/180))**2;if(dd<d){d=dd;nearest=s;}}
+      if(nearest)result[nearest[0]]=processNames[kind as keyof typeof processNames];
+    }
+    return result;
+  }
+  coverage(){return this.maps.steps.map(s=>({id:s[0],pair:s[1],category:s[2],...center(s),strike:localStrike(s),relativeAzimuth:s[8],model:classify(s)}));}
   private action(id:string,fn:()=>void){const b=$(id);if(b)b.onclick=fn;}
   private change(id:string,fn:(value:string)=>void){const b=$<HTMLSelectElement>(id);if(b)b.onchange=()=>fn(b.value);}
   draw(){
@@ -88,22 +106,25 @@ export class Observatory {
         (m.events.visible?'<label><input id="g-depth" type="checkbox" '+(m.depth?"checked":"")+'> Tiefe unterscheiden</label><small>USGS · 2019–2023 · Magnitude ab 6</small>'+(m.depth?'<div class="g-legend"><span>Flach</span><span>Mitteltief</span><span>Tief</span></div>':''):'')+
         (ev?'<h2>Beobachtetes Erdbeben</h2><p>'+ev[1]+' · Magnitude '+ev[5]+' · '+Math.round(ev[4])+' km tief</p>':'')+
         (s?'<h2>'+m.pair+'</h2><p>'+explain[classify(s)]+'</p>'+button("g-segment","Prozess ansehen")+(["ridge","subduction","arc"].includes(classify(s))?button("g-segment-volcano","Vulkanismus ansehen"):''):'')+
+        (this.mapPurpose==="boundaries"?'<label>Grenzbeispiele<select id="g-example"><option value="">Ort auf dem Globus finden …</option>'+opts(this.examples(),"")+'</select></label>':'')+
         '<label>Referenzregion<select id="g-launch"><option value="">Region wählen …</option>'+opts(Object.fromEntries(Object.entries(sites).filter(([k])=>k!=="hawaii").map(([k,v])=>[k,v.name])),"")+'</select></label>'+
         item("Woher wissen wir das?","Seismometer zeichnen Erschütterungen auf. Aus vielen Aufzeichnungen bestimmen Forschende Ort und Tiefe. Ein Kartenpunkt allein verrät die Bruchrichtung nicht.")+back+'</div>';
       this.change("g-quakes",()=>{m.events.visible=!m.events.visible;m.event=undefined;this.draw();});this.change("g-lines",()=>{m.boundaries.visible=!m.boundaries.visible;m.selectedStep=undefined;this.draw();});
       this.change("g-depth",()=>{m.depth=!m.depth;m.recolor();this.draw();});this.change("g-launch",v=>{if(v)void this.openRegion(reference(v as Site,"earthquake"));});
+      this.change("g-example",id=>{const st=m.steps[Number(id)-1];if(!st)return;this.maps.selectedStep=undefined;
+        this.world.nav.fly({...center(st),d:4100,tilt:0,bearing:0},true);this.draw();});
       if(s){this.action("g-segment",()=>this.openBoundary(s));this.action("g-segment-volcano",()=>this.openBoundary(s,"volcano"));}
     }else if(this.mode==="regional"&&this.region){
       const r=this.region,sp=r.spec;
-      this.side.innerHTML='<p class="g-kicker">'+(sp.site?'Regionales Gelände':'Vereinfachtes Modell dieser Grenzart')+'</p><h1>'+sp.name+'</h1><div class="g-stack">'+selectRegions(sp.theme,sp.site||"")+
-        '<small>'+(sp.site?'Höhen aus Geodaten · Untergrund schematisch':'Lage und Grenzrichtung aus PB2002 · Untergrund schematisch')+'</small>'+
+      this.side.innerHTML='<p class="g-kicker">'+(sp.site?topicNames[sp.theme]:sp.theme==='forces'||sp.theme==='lithosphere'?'Schematisch vergrößerter Schnitt':'Vereinfachtes Modell dieser Grenzart')+'</p><h1>'+sp.name+'</h1><div class="g-stack">'+(sp.site?selectRegions(sp.theme,sp.site):'')+
+        '<small>'+(sp.site?'Höhen aus Geodaten · Untergrund schematisch':(sp.theme==='forces'||sp.theme==='lithosphere'?'Schematische Größen und Tiefen':'Lage und Grenzrichtung aus PB2002 · Untergrund schematisch'))+'</small>'+
         (!r.ready?'<p role="status">'+(r.error||'Gelände wird geladen …')+'</p>':
         button("g-cut",r.cut?"An die Oberfläche":"Untergrund öffnen")+
-        '<label class="g-range"><span id="g-phase"></span><input id="g-progress" type="range" min="0" max="1" step=".001" value="'+r.progress+'"></label>'+
-        '<div class="g-buttons">'+button("g-play","Abspielen")+button("g-step","Einzelschritt")+button("g-reset","Zurücksetzen")+'</div>'+
+        (sp.theme==='lithosphere'?'':'<label class="g-range"><span id="g-phase"></span><input id="g-progress" type="range" min="0" max="1" step=".001" value="'+r.progress+'"></label>'+
+        '<div class="g-buttons">'+button("g-play","Abspielen")+button("g-step","Einzelschritt")+button("g-reset","Zurücksetzen")+'</div>')+
         '<label><input type="checkbox" id="g-names" '+(r.names?"checked":"")+'> Namen zeigen</label>'+
         (sp.theme==="earthquake"&&(sp.process==="subduction"||sp.process==="oceanTransform"||sp.process==="arc")?'<label>Seebeben vergleichen<select id="g-sea">'+opts({vertical:"Meeresboden hebt sich",flat:"Seitlicher Versatz"},r.vertical?"vertical":"flat")+'</select></label>':'')+
-        this.extraControls(r)+
+        this.extraControls(r)+'<div id="g-object" aria-live="polite"></div>'+
         '<details><summary>Modell steuern</summary><label><input type="checkbox" id="g-slow" '+(r.slow?"checked":"")+'> Zeitlupe</label><label><input type="checkbox" id="g-stress" '+(r.stress?"checked":"")+'> Spannung im Modell</label></details>'+
         item("Was geschieht hier?",explain[sp.process])+this.extraInfo(r))+
         button("g-map","Zur Weltkarte")+back+'</div>';
@@ -126,7 +147,9 @@ export class Observatory {
     if(play){play.textContent=r.playing?"Pause":"Abspielen";$("g-phase").textContent=phase;if(document.activeElement!==$("g-progress"))$<HTMLInputElement>("g-progress").value=String(r.progress);}
     this.updateLabels(r);return true;
   }
-  private phaseText(r:RegionalScene){return r.progress<.05?"Ausgangszustand":r.progress<.35?"Spannung baut sich auf":r.progress<.47?"Bruch und Versatz":r.progress<.85?"Wellen breiten sich aus":"Nach dem Ereignis";}
+  private phaseText(r:RegionalScene){
+    const byTheme:Partial<Record<Theme,string[]>>={volcano:["Ausgangszustand","Material steigt auf","Gestein schmilzt teilweise","Magma steigt auf","Vulkanbildung"],magnet:["Rücken","Neuer Boden entsteht","Gestein kühlt ab","Magnetfeld wird aufgezeichnet","Älterer Boden wandert nach außen"],forces:["Wärme im Inneren","Mantelgestein bewegt sich","Dichte Lithosphäre sinkt","Zug an der Platte","Kräfte wirken zusammen"],risk:["Gleiches Modellbeben","Spannung steigt","Bruch am Herd","Erschütterung am Standort","Folgen vergleichen"]};
+    if(byTheme[r.spec.theme])return byTheme[r.spec.theme]![Math.min(4,Math.floor(r.progress*5))];return r.progress<.05?"Ausgangszustand":r.progress<.35?"Spannung baut sich auf":r.progress<.47?"Bruch und Versatz":r.progress<.85?"Wellen breiten sich aus":"Nach dem Ereignis";}
   private updateLabels(r:RegionalScene){
     const visible=r.names&&r.cut&&r.spec.theme==="earthquake";
     if(!visible){if(this.labels.childElementCount)this.labels.replaceChildren();return;}
@@ -135,11 +158,31 @@ export class Observatory {
     [r.focus,r.epicenter].forEach((a,i)=>{const v=new T.Vector3(a[0],a[1],.085).project(r.camera),el=this.labels.children[i] as HTMLElement;el.style.left=((1+v.x)*b.width/2)+"px";el.style.top=((1-v.y)*b.height/2)+"px";});
   }
   diagnostics(){const r=this.region;return {mode:this.mode,site:r?.spec.site,process:r?.spec.process,theme:this.theme,ready:r?.ready??(this.maps.steps.length>0),progress:r?.progress,cut:r?.cut,focus:r?.focus,epicenter:r?.epicenter,events:this.maps.rows.length,steps:this.maps.steps.length,selected:this.maps.selectedStep?.[0],...this.timeDiagnostics()};}
-  private enrich(_r:RegionalScene){}
-  private extraControls(_r:RegionalScene){return "";}
-  private extraInfo(r:RegionalScene){return r.spec.theme==="earthquake"?item("Was sind P- und S-Wellen?","Goldene Punkte schwingen vor und zurück. Das zeigt die schnellere P-Welle. Türkise Punkte schwingen quer zur Laufrichtung. Diese S-Welle läuft nur durch festes Material.")+item("Was zeigen die zwei Orte?","Der Bruch beginnt im Erdbebenherd. Direkt darüber liegt an der Oberfläche das Epizentrum.")+item("Wann entsteht ein Tsunami?","Wenn sich ein großer Teil des Meeresbodens hebt oder senkt, bewegt er die Wassersäule. Lange Wasserwellen laufen zur Küste und können dort höher werden."):"";}
-  private bindExtra(_r:RegionalScene){}
-  private pickRegion(_x:number,_y:number){}
+  private enrich(r:RegionalScene){addTeachingModels(r);}
+  private extraControls(r:RegionalScene){
+    if(r.spec.theme==="risk")return '<label>Raumnutzung<select id="g-exposure">'+opts({empty:"Unbesiedelt",sparse:"Einzelne Häuser",dense:"Dichte Siedlung"},r.exposure)+'</select></label><label><input type="checkbox" id="g-protect" '+(r.protection?"checked":"")+'> Bauweise und Wege verbessern</label>';
+    if(r.spec.theme==="earthquake")return button("g-risk","Folgen am Standort vergleichen");
+    return "";
+  }
+  private extraInfo(r:RegionalScene){
+    if(r.spec.theme==="lithosphere")return item("Was gehört zusammen?","Die Kruste und der starre oberste Mantel bilden die Lithosphäre. Der Mantel darunter ist überwiegend fest und über lange Zeit verformbar.");
+    if(r.spec.theme==="forces")return item("Warum bewegen sich Platten?","Heißes Gestein kann sich über lange Zeit bewegen. Kalte Plattenteile können absinken und ziehen. Vom erhöhten Rücken wirkt auch die Schwerkraft. Die Kräfte sind örtlich unterschiedlich stark.");
+    if(r.spec.theme==="magnet")return item("Woher wissen wir das?",explanations.stripe.answer);
+    if(r.spec.theme==="volcano")return item("Wie entsteht Schmelze?",r.spec.process==="subduction"?explanations.fluid.answer:"Heißes Mantelgestein steigt auf. Der Druck sinkt und ein Teil des Gesteins schmilzt.")+item("Was ist Magma?",explanations.melt.answer)+item("Was tritt aus?",explanations.lava.answer)+item("Warum verlaufen Ausbrüche verschieden?","Dünnflüssige Schmelze lässt Gas oft leichter entweichen. In zäher Schmelze kann sich Gas stauen. Auch die Gasmenge spielt eine Rolle.")+(r.spec.site==="island"?item("Was ist auf Island besonders?","Island liegt auf einem Rücken. Zusätzlich steigt hier besonders heißes Mantelmaterial unter der Platte auf."):"");
+    if(r.spec.theme==="risk")return item("Magnitude und Intensität","Die Magnitude beschreibt die Größe des Bebens an der Quelle. Die Intensität beschreibt, wie stark die Erschütterung an einem Ort erlebt wird. Im Modell schwingen die Häuser rechts auf lockerem Boden stärker.")+item("Was bedeutet Momenten-Magnitude?","Forschende schätzen die Größe des Bebens aus der gebrochenen Fläche, dem Versatz und der Steifigkeit des Gesteins. Das Modell berechnet keinen Zahlenwert.")+item("Wie können wir vorsorgen?","Bauweise, erreichbare Fluchtwege und geübte Abläufe können die Folgen mindern. Warnungen müssen die Menschen auch erreichen.")+item("Was ist abzuwägen?","Umbau kostet Geld. Freie Fluchtwege benötigen Platz. Betroffene Menschen können mitentscheiden, wo gebaut und wie der Wiederaufbau vorbereitet wird.");
+    return r.spec.theme==="earthquake"?item("Was sind P- und S-Wellen?","Goldene Punkte schwingen vor und zurück. Das zeigt die schnellere P-Welle. Türkise Punkte schwingen quer zur Laufrichtung. Diese S-Welle läuft nur durch festes Material.")+item("Was zeigen die zwei Orte?","Der Bruch beginnt im Erdbebenherd. Direkt darüber liegt an der Oberfläche das Epizentrum.")+item("Wann entsteht ein Tsunami?","Wenn sich ein großer Teil des Meeresbodens hebt oder senkt, bewegt er die Wassersäule. Lange Wasserwellen laufen zur Küste und können dort höher werden."):"";}
+  private bindExtra(r:RegionalScene){
+    this.change("g-exposure",v=>{r.exposure=v;});this.change("g-protect",()=>{r.protection=!r.protection;});
+    this.action("g-risk",()=>void this.openRegion({...r.spec,theme:"risk"}));
+  }
+  private pickRegion(x:number,y:number){
+    const r=this.region;if(!r?.ready)return;
+    const rect=$("earth").getBoundingClientRect(),ray=new T.Raycaster();ray.params.Line.threshold=.09;
+    ray.setFromCamera(new T.Vector2(2*(x-rect.x)/rect.width-1,1-2*(y-rect.y)/rect.height),r.camera);
+    const hit=ray.intersectObjects(r.scene.children,true).find(h=>{let o:T.Object3D|null=h.object;while(o){if(!o.visible)return false;o=o.parent;}return true;});
+    const info=hit?.object.userData.explanation;
+    if(info&&$("g-object"))$("g-object").textContent=(r.names?info.name+" · ":"")+info.answer;
+  }
   private timeline?:TimeGlobe;
   openTime(){
     this.base();this.mode="time";this.timeline=new TimeGlobe();this.mark();

@@ -11,6 +11,8 @@ export const sites = locations;
 export type Site = keyof typeof sites;
 export function classify(step:Step):Process {
   const {lat,lon}=center(step);
+  const across=Math.abs(Math.sin((localStrike(step)-step[8])*Math.PI/180));
+  if((step[2]==="OCB"||step[2]==="CCB") && across<.38)return "complex";
   switch (step[2]) {
     case "CTF":return "transform";
     case "OTF":return "oceanTransform";

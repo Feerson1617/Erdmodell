@@ -4,7 +4,7 @@ import { localAsset } from "../assets";
 import { sites, type Process, type Site } from "./boundaries";
 
 export type Theme="earthquake"|"volcano"|"risk"|"forces"|"lithosphere"|"magnet";
-export type RegionSpec={site?:Site; name:string; process:Process; lat:number;lon:number; strike:number; theme:Theme};
+export type RegionSpec={site?:Site; name:string; process:Process; lat:number;lon:number; strike:number; azimuth?:number; theme:Theme};
 export const reference=(site:Site,theme:Theme):RegionSpec=>({...sites[site],site,process:sites[site].process as Process,theme});
 export const phases=[0,.34,.49,.68,1];
 const clamp=T.MathUtils.clamp;
@@ -36,7 +36,7 @@ vec3 offsetRock(vec3 p,float side){
  float d=length(p-vec3(0.,focus,0.));float age=(t-.43)*19.-d;
  float shake=age>0.?sin(age*10.)*exp(-age*1.5)*.055/(1.+.14*d):0.;
  vec3 offset=vec3(0.,shake,0.);
- if(kind<.5)offset.z+=drift;
+ if(kind<.5)offset.z+=sense*drift;
  else if(kind<1.5){offset.x-=drift*.55;offset.y+=vertical*release*.44*exp(-pow((p.x+.65)*.91,2.));}
  else if(kind<3.5){offset.x+=drift*.68;offset.y-=load*.21*exp(-p.x*p.x*2.);}
  else if(kind<4.5){offset.x-=drift*.68;offset.y+=load*.34*exp(-p.x*p.x*.45);}
@@ -49,7 +49,7 @@ export class RegionalScene {
   readonly orbit:OrbitControls;
   readonly front=new T.Group();readonly section=new T.Group();readonly labels=new T.Group();
   readonly witnesses=new T.Group();readonly settlement=new T.Group();readonly mechanisms=new T.Group();
-  private ui={t:{value:0},kind:{value:0},focus:{value:-1},vertical:{value:1},clock:{value:0},stress:{value:0}};
+  private ui={t:{value:0},kind:{value:0},focus:{value:-1},vertical:{value:1},clock:{value:0},stress:{value:0},sense:{value:1}};
   private groundData?:Int16Array;private colorMap?:T.Texture;
   private waves:T.Line[]=[];private particles:T.InstancedMesh[]=[];private fault!:T.Line;private rupture!:T.Line;
   private waterColumn?:T.Mesh; private nearSurface=0;private rockMaterial:T.Material[]=[];
@@ -62,6 +62,7 @@ export class RegionalScene {
     this.scene.background=new T.Color(0xa4c0c5);this.scene.fog=new T.FogExp2(0xa4c0c5,.029);
     this.scene.add(new T.HemisphereLight(0xfff6dd,0x8b9da2,2.05));
     const sun=new T.DirectionalLight(0xffdda9,2.5);sun.position.set(-6,9,5);this.scene.add(sun,this.front,this.section,this.witnesses,this.settlement,this.mechanisms);
+    if(spec.azimuth!==undefined)this.ui.sense.value=Math.cos((spec.azimuth-spec.strike)*Math.PI/180)>=0?1:-1;
     this.vertical=spec.process!=="oceanTransform";this.ui.kind.value=numberTypes[spec.process];this.reframe(false);
   }
   reframe(cut:boolean){this.cut=cut;this.camera.position.set(cut?1.3:3.4,cut?2.1:4.5,cut?8.4:7.4);
@@ -96,9 +97,9 @@ export class RegionalScene {
     mat.customProgramCacheKey=()=>String(surface)+String(side);
     mat.onBeforeCompile=s=>{
       Object.assign(s.uniforms,this.ui);s.uniforms.sideOfFault={value:side};
-      s.vertexShader="uniform float t,kind,focus,vertical,sideOfFault; varying vec3 rockPos;"+rockShader+s.vertexShader;
+      s.vertexShader="uniform float t,kind,focus,vertical,sense,sideOfFault; varying vec3 rockPos;"+rockShader+s.vertexShader;
       s.vertexShader=s.vertexShader.replace("#include <begin_vertex>","#include <begin_vertex>\nrockPos=position;transformed+=offsetRock(position,sideOfFault);");
-      s.fragmentShader="uniform float t,kind,stress,vertical,focus; varying vec3 rockPos;"+rockShader+s.fragmentShader;
+      s.fragmentShader="uniform float t,kind,stress,vertical,sense,focus; varying vec3 rockPos;"+rockShader+s.fragmentShader;
       const pigment=surface?`diffuseColor.rgb=mix(diffuseColor.rgb,vec3(.37,.32,.19),.075);diffuseColor.rgb*=1.+.055*grain(rockPos);`:
         `float x=rockPos.x,y=rockPos.y;
         float fold=.13*sin(x*1.8)+.07*sin(x*3.1);
