@@ -23,7 +23,7 @@ const vocabulary:Record<string,[string,string]>={
  "Gefährdete Menschen":["Gefährdete Menschen","Wer sich im betroffenen Gebiet aufhält, ist der Naturgefahr ausgesetzt."],
  "Vergleichsweg":["Vergleichsweg","An diesem Weg lässt sich die Bewegung der beiden Seiten ablesen."]
 };
-const preferred=["Erdbebenherd","Epizentrum","P-Wellenfront","S-Wellenfront","Lavafluss","Basaltische Spalte","Geländemarker","Ruhige Nahbucht","Verdrängte Wassersäule","Ursprüngliche Uferlinie","Magmareservoir","Asche und Gas","Versetzte Geländelinie","Mantelkeil","Gebäude","Evakuierungsweg","Zug der absinkenden Platte","Starrer oberster Mantel","Blockierter Kontakt","Abtauchende ozeanische Kruste","Relative Bewegungsrichtung","Elastisch verformtes Gestein"];
+const preferred=["Überfluteter Bereich","Wasserwelle","Hebung des Meeresbodens","Senkung des Meeresbodens","Erdbebenherd","Epizentrum","P-Wellenfront","S-Wellenfront","Lavafluss","Basaltische Spalte","Geländemarker","Ruhige Nahbucht","Verdrängte Wassersäule","Ursprüngliche Uferlinie","Magmareservoir","Asche und Gas","Versetzte Geländelinie","Mantelkeil","Gebäude","Evakuierungsweg","Zug der absinkenden Platte","Starrer oberster Mantel","Blockierter Kontakt","Abtauchende ozeanische Kruste","Relative Bewegungsrichtung","Elastisch verformtes Gestein"];
 function description(o:T.Object3D):Info|undefined{
  if(o.userData.explanation)return o.userData.explanation;
  const v=vocabulary[o.name];if(v)return {name:v[0],answer:v[1]};
@@ -32,7 +32,7 @@ function description(o:T.Object3D):Info|undefined{
 function drawn(o:T.Object3D){for(let p:T.Object3D|null=o;p;p=p.parent)if(!p.visible)return false;return true;}
 const vec=new T.Vector3(),matrix=new T.Matrix4();
 function anchor(mesh:T.Mesh){
- if(mesh.userData.lessonAnchor)return mesh.localToWorld(mesh.userData.lessonAnchor().clone());
+ if(mesh.userData.lessonAnchor){const point=mesh.userData.lessonAnchor();return point?mesh.localToWorld(point.clone()):undefined;}
  const geo=mesh.geometry,pos=geo?.attributes.position;if(!pos)return;
  const total=Math.min(geo.drawRange.count,(geo.index??pos).count-geo.drawRange.start);if(total<1)return;
  const offset=geo.drawRange.start+Math.min(total-1,Math.floor(total*(geo.hasAttribute("geologyCoord")?.052:.46)));
@@ -71,8 +71,8 @@ export class ObjectLabels{
  clear(){this.scene=undefined;this.object=undefined;this.selected="";this.picked=undefined;this.key="";this.targets.clear();this.layer.clear();this.rev++;}
  private select(id:string,object=this.targets.get(id),point?:T.Vector3){
    if(!object)return;
-   claimObject(id);this.selected=id;this.object=object;this.picked=point?object.worldToLocal(point.clone()):undefined;this.key="";
-   const info=description(object);const field=document.getElementById("g-object");
+   const info=description(object);claimObject(id,info?info.name+" · "+info.answer:"");this.selected=id;this.object=object;this.picked=point?object.worldToLocal(point.clone()):undefined;this.key="";
+   const field=document.getElementById("g-object");
    if(info&&field){field.dataset.selection=id;field.textContent=info.name+" · "+info.answer;field.hidden=false;}
  }
  pick(r:RegionalScene,x:number,y:number){
@@ -98,7 +98,7 @@ export class ObjectLabels{
    for(const mesh of this.objects){
      const info=description(mesh)!;if(used.has(info.name))continue;
      if(!show&&this.object!==mesh)continue;
-     let p=this.picked&&mesh===this.object?mesh.localToWorld(this.picked.clone()):anchor(mesh);if(!p)continue;
+     const p=this.picked&&mesh===this.object?mesh.localToWorld(this.picked.clone()):anchor(mesh);if(!p)continue;
      if(mesh.name==="Gelände"&&p.z>4.52*(1-r.opening))continue;
      const xy=project(p,r.camera,rect.width,rect.height);if(!xy||terrainBlocks(r,p))continue;
      // Front faces of a cut are visible only from the open half-space.

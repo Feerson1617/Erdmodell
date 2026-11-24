@@ -58,7 +58,7 @@ export class LocalLandscape{
         const k=j*n+i;if(j+1<axis.length&&i+1<n)idx.push(k,k+n,k+1,k+1,k+n,k+n+1);
       }
       const g=new T.BufferGeometry();g.setAttribute("position",new T.Float32BufferAttribute(p,3));g.setIndex(idx);g.computeVertexNormals();
-      const mesh=new T.Mesh(g,ground);mesh.name="Nahgelände";if(site==="island"&&half===0)mesh.userData.explanation={name:"Basaltische Spalte",answer:"Der Bruch öffnet einen Weg zur Oberfläche. Bei einem effusiven Ausbruch kann dünnflüssige Lava austreten."};mesh.userData.lessonAnchor=()=>{const x=site==="island"?-.7:half?5:-5,z=-8;return new T.Vector3(x,this.surface(x,z),z);};mesh.receiveShadow=true;this.halves[half].add(mesh);
+      const mesh=new T.Mesh(g,ground);mesh.name="Nahgelände";if(site==="island"&&half===0)mesh.userData.explanation={name:"Basaltische Spalte",answer:"Der Bruch öffnet einen Weg zur Oberfläche. Bei einem effusiven Ausbruch kann dünnflüssige Lava austreten."};mesh.userData.lessonAnchor=()=>{const z=-8,x=site==="island"&&half===0?-2+1.9*Math.sin((z+16)*.045):half?5:-5;return new T.Vector3(x,this.surface(x,z),z);};mesh.receiveShadow=true;this.halves[half].add(mesh);
     }
     if(site==="san"){
       // Survey-style wooden stakes form one transverse line at rest. Each is attached to its own block.

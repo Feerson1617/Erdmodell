@@ -1,4 +1,4 @@
-import {plainAtlas} from "./lesson-controls.mjs";
+import {plainAtlas,shellNames} from "./lesson-controls.mjs";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -384,6 +384,7 @@ async function exercise(browser, engine) {
       s.geometries-s.uploadedTiles <= first.geometries-first.uploadedTiles+12), "Wachstum bei warmen Wiederholungen");
     await page.tap("#nav-inside");
     await settled(page);
+    await shellNames(page,false);
     assert.doesNotMatch(await page.locator("#sidebar").innerText(), /Erdkern|Erdkruste|Erdmantel/i);
     assert.equal((await diagnostics(page)).tectonics.processVisible,false);
     await snap("10-schalenschnitt");

@@ -33,3 +33,24 @@ export function nyosLabels(world:World,width:number,height:number):Annotation[]{
   });
   return out;
 }
+
+/** Test the geometry at the pointer; the open half of the lake cut exposes the water face. */
+export function pickNyos(world:World,ray:T.Raycaster):string|undefined{
+  if(!world.nyos.group.visible||world.nyos.localWeight<.98)return;
+  const eye=world.nyos.group.worldToLocal(world.nav.camera.position.clone());
+  const hits=ray.intersectObject(world.nyos.group,true);
+  for(const hit of hits){
+    let visible=true;
+    for(let p:T.Object3D|null=hit.object;p;p=p.parent)if(!p.visible){visible=false;break;}
+    if(!visible)continue;
+    const name=hit.object.name;
+    if(name==="Nyos-Gasstrom")return "nyos-valley";
+    if(eye.x<=.006)continue;
+    if(name==="Nyos-Entgasungsrohr")return "nyos-pipe";
+    if(name==="Nyos-Gasblasen")return "nyos-bubbles";
+    if(name==="Geschichtetes Wasser auf der geöffneten Schnittfläche"){
+      const point=hit.object.worldToLocal(hit.point.clone());
+      if(point.y<-.035)return world.nyosLesson.dissolved&&point.y<-.12?"nyos-dissolved":"nyos-deep";
+    }
+  }
+}

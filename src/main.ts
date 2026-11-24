@@ -483,8 +483,12 @@ async function boot() {
     $("nav-"+id).classList.add("obsNav");$("nav-"+id).onclick=run;
   }
   renderSide();
+  world.onNyosObject=label=>{
+    if(observation.active)claimObject(label.id,label.name+" · "+label.text);
+    else showDefinition(label);
+  };
   world.onLayer = i => {
-    if(observation.active&&claimObject("shell-"+i)){annotationKey="";return;}
+    if(observation.active&&claimObject("shell-"+i,layers[i].name+" · "+layers[i].text)){annotationKey="";return;}
     if (!observation.active && (labels || released.has(i))) showDefinition(layers[i]);
     else select(i);
   };

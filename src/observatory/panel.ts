@@ -2,7 +2,7 @@ import {boundaryLesson} from "../tectonics/learning";
 import {assumptions,learningFields,regionalReading,timeReading,setReading} from "./lesson";
 import {project,AnnotationLayer} from "../annotations";
 import {ObjectLabels} from "./object-labels";
-import {allowsLabel} from "./reveal";
+import {allowsLabel,claimObject} from "./reveal";
 import {graphics,quality,materials} from "./graphics";
 import {WaterProfile} from "./water-profile";
 import {fields, regionKeys, timeKeys} from "./saved-state";
@@ -278,7 +278,7 @@ export class Observatory {
       else if(v.theme==="forces"||v.theme==="lithosphere")spec={name:topicNames[v.theme],lat:0,lon:-24,strike:0,process:v.theme==="forces"?"subduction":"convergence",theme:v.theme};
       else throw Error("Region fehlt");
       spec.event=v.event;await this.openRegion(spec);const r=this.region;if(!r?.ready)throw Error("Gelände fehlt");
-      Object.assign(r,fields(v.settings,regionKeys));r.analysis=Boolean(r.analysis&&r.water);r.progress=T.MathUtils.clamp(r.progress,0,1);r.restoreCamera(v.view,v.cut,v.position,v.target);
+      Object.assign(r,fields(v.settings,regionKeys));r.moreNames=Boolean(v.settings.moreNames);r.analysis=Boolean(r.analysis&&r.water);r.progress=T.MathUtils.clamp(r.progress,0,1);r.restoreCamera(v.view,v.cut,v.position,v.target);
     }
     this.world.nav.stop();this.world.nav.pose={...s.pose};this.world.nav.goal={...s.pose};this.draw();
   }
@@ -369,7 +369,10 @@ export class Observatory {
   }
   private pickTime(x:number,y:number){
     const b=$("earth").getBoundingClientRect(),ray=new T.Raycaster();ray.setFromCamera(new T.Vector2((x-b.x)/b.width*2-1,1-(y-b.y)/b.height*2),this.world.nav.camera);
-    const name=this.timeline?.pick(ray);if(name)$("g-evidence-name").textContent=name;
+    const name=this.timeline?.pick(ray);if(name){
+      claimObject(name,name+" · "+($("g-evidence-info")?.textContent||"Belegregion in der Rekonstruktion."));
+      setReading("g-evidence-name",name);
+    }
   }
   private focusTime(){
     const t=this.timeline;if(!t)return;
@@ -435,10 +438,15 @@ export class Observatory {
     const key=[t.ready,Math.round(t.year*10),t.layer,t.gnss,t.tracking,t.compare,t.markers.children.length,canvas.clientWidth,canvas.clientHeight,document.body.dataset.reveal,...camera.matrixWorld.elements].join("/");
     if(key!==this.timeKey){this.timeKey=key;
       const points=t.markers.children.filter(o=>o.name).map(o=>({name:o.name,p:o.position}));
-      const tracked=t.tracking&&t.year<=0?t.reconstruction.at(Math.abs(t.year),t.tracking):null;
-      if(tracked)points.unshift({name:tracks[t.tracking][0],p:tracked.v.clone().normalize().multiplyScalar(R+65)});
+      if(t.year<=0&&!t.gnss&&!t.layer){
+        const order=[...new Set([t.tracking,"701","201","501","101","801"].filter(Boolean))];
+        for(const code of order){
+          const at=t.reconstruction.at(Math.abs(t.year),code);
+          if(at)points.push({name:tracks[code][0],p:at.v.clone().normalize().multiplyScalar(R+29)});
+        }
+      }
       const labels=points.flatMap(({name,p},i)=>{const xy=project(p,camera,canvas.clientWidth,canvas.clientHeight);
-        return xy&&p.dot(camera.position.clone().sub(p))>0&&allowsLabel(name,i)?[{id:name,name,text:t.gnss?"Satellitenmessungen zeigen die heutige Bewegung.":meaning,...xy}]:[];});
+        return xy&&p.dot(camera.position.clone().sub(p))>0&&allowsLabel(name,i)?[{id:name,name,text:t.gnss?"Satellitenmessungen zeigen die heutige Bewegung.":meaning,...xy}]:[];}).slice(0,4);
       this.timePins.draw(t.compare?[]:labels,[$("obswitch"),$("observation-controls")],this.timeLayout);
     }
     const station=$<HTMLSelectElement>("g-station");if(station)station.value=String(t.year);const year=Math.round(t.year);$("g-age").textContent=year<0?"Vor "+(-year)+" Mio. Jahren":year>0?"In "+year+" Mio. Jahren":"Heute";

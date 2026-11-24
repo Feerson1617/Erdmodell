@@ -270,7 +270,9 @@ export class RegionalScene {
           const x=T.MathUtils.lerp(range[0],range[1],i/columns);return [x,this.height(x,z),z,x/12+.5,.5-z/9];});
         this.bindRock(g,side);g.userData.surface=true;g.userData.front=front;const land=mesh(g,terrain,"Gelände");land.receiveShadow=true;
         // Anchor to a vertex in the same deforming buffer as the surface.
-        const idx=18*(columns+1)+Math.floor(columns*.46);
+        const row=18*(columns+1);
+        const coastIndex=this.spec.coastLesson?Array.from({length:columns+1},(_,i)=>row+i).reduce((a,b)=>Math.abs(g.attributes.position.getY(a)-.075)<Math.abs(g.attributes.position.getY(b)-.075)?a:b):undefined;
+        const idx=coastIndex??row+Math.floor(columns*.46);
         land.userData.lessonAnchor=()=>new T.Vector3().fromBufferAttribute(g.attributes.position,idx);
         const geology=this.spec.geology;
         Object.defineProperty(land.userData,"explanation",{get:()=>{
@@ -299,7 +301,27 @@ export class RegionalScene {
           for(let j=0;j<=120;j++){const a=Math.max(0,j-1),b=Math.min(120,j+1),slope=(levels[b]-levels[a])/((b-a)*.1),inv=1/Math.hypot(1,slope);
             for(let i=j;i<pos.count;i+=121)normals.setXYZ(i,-slope*inv,inv,0);}
           normals.needsUpdate=true;});
-        (front?this.front:this.scene).add(mesh(g,water,"Wasseroberfläche"));
+        const surface=mesh(g,water,"Wasseroberfläche");
+        if(this.water){
+          const solver=this.water,row=21*121;
+          let name="Wasseroberfläche",chosen=-1;
+          // Read the same wet mask and vertex heights that the water material draws.
+          this.onAnimate(()=>{
+            chosen=-1;name="Wasseroberfläche";let best=0;
+            for(let i=1;i<120;i++){
+              const k=row+i;if(wet.getX(k)<=.002)continue;
+              const flooded=this.spec.coastLesson&&solver.depths[i]<=.001&&terrain[k]>=-.001;
+              const change=Math.abs(levels[i]-solver.surfaces[i]);
+              const weight=front?(flooded?2+wet.getX(k):change):wet.getX(k);
+              if(weight<=best)continue;
+              best=weight;chosen=k;
+              name=front&&flooded?"Überfluteter Bereich":front&&change>.006?"Wasserwelle":"Wasseroberfläche";
+            }
+          });
+          surface.userData.lessonAnchor=()=>chosen<0?undefined:new T.Vector3().fromBufferAttribute(pos,chosen);
+          Object.defineProperty(surface.userData,"explanation",{get:()=>({name,answer:name==="Überfluteter Bereich"?"Dieses Gelände lag anfangs trocken. Hier bedeckt es jetzt Wasser aus dem Küstenmodell.":name==="Wasserwelle"?"An dieser Stelle unterscheidet sich die Wasserhöhe vom Ruhezustand. Die Wasserwelle bewegt sich durch das Meer.":"Die Wasserhöhe stammt aus der Flachwasserberechnung."})});
+        }
+        (front?this.front:this.scene).add(surface);
       }
       const curtain=indexed(1,120,(i,j)=>{const x=-6+i*.1;return [x,j?0:Math.min(0,this.height(x,0)),.011,i/120,j];});
       const glass=waterSection();

@@ -26,12 +26,6 @@ export function isProcessSite(id: string): id is SiteKey {
   return Object.hasOwn(sites, id);
 }
 
-const movement = {
-  divergent: "Zwei Platten bewegen sich voneinander weg.",
-  convergent:
-    "Zwei Platten bewegen sich aufeinander zu. An manchen Grenzen taucht eine Platte unter die andere ab.",
-  transform: "Zwei Platten bewegen sich seitlich aneinander vorbei.",
-};
 const swatches = {
   divergent: "Auseinander",
   convergent: "Aufeinander zu",
@@ -100,8 +94,10 @@ export function plateControls(world: World) {
     <h2>${names[world.profileCode]}</h2><dl><dt>Lage</dt><dd>${profile.place}</dd>
     <dt>Bewegung</dt><dd data-teach="phase">${profile.motion}</dd><dt>Beispiel an einer Plattengrenze</dt><dd data-teach="effects">${profile.boundary}</dd></dl>
     <details><summary>Nachbarplatten</summary><p>${profile.neighbours}</p></details><div class="profileActions"><button id="atlasLocate">Zentrieren</button><button id="atlasCompare">Grenze ansehen</button><button id="atlasWorld">Weltansicht</button></div></section>` : "";
+  const note=boundary?boundaryLesson(boundary.step):undefined;
+  const selected=note&&boundary?`<section class="scienceCard boundaryHint" aria-live="polite"><h2 data-teach="terms">${note.term}</h2><small>${note.place}</small><p data-teach="phase">${note.motion}</p>${options.names?`<p data-teach="labels">${note.plates.join(" · ")}</p>`:""}<p data-teach="cause">${note.cause} ${options.names?note.polarity:""}</p><button id="compare-selected">Bewegung dieser Grenze ansehen</button></section>`:"";
   const start=`<label class="siteSelect">Grenzvergleich auswählen<select id="pair-examples"><option value="">Grenze wählen</option>${Object.entries(teachingSteps).map(([id,text])=>`<option value="${id}">${text}</option>`).join("")}</select></label><div class="playback"><button id="atlasPlay" class="playButton" ${world.mosaic?"":"disabled"}>Platten bewegen</button></div>`;
-  return `${title}${start}${card}
+  return `${title}${selected}${start}${card}
     <div class="plateChecks">${check("boundaries", "Plattengrenzen zeigen", options.boundaries)}
     ${check("plateNames", "Namen zeigen", options.names || world.singlePlateName)}</div>
     ${options.types?'<p class="boundary-legend"><span><i class="swatchDot divergent"></i>Divergenz</span><span><i class="swatchDot convergent"></i>Konvergenz</span><span><i class="swatchDot transform"></i>Transformbewegung</span></p>':""}
@@ -113,7 +109,7 @@ export function plateControls(world: World) {
     ${options.names ? check("smallPlates", "Auch kleinere Platten im Fernblick benennen", world.smallPlateNames) : ""}
     ${`<label class="siteSelect">Platte auswählen<select id="plateSelect"><option value="">Keine</option></select></label>`}
     </details>
-    ${options.boundaries ? `<p class="boundaryHint" aria-live="polite">${boundary ? `<strong>${swatches[boundary.kind]}</strong><br>${movement[boundary.kind]}${options.names ? "<br>" + boundary.plates.join(" · ") : ""}` : "Eine Fläche oder Grenze auf dem Globus antippen."}</p>` : ""}`;
+    ${!boundary&&options.boundaries ? `<p class="boundaryHint" aria-live="polite">Eine Fläche oder Grenze auf dem Globus antippen.</p>` : ""}`;
 }
 
 export function bindPlateControls(
@@ -205,6 +201,7 @@ export function bindPlateControls(
     if (!wasOpen) refresh("atlasPlay");
     syncPlayback(world);
   });
+  click("compare-selected",()=>{const step=world.selectedBoundary?.step;if(step){world.comparePlates(false,step[0]);refresh("atlasPlay");}});
   click("atlasCompare", () => { world.comparePlates(false); refresh("atlasPlay"); });
   click("atlasReset", () => { world.mosaic?.reset(); syncPlayback(world); });
   click("atlasAll", () => { world.inspectPlate(""); refresh("atlasPlay"); });

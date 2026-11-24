@@ -1,3 +1,4 @@
+import {shellNames} from "./lesson-controls.mjs";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -982,6 +983,7 @@ async function checkRevisits(p, run, snap) {
   await p.tap("#nav-inside");
   await settled(p);
   assert.equal((await diag(p)).mode, "inside");
+  await shellNames(p,false);
   assert.doesNotMatch(
     await p.locator("#sidebar").innerText(),
     /Erdkern|Erdkruste|Erdmantel/i,

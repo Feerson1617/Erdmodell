@@ -22,10 +22,15 @@ const act=async(id,value)=>{report.actions.push([id,value??"Klick"]);const el=p.
 const shot=async(name)=>{
  await rest();const result=await p.evaluate(()=>{
    const w=window.geoObservatory(),s=w.observatory,box=e=>{const r=e.getBoundingClientRect();return {x:r.x,y:r.y,w:r.width,h:r.height};};
-   return {mode:s.mode||w.mode,site:s.site,step:s.geology?.id??w.tectonics?.mosaic?.pair?.step,view:s.view,phase:s.progress??s.year??w.tectonics?.mosaic?.progress,camera:s.camera,canvas:box(document.querySelector("#earth")),title:document.querySelector("#learn-phase")?.textContent,term:document.querySelector("#learn-term,.boundary-lesson h1")?.textContent,observing:document.body.classList.contains("observing"),pins:[...document.querySelectorAll(".annotations button")].filter(b=>b.offsetWidth).map(e=>({name:e.innerText,...box(e)}))};});
+   return {mode:s.mode||w.mode,site:s.site,step:s.geology?.id??w.tectonics?.mosaic?.pair?.step,view:s.view,phase:s.progress??s.year??w.tectonics?.mosaic?.progress,camera:s.camera,canvas:box(document.querySelector("#earth")),title:document.querySelector("#learn-phase,#learn-station")?.textContent,cause:document.querySelector("#learn-cause,#learn-history,.boundary-lesson .lesson-lead")?.textContent,term:document.querySelector("#learn-term,.boundary-lesson h1")?.textContent,observing:document.body.classList.contains("observing"),pins:[...document.querySelectorAll(".annotations button")].filter(b=>b.offsetWidth).map(e=>({name:e.innerText,...box(e)}))};});
  if(!before)for(const [i,a] of result.pins.entries()){
    assert.ok(a.x>=result.canvas.x-1&&a.x+a.w<=result.canvas.x+result.canvas.w+1&&a.y>=result.canvas.y-1&&a.y+a.h<=result.canvas.y+result.canvas.h+1,name+" bounds "+a.name);
    for(const b of result.pins.slice(i+1))assert.ok(a.x+a.w<=b.x+1||b.x+b.w<=a.x+1||a.y+a.h<=b.y+1||b.y+b.h<=a.y+1,name+" collision "+a.name+"/"+b.name);
+ }
+ if(!before){
+   const phase={"12-Vor-dem-Bruch":"Ausgangszustand","13-Spannungsaufbau":"Spannungsaufbau","16-Wellen":"Bruch und Wellenausbreitung","18a-Seitenversatz":"Seitlicher Versatz am Meeresboden","18b-Tiefer-Bruch":"Bruch in der Tiefe","20-Ueberflutung":"Küste überflutet","20a-Rueckzug":"Wasser zieht sich zurück","21b-Explosiv-im-Nahmodell":"Ruhendes Lavafeld","23a-Ruhige-Bucht":"Ruhige Nahbucht","24-Pangaea":"Pangäa","25-Kontinentalbewegung":"Der Atlantik wächst","25a-Gegenwart":"Gegenwart"};
+   if(phase[name])assert.equal(result.title,phase[name],name);
+   if(name==="22-Hawaii")assert.ok(!result.pins.some(p=>p.name==="Kontinentale Kruste"));
  }
  await p.screenshot({path:join(out,name+".jpg"),type:"jpeg",quality:81});report.shots.push({name,...result});console.log(name,result.title||"",result.pins.map(v=>v.name).join(", "));
 };

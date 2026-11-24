@@ -1,3 +1,4 @@
+import {nyosLabels,pickNyos} from "./nyos/labels";
 import {claimObject} from "./observatory/reveal";
 import {observeFrame,graphics,cadence} from "./observatory/graphics";
 import * as T from "three";
@@ -82,6 +83,7 @@ export class World {
   private air: T.Mesh;
   private marker = position(firstRegion.target.lat, firstRegion.target.lon, 10);
   onFrame?: () => void;
+  onNyosObject?: (label:Annotation)=>void;
   onLayer?: (i: number) => void;
   onBoundary?: () => void;
   plateOptions: PlateOptions = { boundaries: false, names: false, types: false, category: "all", plate: "" };
@@ -190,7 +192,7 @@ export class World {
     this.scene.fog = new T.FogExp2(0xb6cfd0, 0);
     this.nav.onPick = (x, y) => {
       if(this.customPick?.(x,y))return;
-      if (this.mode !== "inside" && !(this.mode === "plates" && !this.processDetail && this.atlas)) return;
+      if (this.mode !== "inside" && this.mode !== "nyos" && !(this.mode === "plates" && !this.processDetail && this.atlas)) return;
       const b = canvas.getBoundingClientRect(),
         ray = new T.Raycaster();
       ray.setFromCamera(
@@ -200,6 +202,11 @@ export class World {
         ),
         this.nav.camera,
       );
+      if(this.mode==="nyos"){
+        const id=pickNyos(this,ray),label=id&&nyosLabels(this,b.width,b.height).find(s=>s.id===id);
+        if(label)this.onNyosObject?.(label);
+        return;
+      }
       if (this.mode === "plates") {
         if (this.mosaic?.pair) {
           const sample=ray.intersectObjects(this.mosaic.pair.bodies,false)[0];
@@ -214,7 +221,7 @@ export class World {
           this.selectBoundary(boundary);
           if (!boundary && !this.processSite) {
             const hit = this.mosaic?.pick(ray);
-            if (hit) { claimObject(hit.object.name);this.inspectPlate(hit.object.name, hit.point); this.mosaic!.track(hit); }
+            if (hit) { claimObject(hit.object.name,names[hit.object.name]+" · "+(this.profiles[hit.object.name]?.place??""));this.inspectPlate(hit.object.name, hit.point); this.mosaic!.track(hit); }
           }
           this.onBoundary?.();
         }
@@ -390,7 +397,7 @@ export class World {
   selectPairBody(code:string){
     const pair=this.mosaic?.pair;
     if(!pair)return;
-    claimObject(code);
+    claimObject(code,names[code]+" · "+this.profiles[code].place);
     for(const body of pair.bodies)(body.material as T.MeshStandardMaterial).emissive.setHex(body.name===code?0x302817:0);
     const area=document.getElementById("pair-object");
     if(area){area.hidden=false;area.textContent=names[code]+" · "+this.profiles[code].place;}

@@ -35,6 +35,12 @@ export function regionalReading(r:RegionalScene):string[]{
  r.exposure==="empty"?"Hier stehen keine Modellhäuser. Die Naturgefahr besteht auch an einem unbesiedelten Standort.":"Menschen und Gebäude sind der Gefahr ausgesetzt. Die Anfälligkeit heißt Verwundbarkeit. Entscheidend sind unter anderem Bauweise und Untergrund.",
  "Resilienz bedeutet, mit den Folgen umzugehen und wichtige Funktionen wiederherzustellen. Maßnahmen können Risiken mindern."];
  if(!f||f.kind==="unknown")return [a.term,"Grenzzone",a.cause,a.detail];
+ if(r.spec.event==="strike"||r.spec.event==="buried"){
+   const slide=r.spec.event==="strike";
+   return ["Seebeben",t<=onset?"Vor dem Bruch":slide?"Seitlicher Versatz am Meeresboden":"Bruch in der Tiefe",
+     slide?"Die beiden Seiten gleiten überwiegend seitlich aneinander vorbei. Der Meeresboden hebt hier keine große Wassersäule an.":"Die Bruchfläche liegt tiefer. Die Oberfläche des Meeresbodens verlagert sich in diesem Modell nur wenig.",
+     "Nicht jedes Seebeben löst einen Tsunami aus. Seismische Wellen laufen im Gestein."];
+ }
  if(r.water&&["coast","ocean","water"].includes(r.view)){
    const w=r.water;
    let phase="Wasser im Ruhezustand",message="Der Meeresboden trägt die Wassersäule.";

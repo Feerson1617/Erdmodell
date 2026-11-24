@@ -24,7 +24,7 @@ export function readableView(e:unknown){
     return one(r.theme,"process|earthquake|volcano|risk|forces|lithosphere|magnet")&&(r.event===undefined||one(r.event,"strike|uplift|buried"))&&
       (r.coast===true||r.event==="strike"||typeof r.site==="string"&&Object.hasOwn(sites,r.site)||Number.isInteger(r.boundary)&&number(r.boundary,1,5819)||one(r.theme,"forces|lithosphere"))&&
       unit(v.progress)&&flags(v,"playing stress names showP showS detail phasesShown slow vectors protection safeRoute warning relocate")&&
-      (v.analysis===undefined||flag(v.analysis))&&one(v.soil,"rock|loose")&&one(v.eruption,"effusive|explosive")&&one(v.exposure,"dense|sparse|empty")&&one(v.riskSite,"near|far");
+      (v.moreNames===undefined||flag(v.moreNames))&&(v.analysis===undefined||flag(v.analysis))&&one(v.soil,"rock|loose")&&one(v.eruption,"effusive|explosive")&&one(v.exposure,"dense|sparse|empty")&&one(v.riskSite,"near|far");
   }
   if(s.mode!=="")return false;
   if(b.mode==="inside"){const h=b.shell;return record(h)&&flags(h,"subdued cut")&&one(h.comparison,"reference|expanded|lithosphere")&&
