@@ -1,3 +1,5 @@
+import {libraryGLSL} from "./graphics";
+import {lavaTongue} from "./lava-flow";
 import * as T from "three";
 import type {RegionalScene} from "./regional";
 const material=(color:number)=>new T.MeshStandardMaterial({color,roughness:.9});
@@ -22,9 +24,15 @@ function outline(a:number){return 1+.112*Math.sin(a*3+.8)+.073*Math.cos(a*5-.7)+
 function mountain(shield:boolean,dx:number,dz:number){
   const sx=shield?1.75:1.40,sz=shield?1.27:.50,a=Math.atan2(dz/sz,dx/sx),u=Math.hypot(dx/sx,dz/sz)/outline(a);
   if(u>=1)return 0;
+  if(!shield){
+    const strike=dx+.16*Math.sin(dz*3.),across=dz-.05*Math.sin(dx*4.);
+    const ridge=Math.exp(-across*across*28)*Math.exp(-strike*strike*.9);
+    const seam=Math.exp(-across*across*950)*Math.exp(-strike*strike*1.8);
+    return (.21*ridge-.07*seam)*T.MathUtils.smoothstep(1-u,0,.29)*(.86+.14*Math.cos(dx*11.+dz*6.));
+  }
   const rim=.18+.036*Math.sin(3*a),flank=u<rim?.41+.59*T.MathUtils.smoothstep(u,.012,rim):Math.pow((1-u)/(1-rim),shield?1.68:1.35);
   const gully=1+.13*Math.sin(8*a+u*4)+.042*Math.sin(19*a-u*6);
-  return (shield?.48:.64)*flank*gully;
+  return (shield?.32:.24)*flank*gully;
 }
 function edifice(shield:boolean){
   const p:number[]=[],colors:number[]=[],apron:number[]=[],indices:number[]=[],rings=36,sectors=84;
@@ -54,16 +62,26 @@ export function eruption(r:RegionalScene,x:number,top:number){
   const hotspot=r.spec.process==="hotspot",z=r.spec.arcTransect?0:-.33;const centres:T.Mesh[]=[];
   if(!r.spec.arcTransect){
   const shape=edifice(hotspot),rock=material(0x817c77);rock.vertexColors=true;
-  if(r.lib){const atlas=r.lib.color;rock.onBeforeCompile=s=>{
-    s.uniforms.scree={value:atlas};s.vertexShader="varying vec3 flank;\n"+s.vertexShader.replace("#include <begin_vertex>","#include <begin_vertex>\nflank=position;");
-    s.fragmentShader="varying vec3 flank;uniform sampler2D scree;\n"+s.fragmentShader.replace("#include <color_fragment>","#include <color_fragment>\nvec2 p=flank.xz*3.+flank.y*.43;vec3 rock=textureGrad(scree,(vec2(3.,1.)+.004+.992*fract(p))/vec2(4.,2.),dFdx(p)/vec2(4.,2.),dFdy(p)/vec2(4.,2.)).rgb;diffuseColor.rgb*=.53+2.8*sqrt(rock);");};}
+  if(r.lib){const lib=r.lib;rock.onBeforeCompile=s=>{
+    Object.assign(s.uniforms,{faciesColor:{value:lib.color},faciesRelief:{value:lib.relief},detailGrade:r.grade});
+    s.vertexShader="varying vec3 flank;\n"+s.vertexShader.replace("#include <begin_vertex>","#include <begin_vertex>\nflank=position;");
+    s.fragmentShader="varying vec3 flank;\n"+libraryGLSL+s.fragmentShader.replace("#include <color_fragment>",`#include <color_fragment>
+      vec2 p=flank.xz*6.6+flank.y*vec2(.47,.91);
+      vec2 gravelUV=mat2(.78,.625,-.625,.78)*p*2.3+.16;
+      vec3 basalt=fieldSample(faciesColor,p,3.).rgb;
+      vec3 grains=fieldSample(faciesColor,gravelUV,2.).rgb;
+      vec3 relief=fieldSample(faciesRelief,p,3.).rgb;
+      float scree=smoothstep(.22,.72,relief.b+.16*sin(flank.x*16.+flank.z*9.));
+      vec3 surfaceRock=mix(basalt,grains*vec3(.64,.61,.62),.36*scree);
+      diffuseColor.rgb=mix(diffuseColor.rgb,surfaceRock,.81)*(.72+.52*relief.b);
+    `).replace("#include <normal_fragment_maps>","#include <normal_fragment_maps>\nnormal=normalize(normal+mat3(viewMatrix)*vec3(relief.r-.5,0.,relief.g-.5)*.66);");};}
   rock.side=T.DoubleSide;
   if(r.surfaceImage){
     const previous=rock.onBeforeCompile.bind(rock);rock.onBeforeCompile=(s,gl)=>{previous(s,gl);
       s.uniforms.groundImage={value:r.surfaceImage};s.vertexShader="attribute float apron;varying vec3 footprintUV;\n"+s.vertexShader.replace("#include <begin_vertex>","#include <begin_vertex>\nvec3 foot=(modelMatrix*vec4(position,1.)).xyz;footprintUV=vec3(foot.x/12.+.5,.5-foot.z/9.,apron);");
-      s.fragmentShader="uniform sampler2D groundImage;varying vec3 footprintUV;\n"+s.fragmentShader.replace("#include <roughnessmap_fragment>","#include <roughnessmap_fragment>\nfloat toe=smoothstep(.5,.99,footprintUV.z)*smoothstep(.0,.015,originalBed);diffuseColor.rgb=mix(diffuseColor.rgb,texture2D(groundImage,footprintUV.xy).rgb,toe);");};
+      s.fragmentShader="uniform sampler2D groundImage;varying vec3 footprintUV;\n"+s.fragmentShader.replace("#include <roughnessmap_fragment>","#include <roughnessmap_fragment>\nfloat toe=smoothstep(.28,.94,footprintUV.z)*smoothstep(.0,.015,originalBed);diffuseColor.rgb=mix(diffuseColor.rgb,texture2D(groundImage,footprintUV.xy).rgb,toe);");};
   }
-  rock.customProgramCacheKey=()=>"g6-volcanic-flanks-"+Boolean(r.lib)+"-"+Boolean(r.surfaceImage);
+  rock.customProgramCacheKey=()=>"g61-volcanic-flanks-"+Boolean(r.lib)+"-"+Boolean(r.surfaceImage);
   conformFlanks(rock,r);
   const depth=new T.MeshDepthMaterial({depthPacking:T.RGBADepthPacking});conformFlanks(depth,r);
   rock.addEventListener("dispose",()=>depth.dispose());
@@ -72,70 +90,58 @@ export function eruption(r:RegionalScene,x:number,top:number){
     m.customDepthMaterial=depth;m.castShadow=m.receiveShadow=true;centres.push(m);r.scene.add(m);
   }
   }
+  const surface=(xx:number,zz:number)=>Math.max(r.height(xx,zz),...centres.filter(m=>m.visible).map(m=>r.height(xx,zz)-.002+mountain(hotspot,(xx-m.position.x)/m.scale.x,(zz-m.position.z)/m.scale.z)*m.scale.y));
   const channels=[0,1].map(branch=>{
-    const rows=58,cols=6,positions=new Float32Array((rows+1)*(cols+1)*3),uv=[],indices=[];
-    for(let i=0;i<=rows;i++)for(let j=0;j<=cols;j++){
-      uv.push(i/rows,j/cols);
-      if(i<rows&&j<cols){const k=i*(cols+1)+j;indices.push(k,k+1,k+cols+1,k+1,k+cols+2,k+cols+1);}
-    }
-    const g=new T.BufferGeometry();g.setAttribute("position",new T.BufferAttribute(positions,3));g.setAttribute("uv",new T.Float32BufferAttribute(uv,2));g.setIndex(indices);
-    const progress={value:0},hot=new T.MeshStandardMaterial({color:0xffffff,emissive:0x210a03,roughness:.79,side:T.DoubleSide});
-    hot.onBeforeCompile=s=>{s.uniforms.front=progress;s.vertexShader="varying vec2 channel;\n"+s.vertexShader.replace("#include <begin_vertex>","#include <begin_vertex>\nchannel=uv;");
-      s.fragmentShader="varying vec2 channel;uniform float front;\n"+s.fragmentShader.replace("#include <color_fragment>",`#include <color_fragment>
-        float u=channel.x,v=channel.y,age=max(0.,front-u);
-        vec2 p=vec2(u*33.,v*3.+sin(u*19.));
-        float cracks=abs(sin(p.x+.7*sin(p.y*3.1))*cos(p.y*2.+p.x*.29));
-        float molten=max(.32*(1.-smoothstep(.02,.13,age)),1.-smoothstep(.05,.32,cracks))*(1.-.57*smoothstep(.08,.84,age));
-        float edge=smoothstep(0.,.17,min(v,1.-v));
-        vec3 crust=mix(vec3(.066,.042,.034),vec3(.16,.093,.063),.5+.5*sin(p.x*2.3+p.y));
-        diffuseColor.rgb=mix(crust,vec3(1.,.28,.032),molten*edge);
-      `).replace("#include <emissivemap_fragment>","#include <emissivemap_fragment>\ntotalEmissiveRadiance+=vec3(.63,.108,.009)*molten*edge;");};
-    const lava=new T.Mesh(g,hot);lava.name="Lavafluss";lava.frustumCulled=false;lava.userData.explanation={name:"Lavafluss",answer:"Lava folgt dem Gefälle. Ihre Oberfläche kühlt ab und bildet eine dunkle Kruste. Der Fließweg ist ein Modell."};r.scene.add(lava);
-    const path:{x:number;z:number}[]=[],length=branch?1.31:1.62;
-    let px=x,pz=z,prev=0;
-    const surface=(xx:number,zz:number)=>Math.max(r.height(xx,zz),...centres.filter(m=>m.visible).map(m=>r.height(xx,zz)-.002+mountain(hotspot,(xx-m.position.x)/m.scale.x,(zz-m.position.z)/m.scale.z)*m.scale.y));
-    // Begin at a low notch of the crater rim, then trace a downhill channel.
-    let head=0,min=Infinity;for(let j=3;j<=10;j++){const a=j*.08,xx=x+.22*Math.cos(a),zz=z+.155*Math.sin(a),h=mountain(hotspot,xx-x,zz-z)+r.height(xx,zz);if(h<min){head=a;min=h;}}
-    for(let i=0;i<=rows;i++){
-      const u=i/rows;
-      if(i===0){px=x+(r.spec.arcTransect?0:.22)*Math.cos(head);pz=z+(r.spec.arcTransect?0:.155)*Math.sin(head);prev=head;}
-      path.push({x:px,z:pz});let angle=.015,best=Infinity,step=length/rows;
-      for(let k=-3;k<=3;k++){const a=T.MathUtils.clamp(prev+k*.18,-.20,.38),xx=px+step*Math.cos(a),zz=pz+step*Math.sin(a);
-        if(!r.spec.arcTransect&&zz>-.075)continue;
-        const h=r.height(xx,zz)+(r.spec.arcTransect?0:mountain(hotspot,xx-x,zz-z))+.009*Math.abs(k)+.006*Math.abs(a-head-(branch&&u>.26?.66:0)-.24*Math.sin(u*12.));if(h<best){angle=a;best=h;}}
-      prev=angle+(branch&&i===16?.62:0);px+=step*Math.cos(angle);pz+=step*Math.sin(angle);
-    }
+    const tongue=lavaTongue(branch?.117:.21);r.scene.add(tongue.mesh);tongue.mesh.userData.explanation={name:"Lavafluss",answer:"Das Gefälle bestimmt den Weg. An einer Senke endet diese modellierte Lavazunge."};
     let last=-1;
-    return (t:number)=>{const f=T.MathUtils.smoothstep(t,branch?.66:.55,.96);lava.visible=r.eruption==="effusive"&&f>0;
-      if(!lava.visible||last===t)return;last=t;progress.value=f;const p=g.attributes.position as T.BufferAttribute;
-      for(let i=0;i<=rows;i++){const a=path[i],b=path[Math.min(rows,i+1)],c=path[Math.max(0,i-1)],dx=b.x-c.x,dz=b.z-c.z,n=Math.hypot(dx,dz)||1;
-        for(let j=0;j<=cols;j++){const v=j/cols,w=(v-.5)*(branch?.079:.155)*(.85+.16*Math.sin(i*.49)),xx=a.x-w*dz/n,zz=a.z+w*dx/n;
-          p.setXYZ(i*(cols+1)+j,xx,surface(xx,zz)+.013+.018*Math.sin(v*Math.PI),zz);}}
-      p.needsUpdate=true;g.computeVertexNormals();g.setDrawRange(0,Math.floor(rows*f)*cols*6);
+    return (t:number)=>{
+      const phase=T.MathUtils.smoothstep(t,branch?.65:.53,.96);
+      if(phase>0&&(last<0||hotspot&&t!==last)){
+        const active=centres.filter(m=>m.visible).at(-1),cx=active?.position.x??x,cz=active?.position.z??z;
+        const scale=active?.scale.x??1,xx=cx+(r.spec.arcTransect?0:hotspot?.31:branch?.22:-.12)*scale,zz=cz+(r.spec.arcTransect?0:hotspot?.09:-.071)*scale;
+        tongue.build(xx,zz,hotspot?.26:-1.2,branch?1.13:1.64,branch,surface);last=t;
+      }
+      tongue.phase(r.eruption==="effusive"?phase:0);
     };
   });
   const ash=new T.InstancedMesh(new T.PlaneGeometry(2,2),ashMaterial(),64);
   const clasts=new T.InstancedMesh(new T.IcosahedronGeometry(1,0),material(0x564138),26);ash.frustumCulled=clasts.frustumCulled=false;ash.material.addEventListener("dispose",()=>ash.material.map?.dispose());
   ash.userData.explanation={name:"Asche und Gas",answer:"Aufsteigendes Gas dehnt sich aus. Es kann zähe Schmelze zerreißen."};clasts.userData.explanation=ash.userData.explanation;r.scene.add(ash,clasts);
+  const gasMaterial=ash.material.clone();gasMaterial.color.set(0xc7d2d2);gasMaterial.opacity=.19;
+  const gas=new T.InstancedMesh(ash.geometry,gasMaterial,26);gas.frustumCulled=false;gas.name="Vulkanisches Gas";r.scene.add(gas);
+  const tint=new T.Color();
   const dummy=new T.Object3D();
   r.onAnimate(t=>{
     centres.forEach((m,i)=>{const age=hotspot?t*4+.92-i:1;const growth=T.MathUtils.clamp(age*1.6,.02,1);
       m.visible=age>0;const travel=hotspot?Math.max(0,age-1)*.92:0;
       const px=x-.64*travel,pz=z-.59*travel;m.position.set(px,r.height(px,pz)-.018,pz);m.scale.set(growth,growth*(1-.045*travel),growth);});
     channels.forEach(draw=>draw(t));
+    gas.visible=r.eruption==="effusive"&&t>.52;
+    if(gas.visible){
+      for(let i=0;i<gas.count;i++){
+        const age=Math.max(0,(t-.52)*2.6-i*.027)%1,a=i*2.399;
+        const slit=r.spec.site==="island"?.32*Math.sin(a):0;
+        dummy.position.set(x+slit+.49*age*age+.075*Math.sin(a+5*age),top+(hotspot?.22:r.spec.arcTransect?.015:.14)+.95*age,z+.09*Math.cos(a+age*4));
+        dummy.quaternion.copy(r.camera.quaternion);dummy.rotateZ(a+age*.6);
+        dummy.scale.setScalar(.21*Math.sin(Math.PI*age)*(.46+age));
+        dummy.updateMatrix();gas.setMatrixAt(i,dummy.matrix);
+      }gas.instanceMatrix.needsUpdate=true;
+    }
     ash.visible=clasts.visible=r.eruption==="explosive"&&t>.54;
     if(ash.visible)for(const [group,count] of [[ash,64],[clasts,26]] as const){
       for(let i=0;i<count;i++){
         const age=(t-.54)*2.85-i/count*.58,a=i*2.399;let radius=0;
         if(age>=0&&age<1){const plume=group===ash;
-          const spread=plume?.065+.63*age*age:age*1.4;
+          const spread=plume?(.075+.63*age*age)*(.76+.24*Math.sin(a*3.1+age*12)):age*1.4;
           const rise=plume?2.65*age:2.9*age-3.9*age*age;
-          dummy.position.set(x+Math.cos(a)*spread+(plume?.74*age*age:0),top+(r.spec.arcTransect?.02:hotspot?.46:.57)+rise,z+Math.sin(a)*spread);
-          radius=plume?.12+.45*age:.035*(1-age);
+          dummy.position.set(x+Math.cos(a+age*4)*spread+(plume?.74*age*age+.09*Math.sin(age*15):0),top+(r.spec.arcTransect?.02:hotspot?.32:.143)+rise,z+Math.sin(a+age*4)*spread);
+          radius=plume?(.13+.49*age)*(.76+.24*Math.cos(a+age*8)):.035*(1-age);
         }
-        if(group===ash){dummy.quaternion.copy(r.camera.quaternion);dummy.rotateZ(i*2.399);}else dummy.quaternion.identity();
+        if(group===ash){const sunward=.5+.5*Math.cos(a+.4);
+          tint.setRGB(.50+.34*age+.13*sunward,.47+.35*age+.13*sunward,.45+.38*age+.12*sunward);
+          ash.setColorAt(i,tint);dummy.quaternion.copy(r.camera.quaternion);dummy.rotateZ(i*2.399);}else dummy.quaternion.identity();
         dummy.scale.setScalar(radius);dummy.updateMatrix();group.setMatrixAt(i,dummy.matrix);
-      }group.instanceMatrix.needsUpdate=true;
+      }group.instanceMatrix.needsUpdate=true;if(group.instanceColor)group.instanceColor.needsUpdate=true;
     }
   });
 }

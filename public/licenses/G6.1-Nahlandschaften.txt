@@ -1,0 +1,11 @@
+GeoRisiko G6.1 · Daten und Bildnachweise
+
+USGS 3D Elevation Program und National Map. NOAA/USGS-Basiskarten und fremde Kartenbilder wurden für den Nahbereich nicht als Ersatzorthofoto übernommen. Verwendet wurde der USGSNAIPPlus-Bilddienst mit der NAIP-Befliegung der USDA Farm Service Agency in Kalifornien. Der Katalog identifiziert am Mittelpunkt unter anderem m_3512005_se_10_060_20220513. US-amerikanische gemeinfreie Bundesdaten. Luftbild und Höhenraster sind auf dasselbe Fenster bezogen. Adresse, Verarbeitung, Koordinaten, Umfang und SHA-256 in data/g61/parkfield-source.json.
+https://www.usgs.gov/information-policies-and-instructions/copyrights-and-credits
+https://www.fsa.usda.gov/resources/programs/national-agriculture-imagery-program
+
+Poly Haven veröffentlicht die zugrunde liegenden Modelle und Fotos unter CC0 1.0. Die Einzelnachweise mit Urhebern, Originaladressen, geprüften SHA-256-Werten der Quelldateien und Ausgabegrößen befinden sich in data/g61/specimens.json. Verwendet werden Rock 07, Shrub 02, Tree Small 02, Grass Medium 01 und Pine Tree 01. Die Instanzen veranschaulichen Wuchs- und Gesteinsformen. Sie bilden keine Artenerhebung in der jeweiligen Region ab. Die Impostors stammen aus orthografischen Ansichten dieser Modelle. Weitere Angaben in data/g61/mitte-source.json.
+https://polyhaven.com/license
+https://creativecommons.org/publicdomain/zero/1.0/
+
+Die programmgenerierten Pflanzengeometrien, Geröllformen und die Anordnung der Landschaftsobjekte wurden für GeoRisiko erstellt. Die Datenlizenzen der älteren Quellen gelten weiterhin, insbesondere für die aus EOX Sentinel-2 cloudless abgeleiteten geografischen Mosaike (CC BY-NC-SA gemäß G6-Bildquellen.txt).

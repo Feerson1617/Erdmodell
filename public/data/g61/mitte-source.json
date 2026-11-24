@@ -1,0 +1,56 @@
+{
+  "source": "Orthographic views of the CC0 glTF assets listed in specimens.json. Dry meadow grass is a seasonal material variant.",
+  "license": "CC0-1.0",
+  "cells": [
+    [
+      160,
+      248
+    ],
+    [
+      234,
+      248
+    ],
+    [
+      115,
+      248
+    ],
+    [
+      122,
+      248
+    ],
+    [
+      246,
+      218
+    ],
+    [
+      246,
+      207
+    ],
+    [
+      246,
+      209
+    ],
+    [
+      246,
+      213
+    ],
+    [
+      218,
+      196
+    ],
+    [
+      246,
+      111
+    ],
+    [
+      246,
+      209
+    ],
+    [
+      246,
+      213
+    ]
+  ],
+  "bytes": 253666,
+  "sha256": "60f62fd84625f7a8711c0bba38ae7fc7b0bd3ded50cf0bf7d1021a58c70e84bc"
+}

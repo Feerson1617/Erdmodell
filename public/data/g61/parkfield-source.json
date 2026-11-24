@@ -1,0 +1,34 @@
+[
+  {
+    "source": "3D Elevation Program",
+    "author": "U.S. Geological Survey",
+    "license": "USGS public domain",
+    "file": "src/observatory/parkfield-relief.json",
+    "url": "https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer/exportImage?bbox=-13407650.98%2C4282736.57%2C-13405429.49%2C4284958.06&bboxSR=3857&imageSR=3857&size=193%2C193&format=tiff&pixelType=F32&f=image&interpolation=RSP_Bilinear",
+    "processing": "Float32 north-up 193 \u00d7 193, every second sample; decimetres; local microrelief illustrative",
+    "extentGroundMetres": 1800,
+    "centre": [
+      -120.433,
+      35.878
+    ],
+    "bbox3857": "-13407650.98,4282736.57,-13405429.49,4284958.06",
+    "bytes": 47047,
+    "sha256": "2effa6e8cf66ac8fe16fad4d3f00ddf74c3087768aa90795a8a015b003d79e29"
+  },
+  {
+    "source": "National Agriculture Imagery Program",
+    "author": "USDA Farm Service Agency / USGS National Map",
+    "license": "US Government public domain",
+    "file": "public/data/g61/parkfield.webp",
+    "url": "https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPPlus/ImageServer/exportImage?bbox=-13407650.98%2C4282736.57%2C-13405429.49%2C4284958.06&bboxSR=3857&imageSR=3857&size=1536%2C1536&format=jpg&pixelType=U8&f=image&interpolation=RSP_Bilinear&bandIds=0%2C1%2C2",
+    "processing": "RGB from 1536 \u00d7 1536 WGS84 Web Mercator crop, WebP quality 87",
+    "extentGroundMetres": 1800,
+    "centre": [
+      -120.433,
+      35.878
+    ],
+    "bbox3857": "-13407650.98,4282736.57,-13405429.49,4284958.06",
+    "bytes": 501432,
+    "sha256": "1be4e7dec785c49df915a2211102a9dc6b29dced1b21816d53052a9cc1a1913f"
+  }
+]

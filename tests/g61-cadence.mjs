@@ -1,0 +1,15 @@
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import ts from 'typescript';
+const src=await readFile(new URL('../src/observatory/render-cadence.ts',import.meta.url),'utf8');
+const js=ts.transpileModule(src,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ES2022}}).outputText;
+const {RenderCadence}=await import('data:text/javascript;base64,'+Buffer.from(js).toString('base64'));
+const c=new RenderCadence();let now=0;
+const tick=(kind,count,ms)=>{for(let i=0;i<count;i++)c.frame(now+=ms,kind,'san',true);};
+tick('load',2,4500);tick('cached',1200,17);assert.equal(c.grade,1);assert.equal(c.frames,2);
+tick('animation',580,1000/60);assert.equal(c.grade,2);
+tick('camera',1,3300);tick('camera',100,17);assert.equal(c.grade,2);
+tick('animation',400,65);assert.equal(c.grade,0);
+tick('cached',900,17);assert.equal(c.grade,0);
+tick('camera',1800,1000/60);assert.equal(c.grade,2);
+assert.deepEqual(c.changes.map(v=>v.to),[2,1,0,1,2]);console.log('Renderfenster, Ladepause, Cache, Hysterese und Rückkehr auf Maximal geprüft.');

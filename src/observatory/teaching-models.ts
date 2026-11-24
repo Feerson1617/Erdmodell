@@ -92,16 +92,21 @@ function volcano(r:RegionalScene){
     m.onBeforeCompile=s=>{s.vertexShader="varying vec3 inclusion;\n"+s.vertexShader.replace("#include <begin_vertex>","#include <begin_vertex>\ninclusion=position;");
       s.fragmentShader="varying vec3 inclusion;\n"+s.fragmentShader.replace("#include <color_fragment>","#include <color_fragment>\nvec3 p=inclusion*vec3(8.,12.,5.);float seams=abs(sin(p.y+1.6*sin(p.x*.8)+p.z)*cos(p.x*1.3-p.y*.4));float light=1.-smoothstep(.06,.24,seams);diffuseColor.rgb=mix(diffuseColor.rgb*.78,vec3(.72,.24,.064),light*.49);");};
   }
-  for(let i=0;i<13;i++){
+  for(let i=0;i<21;i++){
     const a=i*2.399,size=.125+.08*(1+Math.sin(3.2*i)),lens=object(new T.IcosahedronGeometry(1,1),i%3?mush:melt,"chamber");
     const p=lens.geometry.attributes.position;for(let j=0;j<p.count;j++){const k=1+.21*Math.sin(3.6*p.getX(j)+7*p.getZ(j)+i)*Math.cos(4*p.getY(j));p.setXYZ(j,p.getX(j)*k,p.getY(j)*k,p.getZ(j)*k);}lens.geometry.computeVertexNormals();
-    lens.position.set(.27*Math.cos(a)*Math.sqrt(i/13),.12*Math.sin(a),.025*Math.cos(a));lens.scale.set(size,.044+.03*Math.cos(i)**2,.049);lens.rotation.z=.35*Math.sin(a*2);lenses.add(lens);
+    lens.position.set(.27*Math.cos(a)*Math.sqrt(i/21),.12*Math.sin(a),.025*Math.cos(a));lens.scale.set(size*1.42,.044+.03*Math.cos(i)**2,.049);lens.rotation.z=.35*Math.sin(a*2);lenses.add(lens);
   }
   for(const sign of [-1,1]){
     const path=new T.CatmullRomCurve3([vec(0,0),vec(sign*.17,.11),vec(sign*.20,.29),vec(sign*.36,.44)]);
     const dike=object(new T.TubeGeometry(path,18,.013,5,false),melt,"chamber");lenses.add(dike);
   }
   r.onAnimate(t=>{const filled=.62+.38*T.MathUtils.smoothstep(t,.18,.66);lenses.scale.set(filled,filled,1);});
+  for(let i=0;i<4;i++){
+    const x=(i-1.5)*.17;
+    const path=new T.CatmullRomCurve3([vec(x*.24,.02),vec(x,.25),vec(x*.58,.52),vec(.055*Math.sin(i),.78),vec(0,.91)]);
+    lenses.add(object(new T.TubeGeometry(path,26,.007+i*.0015,5,false),melt,"melt"));
+  }
   eruption(r,vent,top);
 }
 function settlements(r:RegionalScene){

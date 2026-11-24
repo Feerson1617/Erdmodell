@@ -15,11 +15,11 @@ function material(kind:Rock,r:RegionalScene,accreted=false){
   const m=new T.MeshStandardMaterial({color:palette[kind][0],roughness:kind==="basalt"?.79:.94,side:T.DoubleSide});
   m.customProgramCacheKey=()=>"g6-"+kind+accreted+Boolean(r.lib);
   m.onBeforeCompile=shader=>{
-    shader.uniforms.stressPhase=r.stressSignals.phase;shader.uniforms.showStress=r.stressSignals.show;shader.uniforms.ceiling={value:r.rockCeiling};
-    shader.vertexShader="attribute vec2 coupling;attribute vec3 geologyCoord;varying vec2 lock;varying vec3 stone;varying float sectionZ;\n"+shader.vertexShader.replace("#include <begin_vertex>","#include <begin_vertex>\nstone=geologyCoord;sectionZ=position.z;lock=coupling;");
+    shader.uniforms.analysisColor=r.sectionColor;shader.uniforms.stressPhase=r.stressSignals.phase;shader.uniforms.showStress=r.stressSignals.show;shader.uniforms.ceiling={value:r.rockCeiling};
+    shader.vertexShader="attribute float bedFraction;varying float bedContact;attribute vec2 coupling;attribute vec3 geologyCoord;varying vec2 lock;varying vec3 stone;varying float sectionZ;\n"+shader.vertexShader.replace("#include <begin_vertex>","#include <begin_vertex>\nbedContact=bedFraction;stone=geologyCoord;sectionZ=position.z;lock=coupling;");
     const noise="float hashRock(vec3 p){p=fract(p*.31831+vec3(.17,.43,.71));p*=17.;return fract(p.x*p.y*p.z*(p.x+p.y+p.z));} float mineral(vec3 p){vec3 a=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(mix(hashRock(a),hashRock(a+vec3(1,0,0)),f.x),mix(hashRock(a+vec3(0,1,0)),hashRock(a+vec3(1,1,0)),f.x),f.y),mix(mix(hashRock(a+vec3(0,0,1)),hashRock(a+vec3(1,0,1)),f.x),mix(hashRock(a+vec3(0,1,1)),hashRock(a+vec3(1,1,1)),f.x),f.y),f.z);}";
     const structure=kind==="sediment"?"sin(stone.y*38.+a*3.)*.11":kind==="continental"?"smoothstep(.48,.88,b)*.22-smoothstep(.64,.85,a)*.19":kind==="basalt"?"smoothstep(.72,.83,b)*.19-a*.13":kind==="mantle"?"sin(stone.y*11.+a*4.)*.043+b*.10":kind==="wedge"?"mineral(stone*vec3(7.,2.,8.))*.22-a*.10":kind==="warm"?"sin(stone.y*4.+a*5.)*.08+b*.06":"a*.12-b*.09";
-    shader.fragmentShader="uniform highp sampler2D ceiling;varying vec3 stone;varying float sectionZ;varying vec2 lock;uniform float showStress,stressPhase;"+noise+"\n"+shader.fragmentShader.replace("#include <color_fragment>","#include <color_fragment>\nvec2 cell=clamp((stone.xz+vec2(6.,4.5))*16.,vec2(0.),vec2(191.999,143.999));ivec2 at=ivec2(cell);vec2 u=fract(cell);float h=mix(mix(texelFetch(ceiling,at,0).r,texelFetch(ceiling,at+ivec2(1,0),0).r,u.x),mix(texelFetch(ceiling,at+ivec2(0,1),0).r,texelFetch(ceiling,at+ivec2(1,1),0).r,u.x),u.y);"+(accreted?"":"if(abs(sectionZ)>.002&&stone.y>h-.015)discard;")+"float a=mineral(stone*4.7),b=mineral(stone*29.+a*2.);diffuseColor.rgb*=.94+.12*(b-.5)+("+structure+");float band=mineral(stone*vec3(15.,32.,13.));diffuseColor.rgb*=.91+.14*band+.06*smoothstep(-4.,.2,stone.y);float strain=lock.x*smoothstep(0.,.36,stressPhase)*(1.-smoothstep(lock.y,lock.y+.07,stressPhase));diffuseColor.rgb=mix(diffuseColor.rgb,vec3(.70,.22,.068),.72*showStress*strain);");
+    shader.fragmentShader="varying float bedContact;uniform float analysisColor;uniform highp sampler2D ceiling;varying vec3 stone;varying float sectionZ;varying vec2 lock;uniform float showStress,stressPhase;"+noise+"\n"+shader.fragmentShader.replace("#include <color_fragment>","#include <color_fragment>\nvec2 cell=clamp((stone.xz+vec2(6.,4.5))*16.,vec2(0.),vec2(191.999,143.999));ivec2 at=ivec2(cell);vec2 u=fract(cell);float h=mix(mix(texelFetch(ceiling,at,0).r,texelFetch(ceiling,at+ivec2(1,0),0).r,u.x),mix(texelFetch(ceiling,at+ivec2(0,1),0).r,texelFetch(ceiling,at+ivec2(1,1),0).r,u.x),u.y);"+(accreted?"":"if(abs(sectionZ)>.002&&stone.y>h-.015)discard;")+"float a=mineral(stone*4.7),b=mineral(stone*29.+a*2.);diffuseColor.rgb*=.94+.12*(b-.5)+("+structure+");float band=mineral(stone*vec3(15.,32.,13.));diffuseColor.rgb*=.91+.14*band+.06*smoothstep(-4.,.2,stone.y);float strain=lock.x*smoothstep(0.,.36,stressPhase)*(1.-smoothstep(lock.y,lock.y+.07,stressPhase));diffuseColor.rgb=mix(diffuseColor.rgb,vec3(.70,.22,.068),.72*showStress*strain);");
     if(r.lib){
       const tile={sediment:5,continental:4,basalt:3,mantle:2,warm:1,wedge:7,fault:6}[kind];
       const scales={sediment:[.95,2.3],continental:[1.75,1.65],basalt:[2.4,2.6],mantle:[2.1,1.5],warm:[1.3,.9],wedge:[2.4,2.1],fault:[2.9,2.8]}[kind];
@@ -37,8 +37,14 @@ function material(kind:Rock,r:RegionalScene,accreted=false){
         diffuseColor.rgb=mix(diffuseColor.rgb,photo*vec3(1.12,1.01,.92),.14);
         float broken=smoothstep(.63,.99,lock.x)*smoothstep(.58,.85,mineral(stone*vec3(9.,4.,11.)));
         diffuseColor.rgb*=1.-.25*broken;
-        roughnessFactor=clamp(mix(roughnessFactor,micro.b,.54),.52,1.);
-      `).replace("#include <normal_fragment_maps>","#include <normal_fragment_maps>\n normal=normalize(normal+mat3(viewMatrix)*vec3(micro.r-.5,micro.g-.5,0.)*.51);");
+        float seam=min(bedContact,1.-bedContact);
+        float contact=mix(.63,1.,smoothstep(.0,.075,seam+.015*(coarse-.35)));
+        float joint=${kind==="basalt"||kind==="fault"?"1.-smoothstep(.025,.115,abs(sin(stone.x*21.+2.4*a+stone.y*.71)))":kind==="sediment"?"1.-smoothstep(.035,.17,abs(sin(stone.y*31.+a*2.1)))":"smoothstep(.63,.90,b)*.6"};
+        diffuseColor.rgb*=contact*(1.-joint*.18);
+        vec3 keyColor=vec3(${{sediment:".68,.53,.28",continental:".59,.29,.26",basalt:".16,.42,.58",mantle:".26,.46,.30",warm:".72,.34,.13",wedge:".52,.56,.22",fault:".49,.30,.52"}[kind]});
+        diffuseColor.rgb=mix(diffuseColor.rgb,keyColor*(.50+.47*exposure)*contact,analysisColor*.72);
+        roughnessFactor=clamp(mix(roughnessFactor,micro.b,.65)+joint*.08,.48,1.);
+      `).replace("#include <normal_fragment_maps>","#include <normal_fragment_maps>\n normal=normalize(normal+mat3(viewMatrix)*vec3(micro.r-.5,micro.g-.5,0.)*.81);");
     }
   };return m;
 }
@@ -56,6 +62,7 @@ function solid(r:RegionalScene,kind:Rock,side:number,point:(u:number,v:number,z:
   face(columns,12,(u,w)=>[u,0,-4.5*w]);face(columns,12,(u,w)=>[u,1,-4.5*w],true);
   face(8,12,(v,w)=>[0,v,-4.5*w]);face(8,12,(v,w)=>[1,v,-4.5*w],true);
   const g=new T.BufferGeometry();g.setIndex(indices);g.setAttribute("position",new T.Float32BufferAttribute(pos,3));g.computeVertexNormals();
+  g.setAttribute("bedFraction",new T.Float32BufferAttribute(parameters.filter((_,i)=>i%2===1),1));
   g.setAttribute("geologyCoord",g.attributes.position.clone());
   const m=new T.Mesh(g,material(kind,r,Boolean(label)));m.name=label??palette[kind][1];m.userData.explanation={name:m.name,answer:palette[kind][2]};r.section.add(m);
   if(label&&r.spec.process==="ridge"){g.setAttribute("sectionU",new T.Float32BufferAttribute(parameters.filter((_,i)=>i%2===0),1));g.setAttribute("coupling",new T.Float32BufferAttribute(new Float32Array(pos.length/3*2),2));m.frustumCulled=false;}
