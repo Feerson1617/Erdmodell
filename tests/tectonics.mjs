@@ -44,6 +44,7 @@ async function boundaryCycle(page, navigation = false) {
   // Compare finished views. During the atlas reveal the cover changes independently
   // of the boundary lines. Pixel differences from that transition cannot test them.
   if (!navigation) await page.waitForFunction(() => window.geoObservatory().tectonics.mosaic?.opening === 1);
+  let lastDrift;
   for (let attempt=0; attempt<4; attempt++) {
     const frames = await page.evaluate(async navigation => {
       const surface=document.getElementById("earth"), image=document.createElement("canvas");
@@ -61,6 +62,9 @@ async function boundaryCycle(page, navigation = false) {
             }
           }
         }
+        // Read a completed draw after the checkbox's immediate DOM update,
+        // including when this suite is running in the software-rendered browser.
+        await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
         const frame=await new Promise(resolve=>requestAnimationFrame(() => {
           const w=window.geoObservatory();
           ctx.drawImage(surface,0,0,image.width,image.height);
@@ -78,11 +82,14 @@ async function boundaryCycle(page, navigation = false) {
     assert.deepEqual(frames.map(f=>f.boundaries),[false,true,false]);
     assert.ok(frames[1].draws-frames[1].uploadedTiles > frames[2].draws-frames[2].uploadedTiles,
       "Der Renderer zeichnet nach Ausblenden weiter die Grenzgeometrie");
-    assert.ok(added>0.0007 && removed>0.0007 && drift<Math.min(added,removed)*0.6,
+    // An independently streaming base map can change even without a change in tile count.
+    // Only a reproducible off/on/off raster triple can measure the overlay itself.
+    if(drift>=Math.min(added,removed)*.6){lastDrift={added,removed,drift};continue;}
+    assert.ok(added>0.0007 && removed>0.0007,
       `Sichtbarkeit im gerenderten Bild: ein ${added}, aus ${removed}, Abweichung vom Ausgangsbild ${drift}`);
     return {added,removed,drift, frames:frames.map(({png,...metrics})=>metrics)};
   }
-  throw new Error("Innerhalb von vier Bildtripeln keine konstante Renderpuffergröße und Kachelzahl");
+  throw new Error("Kein stabiles Aus–Ein–Aus-Bildtripel bei gleicher Renderpuffergröße und Kachelzahl: "+JSON.stringify(lastDrift));
 }
 function changed(a, b) {
   assert.equal(a.width, b.width);

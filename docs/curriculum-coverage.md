@@ -71,3 +71,9 @@ Die folgende Zuordnung knüpft an die oben angegebenen Projektgrundlagen an. Fac
 | F4 S19–20, Kommunikation und Bewertung | Bauweise, Warnung, Evakuierung, Versorgung und Schutz am Nyos-See | Unterschiedliche Maßnahmen unter Berücksichtigung von Aufwand, Zugang und Restrisiko begründet abwägen | 27–30b |
 
 Die Unterrichtsprotokolle dokumentieren Handlungen und sichtbare Modellzustände. Für den Nachweis einer Schülerkompetenz sind eigene Beschreibungen, Begründungen, Kartenvergleiche und Diskussionen der Lernenden erforderlich.
+
+### Abgleich der Originalseiten
+
+Die Fachanforderungen führen auf Seite 26 für das Geosystem Erde das verbindliche Thema „Naturrisiken – Aufbau der Erde und Modell der Plattentektonik“ auf. Die Kompetenzformulierungen auf Seiten 18–19 bilden den Bezug für die Tätigkeiten in der Tabelle. Auf Seiten 46–47 des Leitfadens stehen mögliche Konkretisierungen, darunter Annahmen und Belege, Erd- und Seebeben sowie der nachhaltige Umgang mit Naturrisiken. [Fachanforderungen und Leitfaden im Fachportal Schleswig-Holstein](https://fachportal.lernnetz.de/sh/fachanforderungen/geographie.html)
+
+Das schulinterne Curriculum ordnet dieses Thema Jahrgang 9 mit einer Wochenstunde Geographie zu. Seite 6 veranschlagt für den Themenblock etwa 15 Unterrichtswochen und nennt als mögliche Inhalte den Erdaufbau, Annahmen, Belege und Erklärungen der Plattentektonik, Vulkanismus, Erd- und Seebeben und den nachhaltigen Umgang mit Naturrisiken. [Fachinternes Curriculum Geographie der ETS, Seite 6](https://ets-toenning.de/wp-content/uploads/2025/07/Fachinternes-Curriculum-Geographie.pdf#page=6)
