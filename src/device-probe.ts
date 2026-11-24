@@ -2,7 +2,7 @@
 export async function deviceProbe(milliseconds: number, finished = () => true) {
   const read = () => {
     const s = (window as unknown as {geoObservatory: () => Record<string, unknown>}).geoObservatory();
-    return Object.fromEntries(["mode","region","resolution","draws","triangles","textures","geometries","programs"].map(k => [k,s[k]]));
+    return Object.fromEntries(["mode","region","observatory","resolution","draws","triangles","textures","geometries","programs"].map(k => [k,s[k]]));
   };
   const started = await new Promise<number>(requestAnimationFrame);
   const states = [read()], gaps: number[] = [];

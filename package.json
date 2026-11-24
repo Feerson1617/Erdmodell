@@ -1,6 +1,6 @@
 {
   "name": "georisiko-3d",
-  "version": "1.0.0",
+  "version": "5.0.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -20,7 +20,8 @@
     "standalone": "python3 scripts/standalone.py",
     "test:plattenatlas": "npm run standalone && node tests/plattengeometrie.mjs && node tests/plattenatlas.mjs && python3 scripts/atlas_film.py",
     "mac:package": "node scripts/stage-desktop.mjs && electron-builder --config desktop/builder.cjs --mac --arm64 --publish never",
-    "mac:build": "npm run build && npm run standalone && npm run mac:package"
+    "mac:build": "npm run build && npm run standalone && npm run mac:package",
+    "test:g5": "npm run standalone && node tests/g5-erdbeben.mjs && node tests/g5-zeit.mjs && node tests/g5-fachmodelle.mjs"
   },
   "dependencies": {
     "@fontsource-variable/dm-sans": "5.2.8",

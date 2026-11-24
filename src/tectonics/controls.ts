@@ -100,7 +100,7 @@ export function plateControls(world: World) {
   const card = profile ? `<section class="scienceCard" id="plateProfile" aria-live="polite">
     <h2>${names[world.profileCode]}</h2><dl><dt>Lage</dt><dd>${profile.place}</dd>
     <dt>Bewegung</dt><dd>${profile.motion}</dd><dt>Beispiel an einer Plattengrenze</dt><dd>${profile.boundary}</dd></dl>
-    <div class="profileActions"><button id="atlasLocate">Zentrieren</button><button id="atlasCompare">Grenze ansehen</button><button id="atlasWorld">Weltansicht</button></div></section>` : "";
+    <details><summary>Nachbarplatten</summary><p>${profile.neighbours}</p></details><div class="profileActions"><button id="atlasLocate">Zentrieren</button><button id="atlasCompare">Grenze ansehen</button><button id="atlasWorld">Weltansicht</button></div></section>` : "";
   const start=`<div class="playback"><button id="atlasPlay" class="playButton" ${world.mosaic?"":"disabled"}>Platten bewegen</button></div>`;
   return `${title}${start}${card}
     <div class="plateChecks">${check("boundaries", "Plattengrenzen zeigen", options.boundaries)}

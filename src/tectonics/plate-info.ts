@@ -82,7 +82,9 @@ export function buildProfiles(steps:Step[], names:Record<string,string>) {
     const neighbour=left===code?right:left;
     const peer=names[neighbour].replace(/e (Platte|Seeplatte)$/,"en $1");
     const direction=directions[Math.round((segment[8]+(left===code?0:180))/45)%8];
-    return [code,{...example,neighbour,place:locations[code],
+    const adjacent=new Set<string>();
+    for(const segment of steps){const a=segment[1].slice(0,2),b=segment[1].slice(-2);if(a===code)adjacent.add(names[b]);if(b===code)adjacent.add(names[a]);}
+    return [code,{...example,neighbour,neighbours:[...adjacent].sort((a,b)=>a.localeCompare(b,"de")).join(", "),place:locations[code],
       motion:`${example.where} bewegt sie sich gegenüber der ${peer} nach ${direction}.`,
       boundary:landmarks[example.step] ?? processes[segment[2]]}];
   }));

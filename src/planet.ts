@@ -23,6 +23,9 @@ export class TerrainLODManager {
   heightData?: Int16Array;
   maps: Partial<Record<Style, T.Texture>> = {};
   material = new T.MeshBasicMaterial({ vertexColors: true });
+  private scientificView={value:0};
+  private detailTexture?:T.Texture;
+  setObservatoryLight(amount:number){this.scientificView.value=amount;}
   private light = { value: new T.Vector3(0, 1, 1).normalize() };
   private mapWeights = { value: new T.Vector3() };
   private nyos = {
@@ -60,6 +63,7 @@ export class TerrainLODManager {
   async init() {
     this.baseline = await texture("earth-base.webp");
     this.material.map = this.baseline;
+    this.detailTexture=await new T.TextureLoader().loadAsync(dataUrl("g5/earth-material.webp"));this.detailTexture.colorSpace=T.NoColorSpace;
     const [a, b, r, h, cover, aerial, atlas] = await Promise.allSettled([
       texture("earth.webp"),
       texture("earth-atlas.webp"),
@@ -86,7 +90,7 @@ export class TerrainLODManager {
       this.warn("Regionale Detailkarte fehlt · verfügbare Auflösungen aktiv");
     this.regionalAtlas = atlas.status === "fulfilled" ? atlas.value : undefined;
     this.material.onBeforeCompile = (shader) => {
-      shader.uniforms.sunUnit = this.light;
+      shader.uniforms.sunUnit = this.light;shader.uniforms.earthDetail={value:this.detailTexture};shader.uniforms.scientific=this.scientificView;
       shader.uniforms.weights = this.mapWeights;
       Object.assign(shader.uniforms, {
         nyosFar: this.nyos.far, nyosMid: this.nyos.mid,
@@ -99,10 +103,10 @@ export class TerrainLODManager {
       );
       shader.uniforms.layer0 = this.regionalSampler;
       shader.vertexShader =
-        "uniform vec3 sunUnit;varying float earthLight;uniform vec3 nyosWeights;uniform vec4 nyosBounds;\n" +
+        "uniform vec3 sunUnit;varying vec3 gNormal;varying vec3 gEye;varying float earthLight;uniform vec3 nyosWeights;uniform vec4 nyosBounds;\n" +
         shader.vertexShader.replace(
           "#include <begin_vertex>",
-          "#include <begin_vertex>\n earthLight=.36+1.05*max(0.,dot(normalize(normal),sunUnit))+.10*normal.y;",
+          "#include <begin_vertex>\n gNormal=normalize(normalMatrix*normal);gEye=normalize(-(modelViewMatrix*vec4(position,1.)).xyz);earthLight=.36+1.05*max(0.,dot(normalize(normal),sunUnit))+.10*normal.y;",
         ).replace("#include <project_vertex>", `
           #include <project_vertex>
           if(nyosWeights.z>0.0) {
@@ -115,7 +119,7 @@ export class TerrainLODManager {
           }`);
       shader.fragmentShader =
         `
-        varying float earthLight;uniform vec3 weights;uniform sampler2D layer0,layer1,layer2;
+        varying vec3 gNormal;varying vec3 gEye;uniform float scientific;uniform sampler2D earthDetail;varying float earthLight;uniform vec3 weights;uniform sampler2D layer0,layer1,layer2;
         uniform vec3 nyosWeights;uniform vec4 nyosFarBounds,nyosMidBounds,nyosBounds;
         uniform sampler2D nyosFar,nyosMid;
         vec4 sampleLayer(sampler2D img,vec2 ll,vec4 rect,float weight){
@@ -145,7 +149,15 @@ export class TerrainLODManager {
             earth=mix(earth,nearRegion.rgb,nearRegion.a);
           }
           diffuseColor.rgb*=mix(earth,local.rgb,local.a);
-          diffuseColor.rgb*=earthLight;`,
+          diffuseColor.rgb*=earthLight;
+          if(scientific>.001){
+            vec3 detail=texture2D(earthDetail,vMapUv).rgb;
+            float shade=dot(detail.rg-vec2(.5),vec2(-.68,.56));
+            float ocean=smoothstep(.002,.055,detail.b),rim=pow(1.-max(0.,dot(normalize(gNormal),normalize(gEye))),3.5);
+            vec3 oceanTint=vec3(.012,.057,.081)*(.55+.45*(1.-detail.b));
+            diffuseColor.rgb*=1.+scientific*clamp(shade*1.45,-.20,.24);
+            diffuseColor.rgb+=scientific*(ocean*oceanTint+rim*vec3(.026,.082,.113));
+          }`,
         );
     };
     this.setStyle(this.style);

@@ -31,6 +31,8 @@ interface PlateOptions {
 }
 
 export class World {
+  customRender?: (dt:number)=>boolean;
+  customPick?: (x:number,y:number)=>boolean;
   scene = new T.Scene();
   gl: T.WebGLRenderer;
   nav: CameraController;
@@ -185,6 +187,7 @@ export class World {
     this.scene.add(this.air);
     this.scene.fog = new T.FogExp2(0xb6cfd0, 0);
     this.nav.onPick = (x, y) => {
+      if(this.customPick?.(x,y))return;
       if (this.mode !== "inside" && !(this.mode === "plates" && !this.processDetail && this.atlas)) return;
       const b = canvas.getBoundingClientRect(),
         ray = new T.Raycaster();
@@ -333,7 +336,7 @@ export class World {
   get selectedBoundary() {
     if (!this.selectedStep) return null;
     const pair = this.selectedStep[1];
-    return { kind: typeOf(this.selectedStep[2]), plates: [names[pair.slice(0, 2)], names[pair.slice(-2)]] };
+    return { step:this.selectedStep, kind: typeOf(this.selectedStep[2]), plates: [names[pair.slice(0, 2)], names[pair.slice(-2)]] };
   }
   private updatePlateLayers() {
     if (!this.atlas) return;
@@ -959,6 +962,7 @@ export class World {
         .addScaledVector(b.north, 1.05)
         .addScaledVector(b.east, -1.2)
         .normalize();
+    this.planet.setObservatoryLight(this.mode==="globe"?smooth((d-1800)/5200):0);
     this.planet.lightDirection(dir);
     this.nyos.lightDirection(dir);
     const shadow = this.local.group.visible && d < 2.3;
@@ -1008,7 +1012,7 @@ export class World {
     }
     this.gl.setClearColor(0xaccbd0, zoom);
     const submit = performance.now();
-    this.gl.render(this.scene, this.nav.camera);
+    if(!this.customRender?.(dt))this.gl.render(this.scene, this.nav.camera);
     this.renderMs = performance.now() - submit;
     this.onFrame?.();
   };

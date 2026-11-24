@@ -8,6 +8,7 @@ export class CameraController {
   readonly reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
   pose = { ...HOME };
   goal = { ...HOME };
+  enabled = true;
   orbit = false;
   minimumDistance = .06;
   orbitMinimum = 38;
@@ -20,6 +21,7 @@ export class CameraController {
     canvas.addEventListener(
       "wheel",
       (e) => {
+        if(!this.enabled)return;
         e.preventDefault();
         this.zoom(
           Math.exp(
@@ -31,6 +33,7 @@ export class CameraController {
     );
     canvas.oncontextmenu = (e) => e.preventDefault();
     canvas.onpointerdown = (e) => {
+      if(!this.enabled)return;
       this.stop();
       canvas.setPointerCapture(e.pointerId);
       this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });

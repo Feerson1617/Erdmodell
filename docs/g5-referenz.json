@@ -1,0 +1,56 @@
+[
+  {
+    "time": 0,
+    "url": "https://gws.gplates.org/topology/plate_polygons/?model=MULLER2019&time=0",
+    "sha256": "26b0b582d430cec378cf6fb754455de203dffd57d4d84c251ca60b6716cd0e2f",
+    "vertices": 38229,
+    "matchedWithinOneDegree": 1.0,
+    "medianDegrees": 0.135,
+    "p95Degrees": 0.204
+  },
+  {
+    "time": 50,
+    "url": "https://gws.gplates.org/topology/plate_polygons/?model=MULLER2019&time=50",
+    "sha256": "00200bb371478277f365abe61774090f724f968761ea857b45b78be81f78c637",
+    "vertices": 11946,
+    "matchedWithinOneDegree": 1.0,
+    "medianDegrees": 0.122,
+    "p95Degrees": 0.197
+  },
+  {
+    "time": 100,
+    "url": "https://gws.gplates.org/topology/plate_polygons/?model=MULLER2019&time=100",
+    "sha256": "9d8ea9e84dcc4542c7b7998c9aac9d9e9ea7670e46f1f51a7c17816bed33e7c4",
+    "vertices": 10723,
+    "matchedWithinOneDegree": 1.0,
+    "medianDegrees": 0.125,
+    "p95Degrees": 0.202
+  },
+  {
+    "time": 150,
+    "url": "https://gws.gplates.org/topology/plate_polygons/?model=MULLER2019&time=150",
+    "sha256": "4038603027a9192add7ebf51b13f1eb7957ab4fb500ca7fc47c38f1900eb2221",
+    "vertices": 8218,
+    "matchedWithinOneDegree": 1.0,
+    "medianDegrees": 0.126,
+    "p95Degrees": 0.205
+  },
+  {
+    "time": 200,
+    "url": "https://gws.gplates.org/topology/plate_polygons/?model=MULLER2019&time=200",
+    "sha256": "0841f3098a65564e25adf17f3ac8d2eb827e567f07c3568b3cf5eba9d8a12c84",
+    "vertices": 4667,
+    "matchedWithinOneDegree": 1.0,
+    "medianDegrees": 0.127,
+    "p95Degrees": 0.212
+  },
+  {
+    "time": 250,
+    "url": "https://gws.gplates.org/topology/plate_polygons/?model=MULLER2019&time=250",
+    "sha256": "7d4f9b80a34a1eecb083e30ffea8678da3891188b6107682b0cd94a4750eeda2",
+    "vertices": 3143,
+    "matchedWithinOneDegree": 1.0,
+    "medianDegrees": 0.126,
+    "p95Degrees": 0.213
+  }
+]
