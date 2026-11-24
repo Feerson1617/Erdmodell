@@ -1,3 +1,5 @@
+import { Observatory } from "./observatory/panel";
+import { reference } from "./observatory/regional";
 import { deviceProbe } from "./device-probe";
 declare global {
   interface Window {
@@ -28,7 +30,7 @@ const $ = <T extends HTMLElement = HTMLElement>(id: string) =>
   document.getElementById(id) as T;
 $("app").innerHTML =
   `<header><div class="brand">${brand}<span>GeoRisiko <b>3D</b></span></div>
-  <nav aria-label="Modellansicht">${[["globe","Globus","globe-2"],["inside","Schalenschnitt","layers-3"],["plates","Plattentektonik","waypoints"],["nyos","Nyos-See","waves"],["place","Orte","map-pin"]].map(([id,label,glyph]) => `<button id="nav-${id}">${icon(glyph)}<span>${label}</span></button>`).join("")}</nav>
+  <nav aria-label="Modellansicht">${[["globe","Globus","globe-2"],["inside","Schalenschnitt","layers-3"],["plates","Plattentektonik","waypoints"],["earthquake","Erdbeben","navigation-2"],["volcano","Vulkanismus","compass"],["risk","Schutz","eye"],["nyos","Nyos-See","waves"],["place","Orte","map-pin"]].map(([id,label,glyph]) => `<button id="nav-${id}">${icon(glyph)}<span>${label}</span></button>`).join("")}</nav>
   <div class="headTools">${button("info","Modellhinweise und Quellen","info")}<button id="present" aria-label="Präsentieren" aria-pressed="false">${icon("maximize")}<span>Präsentieren</span></button></div></header>
   <main id="desk" data-mode="globe"><aside id="sidebar" hidden aria-label="Modellsteuerung"></aside>
   <section class="view" aria-label="Interaktive 3D-Ansicht"><canvas id="earth" tabindex="0" aria-label="Drehbares Erdmodell. Pfeiltasten drehen, Plus und Minus zoomen."></canvas>
@@ -41,13 +43,14 @@ $("app").innerHTML =
   <div id="status" role="status">Erdmodell wird geladen …</div>
   <dialog id="dialog" aria-labelledby="dialogTitle">${button("closeDialog","Schließen","x")}<div id="content"></div></dialog>`;
 if (friday) {
-  for (const id of ["plates", "nyos", "place"]) $("nav-" + id).hidden = true;
+  for (const id of ["plates", "earthquake","volcano","risk","nyos", "place"]) $("nav-" + id).hidden = true;
 }
 const desk = $("desk"),
   side = $("sidebar"),
   dialog = $<HTMLDialogElement>("dialog"),
   content = $("content"),
   status = $("status");
+let observatory: Observatory;
 let world: World,
   labels = false,
   present = false,
@@ -169,6 +172,11 @@ function renderSide() {
     if(oldCode!==side.dataset.profile)side.scrollTop=0;
     if (advancedOpen && $("plateSettings")) $<HTMLDetailsElement>("plateSettings").open = true;
     bindPlateControls(side, world, renderSide);
+    const extra=document.createElement("div");extra.className="g-atlas-tools";
+    extra.innerHTML='<button id="g-boundaries">Grenze untersuchen</button>'+(world.selectedBoundary?'<button id="g-selected">Prozess ansehen</button>':'');
+    side.querySelector("h1")?.after(extra);
+    $("g-boundaries").onclick=()=>void observatory.openMap("boundaries");
+    if($("g-selected"))$("g-selected").onclick=()=>observatory.openBoundary(world.selectedBoundary!.step);
   }
   $("nyosPin").hidden = true;
   $("nyosRelief").hidden = true;
@@ -314,6 +322,7 @@ function updateNote() {
   }
 }
 function navigate(mode: World["mode"]) {
+  observatory?.close();
   if (mode === "inside") world.inside();
   else if (mode === "nyos") world.visit("nyos");
   else if (mode === "plates") world.plates();
@@ -322,6 +331,7 @@ function navigate(mode: World["mode"]) {
   renderSide();
 }
 function reset() {
+  observatory?.close();
   labels = false;
   released.clear();
   world.shell.setComparison("reference");
@@ -419,6 +429,10 @@ async function boot() {
     warn("Ersatzansicht · lokale Weltkarte");
     return;
   }
+  observatory=new Observatory(world,side,navigate);
+  for(const [id,run] of [["earthquake",()=>observatory.openMap()],["volcano",()=>observatory.openRegion(reference("hawaii","volcano"))],["risk",()=>observatory.openRegion(reference("san","risk"))]] as const){
+    $("nav-"+id).classList.add("obsNav");$("nav-"+id).onclick=run;
+  }
   renderSide();
   world.onLayer = i => {
     if (labels || released.has(i)) showDefinition(layers[i]);
@@ -473,6 +487,7 @@ async function boot() {
   let lastHud = 0;
   let lastBearing = NaN;
   world.onFrame = () => {
+    if(observatory.mode){if(status.textContent)status.textContent="";return;}
     if ((world.mode==="inside" && (labels || released.size)) || (world.mode==="plates" && (world.plateOptions.names || world.singlePlateName))) updatePins();
     const now = performance.now();
     if (now - lastHud < 55) return;
@@ -494,7 +509,7 @@ async function boot() {
   Object.defineProperty(window, "geoDeviceProbe", {value: deviceProbe});
   Object.defineProperty(window,"geoAtlasCoverage",{value:()=>world.atlasCoverage()});
   Object.defineProperty(window, "geoObservatory", {
-    value: () => ({...world.diagnostics(), annotationDom:{...tectonicPins.work}, shellAnnotationDom:{...shellPins.work}}),
+    value: () => ({...world.diagnostics(), observatory:observatory.diagnostics(), annotationDom:{...tectonicPins.work}, shellAnnotationDom:{...shellPins.work}}),
   });
 }
 void boot().catch(() =>
