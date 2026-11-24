@@ -1,3 +1,4 @@
+import {libraryGLSL} from "./graphics";
 import {lavaTongue} from "./lava-flow";
 import * as T from "three";
 import type {RegionalScene} from "./regional";
@@ -61,16 +62,26 @@ export function eruption(r:RegionalScene,x:number,top:number){
   const hotspot=r.spec.process==="hotspot",z=r.spec.arcTransect?0:-.33;const centres:T.Mesh[]=[];
   if(!r.spec.arcTransect){
   const shape=edifice(hotspot),rock=material(0x817c77);rock.vertexColors=true;
-  if(r.lib){const atlas=r.lib.color;rock.onBeforeCompile=s=>{
-    s.uniforms.scree={value:atlas};s.vertexShader="varying vec3 flank;\n"+s.vertexShader.replace("#include <begin_vertex>","#include <begin_vertex>\nflank=position;");
-    s.fragmentShader="varying vec3 flank;uniform sampler2D scree;\n"+s.fragmentShader.replace("#include <color_fragment>","#include <color_fragment>\nvec2 p=flank.xz*3.+flank.y*.43;vec3 rock=textureGrad(scree,(vec2(3.,1.)+.004+.992*fract(p))/vec2(4.,2.),dFdx(p)/vec2(4.,2.),dFdy(p)/vec2(4.,2.)).rgb;diffuseColor.rgb*=.53+2.8*sqrt(rock);");};}
+  if(r.lib){const lib=r.lib;rock.onBeforeCompile=s=>{
+    Object.assign(s.uniforms,{faciesColor:{value:lib.color},faciesRelief:{value:lib.relief},detailGrade:r.grade});
+    s.vertexShader="varying vec3 flank;\n"+s.vertexShader.replace("#include <begin_vertex>","#include <begin_vertex>\nflank=position;");
+    s.fragmentShader="varying vec3 flank;\n"+libraryGLSL+s.fragmentShader.replace("#include <color_fragment>",`#include <color_fragment>
+      vec2 p=flank.xz*6.6+flank.y*vec2(.47,.91);
+      vec2 gravelUV=mat2(.78,.625,-.625,.78)*p*2.3+.16;
+      vec3 basalt=fieldSample(faciesColor,p,3.).rgb;
+      vec3 grains=fieldSample(faciesColor,gravelUV,2.).rgb;
+      vec3 relief=fieldSample(faciesRelief,p,3.).rgb;
+      float scree=smoothstep(.22,.72,relief.b+.16*sin(flank.x*16.+flank.z*9.));
+      vec3 surfaceRock=mix(basalt,grains*vec3(.64,.61,.62),.36*scree);
+      diffuseColor.rgb=mix(diffuseColor.rgb,surfaceRock,.81)*(.72+.52*relief.b);
+    `).replace("#include <normal_fragment_maps>","#include <normal_fragment_maps>\nnormal=normalize(normal+mat3(viewMatrix)*vec3(relief.r-.5,0.,relief.g-.5)*.66);");};}
   rock.side=T.DoubleSide;
   if(r.surfaceImage){
     const previous=rock.onBeforeCompile.bind(rock);rock.onBeforeCompile=(s,gl)=>{previous(s,gl);
       s.uniforms.groundImage={value:r.surfaceImage};s.vertexShader="attribute float apron;varying vec3 footprintUV;\n"+s.vertexShader.replace("#include <begin_vertex>","#include <begin_vertex>\nvec3 foot=(modelMatrix*vec4(position,1.)).xyz;footprintUV=vec3(foot.x/12.+.5,.5-foot.z/9.,apron);");
-      s.fragmentShader="uniform sampler2D groundImage;varying vec3 footprintUV;\n"+s.fragmentShader.replace("#include <roughnessmap_fragment>","#include <roughnessmap_fragment>\nfloat toe=smoothstep(.5,.99,footprintUV.z)*smoothstep(.0,.015,originalBed);diffuseColor.rgb=mix(diffuseColor.rgb,texture2D(groundImage,footprintUV.xy).rgb,toe);");};
+      s.fragmentShader="uniform sampler2D groundImage;varying vec3 footprintUV;\n"+s.fragmentShader.replace("#include <roughnessmap_fragment>","#include <roughnessmap_fragment>\nfloat toe=smoothstep(.28,.94,footprintUV.z)*smoothstep(.0,.015,originalBed);diffuseColor.rgb=mix(diffuseColor.rgb,texture2D(groundImage,footprintUV.xy).rgb,toe);");};
   }
-  rock.customProgramCacheKey=()=>"g6-volcanic-flanks-"+Boolean(r.lib)+"-"+Boolean(r.surfaceImage);
+  rock.customProgramCacheKey=()=>"g61-volcanic-flanks-"+Boolean(r.lib)+"-"+Boolean(r.surfaceImage);
   conformFlanks(rock,r);
   const depth=new T.MeshDepthMaterial({depthPacking:T.RGBADepthPacking});conformFlanks(depth,r);
   rock.addEventListener("dispose",()=>depth.dispose());

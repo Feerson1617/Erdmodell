@@ -36,12 +36,14 @@ export function lavaTongue(width:number){
   const front={value:0},m=new T.MeshStandardMaterial({side:T.DoubleSide,roughness:.91});
   m.onBeforeCompile=s=>{s.uniforms.front=front;s.vertexShader="varying vec2 tongue;\n"+s.vertexShader.replace("#include <begin_vertex>","#include <begin_vertex>\ntongue=uv;");
     s.fragmentShader="varying vec2 tongue;uniform float front;\n"+veins+s.fragmentShader.replace("#include <color_fragment>",`#include <color_fragment>
-      float age=max(0.,front-tongue.x);vec2 pos=vec2(tongue.x*16.,tongue.y*2.5);
-      pos+=.55*vec2(flowNoise(pos*1.7),flowNoise(pos*1.3+3.9));float blocks=cooled(pos);
+      float age=max(0.,front-tongue.x);vec2 pos=vec2(tongue.x*19.,tongue.y*3.6);
+      pos+=.89*vec2(flowNoise(pos*1.7),flowNoise(pos*1.3+3.9))+.10*vec2(flowNoise(pos*5.2),flowNoise(pos*6.1+8.));float blocks=cooled(pos);
       float edge=smoothstep(0.,.19,min(tongue.y,1.-tongue.y));
-      float crust=flowNoise(pos*5.9);float heat=edge*(1.-smoothstep(.018,.135,blocks))*(.45+.55*crust)*(1.-.70*smoothstep(.18,.81,age));
+      float crust=.65*flowNoise(pos*5.9)+.35*flowNoise(pos*18.);
+      float exposure=smoothstep(.23,.75,flowNoise(pos*.62+.3)+.19*crust-.32*age);
+      float heat=edge*(1.-smoothstep(.016,.118,blocks))*exposure*(.41+.62*crust)*(1.-.76*smoothstep(.10,.74,age));
       heat=max(heat,(1.-smoothstep(.006,.068,age))*edge*(.22+.52*crust));
-      diffuseColor.rgb=mix(vec3(.032,.030,.033)+vec3(.074,.056,.047)*crust,vec3(.91,.17,.019),heat);
+      diffuseColor.rgb=mix(vec3(.032,.030,.033)+vec3(.108,.091,.083)*crust,vec3(.91,.17,.019),heat);
     `).replace("#include <emissivemap_fragment>","#include <emissivemap_fragment>\ntotalEmissiveRadiance+=vec3(1.36,.235,.013)*heat;");};
   const mesh=new T.Mesh(g,m);mesh.name="Lavafluss";mesh.frustumCulled=false;mesh.visible=false;mesh.receiveShadow=true;
   let route:Sample[]=[];
@@ -49,11 +51,12 @@ export function lavaTongue(width:number){
     route=downhill(x,z,a,length/rows,rows,surface,branch);
     for(let i=0;i<route.length;i++){
       const prev=route[Math.max(0,i-1)],pt=route[i],next=route[Math.min(i+1,route.length-1)];
-      const dx=next.x-prev.x,dz=next.z-prev.z,n=Math.hypot(dx,dz)||1,u=i/rows;
+      const dx=next.x-prev.x,dz=next.z-prev.z,n=Math.hypot(dx,dz)||1,u=i/Math.max(1,route.length-1);
       for(let j=0;j<=cols;j++){const v=j/cols,w=(v-.5)*width*(.48+.44*Math.sin(u*7+.4)**2+.34*Math.sin(u*19+.9)**2)*(1-.51*u);
-        const xx=pt.x-dz/n*w,zz=pt.z+dx/n*w;p.setXYZ(i*(cols+1)+j,xx,surface(xx,zz)+width*(.018+.135*Math.sin(Math.PI*v)),zz);}
+        g.attributes.uv.setXY(i*(cols+1)+j,u,v);
+        const xx=pt.x-dz/n*w,zz=pt.z+dx/n*w;p.setXYZ(i*(cols+1)+j,xx,surface(xx,zz)+width*(.014+.074*Math.sin(Math.PI*v)),zz);}
     }
-    p.needsUpdate=true;g.setDrawRange(0,Math.max(0,route.length-1)*cols*6);g.computeVertexNormals();
+    g.attributes.uv.needsUpdate=true;p.needsUpdate=true;g.setDrawRange(0,Math.max(0,route.length-1)*cols*6);g.computeVertexNormals();
     mesh.userData.track=route.map(v=>[v.x,v.h,v.z]);
   },phase(t:number){front.value=t;g.setDrawRange(0,Math.max(0,Math.floor((route.length-1)*t))*cols*6);mesh.visible=t>0&&route.length>1;}};
 }
