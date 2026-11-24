@@ -1,3 +1,4 @@
+import {Observation} from "./observatory/observation";
 import { Observatory } from "./observatory/panel";
 import { reference } from "./observatory/regional";
 import { deviceProbe } from "./device-probe";
@@ -330,7 +331,9 @@ function updateNote() {
   }
 }
 function navigate(mode: World["mode"]) {
+  const leavingRegional=Boolean(observatory?.mode);
   observatory?.close();
+  if(leavingRegional&&(mode==="plates"||mode==="globe"))world.nav.fly({lat:15,lon:-20,d:16000,tilt:0,bearing:0},true);
   if (mode === "inside") world.inside();
   else if (mode === "nyos") world.visit("nyos");
   else if (mode === "plates") world.plates();
@@ -437,13 +440,14 @@ async function boot() {
     warn("Ersatzansicht · lokale Weltkarte");
     return;
   }
+  const observation=new Observation();
   observatory=new Observatory(world,side,navigate);
   for(const [id,run] of [["earthquake",()=>observatory.openMap()],["volcano",()=>observatory.openRegion(reference("hawaii","volcano"))],["risk",()=>observatory.openRegion(reference("san","risk"))]] as const){
     $("nav-"+id).classList.add("obsNav");$("nav-"+id).onclick=run;
   }
   renderSide();
   world.onLayer = i => {
-    if (labels || released.has(i)) showDefinition(layers[i]);
+    if (!observation.active && (labels || released.has(i))) showDefinition(layers[i]);
     else select(i);
   };
   world.onBoundary = () => { if (world.mode === "plates") renderSide(); };
@@ -495,6 +499,7 @@ async function boot() {
   let lastHud = 0;
   let lastBearing = NaN;
   world.onFrame = () => {
+    observation.update();
     if(observatory.mode){if(status.textContent)status.textContent="";return;}
     if ((world.mode==="inside" && (labels || released.size)) || (world.mode==="plates" && (world.plateOptions.names || world.singlePlateName))) updatePins();
     const now = performance.now();

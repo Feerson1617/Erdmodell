@@ -10,13 +10,15 @@ const palette:Record<Rock,[number,string,string]>={
   warm:[0xa07050,"Verformbarer Mantel","Heißes Mantelgestein ist überwiegend fest. Über lange Zeit kann es sich verformen."],
   wedge:[0x899265,"Mantelkeil","Hier liegt Mantelgestein über der absinkenden Platte."],
   fault:[0x876550,"Störungszone","Hier grenzt bewegtes Gestein an den benachbarten Gesteinskörper."]};
-function material(kind:Rock){
+function material(kind:Rock,r:RegionalScene){
   const m=new T.MeshStandardMaterial({color:palette[kind][0],roughness:kind==="basalt"?.79:.94,side:T.DoubleSide});
   m.customProgramCacheKey=()=>"g51-"+kind;
   m.onBeforeCompile=shader=>{
-    shader.vertexShader="varying vec3 stone;\n"+shader.vertexShader.replace("#include <begin_vertex>","#include <begin_vertex>\nstone=position;");
-    const structure=kind==="sediment"?"sin(rock.y*48.+2.*a+.65*sin(rock.x*2.))":kind==="continental"?"cos(rock.x*5.+rock.y*8.+3.*a)*b":kind==="basalt"?"sin(rock.x*21.+a*3.)*sin(rock.y*17.+b)":"sin(rock.x*5.-rock.y*6.+a)*.42";
-    shader.fragmentShader="varying vec3 stone;\n"+shader.fragmentShader.replace("#include <color_fragment>","#include <color_fragment>\nvec3 rock=stone;float a=sin(rock.x*4.9+rock.y*3.2)*cos(rock.z*3.8+rock.y*7.6);float b=sin(dot(rock,vec3(31.,45.,13.))+a*5.);diffuseColor.rgb*=.95+.09*b+.14*("+structure+");");
+    shader.uniforms.stressPhase=r.stressSignals.phase;shader.uniforms.showStress=r.stressSignals.show;
+    shader.vertexShader="attribute vec2 coupling;attribute vec3 geologyCoord;varying vec2 lock;varying vec3 stone;\n"+shader.vertexShader.replace("#include <begin_vertex>","#include <begin_vertex>\nstone=geologyCoord;lock=coupling;");
+    const noise="float hashRock(vec3 p){p=fract(p*.31831+vec3(.17,.43,.71));p*=17.;return fract(p.x*p.y*p.z*(p.x+p.y+p.z));} float mineral(vec3 p){vec3 a=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(mix(hashRock(a),hashRock(a+vec3(1,0,0)),f.x),mix(hashRock(a+vec3(0,1,0)),hashRock(a+vec3(1,1,0)),f.x),f.y),mix(mix(hashRock(a+vec3(0,0,1)),hashRock(a+vec3(1,0,1)),f.x),mix(hashRock(a+vec3(0,1,1)),hashRock(a+vec3(1,1,1)),f.x),f.y),f.z);}";
+    const structure=kind==="sediment"?"sin(stone.y*38.+a*3.)*.11":kind==="continental"?"smoothstep(.48,.88,b)*.22-smoothstep(.64,.85,a)*.19":kind==="basalt"?"smoothstep(.72,.83,b)*.19-a*.13":"a*.12-b*.09";
+    shader.fragmentShader="varying vec3 stone;varying vec2 lock;uniform float showStress,stressPhase;"+noise+"\n"+shader.fragmentShader.replace("#include <color_fragment>","#include <color_fragment>\nfloat a=mineral(stone*4.7),b=mineral(stone*29.+a*2.);diffuseColor.rgb*=.94+.12*(b-.5)+("+structure+");float strain=lock.x*smoothstep(0.,.36,stressPhase)*(1.-smoothstep(lock.y,lock.y+.07,stressPhase));diffuseColor.rgb=mix(diffuseColor.rgb,vec3(.70,.22,.068),.72*showStress*strain);");
   };return m;
 }
 // A closed solid, with separately shaded cap, base, exposed cross-section and side faces.
@@ -33,7 +35,8 @@ function solid(r:RegionalScene,kind:Rock,side:number,point:(u:number,v:number,z:
   face(54,10,(u,w)=>[u,0,-4.5*w]);face(54,3,(u,w)=>[u,1,-4.5*w],true);
   face(4,6,(v,w)=>[0,v,-4.5*w]);face(4,6,(v,w)=>[1,v,-4.5*w],true);
   const g=new T.BufferGeometry();g.setIndex(indices);g.setAttribute("position",new T.Float32BufferAttribute(pos,3));g.computeVertexNormals();
-  const m=new T.Mesh(g,material(kind));m.name=label??palette[kind][1];m.userData.explanation={name:m.name,answer:palette[kind][2]};r.section.add(m);
+  g.setAttribute("geologyCoord",g.attributes.position.clone());
+  const m=new T.Mesh(g,material(kind,r));m.name=label??palette[kind][1];m.userData.explanation={name:m.name,answer:palette[kind][2]};r.section.add(m);
   r.bindRock(g,side);return m;
 }
 export function geologySolids(r:RegionalScene){

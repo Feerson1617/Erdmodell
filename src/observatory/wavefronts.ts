@@ -26,19 +26,24 @@ export function waveAnalysis(r:RegionalScene){
     for(const [n,front] of fronts.entries()){
       const speed=n?sSpeed:pSpeed,rad=(t-onset)*speed;front.visible=quake&&(n?r.showS:r.showP)&&rad>0&&t<.99;
       const pos=front.geometry.attributes.position as T.BufferAttribute;
+      let count=0,previous=false;
+      const indices=front.geometry.index!;
       if(front.visible)for(let i=0;i<=160;i++){
         const a=i*Math.PI/80,cs=Math.cos(a),sn=Math.sin(a);
+        const centerX=f.hx+rad*cs,centerY=f.hy+rad*sn;
+        const visible=Math.abs(centerX)<=6&&centerY<=r.height(centerX,0)&&centerY>=-5.5;
+        if(previous&&visible){const k=(i-1)*2;for(const vertex of [k,k+1,k+2,k+1,k+3,k+2])indices.setX(count++,vertex);}
+        previous=visible;
         for(let j=0;j<2;j++){
           const radius=Math.max(0,rad+(j-.5)*.095),x=f.hx+radius*cs;
           const y=Math.min(r.height(x,0),f.hy+radius*sn);
-          const vis=Math.abs(x)<=6&&f.hy+rad*sn<r.height(x,0)+.015&&y>=-5.5;
           const d=f.offset(probe,x,y,0,x>=f.xAt(y)?1:-1,t);
-          pos.setXYZ(i*2+j,Math.max(-6,Math.min(6,x)),vis?y:Math.min(r.height(x,0),Math.max(-5.5,y)),vis?.036+d.z:-4.65);
+          pos.setXYZ(i*2+j,Math.max(-6,Math.min(6,x)),Math.max(-5.5,y),.036+d.z);
         }
       }
-      pos.needsUpdate=true;const beads=markers[n];beads.visible=(n?r.showS:r.showP);
+      front.geometry.setDrawRange(0,count);indices.needsUpdate=true;pos.needsUpdate=true;const beads=markers[n];beads.visible=(n?r.showS:r.showP);
       if(detail.visible&&beads.visible)for(let i=0;i<14;i++){
-        const distance=.18+i*.27,x=f.hx+distance,y=f.hy-(n?.38:0),arrival=onset+distance/speed,u=t-arrival;
+        const distance=.18+i*.27,x=f.hx+distance,y=f.hy-(n?.38:0),arrival=onset+Math.hypot(distance,y-f.hy)/speed,u=t-arrival;
         const phase=u>0?Math.sin(u*105)*Math.exp(-u*12)*Math.min(1,u/.017):0;
         dummy.position.set(x+(n?0:phase*.15),y+(n?phase*.17:0),.44);dummy.updateMatrix();beads.setMatrixAt(i,dummy.matrix);
       }beads.instanceMatrix.needsUpdate=true;

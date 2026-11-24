@@ -1,4 +1,5 @@
 import {tracks} from "./reconstruction";
+import geographicExamples from "./geographic-examples.json";
 import gnss from "./gnss.json";
 import { depthSection } from "./depth-section";
 import underwater from "./transform-sea.json";
@@ -57,7 +58,7 @@ export class Observatory {
   }
   async openMap(purpose:"events"|"boundaries"="events"){
     this.base();this.mode="map";this.mapPurpose=purpose;this.theme="earthquake";this.mark();
-    if(purpose==="events")this.world.nav.fly({lat:12,lon:-146,d:15300,tilt:0,bearing:0},true);
+    this.world.nav.fly({lat:purpose==="events"?12:15,lon:purpose==="events"?-146:-20,d:15300,tilt:0,bearing:0},true);
     this.world.nav.minimumDistance=150;this.maps.group.visible=true;this.maps.events.visible=purpose==="events";this.maps.boundaries.visible=true;
     this.maps.event=undefined;this.maps.selectedStep=undefined;this.draw();
     const rev=this.revision;
@@ -65,7 +66,7 @@ export class Observatory {
   }
   async openRegion(spec:RegionSpec){
     this.base();this.mode="regional";this.theme=spec.theme;this.mark();
-    this.world.nav.minimumDistance=.06;this.world.nav.fly({lat:spec.lat,lon:spec.lon,d:Math.max(140,(spec.site?sites[spec.site].width:110)*2.4),tilt:12,bearing:0},true,1150);
+    this.world.nav.minimumDistance=.06;this.world.nav.fly({lat:spec.lat,lon:spec.lon,d:Math.max(3600,(spec.site?sites[spec.site].width:110)*3.2),tilt:12,bearing:0},true,1150);
     const reg=new RegionalScene(spec,$("earth") as HTMLCanvasElement);this.region=reg;reg.orbit.enabled=false;
     this.enrich(reg);const rev=this.revision;this.draw();
     try{await reg.init();if(rev===this.revision)this.draw();}
@@ -92,7 +93,9 @@ export class Observatory {
       this.maps.pick(hit.normalize(),(this.world.nav.pose.d/R)*.018,this.mapPurpose==="events");this.draw();}
     return true;
   }
+  private examplesCache:Record<string,string>={};
   private examples(){
+    if(Object.keys(this.examplesCache).length)return this.examplesCache;
     const distances:Record<string,[number,number]>={ridge:[-28,-13],transform:[36,-120],oceanTransform:[-55,0],subduction:[38,143],arc:[19,145],collision:[28,85],rift:[-3,36],convergence:[-2,137],complex:[34,70]};
     const result:Record<string,string>={};
     for(const [kind,[lat,lon]] of Object.entries(distances)){
@@ -108,7 +111,7 @@ export class Observatory {
       const s=this.maps.steps.filter(s=>test(s)&&!result[s[0]]).sort((a,b)=>Math.hypot(b[6]-b[4],((b[5]-b[3]+540)%360)-180)-Math.hypot(a[6]-a[4],((a[5]-a[3]+540)%360)-180))[0];
       if(s)result[s[0]]=label;
     }
-    return result;
+    this.examplesCache=result;return result;
   }
   coverage(){
     return this.maps.steps.map(geology);
@@ -125,7 +128,7 @@ export class Observatory {
         (m.events.visible?'<label><input id="g-depth" type="checkbox" '+(m.depth?"checked":"")+'> Tiefe unterscheiden</label><small>USGS · 2019–2023 · Magnitude ab 6</small>'+(m.depth?'<div class="g-legend"><span>Flach</span><span>Mitteltief</span><span>Tief</span></div>':''):'')+
         (ev?'<h2>Beobachtetes Erdbeben</h2><p>'+ev[1]+' · Magnitude '+ev[5]+' ('+ev[6]+') · '+Math.round(ev[4])+' km tief</p>':'')+
         (s?'<h2>'+m.pair+'</h2><p>'+explain[classify(s)]+'</p>'+button("g-segment","Prozess ansehen")+button("g-quake-explain",["subduction","arc","oceanTransform"].includes(classify(s))?"Seebeben erklären":"Erdbeben erklären")+(["ridge","subduction","arc"].includes(classify(s))?button("g-segment-volcano","Vulkanismus ansehen"):''):'')+
-        (this.mapPurpose==="boundaries"?'<label>Grenzbeispiele<select id="g-example"><option value="">Ort auf dem Globus finden …</option>'+opts(this.examples(),"")+'</select></label>':'')+
+        (this.mapPurpose==="boundaries"?'<label>Grenzbeispiele<select id="g-example"><option value="">Ort auf dem Globus finden …</option>'+opts(this.examples(),"")+'<optgroup label="Weitere Regionen">'+opts(Object.fromEntries(Object.entries(geographicExamples).filter(([id])=>!this.examplesCache[id])),"")+'</optgroup></select></label>':'')+
         '<label>Referenzregion<select id="g-launch"><option value="">Region wählen …</option>'+opts(Object.fromEntries(Object.entries(sites).filter(([k])=>k!=="hawaii").map(([k,v])=>[k,v.name])),"")+'</select></label>'+
         item("Woher wissen wir das?","Seismometer zeichnen Erschütterungen auf. Aus vielen Aufzeichnungen bestimmen Forschende Ort und Tiefe. Ein Kartenpunkt allein verrät die Bruchrichtung nicht.")+back+'</div>';
       this.change("g-quakes",()=>{m.events.visible=!m.events.visible;m.event=undefined;this.draw();});this.change("g-lines",()=>{m.boundaries.visible=!m.boundaries.visible;m.selectedStep=undefined;this.draw();});
@@ -144,8 +147,9 @@ export class Observatory {
         '<label><input type="checkbox" id="g-names" '+(r.names?"checked":"")+'> Namen zeigen</label>'+
         (sp.theme==="earthquake"&&(sp.comparison||r.faultModel.waterEvent||sp.process==="oceanTransform"&&sp.geology?.elevation!<0)?'<label>Zwei Modellereignisse vergleichen<select id="g-sea">'+opts({vertical:"B · Überschiebung in Japan",flat:"A · Untermeerischer Seitenversatz"},r.vertical?"vertical":"flat")+'</select></label>':'')+
         this.extraControls(r)+(sp.site==="japan"?depthSection():"")+'<div id="g-object" aria-live="polite"></div>'+
-        '<details><summary>Modell steuern</summary><label><input type="checkbox" id="g-slow" '+(r.slow?"checked":"")+'> Zeitlupe</label><label><input type="checkbox" id="g-stress" '+(r.stress?"checked":"")+'> Spannung im Modell</label></details>'+
-        item("Was geschieht hier?",explain[sp.process])+this.extraInfo(r))+
+        '<details><summary>Modell steuern</summary><label><input type="checkbox" id="g-phases" '+(r.phasesShown?"checked":"")+'> Phasen benennen</label><label><input type="checkbox" id="g-slow" '+(r.slow?"checked":"")+'> Zeitlupe</label><label><input type="checkbox" id="g-stress" '+(r.stress?"checked":"")+'> Spannung im Modell</label></details>'+
+        item("Was geschieht hier?",explain[sp.process])+
+        (sp.geology?item("Was ist an diesem Ort belegt?",this.regionText(sp.geology)):"")+this.extraInfo(r))+
         button("g-map","Zur Weltkarte")+back+'</div>';
       this.change("g-site",v=>{if(v)void this.openRegion(reference(v as Site,sp.theme));});
       this.action("g-cut",()=>{r.reframe(!r.cut);this.draw();});this.action("g-play",()=>{if(r.progress>=1)r.progress=0;r.playing=!r.playing;});
@@ -157,7 +161,7 @@ export class Observatory {
         next.comparison=sp.comparison??{...sp,comparison:undefined};
         void this.openRegion(next).then(()=>{if(this.region?.spec===next && openCut){this.region.reframe(true);this.draw();}});
       });this.change("g-names",()=>{r.names=!r.names;});
-      this.change("g-slow",()=>{r.slow=!r.slow;});this.change("g-stress",()=>{r.stress=!r.stress;});this.action("g-map",()=>void this.openMap());this.bindExtra(r);
+      this.change("g-phases",()=>{r.phasesShown=!r.phasesShown;});this.change("g-slow",()=>{r.slow=!r.slow;});this.change("g-stress",()=>{r.stress=!r.stress;});this.action("g-map",()=>void this.openMap());this.bindExtra(r);
     }else this.drawTime();
     this.action("g-world",()=>this.navigateBase("globe"));if(this.message){const p=document.createElement("p");p.textContent=this.message;this.side.append(p);}
   }
@@ -168,8 +172,13 @@ export class Observatory {
     r.orbit.enabled=true;this.world.nav.enabled=false;const canvas=this.world.gl.domElement;r.camera.aspect=canvas.clientWidth/canvas.clientHeight;r.camera.updateProjectionMatrix();
     r.update(dt);this.world.gl.render(r.scene,r.camera);
     const phase=this.phaseText(r),play=$("g-play");
-    if(play){play.textContent=r.playing?"Pause":"Abspielen";$("g-phase").textContent=phase;if(document.activeElement!==$("g-progress"))$<HTMLInputElement>("g-progress").value=String(r.progress);}
+    if(play){play.textContent=r.playing?"Pause":"Abspielen";$("g-phase").textContent=r.phasesShown?phase:"Modellzeit";if(document.activeElement!==$("g-progress"))$<HTMLInputElement>("g-progress").value=String(r.progress);}
     this.updateLabels(r);return true;
+  }
+  private regionText(g:ReturnType<typeof geology>){
+    const card=(a:number)=>["Norden","Nordosten","Osten","Südosten","Süden","Südwesten","Westen","Nordwesten"][Math.round(a/45)%8];
+    if(g.descending&&g.overriding&&g.dipAzimuth!=null)return names[g.descending]+" taucht unter die Platte „"+names[g.overriding]+"“. Der Kontakt fällt nach "+card(g.dipAzimuth)+". Die Bruchfläche des Modellbebens ist vereinfacht.";
+    return "Im globalen Höhenraster liegt der Abschnitt "+(g.elevation<0?"unter Wasser.":"an Land.")+" "+(g.coastalUncertainty?"Der genaue Küstenverlauf bleibt offen.":"")+" "+names[g.left]+" bewegt sich gegenüber der Platte „"+names[g.right]+"“ nach "+card(g.relativeAzimuth)+".";
   }
   private phaseText(r:RegionalScene){
     const byTheme:Partial<Record<Theme,string[]>>={process:["Ausgangszustand","Langsame Plattenbewegung","Gestein verformt sich","Grenzbereich verändert sich","Zustände vergleichen"],volcano:["Ausgangszustand","Material steigt auf","Gestein schmilzt teilweise","Magma steigt auf","Vulkanbildung"],magnet:["Rücken","Neuer Boden entsteht","Gestein kühlt ab","Magnetfeld wird aufgezeichnet","Älterer Boden wandert nach außen"],forces:["Wärme im Inneren","Mantelgestein bewegt sich","Dichte Lithosphäre sinkt","Zug an der Platte","Kräfte wirken zusammen"],risk:["Gleiches Modellbeben","Spannung steigt","Bruch am Herd","Erschütterung am Standort","Folgen vergleichen"]};
@@ -220,10 +229,14 @@ export class Observatory {
     this.action("g-risk",()=>void this.openRegion({...r.spec,theme:"risk"}));
   }
   private pickRegion(x:number,y:number){
-    const r=this.region;if(!r?.ready)return;
+    const r=this.region;if(!r?.ready||document.body.classList.contains("observing"))return;
     const rect=$("earth").getBoundingClientRect(),ray=new T.Raycaster();ray.params.Line.threshold=.09;
     ray.setFromCamera(new T.Vector2(2*(x-rect.x)/rect.width-1,1-2*(y-rect.y)/rect.height),r.camera);
-    const hit=ray.intersectObjects(r.scene.children,true).find(h=>{let o:T.Object3D|null=h.object;while(o){if(!o.visible)return false;o=o.parent;}return true;});
+    const hit=ray.intersectObjects(r.scene.children,true).find(h=>{
+      if(h.object.name==="Gelände"&&r.cut&&h.point.z>0)return false;
+      const mat=(h.object as T.Mesh).material as T.Material|undefined;
+      if(mat?.transparent && !h.object.userData.explanation)return false;
+      let o:T.Object3D|null=h.object;while(o){if(!o.visible)return false;o=o.parent;}return true;});
     const info=hit?.object.userData.explanation;
     if(info&&$("g-object"))$("g-object").textContent=(r.names?info.name+" · ":"")+info.answer;
   }

@@ -41,8 +41,14 @@ export class RegionalScene {
   private contextHeights?:Int16Array;private groundData?:Int16Array;private colorMap?:T.Texture;private normalMap?:T.Texture;private roughMap?:T.Texture;private sky:T.CanvasTexture;private contextMap?:T.Texture;private reveal=0;private transition?:{from:T.Vector3;to:T.Vector3;look:T.Vector3;goal:T.Vector3;fraction:number};
   faultModel!:Fault;private windows?:Int16Array;
   private solids:{g:T.BufferGeometry;base:Float32Array;side:number}[]=[];private lastT=-1;
+  readonly stressSignals={phase:{value:0},show:{value:0}};
   readonly deformed=new T.Vector3();
-  bindRock(g:T.BufferGeometry,side:number){this.solids.push({g,side,base:new Float32Array(g.attributes.position.array)});(g.attributes.position as T.BufferAttribute).setUsage(T.DynamicDrawUsage);}
+  bindRock(g:T.BufferGeometry,side:number){
+    const f=this.faultModel,coords=g.attributes.position,values=new Float32Array(coords.count*2);
+    for(let i=0;i<coords.count;i++){const x=coords.getX(i),y=coords.getY(i),z=coords.getZ(i);
+      values[i*2]=Math.exp(-Math.abs(x-f.xAt(y))*1.4-z*z*.09);
+      values[i*2+1]=onset+Math.hypot(x-f.hx,y-f.hy,z)/16;}
+    g.setAttribute("coupling",new T.BufferAttribute(values,2));this.solids.push({g,side,base:new Float32Array(g.attributes.position.array)});(g.attributes.position as T.BufferAttribute).setUsage(T.DynamicDrawUsage);}
   physicalState(){
     const f=this.faultModel;if(!f)return {};
     const sample=this.solids.find(s=>s.side===1),i=sample?Math.floor(sample.base.length/6)*3:0;
@@ -54,7 +60,7 @@ export class RegionalScene {
       rupture:this.rupture.visible?Array.from(this.rupture.geometry.attributes.position.array):[],waveFronts:this.waves.map(w=>w.visible),
       vertex:sample?{rest:Array.from(sample.base.slice(i,i+3)),drawn:Array.from(sample.g.attributes.position.array.slice(i,i+3)),side:sample.side}:null};
   }
-  showP=true;showS=true;detail=false;water?:WaterSection;private waves:T.Mesh[]=[];private fault!:T.Line;private rupture!:T.Line;
+  showP=true;showS=true;detail=false;phasesShown=false;water?:WaterSection;private waves:T.Mesh[]=[];private fault!:T.Line;private rupture!:T.Line;
   private waterColumn?:T.Mesh; private nearSurface=0;private rockMaterial:T.Material[]=[];
   private people:T.Mesh[]=[];private route?:T.Line;private motion:((t:number)=>void)[]=[];
   progress=0;playing=false;slow=false;cut=false;names=false;vertical=true;stress=false;
@@ -226,7 +232,7 @@ export class RegionalScene {
   update(dt:number){
     this.age+=dt;if(this.playing){this.progress=Math.min(1,this.progress+dt/(this.slow?32:14));if(this.progress===1)this.playing=false;}
     if(!this.ready)return;
-    const t=this.progress;this.ui.t.value=t;this.ui.clock.value=this.age;this.ui.stress.value=+this.stress;
+    const t=this.progress;this.stressSignals.phase.value=t;this.stressSignals.show.value=+(this.stress&&this.spec.theme==="earthquake");this.ui.t.value=t;this.ui.clock.value=this.age;this.ui.stress.value=+this.stress;
     this.ui.vertical.value=+this.vertical;
     const motion=matchMedia("(prefers-reduced-motion: reduce)").matches;
     this.reveal=motion?+this.cut:T.MathUtils.damp(this.reveal,+this.cut,9,dt);
