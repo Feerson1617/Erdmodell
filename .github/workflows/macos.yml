@@ -23,6 +23,23 @@ jobs:
       - run: npm ci
       - run: npm run mac:build
       - run: bash scripts/mount-macos.sh
+      - name: Gesicherten G5.2.1-Stand auf demselben Mac bauen
+        uses: actions/checkout@v4
+        with:
+          ref: 439a6b69e250060ffb39f8ab9aad653775c4289d
+          path: .scratch/g521-reference
+          persist-credentials: false
+      - name: Vergleich der Originalbilder, Modellphasen und Grafikprofile
+        env:
+          G6_CHROME: '1'
+          G6_PERF: '1'
+        run: |
+          npm --prefix .scratch/g521-reference run build
+          npm --prefix .scratch/g521-reference run standalone
+          G6_OUT=test-results/mac/G6/Vorher node tests/g6-gallery.mjs .scratch/g521-reference/artifacts/GeoRisiko-G5.2.1-Web-Test.html
+          G6_OUT=test-results/mac/G6/Nachher node tests/g6-gallery.mjs artifacts/GeoRisiko-G6-Web-Test.html
+          G6_STAGE=Profile G6_PROFILE=classroom G6_OUT=test-results/mac/G6/Unterricht node tests/g6-gallery.mjs artifacts/GeoRisiko-G6-Web-Test.html
+          G6_STAGE=Profile G6_PROFILE=maximum G6_OUT=test-results/mac/G6/Maximal node tests/g6-gallery.mjs artifacts/GeoRisiko-G6-Web-Test.html
       - name: Bedienfilm vorbereiten
         run: command -v ffmpeg || brew install ffmpeg
       - name: Installierte App und Einzeldatei am selben Mac bedienen und messen
@@ -41,23 +58,6 @@ jobs:
           G521_OUT=test-results/mac/G521 node tests/g521-storage.mjs
           G521_OUT=test-results/mac/G521 node tests/g521-water.mjs
           G521_OUT=test-results/mac/G521 node tests/g521-geometry.mjs
-      - name: Gesicherten G5.2.1-Stand auf demselben Mac bauen
-        uses: actions/checkout@v4
-        with:
-          ref: 439a6b69e250060ffb39f8ab9aad653775c4289d
-          path: .scratch/g521-reference
-          persist-credentials: false
-      - name: Vergleich der Originalbilder, Modellphasen und Grafikprofile
-        env:
-          G6_CHROME: '1'
-          G6_PERF: '1'
-        run: |
-          npm --prefix .scratch/g521-reference run build
-          npm --prefix .scratch/g521-reference run standalone
-          G6_OUT=test-results/mac/G6/Vorher node tests/g6-gallery.mjs .scratch/g521-reference/artifacts/GeoRisiko-G5.2.1-Web-Test.html
-          G6_OUT=test-results/mac/G6/Nachher node tests/g6-gallery.mjs artifacts/GeoRisiko-G6-Web-Test.html
-          G6_STAGE=Profile G6_PROFILE=classroom G6_OUT=test-results/mac/G6/Unterricht node tests/g6-gallery.mjs artifacts/GeoRisiko-G6-Web-Test.html
-          G6_STAGE=Profile G6_PROFILE=maximum G6_OUT=test-results/mac/G6/Maximal node tests/g6-gallery.mjs artifacts/GeoRisiko-G6-Web-Test.html
       - run: python3 scripts/g6/report.py
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:

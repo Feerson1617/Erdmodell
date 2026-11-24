@@ -60,6 +60,10 @@ try{
  if(groupIs("island")){await visit("island",true);await shot("16-Reykjanes",true);await zoom();await shot("17-Basalt");await view("cut");await phase(.46);await shot("17a-Schmelze");await view("vent");await shot("18-Schlot");await phase(.82);await shot("19-Lava",true);await select("g-eruption","explosive");await phase(.76);await shot("20-Asche");}
  if(groupIs("other")){await visit("hawaii",true);await phase(.81);await shot("21-Hawaii");await visit("himalaya");await view("cut");await phase(.74);await shot("22-Himalaya");await visit("rift");await view("cut");await phase(.74);await shot("23-Graben");await visit("japan",true);await view("vent");await phase(.78);await shot("23a-Zaozan");}
  if(groupIs("global")){await click("nav-plates");await click("g-time");await rest();await p.locator("#g-year").fill("-125");await shot("24-Zeitreise");await select("g-scenario","aurica");await p.locator("#g-year").fill("160");await p.check("#g-compare");await select("g-second","amasia");await shot("25-Zukunft");await click("nav-nyos");await p.waitForFunction(()=>window.geoObservatory().nyos.terrainVisible&&!window.geoObservatory().flying);await shot("26-Nyos");await click("saved-views");await select("saved-list","p3");await click("view-apply");await p.waitForSelector(".classroom-views",{state:"hidden"});await click("present");await shot("27-Smartboard");}
- if(!stage&&!group){await visit("san");await shot("28-Warmstart",true);}
+ if(!stage&&!group){
+   // Saved classroom presets intentionally enter observation mode and lock the sidebar.
+   await click("present");await click("obswitch");await rest();
+   await visit("san");await shot("28-Warmstart",true);
+ }
  assert.deepEqual(errors,[]);assert.deepEqual(network,[]);await writeFile(join(out,"Aufnahmen.json"),JSON.stringify(rows,null,2));console.log(out,rows.length);
 }catch(e){console.error(await p.evaluate(()=>({body:document.body.innerText.slice(0,900),ready:window.geoObservatory?.()?.ready})).catch(()=>({})));throw e;}finally{await browser.close();await server.close();}

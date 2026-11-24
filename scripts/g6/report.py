@@ -49,6 +49,7 @@ text=['# GeoRisiko G6 · Abnahme','',f"Commit `{raw['commit']}` · Actions-Lauf 
     f"Virtueller ARM64-Mac · {raw['hardware']['cpu']} · macOS {raw['hardware']['macOS']}. Der physische MacBook-Air-M1- und Smartboard-Test wurde auf Wunsch übersprungen.",
     '', '## Bildvergleich und Messverfahren','',
     'Die Originalbilder in Vorher und Nachher stammen aus der offline geöffneten Einzeldatei. G5.2.1 wurde aus 439a6b6 gebaut. Beide Versionen liefen nacheinander in eigenen Chrome-Profilen auf derselben Maschine. Fenstergröße, Kamerapose, Modellzeit, Pause und Zeichenfläche wurden paarweise geprüft. Die Messbank fixiert einen Framebuffer-Pixel je CSS-Pixel. Beim regulären 15-Minuten-Lauf regelt die App ihre Auflösung selbst.',
+    '',f"SHA-256 des gebauten G5.2.1-Exports: {digest(root/'.scratch/g521-reference/artifacts/GeoRisiko-G5.2.1-Web-Test.html')}. SHA-256 von G6: {digest(root/'artifacts/GeoRisiko-G6-Web-Test.html')}.",
     '',f"{len(index['Vorher'])} Bildpaare. Die Messfenster umfassen 2,5 Sekunden nach Eingabe. Unter animation stehen eigene Messungen ab der angegebenen Startphase mit laufendem Modell. Gaps, Median, P95, längste Pause, Speicher, Dreiecke, Geometrien, Texturen und Zeichenaufrufe stehen in Messungen.json. Der Speicherwert summiert die RSS-Werte des Browser-Prozessbaums einschließlich gemeinsam genutzter Seiten.",
     '', '## Grafikprofile und Leistung','',
     '| Ansicht und Zustand | Fassung | FPS | Median ms | P95 ms | Max ms | Draw Calls | Dreiecke | RSS MiB | Szenenaufruf ms |',
