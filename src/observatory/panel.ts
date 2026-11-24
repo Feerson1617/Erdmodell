@@ -183,6 +183,15 @@ export class Observatory {
         item("Was geschieht hier?",explain[sp.process])+
         (sp.geology?item("Was ist an diesem Ort belegt?",this.regionText(sp.geology)):"")+this.extraInfo(r))+
         button("g-map","Zur Weltkarte")+back+'</div>';
+      if(r.localActive){
+        const link=document.createElement("button");link.id="g-local-process";
+        link.textContent=sp.site==="japan"?"Zum regionalen Wasser- und Küstenmodell":sp.theme==="volcano"?"Zum regionalen Vulkan":"Zum regionalen Prozess";
+        $("g-object").before(link);link.onclick=async()=>{
+          if(sp.site==="japan"&&sp.theme!=="earthquake"){await this.openRegion(reference("japan","earthquake"));this.region?.cameraView("water");}
+          else r.cameraView(sp.site==="japan"?"water":sp.theme==="volcano"?"vent":"cut");this.draw();
+        };
+        if(r.localStill)for(const id of ["g-play","g-step","g-progress","g-reset","g-before","g-after","g-stage"]){const el=$(id) as HTMLButtonElement|null;if(el)el.disabled=true;}
+      }
       this.change("g-site",v=>{if(v)void this.openRegion(reference(v as Site,sp.theme));});
       this.action("g-cut",()=>{r.reframe(!r.cut);this.draw();});this.action("g-play",()=>{if(r.progress>=1)r.progress=0;r.playing=!r.playing;});
       this.action("g-step",()=>r.step());this.action("g-reset",()=>{r.progress=0;r.playing=false;});
@@ -319,7 +328,7 @@ export class Observatory {
 
   }
   private bindExtra(r:RegionalScene){
-    this.change("g-eruption",v=>{r.eruption=v;});this.change("g-soil",v=>{r.soil=v;});
+    this.change("g-eruption",v=>{r.eruption=v;if(r.localActive){if(r.localStill)r.playing=false;this.draw();}});this.change("g-soil",v=>{r.soil=v;});
     this.change("g-risk-kind",v=>{const next:RegionSpec=v==="coast"?{name:"Küstenraum · Modell",lat:38,lon:142,strike:0,process:"subduction",theme:"risk",coastLesson:true}:reference("san","risk");void this.openRegion(next);});
     if($("g-relocate")&&!r.spec.coastLesson)$("g-relocate").closest("label")!.hidden=true;
     this.change("g-view",v=>{

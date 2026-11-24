@@ -58,7 +58,14 @@ export class LocalLandscape{
         const k=j*n+i;if(j+1<axis.length&&i+1<n)idx.push(k,k+n,k+1,k+1,k+n,k+n+1);
       }
       const g=new T.BufferGeometry();g.setAttribute("position",new T.Float32BufferAttribute(p,3));g.setIndex(idx);g.computeVertexNormals();
-      const mesh=new T.Mesh(g,ground);mesh.name=site==="island"&&half===0?"Basaltspalte":"Nahgelände";mesh.userData.lessonAnchor=()=>{const x=site==="island"?-.7:half?5:-5,z=-8;return new T.Vector3(x,this.surface(x,z),z);};mesh.receiveShadow=true;this.halves[half].add(mesh);
+      const mesh=new T.Mesh(g,ground);mesh.name="Nahgelände";if(site==="island"&&half===0)mesh.userData.explanation={name:"Basaltische Spalte",answer:"Der Bruch öffnet einen Weg zur Oberfläche. Bei einem effusiven Ausbruch kann dünnflüssige Lava austreten."};mesh.userData.lessonAnchor=()=>{const x=site==="island"?-.7:half?5:-5,z=-8;return new T.Vector3(x,this.surface(x,z),z);};mesh.receiveShadow=true;this.halves[half].add(mesh);
+    }
+    if(site==="san"){
+      // Survey-style wooden stakes form one transverse line at rest. Each is attached to its own block.
+      for(const [i,x] of [-2.2,2.2].entries()){
+        const marker=new T.Mesh(new T.CylinderGeometry(.065,.09,.98,7),new T.MeshStandardMaterial({color:0xebb870,roughness:.95}));
+        marker.position.set(x,this.surface(x,-6)+.47,-6);marker.name="Geländemarker";this.halves[i].add(marker);
+      }
     }
     if(site==="island"){
       this.lava=lavaTongue(3.9);this.lava.build(-2,-16,Math.PI*.49,52,0,(x,z)=>this.surface(x,z));this.root.add(this.lava.mesh);
@@ -213,9 +220,9 @@ export class LocalLandscape{
     const [x,z,tx,tz,eye]=this.site==="japan"?(view==="local"?[-12,32,12,-31,11.5]:[-4,11,13,-14,2.25]):this.site==="island"?(view==="local"?[17,26,-1,-10,7.2]:[5,5,-2,-13,2.5]):view===positions[0]?[22,37,0,-10,9]:[5,9,0,-7,1.9];
     return {position:new T.Vector3(x,this.surface(x,z)+eye,z).multiplyScalar(.1),target:new T.Vector3(tx,this.surface(tx,tz)+2.4,tz).multiplyScalar(.1)};
   }
-  update(camera:T.PerspectiveCamera,t:number,grade:number){
-    this.lava?.phase(this.volcanic?T.MathUtils.smoothstep(t,.53,.96):0);
-    const slip=this.site==="san"?T.MathUtils.smoothstep(t,.35,.51)*.35:0;
+  update(camera:T.PerspectiveCamera,t:number,grade:number,effusive:boolean,release:number){
+    this.lava?.phase(this.volcanic&&effusive?T.MathUtils.smoothstep(t,.53,.96):0);
+    const slip=this.site==="san"?release*.35:0;
     this.halves[0].position.z=-slip;this.halves[1].position.z=slip;
     const cx=camera.position.x*10,cz=camera.position.z*10,key=[Math.round(cx/3),Math.round(cz/3),grade].join("/");
     if(key===this.lastZone)return;this.lastZone=key;this.sun.castShadow=grade>0;

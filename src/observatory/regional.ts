@@ -39,13 +39,14 @@ function indexed(rows:number,cols:number,vertex:(i:number,j:number)=>number[],re
 export class RegionalScene {
   local?:LocalLandscape;
   get localActive(){return localView(this.view)&&!!this.local;}
+  get localStill(){return this.localActive&&!(this.spec.site==="san"&&this.spec.theme==="earthquake"||this.spec.site==="island"&&this.spec.theme==="volcano"&&this.eruption==="effusive");}
   get renderScene(){return this.localActive?this.local!.scene:this.scene;}
   lib?:Library;readonly grade={value:quality()};private relief?:T.Texture;
   private sunlight=new T.DirectionalLight(0xffe9d0,2.17);private shadowState="";private terrainLOD:((distance:number,grade:number)=>void)[]=[];
   prepareRender(renderer:T.WebGLRenderer){
     if(!this.lib)return;
     const q=this.grade.value=quality();
-    if(this.localActive){this.local!.update(this.camera,this.progress,q);renderer.shadowMap.needsUpdate=true;return;}
+    if(this.localActive){this.local!.update(this.camera,this.progress,q,this.eruption==="effusive",this.faultModel.release(this.progress,this.faultModel.hx,this.faultModel.hy,0));renderer.shadowMap.needsUpdate=true;return;}
     this.sunlight.castShadow=q>0;const size=[512,1024,2048][q],shadow=this.sunlight.shadow;
     const samples=4;for(const tex of [this.lib.color,this.lib.relief,this.colorMap,this.relief,this.contextMap]){
       if(tex&&tex.anisotropy!==samples){tex.anisotropy=samples;tex.needsUpdate=true;}
@@ -318,7 +319,7 @@ export class RegionalScene {
   private setCameraView(view:string){
     if(localView(view)&&this.spec.site&&this.lib){
       this.local??=new LocalLandscape(this.spec.site,this.lib,this.grade,(x,z)=>{const unit=(this.spec.width??sites[this.spec.site!].width)*1000/12;return (this.height(x/unit,z/unit)-this.height(0,0))*unit/(this.spec.site==="japan"?4.7:2.4);},this.spec.theme==="volcano");
-      this.view=view;this.cut=false;this.transition=undefined;this.camera.far=240;this.orbit.minDistance=.23;this.orbit.maxDistance=12;
+      this.view=view;if(this.localStill)this.playing=false;this.cut=false;this.transition=undefined;this.camera.far=240;this.orbit.minDistance=.23;this.orbit.maxDistance=12;
       const pose=this.local.pose(view);this.orbit.target.copy(pose.target);this.camera.position.copy(pose.position);this.orbit.update();return;
     }
     this.orbit.minDistance=view==="coast"?2.1:4;
@@ -417,7 +418,7 @@ export class RegionalScene {
   onAnimate(fn:(progress:number)=>void){this.motion.push(fn);}
   step(direction=1){this.playing=false;this.progress=direction>0?(phases.find(v=>v>this.progress+.002)??1):([...phases].reverse().find(v=>v<this.progress-.002)??0);}
   update(dt:number){
-    this.age+=dt;if(this.playing){this.progress=Math.min(1,this.progress+dt/(this.slow?32:14));if(this.progress===1)this.playing=false;}
+    this.age+=dt;if(this.localStill)this.playing=false;if(this.playing){this.progress=Math.min(1,this.progress+dt/(this.slow?32:14));if(this.progress===1)this.playing=false;}
     if(!this.ready)return;
     const t=this.progress;this.sectionColor.value=+!!this.facies;this.stressSignals.phase.value=t;this.stressSignals.show.value=+(this.stress&&this.spec.theme==="earthquake");this.ui.t.value=t;this.ui.clock.value=this.age;this.ui.stress.value=+this.stress;
     this.ui.vertical.value=+this.vertical;

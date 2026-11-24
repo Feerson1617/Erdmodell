@@ -17,6 +17,7 @@ export function regionalReading(r:RegionalScene):string[]{
  const {theme,process,site}=r.spec,t=r.progress,a=accounts[process],f=r.faultModel;
  if(r.localActive){
    if(site==="japan")return ["Küstenausschnitt","Ruhige Nahbucht","Dieses Nahmodell zeigt einen typischen Küstenausschnitt. Die Tsunami-Bewegung untersuchst du im regionalen Wasser- und Küstenmodell.",""];
+   if(site==="island"&&theme==="volcano"&&r.eruption==="explosive")return ["Basaltische Spalte","Ruhendes Lavafeld","Das Nahmodell zeigt Gestein früherer Ausbrüche. Die ausgewählte explosive Eruption siehst du am regionalen Vulkan.",""];
    if(site==="island"&&theme==="volcano")return ["Basaltische Spalte",t>.53&&r.eruption==="effusive"?"Lava fließt aus":"Blick auf die Spalte","Hier tritt dünnflüssige Lava aus einer Spalte aus. Sie folgt dem Gelände und kann in einer Senke zum Stillstand kommen.","Lokales Beispiel eines effusiven Ausbruchs."];
    if(site!=="san"||theme!=="earthquake")return ["Landschaft im Nahmodell","Gelände in Metern","Gestein und Bewuchs zeigen typische Formen. Die Einzelobjekte sind beispielhaft gesetzt.","Geologische Bewegungen lassen sich im regionalen Prozessmodell untersuchen."];
  }

@@ -82,6 +82,7 @@ export async function longClassroom(p,measure,readMemory){
             else{await p.selectOption("#saved-list",localFavorite);await click("view-apply");await p.waitForSelector(".classroom-views",{state:"hidden"});await ready();assert.equal(await p.locator("#g-view").inputValue(),"ground");}
           }
         }
+        if(await p.locator("#g-play").isDisabled()){await click("g-local-process");await ready();}
         await click("g-play");}
       samples.push({width,height,readyMs:performance.now()-loadStart,futureComparison:n%8===6,...await measure(label,15000)});
       if(n%4===2)await click("g-time-play");

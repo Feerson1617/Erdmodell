@@ -2,7 +2,7 @@ import {channels,disclosed,nextLabel,resetReveals,reveal,revealAll,type Channel}
 const el=(id:string)=>document.getElementById(id);
 const neutral=["Erde","Inneres","Karte","Ereignis","Berg","Siedlung","See","Orte"];
 const buttons:Record<string,string>={
-  "g-play":"Abspielen","g-step":"Schritt","g-before":"Vorher","g-after":"Nachher","g-reset":"Zurücksetzen",
+  "g-local-process":"Regionalmodell öffnen","g-play":"Abspielen","g-step":"Schritt","g-before":"Vorher","g-after":"Nachher","g-reset":"Zurücksetzen",
   "g-time-play":"Abspielen","g-reverse":"Rückwärts","g-today":"Heute","g-time":"Zeit wählen","g-boundaries":"Linien wählen",
   "g-quake-explain":"Ereignis öffnen","g-quake-from-process":"Ereignis öffnen","g-cut":"Untergrund","g-segment":"Modell öffnen","g-map":"Zur Karte","g-map-overview":"Weltübersicht","g-depth-open":"Messpunkte im Schnitt",
   "cut":"Ansicht wechseln","scale":"Größe vergleichen","nyos-play":"Abspielen","nyos-reset":"Zurücksetzen","atlasPlay":"Abspielen","playProcess":"Abspielen"};
@@ -27,7 +27,7 @@ export class Observation{
   private build(){
     this.bindings=[];this.controls.replaceChildren();
     for(const id of [...Object.keys(selects),...Object.keys(inputs),...Object.keys(buttons),"g-progress","g-year"]){
-      const source=el(id) as Field|null;if(!source||source.closest("[hidden]")&&id==="g-relocate")continue;
+      const source=el(id) as Field|null;if(!source||source.disabled||source.closest("[hidden]")&&id==="g-relocate")continue;
       if(id==="g-reset"&&el("g-before"))continue;
       let control:Field;
       if(source instanceof HTMLSelectElement){
