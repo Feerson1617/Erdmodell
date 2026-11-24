@@ -364,3 +364,6 @@ body:not(.observing) #desk.pair-layout[data-mode=plates] #modelnote{left:16px;ma
 .observing:is(.show-labels,.show-some-labels) :is(#pins,#platePins,#observatory-labels){display:block!important}
 #g-object:not(:empty){padding:.65em;border-left:3px solid #dbbf75;background:#22392e}
 .boundary-legend{display:flex;gap:.55em;flex-wrap:wrap;color:#d0e1d8;font-size:.92em}.boundary-legend span{display:inline-flex;align-items:center;gap:4px}
+.process-reading{border-left:3px solid #a4bf98;background:#20372e;border-radius:0 8px 8px 0;padding:.7em .9em;margin:.5em 0 .85em;font-size:clamp(15px,1.04vw,20px);line-height:1.38}
+.process-reading h2{margin:0 0 .3em;font-size:1.22em;color:#ddebd4}.process-reading strong{color:#f0d8a4;display:block}
+.process-reading p{margin:.42em 0 0}.process-reading :empty{display:none}

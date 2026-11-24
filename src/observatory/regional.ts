@@ -428,7 +428,7 @@ export class RegionalScene {
       const tr=this.transition;tr.fraction=Math.min(1,tr.fraction+dt*1.55);const v=T.MathUtils.smoothstep(tr.fraction,0,1);
       this.camera.position.lerpVectors(tr.from,tr.to,v);this.orbit.target.lerpVectors(tr.look,tr.goal,v);if(tr.fraction===1)this.transition=undefined;
     }
-    this.labels.visible=this.names && this.spec.theme==="earthquake"&&this.faultModel.kind!=="unknown";
+    this.labels.visible=this.names && this.spec.theme==="earthquake"&&this.faultModel.kind!=="unknown"&&(!document.body.classList.contains("observing")||document.body.classList.contains("show-labels")||document.body.classList.contains("show-some-labels")||document.body.hasAttribute("data-choose-object"));
     const quake=(this.spec.theme==="earthquake"||this.spec.theme==="risk")&&this.faultModel.kind!=="unknown"&&this.view!=="coast"&&this.view!=="ocean";this.fault.visible=quake;
     const f=this.faultModel;
     if((t!==this.lastT||this.lastSection!==this.section.visible) && (this.lastT<0||!["volcano","lithosphere"].includes(this.spec.theme))){

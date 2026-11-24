@@ -12,7 +12,7 @@ const views:Record<string,string>={land:"Regionalübersicht",local:"Nahmodell",g
 type Field=HTMLButtonElement|HTMLSelectElement|HTMLInputElement;
 export class Observation{
   readonly toggle=document.createElement("button");private controls=document.createElement("section");active=false;
-  private bindings:{source:Field;control:Field}[]=[];private root:Node|null=null;private readonly nav=[...document.querySelectorAll("header nav button span")];
+  private readRoot:Node|null=null;private bindings:{source:Field;control:Field}[]=[];private root:Node|null=null;private readonly nav=[...document.querySelectorAll("header nav button span")];
   private readonly original=this.nav.map(s=>s.textContent!);
   constructor(){
     this.toggle.id="obswitch";this.toggle.textContent="Beobachten";this.toggle.setAttribute("aria-pressed","false");
@@ -67,8 +67,8 @@ export class Observation{
     const mode=document.body.dataset.observatory,nav=el("desk")?.dataset.mode;
     const text=mode==="time"?[el("g-age")?.textContent,el("g-certainty")?.textContent].join(" · "):mode==="regional"?el("g-model-note")?.textContent??"Schematisches Modell · Modellzeit verkürzt":mode==="map"?(el("g-depth")?"Beobachtete Erdbeben · USGS 2019–2023":"Plattengrenzen · PB2002"):nav==="inside"?((el("scale") as HTMLInputElement)?.checked?"Äußere Schicht überhöht":"Radien im Referenzmaßstab"):nav==="nyos"?"Geländedaten · schematischer Ablauf":el("pair-process")?"Starre Ausschnitte · Bewegung und Zeit schematisch":"";
     for(const btn of this.controls.querySelectorAll<HTMLButtonElement>("[data-channel]")){const on=String(disclosed(btn.dataset.channel as Channel));if(btn.getAttribute("aria-pressed")!==on)btn.setAttribute("aria-pressed",on);}
-    const readings=Array.from(sidebar.querySelectorAll<HTMLElement>("[data-teach]")).filter(e=>disclosed(e.dataset.teach as Channel)).map(e=>e.textContent?.trim()).filter(Boolean);
-    const insight=el("observe-insight"),reading=readings.join(" · ");if(insight&&insight.textContent!==reading)insight.textContent=reading;
+    const readings=this.controls.dataset.lastReading===document.body.dataset.reveal&&!["regional","time"].includes(mode??"")&&this.readRoot===root?undefined:Array.from(sidebar.querySelectorAll<HTMLElement>("[data-teach]")).filter(e=>disclosed(e.dataset.teach as Channel)).map(e=>e.textContent?.trim()).filter(Boolean);
+    if(readings){const insight=el("observe-insight"),reading=readings.join(" · ");if(insight&&insight.textContent!==reading)insight.textContent=reading;this.readRoot=root;this.controls.dataset.lastReading=document.body.dataset.reveal;}
     const note=el("observe-note");if(note&&note.textContent!==text)note.textContent=text;
   }
 }

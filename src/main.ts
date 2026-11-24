@@ -153,7 +153,7 @@ function renderShellControls() {
   <label class="range" for="opacity">Deckkraft<input id="opacity" type="range" min="15" max="100" ${disabled} value="${selected === null ? 100 : shell.opacity[selected]*100}" aria-label="Deckkraft der gewählten Schale"></label>`;
   const cut = `<label><input id="cut" type="checkbox" ${shell.cut ? "checked" : ""}> Keilschnitt</label>`, scale = `<label><input id="scale" type="checkbox" ${shell.expanded ? "checked" : ""}> ${labels ? "Kruste" : "Außenschale"} verbreitern</label>`, lithosphere = `<label><input id="lithosphere" type="checkbox" ${shell.lithosphere ? "checked" : ""} ${shell.cut && shell.visible[0] && shell.visible[1] ? "" : "disabled"}> ${labels ? "Lithosphäre vergleichen" : "Starren Außenbereich vergleichen"}</label>`;
   const waves = `<button id="evidence">${icon("waves")} P- und S-Wellen</button>`;
-  return `<div class="panelHead"><h1>Schalen</h1><button id="labels" title="Beschriftungen durch die Lehrkraft umschalten" aria-pressed="${labels ? "true" : anyNames ? "mixed" : "false"}">${icon(anyNames ? "eye-off" : "eye")}${anyNames ? "Namen verbergen" : "Namen zeigen"}</button></div>
+  return `<div class="panelHead"><h1 data-teach="terms">Schalenbau</h1><button id="labels" title="Beschriftungen durch die Lehrkraft umschalten" aria-pressed="${labels ? "true" : anyNames ? "mixed" : "false"}">${icon(anyNames ? "eye-off" : "eye")}${anyNames ? "Namen verbergen" : "Namen zeigen"}</button></div>
   <div class="layerlist">${layers.map((l,i) => `<div class="layer ${selected === i ? "chosen" : ""}" style="--rock:#${l.color.toString(16)}"><button data-layer="${i}" aria-pressed="${selected === i}"><span class="swatch" aria-hidden="true">${labels ? i+1 : ""}</span>${layerName(i)}</button><button class="eye" data-eye="${i}" aria-label="${layerName(i)} ${shell.visible[i] ? "ausblenden" : "einblenden"}" aria-pressed="${shell.visible[i]}">${icon(shell.visible[i] ? "eye" : "eye-off")}</button></div>`).join("")}</div>
   ${selected === null ? "" : labels || released.has(selected) ? '<div class="nameActions"><button id="explainLayer">Erklärung öffnen</button><button id="hideOne">Diesen Namen verbergen</button></div>' : '<button id="revealOne">Einzelnen Namen zeigen</button>'}
   ${!labels && released.size ? '<button id="allNames">Alle Namen zeigen</button>' : ""}
@@ -201,6 +201,7 @@ function renderSide() {
   if (mode === "nyos") {
     side.dataset.nyosError = String(!!world.nyos.error);
     side.innerHTML = nyosControls(world);
+    const nyosHeading=side.querySelector("h1");if(nyosHeading)nyosHeading.dataset.teach="terms";
     bindNyosControls(side, world, renderSide);
   }
   if (mode === "place") {
