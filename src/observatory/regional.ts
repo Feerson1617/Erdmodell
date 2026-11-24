@@ -245,7 +245,7 @@ export class RegionalScene {
         arr.setXYZ(i*2,x,y,.081+n*.012);arr.setXYZ(i*2+1,outside?x:xx,outside?y:yy,.081+n*.012);
       }arr.needsUpdate=true;line.frustumCulled=false;
       const dummy=new T.Object3D();for(let i=0;i<32;i++){const along=.14+i*.14,phase=along-rad;
-        const v=.09*Math.sin(phase*12)*Math.exp(-phase*phase*5);dummy.position.set(along+(n?0:v),this.ui.focus.value-.28*n+(n?v:0),.095);dummy.updateMatrix();beads.setMatrixAt(i,dummy.matrix);}
+        const v=.09*Math.sin(phase*12)*Math.exp(-phase*phase*5);dummy.position.set(along+(n?0:v),this.ui.focus.value-.28*n+(n?v:0),.095);dummy.scale.setScalar(dummy.position.y<this.height(dummy.position.x,0)?1:0);dummy.updateMatrix();beads.setMatrixAt(i,dummy.matrix);}
       beads.instanceMatrix.needsUpdate=true;
     }
     if(this.waterColumn){const x=-.55,h=this.height(x,0);this.waterColumn.visible=quake&&this.vertical&&this.ui.kind.value===1&&h<-.05&&t>.38&&t<.62;

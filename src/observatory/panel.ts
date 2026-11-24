@@ -54,7 +54,7 @@ export class Observatory {
   async openMap(purpose:"events"|"boundaries"="events"){
     this.base();this.mode="map";this.mapPurpose=purpose;this.theme="earthquake";this.mark();
     if(purpose==="events")this.world.nav.fly({lat:12,lon:-146,d:15300,tilt:0,bearing:0},true);
-    this.maps.group.visible=true;this.maps.events.visible=purpose==="events";this.maps.boundaries.visible=true;
+    this.world.nav.minimumDistance=150;this.maps.group.visible=true;this.maps.events.visible=purpose==="events";this.maps.boundaries.visible=true;
     this.maps.event=undefined;this.maps.selectedStep=undefined;this.draw();
     const rev=this.revision;
     try{await this.maps.init();if(rev===this.revision)this.draw();}catch{if(rev===this.revision){this.message="Kartendaten konnten nicht geöffnet werden.";this.draw();}}
@@ -93,9 +93,28 @@ export class Observatory {
       for(const s of this.maps.steps){if(classify(s)!==kind)continue;const c=center(s),dl=(c.lon-lon+540)%360-180,dd=(c.lat-lat)**2+(dl*Math.cos(lat*Math.PI/180))**2;if(dd<d){d=dd;nearest=s;}}
       if(nearest)result[nearest[0]]=processNames[kind as keyof typeof processNames];
     }
+    for(const [label,test] of [
+      ["Grenze an der Datumsgrenze",(s:Step)=>Math.abs(s[3]-s[5])>300],
+      ["Kleine Manusplatte",(s:Step)=>s[1].includes("MN")],
+      ["Schräger Grenzverlauf",(s:Step)=>s[2]==="SUB"&&Math.abs(Math.cos((localStrike(s)-s[8])*Math.PI/180))>.52]
+    ] as const){
+      const s=this.maps.steps.filter(s=>test(s)&&!result[s[0]]).sort((a,b)=>Math.hypot(b[6]-b[4],((b[5]-b[3]+540)%360)-180)-Math.hypot(a[6]-a[4],((a[5]-a[3]+540)%360)-180))[0];
+      if(s)result[s[0]]=label;
+    }
     return result;
   }
-  coverage(){return this.maps.steps.map(s=>({id:s[0],pair:s[1],category:s[2],...center(s),strike:localStrike(s),relativeAzimuth:s[8],model:classify(s)}));}
+  coverage(){
+    const dem=this.world.planet.heightData;
+    return this.maps.steps.map(s=>{
+      const c=center(s),model=classify(s),i=Math.round((c.lon+180)*2),j=Math.round((90-c.lat)*2);
+      const h=dem?.[j*721+i],surface=h===undefined||Math.abs(h)<20?"Unbestimmt im globalen Raster":h<0?"Unter dem Meer":"An Land";
+      const local=Object.entries(sites).find(([,v])=>v.process===model&&Math.hypot(v.lat-c.lat,((v.lon-c.lon+540)%360-180)*Math.cos(c.lat*Math.PI/180))<.7);
+      return {id:s[0],pair:s[1],category:s[2],...c,strike:localStrike(s),relativeAzimuth:s[8],relativeSpeedMmPerYear:s[7],model,surface,
+        scope:local?"Referenzregion mit idealisiertem Untergrund":model==="complex"||model==="convergence"?"Allgemeine Anschauung":"Regional angepasste Anschauung",
+        regionalDEM:local?.[0]??null,faultTrace:local?.[0]==="san"?"GEM UCERF3 UCF_32":local?.[0]==="japan"?"USGS Slab2 jap":null,
+        source:"PB2002 und Lage über ETOPO-Raster 0,5°",ruptureGeometry:"schematisch",eventMechanism:null};
+    });
+  }
   private action(id:string,fn:()=>void){const b=$(id);if(b)b.onclick=fn;}
   private change(id:string,fn:(value:string)=>void){const b=$<HTMLSelectElement>(id);if(b)b.onchange=()=>fn(b.value);}
   draw(){

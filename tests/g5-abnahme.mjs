@@ -34,7 +34,8 @@ export async function acceptG5(p,{dir,product,measure,films=true}){
     await p.screenshot({path:join(dir,name+".jpg"),type:"jpeg",quality:85});
     result.pictures.push(name);
   };
-  const perf=async label=>result.measurements.push(await measure(label));
+  const perf=async(label,actions)=>result.measurements.push(await measure(label,actions));
+  const active=async(label,button)=>{await click(button);await perf(label);if(await p.locator("#"+button).textContent()==="Pause")await click(button);};
   const film=async(name,fn)=>{if(films)result.movies.push(await screencast(p,dir,name,fn));else await fn();};
   const map=async()=>{await click("nav-earthquake");await p.waitForFunction(()=>window.geoObservatory().observatory.events===697);};
   const visit=async site=>{await map();const start=performance.now();await p.selectOption("#g-launch",site);await ready();result.loadTimes.push({site,ms:performance.now()-start});};
@@ -54,7 +55,7 @@ export async function acceptG5(p,{dir,product,measure,films=true}){
   result.boundaryModels=Object.fromEntries([...new Set(coverage.map(x=>x.model))].map(id=>[id,coverage.filter(x=>x.model===id).length]));
   const time=async()=>{await click("nav-plates");await click("g-time");await p.waitForFunction(()=>window.geoObservatory().observatory.timeReady);};
   const age=async v=>{await range("g-year",v);await p.waitForTimeout(180);};
-  await time();await shot("07-Pangaea");await perf("Historische Zeitreise");
+  await time();await shot("07-Pangaea");await active("Historische Zeitreise","g-time-play");
   await film("Film-1-Zeitreise",async()=>{
     await click("g-time-play");await p.waitForTimeout(650);await click("g-time-play");
     for(const [yr,n] of [[-200,"08-Aufspaltung"],[-100,"09-Atlantik"],[-50,"10-Indien"]]){await age(yr);if(yr===-50){await p.locator("#g-evidence summary").click();await p.selectOption("#g-evidence-kind","india");}await shot(n);}
@@ -62,7 +63,7 @@ export async function acceptG5(p,{dir,product,measure,films=true}){
     for(const [model,n] of [["ultima","12-Ultima"],["novo","13-Novopangaea"]]){await p.selectOption("#g-scenario",model);await age(180);await click("g-time-focus");await p.waitForFunction(()=>!window.geoObservatory().flying);await shot(n);}
     await p.check("#g-compare");await age(170);await p.waitForTimeout(400);
   });
-  await perf("Zukunftsvergleich");await p.selectOption("#g-scenario","aurica");await age(200);await p.selectOption("#g-scenario","amasia");await age(180);
+  await active("Zukunftsvergleich","g-time-play");await p.selectOption("#g-scenario","aurica");await age(200);await p.selectOption("#g-scenario","amasia");await age(180);
   await click("g-today");await p.selectOption("#g-station","-250");await p.locator("#g-evidence summary").click();
   await p.selectOption("#g-evidence-kind","fossil");await shot("27-Belegorte");await click("g-magnet");await ready();await range("g-progress",.77);await shot("27b-Magnetstreifen");
   await visit("san");await shot("14-Kalifornien");await perf("Kalifornische Landschaft");await click("g-cut");await shot("15-Untergrund");
@@ -72,22 +73,22 @@ export async function acceptG5(p,{dir,product,measure,films=true}){
     await click("g-play");await p.waitForFunction(()=>window.geoObservatory().observatory.progress>.58);await click("g-play");await shot("18-Wellen");
     const s=await get();assert.equal(s.focus[0],s.epicenter[0]);assert.equal(s.focus[2],s.epicenter[2]);assert.ok(s.focus[1]<s.epicenter[1]);
   });
-  await perf("Erdbeben mit Wellen");
+  await active("Erdbeben mit Wellen","g-play");
   await visit("japan");await click("g-cut");await shot("19-Japangraben");
   await film("Film-3-Seebeben-Tsunami",async()=>{
     await p.selectOption("#g-sea","flat");await range("g-progress",.56);await shot("20-Seitlicher-Versatz");
     await p.selectOption("#g-sea","vertical");await range("g-progress",.49);await shot("21-Wassersaeule");
     await click("g-play");await p.waitForFunction(()=>window.geoObservatory().observatory.progress>.72);await click("g-play");await shot("22-Kuestenwelle");
-  });await perf("Seebeben und Tsunami");
+  });await active("Seebeben und Tsunami","g-play");
   await film("Film-4-Regionen",async()=>{for(const [site,n] of [["island","23-Island"],["himalaya","24-Himalaya"],["rift","25-Ostafrika"]]){
     await visit(site);await click("g-cut");await range("g-progress",.42);await shot(n);await p.waitForTimeout(200);}});
   await perf("Ostafrikanischer Graben");
-  await click("nav-volcano");await ready();await range("g-progress",.82);await shot("26-Hawaii");await perf("Hotspot-Vulkanismus");
+  await click("nav-volcano");await ready();await range("g-progress",.82);await shot("26-Hawaii");await active("Hotspot-Vulkanismus","g-play");
   await click("nav-risk");await ready();await p.selectOption("#g-exposure","sparse");await range("g-progress",.51);await shot("28a-Einzelsiedlung");
   await p.selectOption("#g-exposure","dense");await shot("28b-Dichte-Siedlung");await p.check("#g-protect");await p.locator("details").filter({has:p.locator("#g-route")}).locator("summary").click();await p.check("#g-route");await p.check("#g-warning");await shot("29-Vorsorge");
   await click("nav-plates");await click("g-boundaries");await p.waitForFunction(()=>window.geoBoundaryModels().length===5819);
   await film("Film-5-Grenzauswahl",async()=>{
-    const opts=await p.locator("#g-example option").evaluateAll(els=>els.map(e=>e.value).filter(Boolean));assert.equal(opts.length,9);
+    const opts=await p.locator("#g-example option").evaluateAll(els=>els.map(e=>e.value).filter(Boolean));assert.equal(opts.length,12);
     for(const [idx,id] of opts.entries()){
       await p.selectOption("#g-example",id);await p.waitForFunction(()=>!window.geoObservatory().flying);await clickAtCenter();
       assert.equal((await get()).selected,Number(id));await click("g-segment");await ready();await range("g-progress",.57);
@@ -96,7 +97,7 @@ export async function acceptG5(p,{dir,product,measure,films=true}){
   });
   // Native window fullscreen is tested separately; retain a real presentation capture.
   await click("home");await click("present");await p.waitForFunction(()=>document.body.classList.contains("present"));await shot("30-Praesentation");await click("present");await p.waitForFunction(()=>!document.body.classList.contains("present"));
-  for(let i=0;i<4;i++){await visit("japan");await time();await age(-100);await click("nav-volcano");await ready();await click("home");await p.waitForFunction(()=>!window.geoObservatory().flying);const s=await p.evaluate(()=>window.geoObservatory());result.cycles.push({geometries:s.geometries,textures:s.textures,programs:s.programs});}
-  await perf("Wiederholter Modulwechsel");result.checks.push("697 reale Ereignisse","5819 eindeutige Grenzabschnitte","9 geografische Treffer","4 Zukunftsszenarien","Herd lotrecht unter Epizentrum","Siedlungsvergleich bei gleicher Quelle","Vollbild und Rückkehr");
+  await perf("Wiederholter Modulwechsel",async()=>{for(let i=0;i<4;i++){await visit("japan");await time();await age(-100);await click("nav-volcano");await ready();await click("home");await p.waitForFunction(()=>!window.geoObservatory().flying);const s=await p.evaluate(()=>window.geoObservatory());result.cycles.push({geometries:s.geometries,textures:s.textures,programs:s.programs});}});
+  result.checks.push("697 reale Ereignisse","5819 eindeutige Grenzabschnitte","9 geografische Treffer","4 Zukunftsszenarien","Herd lotrecht unter Epizentrum","Siedlungsvergleich bei gleicher Quelle","Vollbild und Rückkehr");
   return result;
 }

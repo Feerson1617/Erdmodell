@@ -181,7 +181,7 @@ async function exercise(p,context,name,pid) {
     await recordFilm(p,context);
     assert.ok(assets.has("/data/nyos/landscape.json") && assets.has("/data/relief.i16"));
   }
-  row.g5=await acceptG5(p,{dir:join(out,"G5"),product:name,films:name==="Electron",measure:label=>measure(p,pid,label)});
+  row.g5=await acceptG5(p,{dir:join(out,"G5"),product:name,films:name==="Electron",measure:(label,actions)=>measure(p,pid,label,actions)});
   row.requestedAssets=[...assets].sort();
   assert.deepEqual(errors,[]);assert.deepEqual(network,[]);return row;
 }

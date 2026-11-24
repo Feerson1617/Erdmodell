@@ -80,7 +80,7 @@ for(const engine of [chromium,webkit]){
       for(const b of await p.locator(".shellQuestions button").all()){
         await b.tap();answers.push(await p.locator("#shellAnswer:visible").innerText());
       }
-      assert.equal(new Set(answers).size,2);assert.ok(answers.every(t=>t.length>35 && t.length<240));
+      assert.equal(new Set(answers).size,5);assert.ok(answers.every(t=>t.length>35 && t.length<240));
       run.shells[title]=answers;if(i===1)await shot("03-schaleninformation");
       await p.tap("#definition > button");assert.ok(await p.locator("#definition").isHidden());
     }
