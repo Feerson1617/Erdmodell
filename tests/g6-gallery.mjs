@@ -30,6 +30,7 @@ const view=async v=>{await select("g-view",v);await rest();};
 // Load a reproducible coastal camera via the product's saved-view format. The
 // Tōhoku model covers 320 km, with its real shoreline at the western edge.
 const savedCamera=async(name,position,target)=>{
+ if((await state()).observatory.view!=="land")await view("land");
  await click("saved-views");await p.fill("#view-name",name);await click("view-save");
  const id=await p.locator("#saved-list").inputValue();await click("view-close");
  await p.evaluate(({id,position,target})=>{const key="georisiko.unterrichtsansichten.v1",items=JSON.parse(localStorage.getItem(key));
@@ -38,25 +39,34 @@ const savedCamera=async(name,position,target)=>{
 };
 const coastCamera=()=>savedCamera("Sichtprüfung · Küste von Tōhoku",[-2.47,1.68,-.63],[-5.72,.06,-2.83]);
 const basaltCamera=()=>savedCamera("Sichtprüfung · Lavafeld auf Reykjanes",[3.5,1.62,-4.0],[.30,.065,-1.80]);
+const probe=(ms)=>p.evaluate(async duration=>{const count=window.__g61Draws,start=performance.now(),data=await window.geoDeviceProbe(duration);
+  data.renderCalls=window.__g61Draws-count;data.drawFps=data.renderCalls*1000/(performance.now()-start);return data;},ms);
+const movingCamera=async()=>{
+  const box=await p.locator("#earth").boundingBox(),x=box.x+box.width*.57,y=box.y+box.height*.41;
+  await p.mouse.move(x,y);await p.mouse.down();const started=performance.now(),sample=probe(2500);
+  while(performance.now()-started<2500){await p.mouse.move(x+85*Math.sin((performance.now()-started)*Math.PI/1250),y);await p.waitForTimeout(32);}
+  await p.mouse.move(x,y);await p.mouse.up();return await sample;
+};
 const shot=async(name,measure=false)=>{
  if(process.env.G6_KEEP&&!process.env.G6_KEEP.split(",").some(key=>name.startsWith(key+"-")))return;
  await rest();console.log("capture",name);const w=await state(),s=w.observatory;await p.screenshot({path:join(out,name+".jpg"),type:"jpeg",quality:86});
- const data=measure&&process.env.G6_PERF?await p.evaluate(()=>window.geoDeviceProbe(2500)):undefined;
+ const data=measure&&process.env.G6_PERF?await probe(2500):undefined;
  let animation;
  if(data&&s.mode==="regional"){
    const startPhase=s.progress;await p.evaluate(()=>document.querySelector("#g-play").click());
-   animation=await p.evaluate(()=>window.geoDeviceProbe(2500));
+   animation=await probe(2500);
    await p.evaluate(()=>{if(window.geoObservatory().observatory.playing)document.querySelector("#g-play").click();});
    await phase(startPhase);await rest();
  }
- rows.push({name,view:s.view,camera:s.camera??[w.lat,w.lon,w.d,w.tilt,w.bearing],region:s.site??w.mode,phase:s.progress??s.year,cut:s.cut,playing:s.playing,viewport:[viewport.width,viewport.height],resolution:w.resolution,draws:w.draws,triangles:w.triangles,geometries:w.geometries,textures:w.textures,loadMs,warm:s.timings,profile:s.graphics,rssMiB:rss(),data,animation});loadMs=0;
+ const cameraMotion=data&&s.mode==="regional"?await movingCamera():undefined;
+ rows.push({cameraMotion,name,view:s.view,camera:s.camera??[w.lat,w.lon,w.d,w.tilt,w.bearing],region:s.site??w.mode,phase:s.progress??s.year,cut:s.cut,playing:s.playing,viewport:[viewport.width,viewport.height],resolution:w.resolution,draws:w.draws,triangles:w.triangles,geometries:w.geometries,textures:w.textures,loadMs,warm:s.timings,profile:s.graphics,rssMiB:rss(),data,animation});loadMs=0;
 };
 const zoom=async()=>{const box=await p.locator("#earth").boundingBox();await p.mouse.move(box.x+box.width*.63,box.y+box.height*.44);await p.mouse.wheel(0,-850);await p.waitForTimeout(400);};
 const nearby=async(v,baseline)=>{const exists=await p.locator('#g-view option[value="'+v+'"]').count();
  if(exists)await view(v);else await baseline();};
 const landscapePairs=async(site)=>{
  if(site==="san"){await nearby("local",async()=>{await view("land");await zoom();});await shot("04a-Lokale-Landschaft");await nearby("ground",async()=>{await view("land");await zoom();});await shot("05a-Gras-und-Eichen");}
- if(site==="island"){await nearby("local",basaltCamera);await shot("17b-Spaltenlandschaft");await nearby("ground",basaltCamera);await shot("17c-Lavafeld");}
+ if(site==="island"){await nearby("local",basaltCamera);await shot("17b-Spaltenlandschaft");await nearby("ground",basaltCamera);await phase(.83);await shot("17c-Lavafeld");await phase(0);}
  if(site==="japan"){await nearby("local",coastCamera);await shot("10b-Kuestenausschnitt");await nearby("ground",coastCamera);await shot("13a-Uferwasser");}
 };
 const stage=process.env.G6_STAGE;const groupIs=k=>!stage&&(!group||group===k);
@@ -80,7 +90,7 @@ try{
  if(stage==="F"){await shot("Globus");await click("nav-inside");await shot("Schalen");}
  if(groupIs("world")){await shot("01-Globus",true);await click("nav-inside");await shot("02-Schalen");}
  if(groupIs("san")){await visit("san");await shot("03-Parkfield",true);await landscapePairs("san");await view("land");await zoom();await shot("04-Boden");await view("overhead");await zoom();await shot("05-Bewuchs");await phase(.49);await shot("06-Transform");await view("cut");await shot("07-Schnitt");await view("overhead");if(!await p.isVisible("#g-stress"))await p.locator("#g-stress").locator("xpath=ancestor::details[1]/summary").click();await p.check("#g-stress");await phase(.30);await shot("08-Spannung");await view("waves");await phase(.53);await shot("09-Wellen",true);}
- if(groupIs("japan")){await visit("japan");await shot("10-Tohoku",true);await landscapePairs("japan");await coastCamera();await shot("10a-Kuestenrelief");await view("water");await phase(.49);await shot("11-Meeresboden");await view("cut");await shot("12-Subduktion");await view("land");await zoom();await phase(.58);await shot("13-Wasser");await view("ocean");await phase(.63);await shot("14-Offenes-Meer",true);await view("coast");await phase(.658);await shot("15-Ueberflutung");}
+ if(groupIs("japan")){await visit("japan");await shot("10-Tohoku",true);await landscapePairs("japan");await coastCamera();await shot("10a-Kuestenrelief");await view("water");await phase(.49);await shot("11-Meeresboden");await view("cut");await shot("12-Subduktion");await view("land");await zoom();await phase(.58);await shot("13-Wasser");await view("ocean");await phase(.63);await shot("14-Offenes-Meer",true);await view("coast");await phase(.658);await shot("15-Ueberflutung");await phase(.94);await shot("15a-Rueckzug");}
  if(groupIs("island")){await visit("island",true);await view("land");await shot("16-Reykjanes",true);await landscapePairs("island");await basaltCamera();await shot("17-Basalt");await view("cut");await phase(.46);await shot("17a-Schmelze");await view("vent");await shot("18-Schlot");await phase(.82);await shot("19-Lava",true);await select("g-eruption","explosive");await phase(.76);await shot("20-Asche");}
  if(groupIs("other")){await visit("hawaii",true);await view("land");await phase(.81);await shot("21-Hawaii");await visit("himalaya");await view("cut");await phase(.74);await shot("22-Himalaya");await visit("rift");await view("cut");await phase(.74);await shot("23-Graben");await visit("japan",true);await view("vent");await phase(.78);await shot("23a-Zaozan");}
  if(groupIs("global")){await click("nav-plates");await click("g-time");await rest();await p.locator("#g-year").fill("-125");await shot("24-Zeitreise");await select("g-scenario","aurica");await p.locator("#g-year").fill("160");await p.check("#g-compare");await select("g-second","amasia");await shot("25-Zukunft");await click("nav-nyos");await p.waitForFunction(()=>window.geoObservatory().nyos.terrainVisible&&!window.geoObservatory().flying);await shot("26-Nyos");await click("saved-views");await select("saved-list","p3");await click("view-apply");await p.waitForSelector(".classroom-views",{state:"hidden"});await click("present");await shot("27-Smartboard");}

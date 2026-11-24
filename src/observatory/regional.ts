@@ -94,7 +94,8 @@ export class RegionalScene {
     });
     const cutFaces=this.solids.filter(s=>s.slice&&f.kind==="strike");
     let cutPlaneError=0;for(const s of cutFaces){const p=s.g.attributes.position;for(let i=0;i<p.count;i++)if(s.base[3*i+2]===0)cutPlaneError=Math.max(cutPlaneError,Math.abs(p.getZ(i)));}
-    return {floodHistory:this.water?.shorelineHistory,waterProfile:this.water?Array.from({length:this.water.cells},(_,i)=>{const x=-6+i*this.water!.dx,t=this.progress;
+    const lavaTracks:number[][][]=[];if(this.spec.theme==="volcano")this.scene.traverse(o=>{if(o.visible&&o.userData.track)lavaTracks.push(o.userData.track);});
+    return {lavaTracks,floodHistory:this.water?.shorelineHistory,waterProfile:this.water?Array.from({length:this.water.cells},(_,i)=>{const x=-6+i*this.water!.dx,t=this.progress;
       return {x,bed:this.water!.bed(x,t),eta:this.water!.sample(x,t),depth:this.water!.sample(x,t,true)};}):undefined,cutPlaneError,markerEnds:this.markerEnds,flood:this.water?.extent(this.progress),vertices,profilePoints:f.profile.map(([x,km])=>({x,km,y:f.interfaceY(x)})),sense:f.sense,maxPlaneError,focusError:Math.abs(f.hx-f.xAt(f.hy)),pArrival:onset+distance/pSpeed,sArrival:onset+distance/sSpeed,
       earlyShake:f.shaking(onset+distance/pSpeed-.002,f.hx,this.epicenter[1],0),lateShake:f.shaking(1,f.hx,this.epicenter[1],0),fault:f.kind,trace:f.trace,dipSign:f.dipSign,profile:f.profile.length,waterEvent:f.waterEvent,waterSurface:this.water?.sample(f.hx,this.progress)??0,waterSignals:this.water?[0,.48,.58,.72,.88,1].map(t=>[t,this.water!.sample(f.hx,t),this.water!.sample(-4,t)]):[],
       rupture:this.rupture.visible?Array.from(this.rupture.geometry.attributes.position.array):[],waveFronts:this.waves.map(w=>w.visible),
@@ -138,7 +139,7 @@ export class RegionalScene {
     return Math.abs(z)<.002 || at("getY")<=this.height(at("getX"),z)-.015;
   }
   get opening(){return this.reveal;}
-  get viewSettled(){return !this.transition && Math.abs(this.reveal-Number(this.cut))<.012;}
+  get viewSettled(){return !(this.localActive&&this.local!.pending)&&!this.transition && Math.abs(this.reveal-Number(this.cut))<.012;}
   reframe(cut:boolean){this.orbit.minDistance=4;this.orbit.maxDistance=22;this.camera.far=120;this.view=cut?"cut":"land";this.cut=cut;this.camera.position.set(cut?1.3:3.4,cut?2.1:4.5,cut?8.4:7.4);
     const goal=new T.Vector3(0,cut?-.68:0,cut?-.6:-.5),to=this.camera.position.clone();
     if(this.ready&&!matchMedia("(prefers-reduced-motion: reduce)").matches){this.camera.position.copy(this.lastCamera);this.transition={from:this.lastCamera.clone(),to,look:this.orbit.target.clone(),goal,fraction:0};}

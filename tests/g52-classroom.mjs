@@ -129,6 +129,15 @@ export async function classroom(p,dir,record=false){
     // Remove only the three temporary scenes created during this test.
     for(const id of [running,mapKey,timeKey,key]){await click("saved-views");await choose("saved-list",id);await click("view-remove");await click("view-close");}
     await click("obswitch");await click("home");if(await p.locator("body.present").count()){await click("present");await p.waitForSelector("body.present",{state:"detached"});}
+    await film("Nahmodell-und-Untergrund",async()=>{
+      await click("nav-earthquake");await choose("g-launch","san");await rest();await fill("g-progress",.46);
+      await choose("g-view","local");await rest();await choose("g-view","ground");await rest();
+      const before=await at(.46),favorite=await save("Bodennahe Kamera");
+      await choose("g-view","cut");await rest();await recall(favorite);const after=await at(.46);
+      assert.equal(after.view,"ground");for(const key of ["position","target"])assert.ok(after.camera[key].every((x,i)=>Math.abs(x-before.camera[key][i])<1e-7));
+      await click("saved-views");await choose("saved-list",favorite);await click("view-remove");await click("view-close");
+      await choose("g-view","cut");await rest();await click("home");await rest();
+    });
     await writeFile(join(dir,record?"Unterricht-App.json":"Unterricht-HTML.json"),JSON.stringify(log,null,2));return log;
   }finally{await display.detach();}
 }

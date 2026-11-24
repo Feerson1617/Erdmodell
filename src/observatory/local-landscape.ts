@@ -34,7 +34,7 @@ export class LocalLandscape{
   private terrain:number[][]=[];
   private photo?:T.Texture;
   private disposed=false;
-  revision=0;
+  revision=0;pending=0;
   private sets:{group:T.InstancedMesh;near:T.BufferGeometry;mid:T.BufferGeometry;matrices:T.Matrix4[];middle:T.InstancedMesh;scans:T.InstancedMesh[];type:string}[]=[];
   private lastZone="";
   constructor(readonly site:Site,private lib:Library,private grade:{value:number},private regionalRise:(x:number,z:number)=>number,private volcanic:boolean){
@@ -58,7 +58,7 @@ export class LocalLandscape{
         const k=j*n+i;if(j+1<axis.length&&i+1<n)idx.push(k,k+n,k+1,k+1,k+n,k+n+1);
       }
       const g=new T.BufferGeometry();g.setAttribute("position",new T.Float32BufferAttribute(p,3));g.setIndex(idx);g.computeVertexNormals();
-      const mesh=new T.Mesh(g,ground);mesh.receiveShadow=true;this.halves[half].add(mesh);
+      const mesh=new T.Mesh(g,ground);mesh.name="Nahgelände";mesh.receiveShadow=true;this.halves[half].add(mesh);
     }
     if(site==="island"){
       this.lava=lavaTongue(3.4);this.lava.build(-2,-16,Math.PI*.49,52,0,(x,z)=>this.surface(x,z));this.root.add(this.lava.mesh);
@@ -106,9 +106,9 @@ export class LocalLandscape{
   private groundMaterial(){
     const m=new T.MeshStandardMaterial({color:0xffffff,roughness:.92});
     const imagery={value:this.lib.color},hasPhoto={value:0};
-    if(this.site==="san")new T.TextureLoader().load(localAsset("data/g61/parkfield.webp"),tex=>{
-      if(this.disposed){tex.dispose();return;}this.photo=tex;tex.colorSpace=T.SRGBColorSpace;tex.anisotropy=4;imagery.value=tex;hasPhoto.value=1;this.revision++;
-    });
+    if(this.site==="san"){this.pending++;new T.TextureLoader().load(localAsset("data/g61/parkfield.webp"),tex=>{
+      if(this.disposed){tex.dispose();return;}this.photo=tex;tex.colorSpace=T.SRGBColorSpace;tex.anisotropy=4;imagery.value=tex;hasPhoto.value=1;this.revision++;this.pending--;
+    },undefined,()=>{this.pending--;this.revision++;});}
     const basalt=this.site==="island"||this.site==="hawaii",coast=this.site==="japan";
     m.onBeforeCompile=s=>{
       Object.assign(s.uniforms,{faciesColor:{value:this.lib.color},faciesRelief:{value:this.lib.relief},detailGrade:this.grade,ortho:imagery,hasPhoto});
@@ -190,13 +190,14 @@ export class LocalLandscape{
       matrices.forEach((m,i)=>group.setMatrixAt(i,m));group.castShadow=kind!=="grass";group.receiveShadow=true;group.name=kind;
       const middle=new T.InstancedMesh(mid,impostor?.material??material,matrices.length);middle.castShadow=kind==="oak";middle.receiveShadow=true;
       this.halves[Number(side)].add(group,middle);const scans:T.InstancedMesh[]=[];this.sets.push({group,near,mid,matrices,middle,scans,type:kind});
-      scannedSpecimen(kind)?.then(parts=>{
+      const loading=scannedSpecimen(kind);if(loading)this.pending++;
+      loading?.then(parts=>{
         if(this.disposed)return;
         for(const part of parts){const model=new T.InstancedMesh(part.geometry,part.material,matrices.length);
           model.count=0;model.frustumCulled=false;model.userData.sharedSpecimen=true;model.castShadow=kind!=="grass";model.receiveShadow=true;
           this.halves[Number(side)].add(model);scans.push(model);}
         this.lastZone="";this.revision++;
-      }).catch(e=>console.error("Nahdetail konnte nicht geladen werden",kind,e));
+      }).catch(e=>console.error("Nahdetail konnte nicht geladen werden",kind,e)).finally(()=>{this.pending--;this.revision++;});
     }
   }
   pose(view:string){

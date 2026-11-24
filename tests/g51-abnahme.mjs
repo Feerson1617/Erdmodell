@@ -74,7 +74,10 @@ export async function longClassroom(p,measure,readMemory){
       const label=["Parkfield","Tohoku und Tsunami","Zeitreise","Vulkanismus"][n%4];
       const loadStart=performance.now();
       if(n%4===2){await time();if(n%8===6){await p.selectOption("#g-scenario","aurica");await p.locator("#g-year").fill("160");await p.check("#g-compare");await p.waitForFunction(()=>window.geoObservatory().observatory.timeReady);}await click("g-time-play");}
-      else{if(n%4===3){await click("nav-volcano");await ready();}else{await visit(n%4===0?"san":"japan");await click("g-cut");}await click("g-play");}
+      else{if(n%4===3){await click("nav-volcano");await ready();}else{await visit(n%4===0?"san":"japan");await click("g-cut");}if(n%8===0||n%8===3||n%8===5){
+          await p.selectOption("#g-view","local");await ready();await p.selectOption("#g-view","ground");await ready();
+        }
+        await click("g-play");}
       samples.push({width,height,readyMs:performance.now()-loadStart,futureComparison:n%8===6,...await measure(label,15000)});
       if(n%4===2)await click("g-time-play");
       await click("home");await p.waitForFunction(()=>!window.geoObservatory().flying);

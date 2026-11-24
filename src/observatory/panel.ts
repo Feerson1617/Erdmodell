@@ -210,7 +210,7 @@ export class Observatory {
     const start=r.timings.firstDrawMs===undefined?performance.now():0;
     graphics.idle=this.lastScene===r&&state===this.drawnState&&!r.playing&&r.viewSettled;
     graphics.scope=[r.spec.site??r.spec.process,r.spec.theme,r.localActive?"local":"regional"].join("/");
-    graphics.activity=graphics.idle?"cached":r.playing?"animation":this.lastScene===r?"camera":"still";
+    graphics.activity=r.localActive&&r.local!.pending?"load":graphics.idle?"cached":r.playing?"animation":this.lastScene===r?"camera":"still";
     if(!graphics.idle){
       r.prepareRender(this.world.gl);this.world.gl.render(r.renderScene,r.camera);this.lastScene=r;this.drawnState=state;
     }
