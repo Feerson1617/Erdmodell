@@ -1,3 +1,4 @@
+import {installProfiles} from "./observatory/graphics";
 import {classroomViews} from "./observatory/classroom-views";
 import {fields,lessonKeys} from "./observatory/saved-state";
 import {Observation} from "./observatory/observation";
@@ -427,6 +428,7 @@ document.onfullscreenchange = () => {
 const canvas = $<HTMLCanvasElement>("earth");
 paint();
 async function boot() {
+  installProfiles(document.querySelector(".headTools")!);
   try {
     world = new World(canvas, warn);
   } catch {

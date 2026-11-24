@@ -1,3 +1,4 @@
+import {observeCadence} from "./observatory/graphics";
 import * as T from "three";
 import { CameraController, HOME, type Pose } from "./camera";
 import { angularDistance, R, RAD, position, basis, smooth, clamp } from "./geo";
@@ -900,6 +901,7 @@ export class World {
     this.frameCount++;
     if (now - this.fpsStart >= 900) {
       this.fps = (this.frameCount * 1000) / (now - this.fpsStart);
+      observeCadence(this.fps,(now-this.fpsStart)/1000);
       const ratio = this.resolution.sample(this.fps, (now - this.fpsStart) / 1000);
       if (ratio !== undefined) this.gl.setPixelRatio(ratio);
       this.frameCount = 0;

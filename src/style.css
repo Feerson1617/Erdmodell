@@ -337,3 +337,5 @@ body[data-observatory=time] #observe-note,#g-age{font-size:clamp(1.08rem,1.75vw,
 
 #water-profile .original-shore{stroke:#f4efe0;stroke-dasharray:3 4;stroke-width:1.6;fill:none;}
 #water-profile .advance{stroke:#72f4c8;stroke-width:7;fill:none;}
+
+#g6-quality-menu{position:relative;align-self:center}#g6-quality-menu summary{display:grid;place-items:center;cursor:pointer;width:34px;height:34px;color:inherit;border-radius:7px}#g6-quality-menu summary:hover{background:#8baba428}#g6-quality-menu label{position:absolute;right:0;top:40px;display:grid;gap:8px;padding:14px 16px;background:#183139;color:white;border:1px solid #51717a;border-radius:10px;box-shadow:0 6px 24px #07182055;z-index:12}#g6-quality-menu select{min-width:135px}

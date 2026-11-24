@@ -1,3 +1,4 @@
+import {graphics,quality} from "./graphics";
 import {WaterProfile} from "./water-profile";
 import {fields, regionKeys, timeKeys} from "./saved-state";
 import {tracks} from "./reconstruction";
@@ -182,7 +183,7 @@ export class Observatory {
     if(this.mode==="time")return this.frameTime(dt);
     const r=this.region;if(!r||!r.ready||this.world.nav.flight)return false;
     r.orbit.enabled=true;this.world.nav.enabled=false;const canvas=this.world.gl.domElement;r.camera.aspect=canvas.clientWidth/canvas.clientHeight;r.camera.updateProjectionMatrix();
-    r.update(dt);const start=r.timings.firstDrawMs===undefined?performance.now():0;this.world.gl.render(r.scene,r.camera);
+    r.update(dt);r.prepareRender(this.world.gl);const start=r.timings.firstDrawMs===undefined?performance.now():0;this.world.gl.render(r.scene,r.camera);
     if(start)r.timings.firstDrawMs=performance.now()-start;
     this.profile.show(r,()=>{r.analysis=false;this.draw();});
     const cut=$("g-cut"),view=$<HTMLSelectElement>("g-view");
@@ -254,7 +255,7 @@ export class Observatory {
       r.cameraView(i<5?"overhead":i===5?"waves":i===6?"cut":"water");r.progress=[0,0,0,.30,.49,.53,0,.48][i];r.stress=i===3;}
     this.draw();
   }
-  diagnostics(){const r=this.region;return {mode:this.mode,purpose:this.mapPurpose,mapLayers:{events:this.maps.events.visible,lines:this.maps.boundaries.visible,depth:this.maps.depth},camera:r?.ready?{position:r.camera.position.toArray(),target:r.orbit.target.toArray()}:undefined,settings:r?fields(r,regionKeys):undefined,timings:r?.timings,switching:this.switching,analysis:r?.analysis,view:r?.view,event:r?.spec.event,playing:r?.playing,vectors:r?.vectors,coastLesson:r?.spec.coastLesson,site:r?.spec.site,geology:r?.spec.geology,physics:r?.ready?r.physicalState():undefined,process:r?.spec.process,theme:this.theme,ready:!this.switching&&(r?.ready??(this.maps.steps.length>0)),progress:r?.progress,cut:r?.cut,viewSettled:r?.viewSettled,focus:r?.faultModel?.kind==="unknown"?undefined:r?.focus,epicenter:r?.faultModel?.kind==="unknown"?undefined:r?.epicenter,events:this.maps.rows.length,steps:this.maps.steps.length,selected:this.maps.selectedStep?.[0],...this.timeDiagnostics()};}
+  diagnostics(){const r=this.region;return {graphics:{profile:graphics.profile,grade:quality()},mode:this.mode,purpose:this.mapPurpose,mapLayers:{events:this.maps.events.visible,lines:this.maps.boundaries.visible,depth:this.maps.depth},camera:r?.ready?{position:r.camera.position.toArray(),target:r.orbit.target.toArray()}:undefined,settings:r?fields(r,regionKeys):undefined,timings:r?.timings,switching:this.switching,analysis:r?.analysis,view:r?.view,event:r?.spec.event,playing:r?.playing,vectors:r?.vectors,coastLesson:r?.spec.coastLesson,site:r?.spec.site,geology:r?.spec.geology,physics:r?.ready?r.physicalState():undefined,process:r?.spec.process,theme:this.theme,ready:!this.switching&&(r?.ready??(this.maps.steps.length>0)),progress:r?.progress,cut:r?.cut,viewSettled:r?.viewSettled,focus:r?.faultModel?.kind==="unknown"?undefined:r?.focus,epicenter:r?.faultModel?.kind==="unknown"?undefined:r?.epicenter,events:this.maps.rows.length,steps:this.maps.steps.length,selected:this.maps.selectedStep?.[0],...this.timeDiagnostics()};}
   private enrich(r:RegionalScene){addTeachingModels(r);}
   private extraControls(r:RegionalScene){
     if(r.spec.theme==="volcano")return '<label>Modellausbruch<select id="g-eruption">'+opts({effusive:"Lava fließt aus",explosive:"Asche und Gase steigen auf"},r.eruption)+'</select></label>';

@@ -1,3 +1,5 @@
+import {groundCover} from "./landscape-details";
+import {loadTexture,materials,decorateTerrain,quality,graphics,type Library} from "./graphics";
 import {coastalSand,coastalGrass} from "./coast-appearance";
 import * as T from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
@@ -34,6 +36,16 @@ function indexed(rows:number,cols:number,vertex:(i:number,j:number)=>number[],re
   g.setAttribute("uv",new T.Float32BufferAttribute(uv,2));g.setIndex(index);g.computeVertexNormals();return g;
 }
 export class RegionalScene {
+  lib?:Library;readonly grade={value:quality()};private relief?:T.Texture;
+  private sunlight=new T.DirectionalLight(0xffdec0,2.25);private shadowState="";private terrainLOD:((distance:number,grade:number)=>void)[]=[];
+  prepareRender(renderer:T.WebGLRenderer){
+    if(!this.lib)return;
+    const q=this.grade.value=quality();this.sunlight.castShadow=q>0;const size=[512,1024,2048][q],shadow=this.sunlight.shadow;
+    if(shadow.mapSize.x!==size){shadow.map?.dispose();shadow.map=null;shadow.mapSize.set(size,size);}
+    this.terrainLOD.forEach(fn=>fn(this.orbit.getDistance(),q));
+    const key=[graphics.revision,Math.floor(this.progress*10),this.cut,this.viewSettled].join("-");
+    if(key!==this.shadowState){renderer.shadowMap.needsUpdate=true;this.shadowState=key;}
+  }
   readonly scene=new T.Scene();
   readonly camera=new T.PerspectiveCamera(38,1,.02,120);
   readonly orbit:OrbitControls;
@@ -91,10 +103,10 @@ export class RegionalScene {
     this.orbit.enablePan=false;this.orbit.minDistance=4;this.orbit.maxDistance=22;this.orbit.maxPolarAngle=1.49;
     const sky=document.createElement("canvas");sky.width=2;sky.height=256;
     const ctx=sky.getContext("2d")!,grad=ctx.createLinearGradient(0,0,0,256);
-    grad.addColorStop(0,"#648ca6");grad.addColorStop(.43,"#c8d8d6");grad.addColorStop(.64,"#c8ccc0");grad.addColorStop(1,"#829b9b");ctx.fillStyle=grad;ctx.fillRect(0,0,2,256);
+    grad.addColorStop(0,"#48769c");grad.addColorStop(.43,"#b6d1da");grad.addColorStop(.64,"#d8d7be");grad.addColorStop(1,"#829b9b");ctx.fillStyle=grad;ctx.fillRect(0,0,2,256);
     this.sky=new T.CanvasTexture(sky);this.sky.colorSpace=T.SRGBColorSpace;this.scene.background=this.sky;this.scene.fog=new T.FogExp2(0xacc5cb,.026);
-    this.scene.add(new T.HemisphereLight(0xfff4da,0x75848c,1.78));
-    const sun=new T.DirectionalLight(0xffdda9,2.5);sun.position.set(-6,9,5);this.scene.add(sun,this.front,this.section,this.witnesses,this.settlement,this.mechanisms);
+    this.scene.add(new T.HemisphereLight(0xdbe9ff,0x93806a,1.48));
+    const sun=this.sunlight;sun.position.set(-7,6,3);Object.assign(sun.shadow.camera,{left:-8,right:8,top:7,bottom:-7,near:.1,far:26});sun.shadow.camera.updateProjectionMatrix();sun.shadow.normalBias=.008;sun.shadow.bias=-.0003;this.scene.add(sun,this.front,this.section,this.witnesses,this.settlement,this.mechanisms);
     if(spec.azimuth!==undefined)this.ui.sense.value=Math.cos((spec.azimuth-spec.strike)*Math.PI/180)>=0?1:-1;
     this.vertical=["arc","subduction"].includes(spec.process);this.reframe(false);
   }
@@ -148,11 +160,13 @@ export class RegionalScene {
     if(this.spec.site){
       const base="data/g5/terrain/"+this.spec.site;
       const asset=(suffix:string)=>localAsset(this.spec.arcTransect?"data/g51/zao/"+(suffix===".i16"?"terrain.i16":suffix.slice(1)):base+suffix);
-      const [response,tex,normal,rough,farHeight,farImage]=await Promise.all([fetch(asset(".i16")),new T.TextureLoader().loadAsync(asset("-surface.webp")),new T.TextureLoader().loadAsync(asset("-normal.webp")),new T.TextureLoader().loadAsync(asset("-rough.webp")),fetch(asset("-context.i16")),new T.TextureLoader().loadAsync(asset("-context.webp"))]);
-      if(this.disposed){tex.dispose();normal.dispose();rough.dispose();farImage.dispose();return;}
+      const enhanced=this.spec.site==="san";
+      const region=this.spec.arcTransect?"zao":this.spec.site;
+      const [response,tex,normal,rough,farHeight,farImage,lib,relief]=await Promise.all([fetch(asset(".i16")),enhanced?loadTexture(region+"-surface.webp",true):new T.TextureLoader().loadAsync(asset("-surface.webp")),new T.TextureLoader().loadAsync(asset("-normal.webp")),new T.TextureLoader().loadAsync(asset("-rough.webp")),fetch(asset("-context.i16")),enhanced?loadTexture(region+"-context.webp",true):new T.TextureLoader().loadAsync(asset("-context.webp")),enhanced?materials():undefined,enhanced?loadTexture(region+"-relief.webp"):undefined]);
+      if(this.disposed){tex.dispose();normal.dispose();rough.dispose();farImage.dispose();relief?.dispose();return;}
       if(!response.ok)throw Error("Höhendaten fehlen");
       const [heightBytes,contextBytes]=await Promise.all([response.arrayBuffer(),farHeight.arrayBuffer()]);const heights=new Int16Array(heightBytes);if(heights.length!==193*145)throw Error("Höhenraster unvollständig");
-      if(this.disposed){tex.dispose();normal.dispose();rough.dispose();farImage.dispose();return;}this.groundData=heights;this.colorMap=tex;this.normalMap=normal;this.roughMap=rough;normal.anisotropy=4;tex.colorSpace=T.SRGBColorSpace;tex.anisotropy=4;this.contextMap=farImage;farImage.colorSpace=T.SRGBColorSpace;this.surround(new Int16Array(contextBytes),farImage);
+      if(this.disposed){tex.dispose();normal.dispose();rough.dispose();farImage.dispose();relief?.dispose();return;}this.lib=lib;this.relief=relief;this.sunlight.castShadow=!!lib;this.groundData=heights;this.colorMap=tex;this.normalMap=normal;this.roughMap=rough;normal.anisotropy=4;tex.colorSpace=T.SRGBColorSpace;tex.anisotropy=4;this.contextMap=farImage;farImage.colorSpace=T.SRGBColorSpace;this.surround(new Int16Array(contextBytes),farImage);
     }
     if(!this.spec.site && this.spec.geology){
       globalWindows??=fetch(localAsset("data/g51/regional-relief.i16")).then(r=>{if(!r.ok)throw Error("Regionalraster fehlt");return r.arrayBuffer();}).then(b=>new Int16Array(b)).catch(e=>{globalWindows=undefined;throw e;});
@@ -162,7 +176,7 @@ export class RegionalScene {
     this.timings.dataMs=performance.now()-start;const build=performance.now();
     this.faultModel=new Fault(this.spec,(x,z)=>this.height(x,z));if(this.faultModel.waterEvent)this.water=new WaterSection(this.faultModel);this.timings.solverMs=performance.now()-build;
     this.nearSurface=this.height(this.faultModel.hx,0);this.ui.focus.value=this.faultModel.hy;
-    this.buildSurface();this.addVectors();this.addTrace();this.groundDetails();this.buildQuake();this.buildExtras();this.ready=true;this.update(0);this.timings.geometryMs=performance.now()-build-this.timings.solverMs;
+    this.buildSurface();this.addVectors();this.addTrace();if(this.lib&&this.colorMap)groundCover(this,this.lib,this.colorMap);else this.groundDetails();this.buildQuake();this.buildExtras();this.ready=true;this.update(0);this.timings.geometryMs=performance.now()-build-this.timings.solverMs;
   }
   private surround(h:Int16Array,image:T.Texture){
     this.contextHeights=h;
@@ -179,7 +193,27 @@ export class RegionalScene {
         if(Math.abs(x)<=6.001&&Math.abs(z)<=4.501)y=this.height(x,z);
         return [x,sea?-.006:y,z,u,1-v];
       },!front);
-      parent.add(mesh(geometry(false),terrain,"Landschaftsumfeld"));if(["japan","hawaii","island"].includes(this.spec.site!))parent.add(mesh(geometry(true),water,"Offenes Meer"));
+      const geom=geometry(false),land=mesh(geom,terrain,"Landschaftsumfeld");land.receiveShadow=true;parent.add(land);
+      if(this.lib){
+        const make=(step:number)=>{const idx:number[]=[];
+          for(let j=0;j<rows;j+=step)for(let i=0;i<cols;i+=step){
+            const y=Math.min(rows,j+step),x=Math.min(cols,i+step),ring:number[]=[];
+            const edge=(i0:number,j0:number,i1:number,j1:number,divide:boolean)=>{
+              const n=divide?Math.max(Math.abs(i1-i0),Math.abs(j1-j0)):1;
+              for(let k=0;k<n;k++)ring.push((j0+(j1-j0)*k/n)*(cols+1)+i0+(i1-i0)*k/n);
+            };
+            edge(i,j,i,y,i===0);edge(i,y,x,y,y===rows);edge(x,y,x,j,x===cols);edge(x,j,i,j,j===0);
+            if(ring.length===4){const [a,b,c,d]=ring;if(front)idx.push(a,b,d,b,c,d);else idx.push(a,d,b,b,d,c);}
+            else {const center=Math.floor((j+y)/2)*(cols+1)+Math.floor((i+x)/2);
+              for(let k=0;k<ring.length;k++){const a=ring[k],b=ring[(k+1)%ring.length];if(front)idx.push(a,b,center);else idx.push(b,a,center);}
+            }
+          }return new T.Uint16BufferAttribute(idx,1);};
+        const indices=[geom.index!,make(2),make(3)];let level=0;this.terrainLOD.push((distance,grade)=>{
+          const next=grade===2||distance<6?0:distance>12?2:distance>7?1:level;
+          if(level!==next){geom.setIndex(indices[next]);level=next;}
+        });
+      }
+      if(["japan","hawaii","island"].includes(this.spec.site!))parent.add(mesh(geometry(true),water,"Offenes Meer"));
     }
   }
   private buildSurface(){
@@ -189,7 +223,7 @@ export class RegionalScene {
       for(const front of [false,true])(front?this.front:this.scene).add(coastalGrass((x,z)=>this.height(x,z),front));
     }
     for(const side of (this.water?[1]:this.spec.process==="rift"?[-1,0,1]:[-1,1])){
-      const terrain=new T.MeshStandardMaterial({color:this.colorMap?0xffffff:0x93866b,roughness:.86,map:this.colorMap??null,normalMap:this.normalMap??null,normalScale:new T.Vector2(.75,.75),roughnessMap:this.roughMap??null,side:T.DoubleSide});
+      const terrain=new T.MeshStandardMaterial({color:this.colorMap?0xffffff:0x93866b,roughness:.86,map:this.colorMap??null,normalMap:this.lib?null:this.normalMap??null,normalScale:new T.Vector2(.75,.75),roughnessMap:this.lib?null:this.roughMap??null,side:T.DoubleSide});
       terrain.onBeforeCompile=s=>{s.uniforms.opening=this.ui.opening;s.vertexShader="varying float restZ;\n"+s.vertexShader.replace("#include <begin_vertex>","#include <begin_vertex>\nrestZ=position.z;");s.fragmentShader="uniform float opening;varying float restZ;\n"+s.fragmentShader.replace("#include <color_fragment>","#include <color_fragment>\nif(restZ>4.52*(1.-opening))discard;");};
       if(this.spec.site==="san"&&this.spec.theme==="earthquake"){
         const prepare=terrain.onBeforeCompile.bind(terrain);
@@ -203,12 +237,13 @@ export class RegionalScene {
           shader.vertexShader="varying vec2 landscapeXY;\n"+shader.vertexShader.replace("restZ=position.z;","restZ=position.z;landscapeXY=position.xz;");
           shader.fragmentShader="uniform sampler2D contextImage;varying vec2 landscapeXY;\n"+shader.fragmentShader.replace("#include <map_fragment>", "#include <map_fragment>\nfloat border=smoothstep(.78,1.,max(abs(landscapeXY.x)/6.,abs(landscapeXY.y)/4.5));diffuseColor.rgb=mix(diffuseColor.rgb,texture2D(contextImage,vec2(.5+landscapeXY.x/48.,.5-landscapeXY.y/36.)).rgb,border);");};
       }
+      if(this.lib)decorateTerrain(terrain,this.lib,this.relief,this.spec.site==="island"||this.spec.site==="hawaii"?2:this.spec.site==="japan"?1:this.spec.site==="himalaya"?3:this.spec.site==="rift"?4:0,this.grade,this.spec.theme);
       for(const front of [false,true]){
         const bounds=new Map<number,[number,number]>();
         const columns=this.water?120:64;const g=indexed(36,columns,(i,j)=>{const z=(front?0:-4.5)+j/8;
           let range=bounds.get(j);if(!range){range=this.water?[-6,6]:f.horizonRange(side,x=>this.height(x,z));bounds.set(j,range);}
           const x=T.MathUtils.lerp(range[0],range[1],i/columns);return [x,this.height(x,z),z,x/12+.5,.5-z/9];});
-        this.bindRock(g,side);g.userData.surface=true;this.scene.add(mesh(g,terrain,"Gelände"));
+        this.bindRock(g,side);g.userData.surface=true;g.userData.front=front;const land=mesh(g,terrain,"Gelände");land.receiveShadow=true;this.scene.add(land);
       }
     }
     geologySolids(this);
@@ -398,6 +433,6 @@ export class RegionalScene {
   dispose(){
     this.disposed=true;this.orbit.dispose();const gs=new Set<T.BufferGeometry>(),ms=new Set<T.Material>();
     this.scene.traverse(o=>{const m=o as T.Mesh;if(m instanceof T.InstancedMesh)m.dispose();if(m.geometry)gs.add(m.geometry);if(m.material)for(const a of Array.isArray(m.material)?m.material:[m.material])ms.add(a);});
-    for(const g of gs)g.dispose();for(const m of ms)m.dispose();this.colorMap?.dispose();this.normalMap?.dispose();this.roughMap?.dispose();this.sky.dispose();this.contextMap?.dispose();this.envelope?.dispose();
+    for(const g of gs)g.dispose();for(const m of ms)m.dispose();this.colorMap?.dispose();this.normalMap?.dispose();this.roughMap?.dispose();this.sky.dispose();this.contextMap?.dispose();this.envelope?.dispose();this.relief?.dispose();this.sunlight.shadow.dispose();
   }
 }
