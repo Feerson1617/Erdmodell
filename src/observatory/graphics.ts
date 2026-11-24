@@ -3,7 +3,7 @@ import {localAsset} from "../assets";
 
 export type Profile="auto"|"classroom"|"maximum";
 const key="georisiko.graphics.g6";
-export const graphics={profile:"auto" as Profile,adaptive:1,revision:0};
+export const graphics={profile:"auto" as Profile,adaptive:1,revision:0,idle:false};
 try{const saved=localStorage.getItem(key);if(saved==="maximum"||saved==="classroom")graphics.profile=saved;}catch{/* private file session */}
 export function quality(){return graphics.profile==="maximum"?2:graphics.profile==="classroom"?1:graphics.adaptive;}
 let slow=0,fast=0;

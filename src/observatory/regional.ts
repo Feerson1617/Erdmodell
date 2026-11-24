@@ -104,7 +104,7 @@ export class RegionalScene {
   soil="rock";eruption="effusive";coastal=false;protection=false;safeRoute=false;warning=false;relocate=false;exposure="dense";ready=false;error="";private disposed=false;private age=0;
   constructor(readonly spec:RegionSpec,canvas:HTMLCanvasElement){
     this.orbit=new OrbitControls(this.camera,canvas);this.orbit.target.set(0,0,0);
-    this.orbit.enablePan=false;this.orbit.minDistance=4;this.orbit.maxDistance=22;this.orbit.maxPolarAngle=1.49;
+    this.orbit.addEventListener("start",()=>{this.transition=undefined;});this.orbit.enablePan=false;this.orbit.minDistance=4;this.orbit.maxDistance=22;this.orbit.maxPolarAngle=1.49;
     const sky=document.createElement("canvas");sky.width=2;sky.height=256;
     const ctx=sky.getContext("2d")!,grad=ctx.createLinearGradient(0,0,0,256);
     grad.addColorStop(0,"#48769c");grad.addColorStop(.43,"#b6d1da");grad.addColorStop(.64,"#d8d7be");grad.addColorStop(1,"#829b9b");ctx.fillStyle=grad;ctx.fillRect(0,0,2,256);
@@ -131,6 +131,7 @@ export class RegionalScene {
     const z=at("getZ");
     return Math.abs(z)<.002 || at("getY")<=this.height(at("getX"),z)-.015;
   }
+  get opening(){return this.reveal;}
   get viewSettled(){return !this.transition && Math.abs(this.reveal-Number(this.cut))<.012;}
   reframe(cut:boolean){this.view=cut?"cut":"land";this.cut=cut;this.camera.position.set(cut?1.3:3.4,cut?2.1:4.5,cut?8.4:7.4);
     const goal=new T.Vector3(0,cut?-.68:0,cut?-.6:-.5),to=this.camera.position.clone();
@@ -292,6 +293,15 @@ export class RegionalScene {
   }
   waterHeight(x:number,t:number){if(!this.water)return 0;return this.water.sample(x,t);}
   cameraView(view:string){
+    const origin=this.camera.position.clone(),look=this.orbit.target.clone();
+    this.setCameraView(view);
+    if(this.transition||!this.ready||matchMedia("(prefers-reduced-motion: reduce)").matches)return;
+    const to=this.camera.position.clone(),goal=this.orbit.target.clone();
+    if(origin.distanceToSquared(to)<.002)return;
+    this.camera.position.copy(origin);this.orbit.target.copy(look);this.orbit.update();
+    this.transition={from:origin,to,look,goal,fraction:0};
+  }
+  private setCameraView(view:string){
     this.orbit.minDistance=view==="coast"?2.1:4;
     if(view==="coast"&&this.spec.coastLesson){
       this.reframe(false);this.view=view;this.transition=undefined;

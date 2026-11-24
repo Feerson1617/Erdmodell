@@ -178,12 +178,24 @@ export class Observatory {
     }else this.drawTime();
     this.action("g-world",()=>this.navigateBase("globe"));if(this.message){const p=document.createElement("p");p.textContent=this.message;this.side.append(p);}
   }
+  private lastScene?:RegionalScene;
+  private drawnState="";
   private frame(dt:number){
+    graphics.idle=false;
+    if(this.lastScene!==this.region||this.world.nav.flight||this.mode!=="regional"){this.lastScene=undefined;this.drawnState="";}
+
     if(!this.mode)return false;
     if(this.mode==="time")return this.frameTime(dt);
     const r=this.region;if(!r||!r.ready||this.world.nav.flight)return false;
     r.orbit.enabled=true;this.world.nav.enabled=false;const canvas=this.world.gl.domElement;r.camera.aspect=canvas.clientWidth/canvas.clientHeight;r.camera.updateProjectionMatrix();
-    r.update(dt);r.prepareRender(this.world.gl);const start=r.timings.firstDrawMs===undefined?performance.now():0;this.world.gl.render(r.scene,r.camera);
+    r.update(dt);
+    const state=[r.view,r.cut,r.opening.toFixed(4),r.vertical,r.coastal,r.front.visible,r.labels.visible,
+      canvas.width,canvas.height,graphics.revision,...r.camera.position.toArray().map(v=>v.toFixed(7)),...r.orbit.target.toArray().map(v=>v.toFixed(7)),...regionKeys.map(key=>r[key])].join("|");
+    const start=r.timings.firstDrawMs===undefined?performance.now():0;
+    graphics.idle=this.lastScene===r&&state===this.drawnState&&!r.playing&&r.viewSettled;
+    if(!graphics.idle){
+      r.prepareRender(this.world.gl);this.world.gl.render(r.scene,r.camera);this.lastScene=r;this.drawnState=state;
+    }
     if(start)r.timings.firstDrawMs=performance.now()-start;
     this.profile.show(r,()=>{r.analysis=false;this.draw();});
     const cut=$("g-cut"),view=$<HTMLSelectElement>("g-view");
