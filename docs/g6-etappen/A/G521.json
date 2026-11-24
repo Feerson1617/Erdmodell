@@ -1,0 +1,527 @@
+[
+  {
+    "name": "03-Parkfield",
+    "camera": {
+      "position": [
+        3.3999999999999995,
+        4.499999999999999,
+        7.3999999999999995
+      ],
+      "target": [
+        0,
+        0,
+        -0.5
+      ]
+    },
+    "region": "san",
+    "phase": 0,
+    "cut": false,
+    "playing": false,
+    "viewport": [
+      1920,
+      1080
+    ],
+    "resolution": {
+      "initial": 1,
+      "minimum": 0.75,
+      "maximum": 1,
+      "width": 1338,
+      "height": 860,
+      "reductions": 1,
+      "recoveries": 0
+    },
+    "draws": 16,
+    "triangles": 69490,
+    "geometries": 53,
+    "textures": 10,
+    "loadMs": 2690.4785630000006,
+    "warm": {
+      "dataMs": 467.3999999985099,
+      "solverMs": 0.19999999925494194,
+      "geometryMs": 164.19999999925494,
+      "warmShaderMs": 52.100000001490116,
+      "firstDrawMs": 548.8000000007451
+    },
+    "rssMiB": 830.3671875,
+    "data": {
+      "elapsedMs": 2599.8999999999996,
+      "frames": 6,
+      "fps": 2.307781068502635,
+      "median": 400,
+      "p95": 416.6999999999989,
+      "max": 950,
+      "gaps": [
+        416.6999999999989,
+        383.2000000000007,
+        950,
+        116.70000000000073,
+        400,
+        333.2999999999993
+      ],
+      "states": [
+        {
+          "observatory": {
+            "mode": "regional",
+            "site": "san",
+            "process": "transform",
+            "theme": "earthquake",
+            "progress": 0
+          },
+          "mode": "globe",
+          "region": "hooge",
+          "resolution": {
+            "initial": 1,
+            "minimum": 0.75,
+            "maximum": 1,
+            "width": 1181,
+            "height": 759,
+            "reductions": 2,
+            "recoveries": 0
+          },
+          "draws": 16,
+          "triangles": 69490,
+          "textures": 10,
+          "geometries": 53,
+          "programs": 21
+        },
+        {
+          "observatory": {
+            "mode": "regional",
+            "site": "san",
+            "process": "transform",
+            "theme": "earthquake",
+            "progress": 0
+          },
+          "mode": "globe",
+          "region": "hooge",
+          "resolution": {
+            "initial": 1,
+            "minimum": 0.75,
+            "maximum": 1,
+            "width": 1181,
+            "height": 759,
+            "reductions": 2,
+            "recoveries": 0
+          },
+          "draws": 16,
+          "triangles": 69490,
+          "textures": 10,
+          "geometries": 53,
+          "programs": 21
+        },
+        {
+          "observatory": {
+            "mode": "regional",
+            "site": "san",
+            "process": "transform",
+            "theme": "earthquake",
+            "progress": 0
+          },
+          "mode": "globe",
+          "region": "hooge",
+          "resolution": {
+            "initial": 1,
+            "minimum": 0.75,
+            "maximum": 1,
+            "width": 1181,
+            "height": 759,
+            "reductions": 2,
+            "recoveries": 0
+          },
+          "draws": 16,
+          "triangles": 69490,
+          "textures": 10,
+          "geometries": 53,
+          "programs": 21
+        }
+      ]
+    }
+  },
+  {
+    "name": "04-Boden",
+    "camera": {
+      "position": [
+        2.1985156526924445,
+        2.9098001285635298,
+        4.608315781255975
+      ],
+      "target": [
+        0,
+        0,
+        -0.5
+      ]
+    },
+    "region": "san",
+    "phase": 0,
+    "cut": false,
+    "playing": false,
+    "viewport": [
+      1920,
+      1080
+    ],
+    "resolution": {
+      "initial": 1,
+      "minimum": 0.75,
+      "maximum": 1,
+      "width": 1181,
+      "height": 759,
+      "reductions": 2,
+      "recoveries": 0
+    },
+    "draws": 15,
+    "triangles": 61714,
+    "geometries": 53,
+    "textures": 10,
+    "loadMs": 0,
+    "warm": {
+      "dataMs": 467.3999999985099,
+      "solverMs": 0.19999999925494194,
+      "geometryMs": 164.19999999925494,
+      "warmShaderMs": 52.100000001490116,
+      "firstDrawMs": 548.8000000007451
+    },
+    "rssMiB": 850.7890625
+  },
+  {
+    "name": "05-Bewuchs",
+    "camera": {
+      "position": [
+        1.0992578263462218,
+        4.357386375962385,
+        1.7191912025340645
+      ],
+      "target": [
+        0,
+        0.34832842105263156,
+        -0.35
+      ]
+    },
+    "region": "san",
+    "phase": 0,
+    "cut": false,
+    "playing": false,
+    "viewport": [
+      1920,
+      1080
+    ],
+    "resolution": {
+      "initial": 1,
+      "minimum": 0.75,
+      "maximum": 1,
+      "width": 1181,
+      "height": 759,
+      "reductions": 2,
+      "recoveries": 0
+    },
+    "draws": 13,
+    "triangles": 46162,
+    "geometries": 53,
+    "textures": 10,
+    "loadMs": 0,
+    "warm": {
+      "dataMs": 467.3999999985099,
+      "solverMs": 0.19999999925494194,
+      "geometryMs": 164.19999999925494,
+      "warmShaderMs": 52.100000001490116,
+      "firstDrawMs": 548.8000000007451
+    },
+    "rssMiB": 851.828125
+  },
+  {
+    "name": "06-Transform",
+    "camera": {
+      "position": [
+        1.0992578263462218,
+        4.357386375962385,
+        1.7191912025340645
+      ],
+      "target": [
+        0,
+        0.34832842105263156,
+        -0.35
+      ]
+    },
+    "region": "san",
+    "phase": 0.49,
+    "cut": false,
+    "playing": false,
+    "viewport": [
+      1920,
+      1080
+    ],
+    "resolution": {
+      "initial": 1,
+      "minimum": 0.75,
+      "maximum": 1,
+      "width": 1181,
+      "height": 759,
+      "reductions": 2,
+      "recoveries": 0
+    },
+    "draws": 13,
+    "triangles": 46162,
+    "geometries": 53,
+    "textures": 10,
+    "loadMs": 0,
+    "warm": {
+      "dataMs": 467.3999999985099,
+      "solverMs": 0.19999999925494194,
+      "geometryMs": 164.19999999925494,
+      "warmShaderMs": 52.100000001490116,
+      "firstDrawMs": 548.8000000007451
+    },
+    "rssMiB": 852.08984375
+  },
+  {
+    "name": "07-Schnitt",
+    "camera": {
+      "position": [
+        1.300000000000002,
+        2.100000000000001,
+        8.400000000000007
+      ],
+      "target": [
+        0,
+        -0.68,
+        -0.6
+      ]
+    },
+    "region": "san",
+    "phase": 0.49,
+    "cut": true,
+    "playing": false,
+    "viewport": [
+      1920,
+      1080
+    ],
+    "resolution": {
+      "initial": 1,
+      "minimum": 0.75,
+      "maximum": 1,
+      "width": 1181,
+      "height": 759,
+      "reductions": 2,
+      "recoveries": 0
+    },
+    "draws": 27,
+    "triangles": 95014,
+    "geometries": 65,
+    "textures": 11,
+    "loadMs": 0,
+    "warm": {
+      "dataMs": 467.3999999985099,
+      "solverMs": 0.19999999925494194,
+      "geometryMs": 164.19999999925494,
+      "warmShaderMs": 52.100000001490116,
+      "firstDrawMs": 548.8000000007451
+    },
+    "rssMiB": 798.41796875
+  },
+  {
+    "name": "08-Spannung",
+    "camera": {
+      "position": [
+        1.7000000000000002,
+        6.548328421052632,
+        2.85
+      ],
+      "target": [
+        0,
+        0.34832842105263156,
+        -0.35
+      ]
+    },
+    "region": "san",
+    "phase": 0.3,
+    "cut": false,
+    "playing": false,
+    "viewport": [
+      1920,
+      1080
+    ],
+    "resolution": {
+      "initial": 1,
+      "minimum": 0.75,
+      "maximum": 1,
+      "width": 1181,
+      "height": 759,
+      "reductions": 2,
+      "recoveries": 0
+    },
+    "draws": 16,
+    "triangles": 69490,
+    "geometries": 65,
+    "textures": 11,
+    "loadMs": 0,
+    "warm": {
+      "dataMs": 467.3999999985099,
+      "solverMs": 0.19999999925494194,
+      "geometryMs": 164.19999999925494,
+      "warmShaderMs": 52.100000001490116,
+      "firstDrawMs": 548.8000000007451
+    },
+    "rssMiB": 813.16015625
+  },
+  {
+    "name": "09-Wellen",
+    "camera": {
+      "position": [
+        0.2500000000000001,
+        -0.16000000000000025,
+        6.220000000000003
+      ],
+      "target": [
+        6.490628035480972e-17,
+        -0.7000000000000001,
+        -0.18
+      ]
+    },
+    "region": "san",
+    "phase": 0.53,
+    "cut": true,
+    "playing": false,
+    "viewport": [
+      1920,
+      1080
+    ],
+    "resolution": {
+      "initial": 1,
+      "minimum": 0.75,
+      "maximum": 1,
+      "width": 1181,
+      "height": 759,
+      "reductions": 2,
+      "recoveries": 0
+    },
+    "draws": 27,
+    "triangles": 94934,
+    "geometries": 65,
+    "textures": 11,
+    "loadMs": 0,
+    "warm": {
+      "dataMs": 467.3999999985099,
+      "solverMs": 0.19999999925494194,
+      "geometryMs": 164.19999999925494,
+      "warmShaderMs": 52.100000001490116,
+      "firstDrawMs": 548.8000000007451
+    },
+    "rssMiB": 803.625,
+    "data": {
+      "elapsedMs": 2550,
+      "frames": 5,
+      "fps": 1.9607843137254901,
+      "median": 433.40000000000146,
+      "p95": 749.9000000000015,
+      "max": 899.9000000000015,
+      "gaps": [
+        433.40000000000146,
+        749.9000000000015,
+        183.39999999999418,
+        899.9000000000015,
+        283.40000000000146
+      ],
+      "states": [
+        {
+          "observatory": {
+            "mode": "regional",
+            "site": "san",
+            "process": "transform",
+            "theme": "earthquake",
+            "progress": 0.53
+          },
+          "mode": "globe",
+          "region": "hooge",
+          "resolution": {
+            "initial": 1,
+            "minimum": 0.75,
+            "maximum": 1,
+            "width": 1181,
+            "height": 759,
+            "reductions": 2,
+            "recoveries": 0
+          },
+          "draws": 27,
+          "triangles": 94934,
+          "textures": 11,
+          "geometries": 65,
+          "programs": 21
+        },
+        {
+          "observatory": {
+            "mode": "regional",
+            "site": "san",
+            "process": "transform",
+            "theme": "earthquake",
+            "progress": 0.53
+          },
+          "mode": "globe",
+          "region": "hooge",
+          "resolution": {
+            "initial": 1,
+            "minimum": 0.75,
+            "maximum": 1,
+            "width": 1181,
+            "height": 759,
+            "reductions": 2,
+            "recoveries": 0
+          },
+          "draws": 27,
+          "triangles": 94934,
+          "textures": 11,
+          "geometries": 65,
+          "programs": 21
+        },
+        {
+          "observatory": {
+            "mode": "regional",
+            "site": "san",
+            "process": "transform",
+            "theme": "earthquake",
+            "progress": 0.53
+          },
+          "mode": "globe",
+          "region": "hooge",
+          "resolution": {
+            "initial": 1,
+            "minimum": 0.75,
+            "maximum": 1,
+            "width": 1181,
+            "height": 759,
+            "reductions": 2,
+            "recoveries": 0
+          },
+          "draws": 27,
+          "triangles": 94934,
+          "textures": 11,
+          "geometries": 65,
+          "programs": 21
+        },
+        {
+          "observatory": {
+            "mode": "regional",
+            "site": "san",
+            "process": "transform",
+            "theme": "earthquake",
+            "progress": 0.53
+          },
+          "mode": "globe",
+          "region": "hooge",
+          "resolution": {
+            "initial": 1,
+            "minimum": 0.75,
+            "maximum": 1,
+            "width": 1181,
+            "height": 759,
+            "reductions": 2,
+            "recoveries": 0
+          },
+          "draws": 27,
+          "triangles": 94934,
+          "textures": 11,
+          "geometries": 65,
+          "programs": 21
+        }
+      ]
+    }
+  }
+]

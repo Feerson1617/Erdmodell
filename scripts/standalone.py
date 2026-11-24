@@ -1,6 +1,7 @@
 """Pack the production entry and its local dependencies into one portable HTML."""
 import base64
 import json
+import html as html_escape
 import mimetypes
 import posixpath
 import re
@@ -8,7 +9,7 @@ from pathlib import Path
 
 root = Path(__file__).resolve().parents[1]
 dist = root / "dist"
-output = root / "artifacts/GeoRisiko-G5.2.1-Web-Test.html"
+output = root / "artifacts/GeoRisiko-G6-Web-Test.html"
 (js_file,) = (dist / "assets").glob("*.js")
 (css_file,) = (dist / "assets").glob("*.css")
 assets = {}
@@ -36,22 +37,34 @@ def embed_css_url(match):
 js = re.sub(r'new URL\("([^"]+)",import.meta.url\).href', embed_module_url, js_file.read_text())
 assert 'import.meta.url' not in js, "Unresolved module asset"
 css = re.sub(r'url\(([^)]+)\)', embed_css_url, css_file.read_text())
-loader = """window.__geoAsset = path => {
+# Inert payloads keep large terrain assets out of the JavaScript parser and debugger.
+payloads = []
+for key,value in assets.items():
+    mime,data=value.removeprefix("data:").split(";base64,",1)
+    payloads.append('<script type="application/octet-stream" data-geo-key="'+html_escape.escape(key,quote=True)+'" data-mime="'+html_escape.escape(mime,quote=True)+'">'+data+'</script>')
+loader = """const urls=new Map(), payloads=new Map(Array.from(document.querySelectorAll("[data-geo-key]"),node=>[node.dataset.geoKey,node]));
+window.__geoAsset = path => {
   if (urls.has(path)) return urls.get(path);
-  const encoded = embedded[path];
-  if (!encoded) throw new Error("Eingebettete Datei fehlt: " + path);
-  const comma = encoded.indexOf(",");
-  const bytes = Uint8Array.from(atob(encoded.slice(comma+1)), c => c.charCodeAt(0));
-  const url = URL.createObjectURL(new Blob([bytes], {type:encoded.slice(5,encoded.indexOf(";"))}));
-  urls.set(path,url);
-  return url;
+  const node=payloads.get(path);
+  if (!node) throw new Error("Eingebettete Datei fehlt: " + path);
+  const encoded=node.textContent;
+  let bytes;
+  if (typeof Uint8Array.fromBase64==="function") bytes=Uint8Array.fromBase64(encoded);
+  else {
+    const binary=atob(encoded);
+    bytes=new Uint8Array(binary.length);
+    for(let i=0;i<bytes.length;i++)bytes[i]=binary.charCodeAt(i);
+  }
+  const url=URL.createObjectURL(new Blob([bytes],{type:node.dataset.mime}));
+  urls.set(path,url);payloads.delete(path);node.remove();return url;
 };"""
 js = re.sub(r'</script', lambda _: r'<\/script', js, flags=re.I)
 html = f"""<!doctype html>
 <html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>GeoRisiko 3D · Web-Test</title><link rel="icon" href="data:,"><style>{css}</style></head>
-<body><div id="app"></div><noscript>Zum Drehen des Erdmodells bitte JavaScript einschalten.</noscript>
-<script>const embedded={json.dumps(assets,separators=(',',':'))}, urls=new Map();{loader}</script>
+<body><div id="app"><p role="status">GeoRisiko lädt das Erdmodell …</p></div><noscript>Zum Drehen des Erdmodells bitte JavaScript einschalten.</noscript>
+{"".join(payloads)}
+<script>{loader}</script>
 <script type="module">{js}</script></body></html>
 """
 output.parent.mkdir(exist_ok=True)

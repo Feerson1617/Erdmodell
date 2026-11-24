@@ -5,10 +5,10 @@ import {resolve,join} from "node:path";
 import {pathToFileURL} from "node:url";
 const out=process.env.G521_OUT??"test-results/mac/G521",key="georisiko.unterrichtsansichten.v1";
 await mkdir(out,{recursive:true});
-const browser=await chromium.launch({args:["--use-angle=swiftshader","--enable-unsafe-swiftshader"]});
+const browser=await chromium.launch(process.env.G6_NATIVE_GPU?{channel:"chrome",headless:false}:{args:["--use-angle=swiftshader","--enable-unsafe-swiftshader"]});
 try{
  const p=await browser.newPage({viewport:{width:1366,height:768},reducedMotion:"reduce"});
- await p.goto(pathToFileURL(resolve("artifacts/GeoRisiko-G5.2.1-Web-Test.html")).href);
+ await p.goto(pathToFileURL(resolve("artifacts/GeoRisiko-G6-Web-Test.html")).href);
  await p.waitForFunction(()=>window.geoObservatory?.().ready);
  await p.click("#saved-views");await p.selectOption("#saved-list","p3");await p.click("#view-apply");await p.waitForSelector("dialog.classroom-views",{state:"hidden"});
  await p.click("#saved-views");await p.fill("#view-name","Legacy");await p.click("#view-save");await p.click("#view-close");

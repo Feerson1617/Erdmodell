@@ -6,13 +6,13 @@ import {pathToFileURL} from "node:url";
 
 const dir=process.env.G521_OUT??"test-results/g521";
 await mkdir(dir,{recursive:true});
-const browser=await chromium.launch({args:["--use-angle=swiftshader","--enable-unsafe-swiftshader"]});
+const browser=await chromium.launch(process.env.G6_NATIVE_GPU?{channel:"chrome",headless:false}:{args:["--use-angle=swiftshader","--enable-unsafe-swiftshader"]});
 try{
  const p=await browser.newPage({viewport:{width:1920,height:1080},reducedMotion:"reduce"});p.setDefaultTimeout(60000);
  await p.addInitScript(()=>{window.__THREE_DEVTOOLS__=new EventTarget();window.__THREE_DEVTOOLS__.addEventListener("observe",({detail})=>{
     if(!detail.isWebGLRenderer)return;const draw=detail.render.bind(detail);
     detail.render=(s,c)=>{if(c.far===120)window.renderedSection=s;return draw(s,c);};});});
- await p.goto(pathToFileURL(resolve(process.env.G521_HTML??"artifacts/GeoRisiko-G5.2.1-Web-Test.html")).href);
+ await p.goto(pathToFileURL(resolve(process.env.G521_HTML??"artifacts/GeoRisiko-G6-Web-Test.html")).href);
  await p.waitForFunction(()=>window.geoObservatory?.().ready);
  const ready=()=>p.waitForFunction(()=>{const w=window.geoObservatory(),o=w.observatory;return !w.flying&&o.mode==="regional"&&o.ready&&o.viewSettled;});
  const audit=()=>p.evaluate(()=>{

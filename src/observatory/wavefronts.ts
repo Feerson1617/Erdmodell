@@ -4,15 +4,15 @@ import type {RegionalScene} from "./regional";
 
 export function waveAnalysis(r:RegionalScene){
   const f=r.faultModel;
-  const colors=[0xf5bd67,0x58dadd],fronts:T.Mesh[]=[],markers:T.InstancedMesh[]=[];
+  const colors=[0xffce7c,0x77e4e8],fronts:T.Mesh[]=[],markers:T.InstancedMesh[]=[];
   const detail=new T.Group();r.section.add(detail);detail.name="Gesteinspunkte im Detail";
   const dummy=new T.Object3D();
   for(const [n,color] of colors.entries()){
     const points=160,positions=new T.Float32BufferAttribute(new Float32Array((points+1)*6),3);
-    const g=new T.BufferGeometry();g.setAttribute("position",positions);
+    const g=new T.BufferGeometry();g.setAttribute("position",positions);g.setAttribute("edge",new T.Float32BufferAttribute(Array.from({length:(points+1)*2},(_,i)=>i%2),1));
     const indices=[];for(let i=0;i<points;i++){const k=i*2;indices.push(k,k+1,k+2,k+1,k+3,k+2);}g.setIndex(indices);
     const mat=new T.MeshBasicMaterial({color,transparent:true,opacity:.75,depthWrite:false,side:T.DoubleSide});
-    const m=new T.Mesh(g,mat);m.name=n?"S-Wellenfront":"P-Wellenfront";m.userData.explanation={name:m.name,answer:n?"Gestein bewegt sich quer zur Laufrichtung.":"Das Gestein wird zusammengedrückt und gedehnt."};m.frustumCulled=false;
+    const m=new T.Mesh(g,mat);m.name=n?"S-Wellenfront":"P-Wellenfront";m.userData.explanation={name:m.name,answer:n?"Gestein bewegt sich quer zur Laufrichtung.":"Das Gestein wird zusammengedrückt und gedehnt."};m.material.onBeforeCompile=s=>{s.vertexShader="attribute float edge;varying float faceEdge;\n"+s.vertexShader.replace("#include <begin_vertex>","#include <begin_vertex>\nfaceEdge=edge;");s.fragmentShader="varying float faceEdge;\n"+s.fragmentShader.replace("#include <color_fragment>","#include <color_fragment>\ndiffuseColor.a*=.22+.78*smoothstep(.0,.75,faceEdge);");};m.frustumCulled=false;
     r.section.add(m);fronts.push(m);
     const beads=new T.InstancedMesh(new T.SphereGeometry(.069,10,7),new T.MeshStandardMaterial({color,emissive:color,emissiveIntensity:.22}),14);
     beads.frustumCulled=false;detail.add(beads);markers.push(beads);

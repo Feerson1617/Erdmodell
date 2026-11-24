@@ -1,3 +1,4 @@
+import {observeCadence,graphics} from "./observatory/graphics";
 import * as T from "three";
 import { CameraController, HOME, type Pose } from "./camera";
 import { angularDistance, R, RAD, position, basis, smooth, clamp } from "./geo";
@@ -887,6 +888,7 @@ export class World {
     if (!this.running) return;
     requestAnimationFrame(this.render);
     if (document.hidden) { this.last = 0; return; }
+    if(!graphics.idle&&this.last&&now-this.last>600)observeCadence(1000/(now-this.last),Math.min(3.1,(now-this.last)/1000));
     if (!this.last || now - this.last > 2000) {
       this.fpsStart = now;
       this.frameCount = 0;
@@ -900,7 +902,8 @@ export class World {
     this.frameCount++;
     if (now - this.fpsStart >= 900) {
       this.fps = (this.frameCount * 1000) / (now - this.fpsStart);
-      const ratio = this.resolution.sample(this.fps, (now - this.fpsStart) / 1000);
+      if(!graphics.idle)observeCadence(this.fps,(now-this.fpsStart)/1000);
+      const ratio = graphics.idle?undefined:this.resolution.sample(this.fps, (now - this.fpsStart) / 1000);
       if (ratio !== undefined) this.gl.setPixelRatio(ratio);
       this.frameCount = 0;
       this.fpsStart = now;

@@ -11,7 +11,13 @@ from zipfile import ZipFile
 
 app_zip, html_path, output = map(Path,sys.argv[1:])
 html=html_path.read_text()
-embedded=json.loads(re.search(r'<script>const embedded=(.+?), urls=new Map\(\);',html).group(1))
+# Older single-file releases stored the same resources in a JS literal.
+payloads=re.findall(r'<script type="application/octet-stream" data-geo-key="([^"]+)" data-mime="([^"]+)">([A-Za-z0-9+/=]*)</script>',html)
+if payloads:
+    embedded={key:"data:"+mime+";base64,"+data for key,mime,data in payloads}
+    assert len(embedded)==len(payloads), "duplicate resource key"
+else:
+    embedded=json.loads(re.search(r'<script>const embedded=(.+?), urls=new Map\(\);',html).group(1))
 with ZipFile(app_zip) as z:
     package=z.read("GeoRisiko.app/Contents/Resources/app.asar")
 header_size=struct.unpack_from("<I",package,4)[0]

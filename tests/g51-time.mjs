@@ -6,11 +6,11 @@ const idx=JSON.parse(readFileSync("public/data/g51/historic.json")),bytes=readFi
 const q=new Float32Array(bytes.buffer,bytes.byteOffset,bytes.length/4);
 assert.equal(q.length,idx.pids.length*251*4);
 for(let i=0;i<q.length;i+=4)assert.ok(Math.abs(Math.hypot(q[i],q[i+1],q[i+2],q[i+3])-1)<.000002);
-const b=await chromium.launch({args:["--use-angle=swiftshader","--enable-unsafe-swiftshader"]});
+const b=await chromium.launch(process.env.G6_NATIVE_GPU?{channel:"chrome",headless:false}:{args:["--use-angle=swiftshader","--enable-unsafe-swiftshader"]});
 try{
  const page=await b.newPage({viewport:{width:1440,height:900},reducedMotion:"reduce"});
  const errors=[];page.on("pageerror",e=>errors.push(String(e)));page.on("console",m=>{if(m.type()==="error")errors.push(m.text());});
- await page.goto(pathToFileURL(resolve(process.env.G51_HTML||"artifacts/GeoRisiko-G5.2.1-Web-Test.html")).href);
+ await page.goto(pathToFileURL(resolve(process.env.G51_HTML||"artifacts/GeoRisiko-G6-Web-Test.html")).href);
  await page.click("#nav-plates");await page.click("#g-time");
  const get=()=>page.evaluate(()=>window.geoObservatory().observatory);
  await page.waitForFunction(()=>window.geoObservatory().observatory.rigid);

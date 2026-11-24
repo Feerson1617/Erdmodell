@@ -40,7 +40,7 @@ function ribbon(r:RegionalScene,lo:(x:number)=>number,hi:(x:number)=>number,colo
 }
 function flow(r:RegionalScene,c:T.CatmullRomCurve3,color:number,id:string,count:number,start:number,end:number){
   if(id==="melt"||id==="hotspot"){
-    const tube=new T.TubeGeometry(c,64,.046,7,false),mat=new T.MeshStandardMaterial({color,emissive:0xa64219,emissiveIntensity:.53,roughness:.72});
+    const tube=new T.TubeGeometry(c,64,.024,7,false),mat=new T.MeshStandardMaterial({color,emissive:0xa64219,emissiveIntensity:.32,roughness:.72});
     const vein=object(tube,mat,id);r.section.add(vein);
     r.onAnimate(t=>{const extent=T.MathUtils.smoothstep(t,start,end);vein.visible=extent>0;tube.setDrawRange(0,Math.floor(64*extent)*42);});return;
   }
@@ -86,8 +86,22 @@ function volcano(r:RegionalScene){
   if(k==="subduction"||k==="arc")flow(r,new T.CatmullRomCurve3([vec(vent,f.interfaceY(vent)),vec(vent-.11,(f.interfaceY(vent)+top)/2),vec(vent,top-.93)]),0x8bd2d7,"fluid",7,.04,.61);
   const plume=new T.CatmullRomCurve3([vec(vent+.2,top-2.15),vec(vent-.17,top-1.47),vec(vent,top-.93),vec(vent,top+.03)]);
   flow(r,plume,0xf2ad6c,k==="hotspot"?"hotspot":"melt",15,.12,.93);
-  const reservoir=object(new T.IcosahedronGeometry(1,2),chips(0xb76d49),"chamber");reservoir.position.set(vent,-.98,.16);r.section.add(reservoir);
-  reservoir.position.y=top-.91;r.onAnimate(t=>{const f=T.MathUtils.smoothstep(t,.18,.66);reservoir.scale.set(.34+.25*f,.11+.09*f,.095);});
+  const lenses=new T.Group();lenses.position.set(vent,top-.91,.075);r.section.add(lenses);
+  const mush=chips(0x786157),melt=chips(0xb98269);
+  for(const m of [mush,melt]){
+    m.onBeforeCompile=s=>{s.vertexShader="varying vec3 inclusion;\n"+s.vertexShader.replace("#include <begin_vertex>","#include <begin_vertex>\ninclusion=position;");
+      s.fragmentShader="varying vec3 inclusion;\n"+s.fragmentShader.replace("#include <color_fragment>","#include <color_fragment>\nvec3 p=inclusion*vec3(8.,12.,5.);float seams=abs(sin(p.y+1.6*sin(p.x*.8)+p.z)*cos(p.x*1.3-p.y*.4));float light=1.-smoothstep(.06,.24,seams);diffuseColor.rgb=mix(diffuseColor.rgb*.78,vec3(.72,.24,.064),light*.49);");};
+  }
+  for(let i=0;i<13;i++){
+    const a=i*2.399,size=.125+.08*(1+Math.sin(3.2*i)),lens=object(new T.IcosahedronGeometry(1,1),i%3?mush:melt,"chamber");
+    const p=lens.geometry.attributes.position;for(let j=0;j<p.count;j++){const k=1+.21*Math.sin(3.6*p.getX(j)+7*p.getZ(j)+i)*Math.cos(4*p.getY(j));p.setXYZ(j,p.getX(j)*k,p.getY(j)*k,p.getZ(j)*k);}lens.geometry.computeVertexNormals();
+    lens.position.set(.27*Math.cos(a)*Math.sqrt(i/13),.12*Math.sin(a),.025*Math.cos(a));lens.scale.set(size,.044+.03*Math.cos(i)**2,.049);lens.rotation.z=.35*Math.sin(a*2);lenses.add(lens);
+  }
+  for(const sign of [-1,1]){
+    const path=new T.CatmullRomCurve3([vec(0,0),vec(sign*.17,.11),vec(sign*.20,.29),vec(sign*.36,.44)]);
+    const dike=object(new T.TubeGeometry(path,18,.013,5,false),melt,"chamber");lenses.add(dike);
+  }
+  r.onAnimate(t=>{const filled=.62+.38*T.MathUtils.smoothstep(t,.18,.66);lenses.scale.set(filled,filled,1);});
   eruption(r,vent,top);
 }
 function settlements(r:RegionalScene){
@@ -133,7 +147,10 @@ function witness(r:RegionalScene){
         if(i<72){const k=i*2;indices.push(k,k+1,k+2,k+1,k+3,k+2);}
       }
       const g=new T.BufferGeometry();g.setAttribute("position",new T.Float32BufferAttribute(coords,3));g.setIndex(indices);g.computeVertexNormals();
-      const mat=new T.MeshStandardMaterial({color:stripe?0xffe9ae:0x4a4237,roughness:.92,side:T.DoubleSide});
+      const mat=new T.MeshStandardMaterial({color:stripe?0xe5d8ae:0x8d795f,roughness:.92,side:T.DoubleSide});
+      if(!stripe&&r.lib){const tex=r.lib.color;mat.onBeforeCompile=sh=>{
+        sh.uniforms.track={value:tex};sh.vertexShader="varying vec2 trackUV;\n"+sh.vertexShader.replace("#include <begin_vertex>","#include <begin_vertex>\ntrackUV=position.xz;");
+        sh.fragmentShader="uniform sampler2D track;varying vec2 trackUV;\n"+sh.fragmentShader.replace("#include <color_fragment>","#include <color_fragment>\nvec2 p=trackUV*3.;float grit=textureGrad(track,(vec2(1.,1.)+.004+.992*fract(p))/vec2(4.,2.),dFdx(p)/vec2(4.,2.),dFdy(p)/vec2(4.,2.)).g;diffuseColor.rgb*=.57+1.4*sqrt(grit);");};}
       const road=object(g,mat,"marker");road.name="Schematischer Vergleichsweg";r.witnesses.add(road);r.bindRock(g,side);
       if(stripe)r.onAnimate(()=>{const p=g.attributes.position;r.markerEnds[index]=[p.getX(0),p.getY(0),(p.getZ(0)+p.getZ(1))/2];});
     }
