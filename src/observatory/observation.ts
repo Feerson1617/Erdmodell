@@ -3,10 +3,10 @@ const neutral=["Erde","Inneres","Karte","Ereignis","Berg","Siedlung","See","Orte
 const buttons:Record<string,string>={
   "g-play":"Abspielen","g-step":"Schritt","g-before":"Vorher","g-after":"Nachher","g-reset":"Zurücksetzen",
   "g-time-play":"Abspielen","g-reverse":"Rückwärts","g-today":"Heute","g-time":"Zeit wählen","g-boundaries":"Linien wählen",
-  "g-segment":"Öffnen","g-map":"Zur Karte","g-map-overview":"Weltübersicht","g-depth-open":"Messpunkte im Schnitt",
+  "g-quake-explain":"Ereignis öffnen","g-quake-from-process":"Ereignis öffnen","g-cut":"Untergrund","g-segment":"Modell öffnen","g-map":"Zur Karte","g-map-overview":"Weltübersicht","g-depth-open":"Messpunkte im Schnitt",
   "cut":"Ansicht wechseln","scale":"Größe vergleichen","nyos-play":"Abspielen","nyos-reset":"Zurücksetzen","atlasPlay":"Abspielen","playProcess":"Abspielen"};
-const inputs:Record<string,string>={"g-quakes":"Ereignispunkte","g-lines":"Grenzlinien","g-depth":"Tiefe","g-stress":"Spannung","g-vectors":"Bewegungspfeile","g-p":"P · gold","g-s":"S · türkis","g-follow":"Kamera folgt","g-trail":"Spur"};
-const selects:Record<string,string>={"g-launch":"Ort","g-site":"Region","g-view":"Ansicht","g-stage":"Zustand","g-sea":"Meeresereignis","g-scenario":"Zeitmodell","g-station":"Zeitsprung","g-track":"Bereich verfolgen"};
+const inputs:Record<string,string>={"g-water-profile":"Wasserprofil","g-detail":"Teilchen","g-compare":"Vergleich","g-future-lines":"Modellgrenzen","g-protect":"Bauweise","g-route":"Fluchtweg","g-warning":"Warnung","g-relocate":"Höherer Standort","g-quakes":"Ereignispunkte","g-lines":"Grenzlinien","g-depth":"Tiefe","g-stress":"Spannung","g-vectors":"Bewegungspfeile","g-p":"P · gold","g-s":"S · türkis","g-follow":"Kamera folgt","g-trail":"Spur"};
+const selects:Record<string,string>={"g-example":"Grenzabschnitt","g-second":"Zweites Zeitmodell","g-risk-kind":"Gefahr","g-risk-site":"Standort","g-soil":"Baugrund","g-exposure":"Besiedlung","g-launch":"Ort","g-site":"Region","g-view":"Ansicht","g-stage":"Zustand","g-sea":"Meeresereignis","g-scenario":"Zeitmodell","g-station":"Zeitsprung","g-track":"Bereich verfolgen"};
 const views:Record<string,string>={land:"Landschaft",overhead:"Von oben",cut:"Untergrund",fault:"Kontakt",focus:"Ausgangspunkt",waves:"Ausbreitung",water:"Meeresboden",ocean:"Offenes Meer",coast:"Küste · Modell",vent:"Detail"};
 type Field=HTMLButtonElement|HTMLSelectElement|HTMLInputElement;
 export class Observation{
@@ -26,12 +26,12 @@ export class Observation{
   private build(){
     this.bindings=[];this.controls.replaceChildren();
     for(const id of [...Object.keys(selects),...Object.keys(inputs),...Object.keys(buttons),"g-progress","g-year"]){
-      const source=el(id) as Field|null;if(!source)continue;
+      const source=el(id) as Field|null;if(!source||source.closest("[hidden]")&&id==="g-relocate")continue;
       if(id==="g-reset"&&el("g-before"))continue;
       let control:Field;
       if(source instanceof HTMLSelectElement){
         const s=document.createElement("select");s.setAttribute("aria-label",selects[id]);
-        [...source.options].forEach((o,i)=>{const label=id==="g-view"?views[o.value]:id==="g-stage"?"Zustand "+(i+1):id==="g-sea"?"Ereignis "+["B","A","C"][i]:o.text;
+        [...source.options].forEach((o,i)=>{const label=id==="g-example"&&o.value&&!(o.parentElement instanceof HTMLOptGroupElement)?"Abschnitt "+o.value:id==="g-view"?views[o.value]:id==="g-stage"?"Zustand "+(i+1):id==="g-sea"?"Ereignis "+["B","A","C"][i]:o.text;
           s.add(new Option(label??o.text,o.value));});
         s.onchange=()=>{source.value=s.value;source.dispatchEvent(new Event("change"));};control=s;
       }else if(source instanceof HTMLInputElement&&source.type==="range"){
@@ -51,6 +51,7 @@ export class Observation{
     for(const {source,control} of this.bindings){
       if(source instanceof HTMLInputElement&&source.type==="checkbox")control.setAttribute("aria-pressed",String(source.checked));
       else if(control instanceof HTMLSelectElement||control instanceof HTMLInputElement){if(control.value!==source.value)control.value=source.value;}
+      else if(source.id==="g-cut")control.textContent=source.textContent;
       else if(source.id.endsWith("play")||source.id==="atlasPlay"||source.id==="playProcess")control.textContent=/Pause|Anhalten/.test(source.textContent??"")?"Pause":"Abspielen";
     }
     const mode=document.body.dataset.observatory,nav=el("desk")?.dataset.mode;

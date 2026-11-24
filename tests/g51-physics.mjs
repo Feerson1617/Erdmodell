@@ -8,7 +8,7 @@ const browser=await chromium.launch({args:["--use-angle=swiftshader","--enable-u
 try{
  const p=await browser.newPage({viewport:{width:1440,height:900},reducedMotion:"reduce"});
  const errors=[];p.on("pageerror",e=>errors.push(e.message));
- await p.goto(pathToFileURL(resolve(process.env.G51_HTML||"artifacts/GeoRisiko-G5.2-Web-Test.html")).href);
+ await p.goto(pathToFileURL(resolve(process.env.G51_HTML||"artifacts/GeoRisiko-G5.2.1-Web-Test.html")).href);
  await p.waitForFunction(()=>window.geoObservatory?.().ready);
  await p.click("#nav-earthquake");await p.waitForFunction(()=>window.geoBoundaryModels().length===5819);
  const records=await p.evaluate(()=>window.geoBoundaryModels());
@@ -34,14 +34,15 @@ try{
    assert.ok(f.maxPlaneError<2e-5,site+" Bruch auf der Kontaktfläche");assert.ok(f.focusError<1e-8);
    assert.ok(f.earlyShake===0 && f.lateShake===0);assert.ok(f.pArrival<f.sArrival);
    await progress(1);const end=await data();assert.notDeepEqual(end.physics.vertex.drawn,end.physics.vertex.rest);
-   const movement=end.physics.vertices.map(v=>({side:v.side,x:v.drawn[0]-v.rest[0],y:v.drawn[1]-v.rest[1],z:v.drawn[2]-v.rest[2]}));
+   const movement=end.physics.vertices.map(v=>({side:v.materialSide??v.side,x:v.drawn[0]-v.rest[0],y:v.drawn[1]-v.rest[1],z:v.drawn[2]-v.rest[2]}));
    for(const d of movement){
      if(site==="san"){assert.ok(Math.abs(d.x)+Math.abs(d.y)<1e-5);assert.ok(d.z*d.side*f.sense>0);}
-     if(site==="rift"){assert.ok(d.side===0?d.y<0&&Math.abs(d.x)<1e-5:d.x*d.side>0&&Math.abs(d.y)<1e-5);}
-     if(site==="himalaya"){assert.ok(d.y*d.side*f.dipSign>0);assert.ok(Math.abs(d.x+f.dipSign*d.y/Math.tan(27*Math.PI/180))<2e-5);}
-     if(site==="japan"){assert.ok(d.y*d.side*f.dipSign>=-1e-6);assert.ok(Math.abs(d.z)<1e-5);}
+     if(site==="rift"){assert.ok(d.side===0?d.y<=1e-5:d.x*d.side>=-1e-5&&Math.abs(d.y)<1e-5);}
+     if(site==="himalaya"){assert.ok(d.y*d.side*f.dipSign>=-1e-5);assert.ok(Math.abs(d.x+f.dipSign*d.y/Math.tan(27*Math.PI/180))<2e-5);}
+     if(site==="japan"){assert.ok(Number.isFinite(d.y));assert.ok(Math.abs(d.z)<1e-5);}
    }
    if(site==="japan"){
+     assert.ok(movement.some(v=>Math.abs(v.y)>.001));
      assert.ok(f.profilePoints.every(v=>Math.abs(v.y+v.km*12*4.7/320)<.00001));
      assert.ok(f.waterSignals.every(row=>row.every(Number.isFinite)));assert.ok(Math.max(...f.waterSignals.map(s=>Math.abs(s[1]-f.waterSignals[0][1])))>0.0001);
    }

@@ -50,19 +50,42 @@ export class Fault {
     }
     return side<0?[seam,-6]:[seam,6];
   }
+  get riftRoot(){return this.top+this.trace*Math.tan(this.dip*Math.PI/180);}
+  sideAt(x:number,y:number){
+    if(this.spec.process==="rift"){const half=Math.max(0,-this.xAt(y));return x< -half?-1:x>half?1:0;}
+    if(this.spec.process==="ridge")return Math.sign(x);
+    return x>=this.trace?1:-1;
+  }
+  // Solve the intersection with the actual topographic/layer horizon at this slice.
+  horizonRange(side:number,horizon:(x:number)=>number):[number,number]{
+    const rift=this.spec.process==="rift";
+    if(this.spec.process==="ridge"&&["process","magnet","forces"].includes(this.spec.theme)||this.kind==="strike"||this.kind==="unknown"||this.kind==="interface"||this.kind==="thrust")return side<0?[-6,this.trace]:[this.trace,6];
+    const root=(sign:number)=>{
+      let a=-6,b=6;
+      for(let i=0;i<22;i++){const x=(a+b)*.5,seam=this.xAt(horizon(x));if(x<(rift?sign*Math.max(0,-seam):seam))a=x;else b=x;}
+      return (a+b)*.5;
+    };
+    if(side<0)return [-6,root(-1)];
+    if(side>0)return [root(1),6];
+    return [root(-1),root(1)];
+  }
+  ridgeWidth(y:number,t:number){return .65*t*smooth((y-this.top+2.5)/1.65);}
   point(y:number,z=0){return new T.Vector3(this.xAt(y),y,z);}
   release(t:number,x:number,y:number,z:number){return smooth((t-onset-Math.hypot(x-this.hx,y-this.hy,z)/16)/.07);}
   shaking(t:number,x:number,y:number,z:number){
-    const d=Math.hypot(x-this.hx,y-this.hy,z),a=t-onset-d/pSpeed,b=t-onset-d/sSpeed;
+    return this.shakingAt(t,Math.hypot(x-this.hx,y-this.hy,z));
+  }
+  shakingAt(t:number,d:number){
+    const a=t-onset-d/pSpeed,b=t-onset-d/sSpeed;
     const pulse=(v:number)=>v>0&&v<.35?Math.sin(v*117)*Math.exp(-v*15)*smooth(v/.018)*(1-smooth((v-.22)/.13)):0;
     return (.035*pulse(a)+.069*pulse(b))*(1-smooth((t-.88)/.12))/(1+.18*d);
   }
-  offset(target:T.Vector3,x:number,y:number,z:number,side:number,t:number,theme=this.spec.theme){
+  offset(target:T.Vector3,x:number,y:number,z:number,side:number,t:number,theme=this.spec.theme,distance?:number,locking?:number){
     target.set(0,0,0);if(t===0||this.kind==="unknown")return target;
     const quake=theme==="earthquake"||theme==="risk",slow=theme==="process"||theme==="magnet"||theme==="forces";
     if(!quake&&!slow)return target;
-    const lock=Math.exp(-Math.abs(x-this.xAt(y))*.94-z*z*.029);
-    const strain=quake?smooth(t/onset)*(1-lock+lock*this.release(t,x,y,z)):t;
+    const lock=locking??Math.exp(-Math.abs(x-this.xAt(y))*.94-z*z*.029);
+    const strain=quake?smooth(t/onset)*(1-lock+lock*smooth((t-onset-(distance??Math.hypot(x-this.hx,y-this.hy,z))/16)/.07)):t;
     const taper=quake&&this.waterEvent?Math.exp(-Math.pow((x-this.hx)/2.4,2)):1;
     const buried=this.spec.event==="buried"?smooth((this.top-y)/1.6):1;
     const slip=side*.38*strain*taper*buried;
@@ -71,19 +94,25 @@ export class Fault {
       const dy=slip*this.slipSign*this.dipSign*Math.sin(this.dip*Math.PI/180);
       target.set(this.xAt(y+dy)-this.xAt(y),dy,0);
       // The nascent plate at a spreading axis and the hinterland separate over geologic time.
-      if(slow&&this.spec.process==="ridge")target.set(side*.65*t,0,0);
+      if(slow&&this.spec.process==="ridge"){
+        const width=this.ridgeWidth(y,t),creep=Math.tanh(x/2);
+        target.set(side*width+(.65*t-width)*creep,0,0);
+      }
     }
     if(this.spec.process==="rift"){
-      // Conjugate normal faults bound the central hanging block. Relative slip on each
-      // face is along dip. The footwalls move apart as the central block subsides.
-      const a=.46*strain,angle=this.dip*Math.PI/180;
-      target.set(side*a*Math.cos(angle),side===0?-a*Math.sin(angle):0,0);
+      // Slip dies out at the root. At the same final elevation the outer face
+      // and the lowered central face have exactly the same horizontal position.
+      const phase=(quake?this.release(t,this.hx,this.hy,0):t)*smooth(4.5-Math.abs(z))*smooth(6-Math.abs(x)),angle=this.dip*Math.PI/180;
+      const h=y-this.riftRoot,taperDepth=1.4,k=.46*Math.sin(angle)*phase/taperDepth;
+      if(h<=0)target.set(.17*phase*x*smooth(-h/1.25),0,0);
+      else if(side===0)target.set(0,-k*Math.min(h,taperDepth),0);
+      else target.set(side*k*Math.min(h/(1-k),taperDepth)/Math.tan(angle),0,0);
     }
     if(slow&&this.spec.process==="collision"){
-      const h=Math.tanh(x/2.3),jacobian=1-.32*t*(1-h*h);
-      target.x-=.736*t*h;target.y+=(y+.85)*(1/jacobian-1);
+      const h=Math.tanh((x+target.x)/2.3),jacobian=1-.32*t*(1-h*h);
+      target.x-=.736*t*h;target.y+=(y+target.y+.85)*(1/jacobian-1);
     }
-    if(quake)target.y+=this.shaking(t,x,y,z);
+    if(quake)target.y+=this.spec.process==="rift"?this.shaking(t,x+target.x,y+target.y,z):this.shakingAt(t,distance??Math.hypot(x-this.hx,y-this.hy,z));
     // The regional block meets a stationary geographic context at its far edges.
     if(this.kind==="strike"&&Math.abs(z)>3.5)target.multiplyScalar(smooth(4.5-Math.abs(z)));
     return target;

@@ -42,15 +42,25 @@ export class RegionalScene {
   private ui={t:{value:0},kind:{value:0},focus:{value:-1},vertical:{value:1},clock:{value:0},stress:{value:0},sense:{value:1},opening:{value:0}};
   private contextHeights?:Int16Array;private groundData?:Int16Array;private colorMap?:T.Texture;private normalMap?:T.Texture;private roughMap?:T.Texture;private sky:T.CanvasTexture;private contextMap?:T.Texture;private reveal=0;private transition?:{from:T.Vector3;to:T.Vector3;look:T.Vector3;goal:T.Vector3;fraction:number};
   faultModel!:Fault;private windows?:Int16Array;
-  private solids:{g:T.BufferGeometry;base:Float32Array;side:number;slice?:((index:number,z:number)=>number)}[]=[];private lastT=-1;
+  private solids:{g:T.BufferGeometry;base:Float32Array;side:number;waterSkin?:Float32Array;shear?:Float32Array;motionData:Float32Array;slice?:((index:number,z:number)=>number)}[]=[];private lastT=-1;private lastSection=false;
   readonly stressSignals={phase:{value:0},show:{value:0}};
   readonly deformed=new T.Vector3();
   bindRock(g:T.BufferGeometry,side:number,slice?:(index:number,z:number)=>number){
-    const f=this.faultModel,coords=g.attributes.position,values=new Float32Array(coords.count*2);
+    const f=this.faultModel,coords=g.attributes.position,values=new Float32Array(coords.count*2),motionData=new Float32Array(coords.count*2);
     for(let i=0;i<coords.count;i++){const x=coords.getX(i),y=coords.getY(i),z=coords.getZ(i);
       values[i*2]=Math.exp(-Math.abs(x-f.xAt(y))*1.4-z*z*.09);
-      values[i*2+1]=onset+Math.hypot(x-f.hx,y-f.hy,z)/16;}
-    g.setAttribute("coupling",new T.BufferAttribute(values,2));this.solids.push({g,side,slice,base:new Float32Array(g.attributes.position.array)});(g.attributes.position as T.BufferAttribute).setUsage(T.DynamicDrawUsage);}
+      motionData[2*i]=Math.hypot(x-f.hx,y-f.hy,z);motionData[2*i+1]=Math.exp(-Math.abs(x-f.xAt(y))*.94-z*z*.029);
+      values[i*2+1]=onset+motionData[2*i]/16;}
+    let waterSkin:Float32Array|undefined;
+    if(this.water){waterSkin=new Float32Array(coords.count*2);for(let i=0;i<coords.count;i++){
+      const x=coords.getX(i),depth=this.height(x,coords.getZ(i))-coords.getY(i);
+      waterSkin[2*i]=1-T.MathUtils.smoothstep(depth,0,1.4);waterSkin[2*i+1]=this.height(x,0);
+    }}
+    // Slip is distributed through a narrow shear zone. Adjacent lithologies
+    // therefore carry the same displacement at their shared contact.
+    const shear=f.kind==="interface"||f.kind==="thrust"?Float32Array.from({length:coords.count},(_,i)=>
+      T.MathUtils.smoothstep(Math.abs(coords.getY(i)-f.interfaceY(coords.getX(i))),0,.65)):undefined;
+    g.setAttribute("coupling",new T.BufferAttribute(values,2));this.solids.push({g,side,slice,waterSkin,shear,motionData,base:new Float32Array(g.attributes.position.array)});(g.attributes.position as T.BufferAttribute).setUsage(T.DynamicDrawUsage);}
   physicalState(){
     const f=this.faultModel;if(!f)return {};
     const sample=this.solids.find(s=>s.side===1),i=sample?Math.floor(sample.base.length/6)*3:0;
@@ -59,15 +69,17 @@ export class RegionalScene {
     const distance=Math.hypot(this.epicenter[1]-f.hy,this.epicenter[0]-f.hx);
     const vertices=this.solids.map(({g,base,side})=>{
       const k=Math.floor(base.length/6)*3,a=Array.from(base.slice(k,k+3)),b=Array.from(g.attributes.position.array.slice(k,k+3));
-      return {side,rest:a,drawn:b};
+      return {side,materialSide:f.kind==="thrust"||f.kind==="interface"?(a[1]>f.interfaceY(a[0])?f.dipSign:-f.dipSign):side,rest:a,drawn:b};
     });
     const cutFaces=this.solids.filter(s=>s.slice&&f.kind==="strike");
     let cutPlaneError=0;for(const s of cutFaces){const p=s.g.attributes.position;for(let i=0;i<p.count;i++)if(s.base[3*i+2]===0)cutPlaneError=Math.max(cutPlaneError,Math.abs(p.getZ(i)));}
-    return {cutPlaneError,markerEnds:this.markerEnds,flood:this.water?.extent(this.progress),vertices,profilePoints:f.profile.map(([x,km])=>({x,km,y:f.interfaceY(x)})),sense:f.sense,maxPlaneError,focusError:Math.abs(f.hx-f.xAt(f.hy)),pArrival:onset+distance/pSpeed,sArrival:onset+distance/sSpeed,
+    return {waterProfile:this.water?Array.from({length:this.water.cells},(_,i)=>{const x=-6+i*this.water!.dx,t=this.progress;
+      return {x,bed:this.water!.bed(x,t),eta:this.water!.sample(x,t),depth:this.water!.sample(x,t,true)};}):undefined,cutPlaneError,markerEnds:this.markerEnds,flood:this.water?.extent(this.progress),vertices,profilePoints:f.profile.map(([x,km])=>({x,km,y:f.interfaceY(x)})),sense:f.sense,maxPlaneError,focusError:Math.abs(f.hx-f.xAt(f.hy)),pArrival:onset+distance/pSpeed,sArrival:onset+distance/sSpeed,
       earlyShake:f.shaking(onset+distance/pSpeed-.002,f.hx,this.epicenter[1],0),lateShake:f.shaking(1,f.hx,this.epicenter[1],0),fault:f.kind,trace:f.trace,dipSign:f.dipSign,profile:f.profile.length,waterEvent:f.waterEvent,waterSurface:this.water?.sample(f.hx,this.progress)??0,waterSignals:this.water?[0,.48,.58,.72,.88,1].map(t=>[t,this.water!.sample(f.hx,t),this.water!.sample(-4,t)]):[],
       rupture:this.rupture.visible?Array.from(this.rupture.geometry.attributes.position.array):[],waveFronts:this.waves.map(w=>w.visible),
       vertex:sample?{rest:Array.from(sample.base.slice(i,i+3)),drawn:Array.from(sample.g.attributes.position.array.slice(i,i+3)),side:sample.side}:null};
   }
+  analysis=false;readonly timings:Record<string,number>={};
   view="land";vectors=false;riskSite="near";markerEnds:number[][]=[];
   showP=true;showS=true;detail=false;phasesShown=false;water?:WaterSection;private waves:T.Mesh[]=[];private fault!:T.Line;private rupture!:T.Line;
   private waterColumn?:T.Mesh; private nearSurface=0;private rockMaterial:T.Material[]=[];
@@ -98,7 +110,7 @@ export class RegionalScene {
   }
   isGeologyVisible(hit:T.Intersection){
     const obj=hit.object as T.Mesh,rest=obj.geometry?.getAttribute("geologyCoord"),face=hit.face,b=hit.barycoord;
-    if(!rest||!face||!b)return true;
+    if(!rest||!face||!b||obj.geometry.hasAttribute("sectionU"))return true;
     const at=(axis:"getX"|"getY"|"getZ")=>rest[axis](face.a)*b.x+rest[axis](face.b)*b.y+rest[axis](face.c)*b.z;
     const z=at("getZ");
     return Math.abs(z)<.002 || at("getY")<=this.height(at("getX"),z)-.015;
@@ -132,6 +144,7 @@ export class RegionalScene {
     return .12+.08*Math.cos(x+z*.2);
   }
   async init(){
+    const start=performance.now();
     if(this.spec.site){
       const base="data/g5/terrain/"+this.spec.site;
       const asset=(suffix:string)=>localAsset(this.spec.arcTransect?"data/g51/zao/"+(suffix===".i16"?"terrain.i16":suffix.slice(1)):base+suffix);
@@ -146,9 +159,10 @@ export class RegionalScene {
       const heights=await globalWindows;if(this.disposed)return;
       const index=(this.spec.geology.id-1)*49;this.windows=heights.subarray(index,index+49);
     }
-    this.faultModel=new Fault(this.spec,(x,z)=>this.height(x,z));if(this.faultModel.waterEvent)this.water=new WaterSection(this.faultModel);
+    this.timings.dataMs=performance.now()-start;const build=performance.now();
+    this.faultModel=new Fault(this.spec,(x,z)=>this.height(x,z));if(this.faultModel.waterEvent)this.water=new WaterSection(this.faultModel);this.timings.solverMs=performance.now()-build;
     this.nearSurface=this.height(this.faultModel.hx,0);this.ui.focus.value=this.faultModel.hy;
-    this.buildSurface();this.addVectors();this.addTrace();this.groundDetails();this.buildQuake();this.buildExtras();this.ready=true;this.update(0);
+    this.buildSurface();this.addVectors();this.addTrace();this.groundDetails();this.buildQuake();this.buildExtras();this.ready=true;this.update(0);this.timings.geometryMs=performance.now()-build-this.timings.solverMs;
   }
   private surround(h:Int16Array,image:T.Texture){
     this.contextHeights=h;
@@ -174,9 +188,15 @@ export class RegionalScene {
       this.colorMap=coastalSand();
       for(const front of [false,true])(front?this.front:this.scene).add(coastalGrass((x,z)=>this.height(x,z),front));
     }
-    for(const side of (this.spec.process==="rift"?[-1,0,1]:[-1,1])){
+    for(const side of (this.water?[1]:this.spec.process==="rift"?[-1,0,1]:[-1,1])){
       const terrain=new T.MeshStandardMaterial({color:this.colorMap?0xffffff:0x93866b,roughness:.86,map:this.colorMap??null,normalMap:this.normalMap??null,normalScale:new T.Vector2(.75,.75),roughnessMap:this.roughMap??null,side:T.DoubleSide});
       terrain.onBeforeCompile=s=>{s.uniforms.opening=this.ui.opening;s.vertexShader="varying float restZ;\n"+s.vertexShader.replace("#include <begin_vertex>","#include <begin_vertex>\nrestZ=position.z;");s.fragmentShader="uniform float opening;varying float restZ;\n"+s.fragmentShader.replace("#include <color_fragment>","#include <color_fragment>\nif(restZ>4.52*(1.-opening))discard;");};
+      if(this.spec.site==="san"&&this.spec.theme==="earthquake"){
+        const prepare=terrain.onBeforeCompile.bind(terrain);
+        terrain.onBeforeCompile=(s,renderer)=>{prepare(s,renderer);s.uniforms.phase=this.stressSignals.phase;s.uniforms.showStress=this.stressSignals.show;
+          s.vertexShader="attribute vec2 coupling;varying vec2 locking;varying vec2 groundPos;\n"+s.vertexShader.replace("#include <begin_vertex>","#include <begin_vertex>\nlocking=coupling;groundPos=position.xz;");
+          s.fragmentShader="uniform float phase,showStress;varying vec2 locking;varying vec2 groundPos;\n"+s.fragmentShader.replace("#include <color_fragment>","#include <color_fragment>\nfloat load=showStress*locking.x*smoothstep(0.,.36,phase)*(1.-smoothstep(locking.y,locking.y+.07,phase));float rings=.5+.5*cos(17.*length(groundPos*vec2(.95,.54)));diffuseColor.rgb=mix(diffuseColor.rgb,vec3(.95,.29,.036),load*(.38+.46*rings));");};
+      }
       if(this.contextMap){
         const prepare=terrain.onBeforeCompile.bind(terrain);
         terrain.onBeforeCompile=(shader,renderer)=>{prepare(shader,renderer);shader.uniforms.contextImage={value:this.contextMap};
@@ -184,8 +204,11 @@ export class RegionalScene {
           shader.fragmentShader="uniform sampler2D contextImage;varying vec2 landscapeXY;\n"+shader.fragmentShader.replace("#include <map_fragment>", "#include <map_fragment>\nfloat border=smoothstep(.78,1.,max(abs(landscapeXY.x)/6.,abs(landscapeXY.y)/4.5));diffuseColor.rgb=mix(diffuseColor.rgb,texture2D(contextImage,vec2(.5+landscapeXY.x/48.,.5-landscapeXY.y/36.)).rgb,border);");};
       }
       for(const front of [false,true]){
-        const g=indexed(36,64,(i,j)=>{const [a,b]=f.blockRange(side,f.top),x=T.MathUtils.lerp(Math.min(a,b),Math.max(a,b),i/64),z=(front?0:-4.5)+j/8;return [x,this.height(x,z)+.009,z,x/12+.5,.5-z/9];});
-        this.bindRock(g,side);g.userData.coastSurface=this.spec.coastLesson;this.scene.add(mesh(g,terrain,"Gelände"));
+        const bounds=new Map<number,[number,number]>();
+        const columns=this.water?120:64;const g=indexed(36,columns,(i,j)=>{const z=(front?0:-4.5)+j/8;
+          let range=bounds.get(j);if(!range){range=this.water?[-6,6]:f.horizonRange(side,x=>this.height(x,z));bounds.set(j,range);}
+          const x=T.MathUtils.lerp(range[0],range[1],i/columns);return [x,this.height(x,z),z,x/12+.5,.5-z/9];});
+        this.bindRock(g,side);g.userData.surface=true;this.scene.add(mesh(g,terrain,"Gelände"));
       }
     }
     geologySolids(this);
@@ -199,11 +222,16 @@ export class RegionalScene {
           shader.fragmentShader="varying float depthAt;\n"+shader.fragmentShader.replace("#include <color_fragment>","#include <color_fragment>\nif(depthAt<=.001)discard;float deep=smoothstep(.0,.8,depthAt);diffuseColor.rgb=mix(vec3(.12,.65,.60),diffuseColor.rgb,deep);diffuseColor.a*=mix(.78,1.,deep);");
         };
         const levels=new Float32Array(121),depths=new Float32Array(121),terrain=Float32Array.from({length:pos.count},(_,i)=>this.height(pos.getX(i),pos.getZ(i)));
+        const crossRelief=Float32Array.from(terrain,(h,i)=>h-this.height(pos.getX(i),0));
         let previous=-1;this.onAnimate(t=>{if(t===previous||(!this.water&&previous>=0))return;previous=t;
           for(let j=0;j<121;j++){const x=-6+j*12/120;levels[j]=this.water?.sample(x,t)??0;depths[j]=this.water?.sample(x,t,true)??0;}
           for(let i=0;i<pos.count;i++){const j=i%121,top=levels[j];pos.setY(i,top+.002);
-            wet.setX(i,this.spec.coastLesson?depths[j]:top-terrain[i]);}
-          pos.needsUpdate=wet.needsUpdate=true;g.computeVertexNormals();});
+            wet.setX(i,this.water?depths[j]-crossRelief[i]:top-terrain[i]);}
+          pos.needsUpdate=wet.needsUpdate=true;
+          const normals=g.attributes.normal as T.BufferAttribute;
+          for(let j=0;j<=120;j++){const a=Math.max(0,j-1),b=Math.min(120,j+1),slope=(levels[b]-levels[a])/((b-a)*.1),inv=1/Math.hypot(1,slope);
+            for(let i=j;i<pos.count;i+=121)normals.setXYZ(i,-slope*inv,inv,0);}
+          normals.needsUpdate=true;});
         (front?this.front:this.scene).add(mesh(g,water,"Wasseroberfläche"));
       }
       const curtain=indexed(1,120,(i,j)=>{const x=-6+i*.1;return [x,j?0:Math.min(0,this.height(x,0)),.011,i/120,j];});
@@ -289,8 +317,9 @@ export class RegionalScene {
       transforms.forEach((v,i)=>{m.setMatrixAt(i,v);m.setColorAt(i,new T.Color().setRGB(.73+.25*rand(),.77+.21*rand(),.69+.25*rand()));});
       let last=-1;const matrix=new T.Matrix4();this.onAnimate(t=>{
         if(last===t||this.spec.theme==="volcano")return;last=t;
-        transforms.forEach((v,i)=>{const x=v.elements[12],y=v.elements[13],z=v.elements[14],d=this.faultModel.offset(this.deformed,x,y,z,x>=this.faultModel.trace?1:-1,t);
-          matrix.copy(v);matrix.setPosition(x+d.x,y+d.y,z+d.z);m.setMatrixAt(i,matrix);});m.instanceMatrix.needsUpdate=true;
+        transforms.forEach((v,i)=>{const x=v.elements[12],y=v.elements[13],z=v.elements[14],f=this.faultModel,h=this.height(x,z),shear=f.kind==="thrust"||f.kind==="interface",side=shear?(h>f.interfaceY(x)?f.dipSign:-f.dipSign):f.sideAt(x,h),d=f.offset(this.deformed,x,h,z,side,t);
+          if(shear){const w=T.MathUtils.smoothstep(Math.abs(h-f.interfaceY(x)),0,.65),shake=this.spec.theme==="earthquake"||this.spec.theme==="risk"?f.shaking(t,x,h,z):0;d.x*=w;d.y=T.MathUtils.lerp(shake,d.y,w);}
+          matrix.copy(v);if(this.water)matrix.setPosition(x,y+this.water.bed(x,t)-this.height(x,0),z);else matrix.setPosition(x+d.x,y+d.y,z+d.z);m.setMatrixAt(i,matrix);});m.instanceMatrix.needsUpdate=true;
       });m.name=vegetation?"Symbolische Vegetationsgruppen":"Gestein an der Oberfläche";this.scene.add(m);
     }
   }
@@ -327,21 +356,31 @@ export class RegionalScene {
     this.labels.visible=this.names && this.spec.theme==="earthquake"&&this.faultModel.kind!=="unknown"&&!document.body.classList.contains("observing");
     const quake=(this.spec.theme==="earthquake"||this.spec.theme==="risk")&&this.faultModel.kind!=="unknown"&&this.view!=="coast"&&this.view!=="ocean";this.fault.visible=quake;
     const f=this.faultModel;
-    if(t!==this.lastT && (this.lastT<0||!["volcano","lithosphere"].includes(this.spec.theme))){
-      for(const {g,base,side,slice} of this.solids){
+    if((t!==this.lastT||this.lastSection!==this.section.visible) && (this.lastT<0||!["volcano","lithosphere"].includes(this.spec.theme))){
+      const water=this.water,bed=water?Float32Array.from({length:water.cells},(_,j)=>water.bed(-6+j*water.dx,t)):undefined;
+      for(const {g,base,side,slice,waterSkin,shear,motionData} of this.solids){
+        if(slice&&!this.section.visible)continue;
         const pos=g.attributes.position as T.BufferAttribute;
-        for(let i=0;i<pos.count;i++){const x=base[3*i],y=base[3*i+1],z=base[3*i+2],d=f.offset(this.deformed,x,y,z,side,t);if(slice&&z===0&&f.kind==="strike"){
+        for(let i=0;i<pos.count;i++){const x=base[3*i],y=base[3*i+1],z=base[3*i+2],d=this.deformed;
+          if(waterSkin&&waterSkin[2*i]===1)d.set(0,0,0);else {
+            f.offset(d,x,y,z,shear?(y>f.interfaceY(x)?f.dipSign:-f.dipSign):side,t,this.spec.theme,motionData[i*2],motionData[i*2+1]);
+            if(shear&&shear[i]<1){
+              const shake=(this.spec.theme==="earthquake"||this.spec.theme==="risk")?f.shakingAt(t,motionData[i*2]):0;d.x*=shear[i];d.y=T.MathUtils.lerp(shake,d.y,shear[i]);
+            }
+          }
+          if(slice&&z===0&&f.kind==="strike"){
             // Intersect the advected block with the fixed section z=0. Texture samples
             // follow the incoming material as the two faces slide past one another.
             let materialZ=-d.z,yy=y;
-            for(let j=0;j<4;j++){yy=slice(i,materialZ);f.offset(this.deformed,x,yy,materialZ,side,t);materialZ=-this.deformed.z;}
+            for(let j=0;j<4;j++){yy=slice(i,materialZ);f.offset(this.deformed,x,yy,materialZ,side,t);if(Math.abs(materialZ+this.deformed.z)<.00001)break;materialZ=-this.deformed.z;}
             pos.setXYZ(i,x,yy+this.deformed.y,0);(g.attributes.geologyCoord as T.BufferAttribute).setXYZ(i,x,yy,materialZ);
-          }else if(this.spec.coastLesson&&this.water&&(g.userData.coastSurface||slice&&Math.abs(y-this.height(x,0))<.03)){
-            pos.setXYZ(i,x,this.water.sample(x,t)-this.water.sample(x,t,true)+(g.userData.coastSurface?-.001:0),z);
+          }else if(waterSkin&&water&&bed&&waterSkin[2*i]>0){
+            const w=waterSkin[2*i],col=T.MathUtils.clamp((x+6)/water.dx,0,water.cells-1),j=Math.min(water.cells-2,Math.floor(col)),bottom=T.MathUtils.lerp(bed[j],bed[j+1],col-j)-waterSkin[2*i+1];
+            pos.setXYZ(i,x+d.x*(1-w),y+T.MathUtils.lerp(d.y,bottom,w),z+d.z*(1-w));
           }else pos.setXYZ(i,x+d.x,y+d.y,z+d.z);}
         pos.needsUpdate=true;if(slice)g.attributes.geologyCoord.needsUpdate=true;
       }
-      this.lastT=t;
+      this.lastT=t;this.lastSection=this.section.visible;
     }
     this.rupture.visible=quake&&f.kind!=="unknown"&&t>onset&&t<.72;
     if(this.rupture.visible){
@@ -350,7 +389,7 @@ export class RegionalScene {
       pos.needsUpdate=true;this.rupture.frustumCulled=false;
     }
     if(this.waterColumn){const x=f.hx,h=this.height(x,0),top=this.waterHeight(x,t);this.waterColumn.visible=f.waterEvent&&t>=onset&&t<.67&&this.view!=="coast"&&this.view!=="ocean";
-      const dy=f.offset(this.deformed,x,h,0,x>=f.trace?1:-1,t).y;this.waterColumn.scale.y=Math.max(.03,top-h-dy);this.waterColumn.position.set(x,h+dy+this.waterColumn.scale.y/2,.065);}
+      const bed=this.water?.bed(x,t)??h;this.waterColumn.scale.y=Math.max(.001,top-bed);this.waterColumn.position.set(x,bed+this.waterColumn.scale.y/2,.065);}
     for(const fn of this.motion)fn(t);this.orbit.update();this.lastCamera.copy(this.camera.position);
   }
   get focus(){return [this.faultModel?.hx??0,this.ui.focus.value,0];}

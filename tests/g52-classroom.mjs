@@ -7,7 +7,7 @@ import {screencast} from "./g5-abnahme.mjs";
 export async function classroom(p,dir,record=false){
   await mkdir(dir,{recursive:true});
   const display=await p.context().newCDPSession(p);
-  const log={steps:[],pictures:[],movies:[],coast:[],favorites:[],coverage:{}};
+  const log={steps:[],transfer:[],switches:[],profiles:{},pictures:[],movies:[],coast:[],favorites:[],coverage:{}};
   if(record)await display.send("Emulation.setDeviceMetricsOverride",{width:1920,height:1080,screenWidth:1920,screenHeight:1080,deviceScaleFactor:1,mobile:false});
   let actions=[];
   const click=async id=>{actions.push(id);await p.locator("#"+id).click();};
@@ -49,6 +49,14 @@ export async function classroom(p,dir,record=false){
       assert.equal(await p.locator("#sidebar").isVisible(),false);
       await step("Namen und Phasen freigeben",async()=>{await click("obswitch");await click("g-names");await p.locator("details").filter({has:p.locator("#g-phases")}).locator("summary").click();actions.push("Modell steuern");await click("g-phases");});assert.equal((await at(.53)).settings.phasesShown,true);
       await step("Japan als Transferbeispiel öffnen",async()=>{await choose("g-site","japan");await rest();await choose("g-view","cut");});await shot("08-Japan");
+      const transfer=async(label,fn)=>{actions=[];const start=performance.now();await fn();await rest();const s=await state();
+        log.transfer.push({label,actions:[...actions],ms:Math.round(performance.now()-start),site:s.site,phase:s.progress,view:s.view,playing:s.playing,focus:s.focus,mode:s.mode});};
+      await transfer("Vorhersage im ruhenden Japanschnitt",async()=>{await at(0);await p.waitForTimeout(500);await at(0);});
+      await transfer("Subduktionsbeben abspielen",async()=>{await fill("g-progress",.32);await click("g-play");await p.waitForFunction(()=>window.geoObservatory().observatory.progress>=.49,null,{timeout:180000});await click("g-play");});
+      await transfer("Herd und Wellenausbreitung",async()=>{await fill("g-progress",.53);await choose("g-view","focus");await rest();await choose("g-view","waves");await rest();
+        const s=await at(.53);assert.ok(s.focus&&s.physics.waveFronts.every(Boolean));assert.equal(await p.innerText("#g-cut"),"An die Oberfläche");await shot("18-Japan-Herd-Wellen");});
+      await transfer("Kalifornien in derselben Modellphase",async()=>{await choose("g-site","san");await rest();await fill("g-progress",.53);await choose("g-view","waves");assert.equal((await at(.53)).site,"san");await shot("19-Kalifornien-Transfer");});
+      await transfer("Zur globalen Erdbebenkarte",async()=>{await click("g-map");assert.equal((await state()).mode,"map");});
       await step("Zur globalen Erde zurückkehren",()=>click("g-world"));assert.equal((await state()).mode,"");
     });
     assert.equal(log.steps.length,13);assert.ok(log.steps.slice(1,10).every(s=>s.visibleAnswers===0));
@@ -60,9 +68,12 @@ export async function classroom(p,dir,record=false){
     let actual=await state();for(const field of ["view","cut","settings","camera","progress","site"])assert.deepEqual(actual[field],expected[field],field);assert.equal(await p.locator("body.observing").count(),1);
     log.favorites.push("Region, Schnitt, Kamera, Modellzeit, Pause, Zustand, Namen, Wellen, Vektoren und Beobachten");
     await click("obswitch");await choose("g-site","japan");await rest();await fill("g-progress",.52);
-    await film("Meeresboden-Offenes-Meer-Kueste",async()=>{
-      for(const event of ["flat","buried","vertical"]){await choose("g-sea",event);await rest();const s=await at(.52);assert.equal(s.physics.waterEvent,event==="vertical");}
-      await choose("g-view","water");await shot("10-Meeresboden");
+    const profile=async key=>{const was=(await state()).progress;
+      await fill("g-progress",0);const start=await at(0);await fill("g-progress",1);const end=await at(1);
+      log.profiles[key]={focus:start.focus,start:start.physics.waterProfile,end:end.physics.waterProfile};await fill("g-progress",was);};
+    await profile("Japan");await film("Meeresboden-Offenes-Meer-Kueste",async()=>{
+      for(const event of ["flat","buried","flat","vertical"]){await choose("g-sea",event);await rest();const s=await at(.52);assert.equal(s.physics.waterEvent,event==="vertical");log.switches.push({event,progress:s.progress,...s.timings});}
+      await choose("g-view","water");await shot("10-Meeresboden");await click("g-water-profile");await p.waitForSelector("#water-profile:visible");await at(.52);
       await choose("g-view","ocean");await at(.52);await fill("g-progress",.63);await shot("11-Offenes-Meer");
       await choose("g-view","coast");assert.ok((await at(.63)).coastLesson);
       const history=await p.evaluate(()=>{const input=document.querySelector("#g-progress"),rows=[];
@@ -71,8 +82,11 @@ export async function classroom(p,dir,record=false){
       const ebb=history.filter(v=>v.t>peak.t).reduce((a,b)=>b.newlyWet<a.newlyWet?b:a);
       assert.equal(history[0].newlyWet,0);assert.ok(peak.newlyWet>0&&ebb.newlyWet<peak.newlyWet);log.coast={initial:history[0],peak,ebb,history};
       await fill("g-progress",0);await shot("12-Kueste-vorher");await fill("g-progress",peak.t);await shot("13-Kueste-Ueberflutung");await fill("g-progress",ebb.t);await shot("14-Kueste-Rueckzug");
-      await choose("g-view","water");assert.equal((await at(ebb.t)).site,"japan");
+      for(const phase of ["before","peak","ebb"]){await click("profile-"+phase);await rest();const s=await state();assert.ok(!s.playing);const wet=await p.locator('[data-line="inland"]').getAttribute("d");
+        if(phase==="peak")assert.ok(s.physics.flood.newlyWet>0&&wet.includes("Z"));await shot("Profil-"+phase);}
+      await fill("g-progress",ebb.t);await choose("g-view","water");assert.equal((await at(ebb.t)).site,"japan");await click("profile-close");
     });
+    await choose("g-view","coast");await rest();await profile("Kueste");await choose("g-view","water");await rest();
     await click("g-depth-open");const svg=p.locator(".depth-plot svg");assert.equal(await svg.locator("circle").count(),176);assert.equal(await svg.locator("polyline").count(),0);await shot("15-Tiefenschnitt-Messpunkte");
     await click("depth-line");await click("depth-values");assert.equal((await svg.locator("polyline").getAttribute("points")).split(" ").length,13);await shot("16-Tiefenschnitt-Profil");await click("depth-model");assert.equal((await at(log.coast.ebb.t)).view,"cut");
     await click("g-map");await rest();const records=await p.evaluate(()=>window.geoBoundaryModels());
