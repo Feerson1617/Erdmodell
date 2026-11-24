@@ -3,7 +3,7 @@ export async function deviceProbe(milliseconds: number, finished = () => true) {
   const read = () => {
     const s = (window as unknown as {geoObservatory: () => Record<string, unknown>}).geoObservatory();
     const obs=s.observatory as Record<string,unknown>|undefined;
-    const observatory=obs?Object.fromEntries(["mode","site","process","theme","year","scenario","progress"].map(k=>[k,obs[k]])):undefined;
+    const observatory=obs?Object.fromEntries(["mode","site","process","theme","year","scenario","progress","view","graphics"].map(k=>[k,obs[k]])):undefined;
     return {observatory,renderedFrames:Number(s.renderedFrames),...Object.fromEntries(["mode","region","resolution","draws","triangles","textures","geometries","programs","renderedFrames","frameKinds","qualityChanges"].map(k => [k,s[k]]))};
   };
   const started = await new Promise<number>(requestAnimationFrame);

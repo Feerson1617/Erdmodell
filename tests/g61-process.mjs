@@ -9,7 +9,7 @@ await mkdir(out,{recursive:true});
 const browser=await chromium.launch(process.env.G6_NATIVE_GPU?{channel:'chrome',headless:false}:{args:['--use-angle=swiftshader','--enable-unsafe-swiftshader']});
 try{
   const p=await browser.newPage({viewport:{width:1280,height:720},reducedMotion:'reduce'});
-  const errors=[],net=[],lava=[],roots=[];p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});p.on('request',r=>{if(/^https?:/.test(r.url()))net.push(r.url());});
+  const errors=[],net=[],lava=[],roots=[];let localFlow;p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});p.on('request',r=>{if(/^https?:/.test(r.url()))net.push(r.url());});
   p.setDefaultTimeout(120000);
   await p.addInitScript(()=>{window.__THREE_DEVTOOLS__=new EventTarget();window.__THREE_DEVTOOLS__.addEventListener('observe',({detail:r})=>{
     if(r.isWebGLRenderer){const draw=r.render.bind(r);r.render=(s,c)=>{window.regionDraw=s;return draw(s,c);};}
@@ -32,6 +32,10 @@ try{
       assert.ok(rows.every(r=>r.maxClimb<.00001),JSON.stringify({site,phase,rows}));lava.push({site,phase,rows});
     }
   }
+  await p.selectOption('#g-site','island');await ready();await p.selectOption('#g-view','ground');await ready();await p.locator('#g-progress').fill('0.95');await paint();
+  localFlow=await p.evaluate(()=>{const m=window.regionDraw.getObjectByName('Lavafluss'),a=m.geometry.attributes.position,t=m.userData.track;
+    return {metres:Math.hypot(t.at(-1)[0]-t[0][0],t.at(-1)[2]-t[0][2]),indices:m.geometry.drawRange.count,maxClimb:Math.max(...t.slice(1).map((_,i)=>a.getY((i+1)*9+4)-a.getY(i*9+4)))};});
+  assert.ok(localFlow.metres>7&&localFlow.indices>0&&localFlow.maxClimb<.00001,JSON.stringify(localFlow));
   for(const site of ['san','island','japan','rift','himalaya','hawaii']){
     await p.click(site==='hawaii'?'#nav-volcano':'#nav-earthquake');if(site==='hawaii')await ready();
     await p.selectOption(site==='hawaii'?'#g-site':'#g-launch',site);await ready();
@@ -55,11 +59,13 @@ try{
     });
     assert.ok(anchors.count>0&&anchors.maxAbove<.002,JSON.stringify({site,anchors}));
     if(site==='japan')assert.ok(anchors.minHeight>-.1,JSON.stringify(anchors));
-    roots.push({site,anchors});await p.selectOption('#g-view','cut');await ready();
+    const key=await p.evaluate(()=>window.regionDraw.getObjectByName('Nahgelände').material.customProgramCacheKey());
+    assert.equal(key,'local-ground-'+(['island','hawaii'].includes(site)?'basalt':site==='japan'?'coast':'soil'));
+    roots.push({site,anchors,material:key});await p.screenshot({path:join(out,'Nah-'+site+'.jpg'),type:'jpeg',quality:86});await p.selectOption('#g-view','cut');await ready();
     assert.equal(await p.locator('#g-progress').inputValue(),'0.49');
   }
   assert.deepEqual(errors,[]);assert.deepEqual(net,[]);
-  await writeFile(join(out,'Nahmodelle.json'),JSON.stringify({lava,roots,errors,net},null,2));
+  await writeFile(join(out,'Nahmodelle.json'),JSON.stringify({lava,localFlow,roots,errors,net},null,2));
   console.log(lava.length,'Lavatests und',roots.length,'reale Wurzel-/Maßstabsprüfungen bestanden');
 }finally{await browser.close();}
 

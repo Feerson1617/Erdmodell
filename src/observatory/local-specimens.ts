@@ -4,9 +4,17 @@ import {localAsset} from "../assets";
 const assets:Record<string,[string,number]>={oak:["tree_small_02",7.7],conifer:["pine_tree_01",10],grass:["grass_medium_01",.62],shrub:["shrub_02",1.25],rock:["rock_07",1.34]};
 type Part={geometry:T.BufferGeometry;material:T.MeshStandardMaterial};
 const cache=new Map<string,Promise<Part[]>>();
-export function scannedSpecimen(kind:string){
+export function scannedSpecimen(kind:string):Promise<Part[]>|undefined{
   const dry=kind==="drygrass";const ref=assets[dry?"grass":kind];if(!ref)return;
   let pending=cache.get(kind);
+  if(!pending&&dry){
+    pending=scannedSpecimen("grass")!.then(parts=>parts.map(part=>{
+      const material=part.material.clone();material.onBeforeCompile=s=>{
+        s.fragmentShader=s.fragmentShader.replace("#include <color_fragment>","#include <color_fragment>\nfloat blade=dot(diffuseColor.rgb,vec3(.2126,.7152,.0722));diffuseColor.rgb=vec3(.38,.25,.092)*(.53+2.3*sqrt(blade));");
+      };return {geometry:part.geometry,material};
+    })).catch(error=>{cache.delete(kind);throw error;});
+    cache.set(kind,pending);
+  }
   if(!pending){
     const loader=new GLTFLoader();
     loader.register(parser=>{parser.textureLoader=new T.TextureLoader(parser.options.manager);return {name:"GeoRisikoEmbeddedImages"};});
@@ -17,9 +25,7 @@ export function scannedSpecimen(kind:string){
       scene.traverse(child=>{if(!(child instanceof T.Mesh))return;
         const geometry=child.geometry as T.BufferGeometry,material=child.material as T.MeshStandardMaterial;
         geometry.applyMatrix4(child.matrixWorld);geometry.translate(-origin.x,-origin.y,-origin.z);geometry.scale(factor,factor,factor);
-        material.roughness=.93;if(dry)material.onBeforeCompile=s=>{
-          s.fragmentShader=s.fragmentShader.replace("#include <color_fragment>","#include <color_fragment>\nfloat blade=dot(diffuseColor.rgb,vec3(.2126,.7152,.0722));diffuseColor.rgb=vec3(.38,.25,.092)*(.53+2.3*sqrt(blade));");
-        };
+        material.roughness=.93;
         if(material.map)material.map.anisotropy=4;parts.push({geometry,material});
       });return parts;
     }).catch(error=>{cache.delete(kind);throw error;});

@@ -86,8 +86,8 @@
       "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/pine_tree_01/pine_tree_01_trunk_b_diff_1k.jpg": "9d39263a9243a4b6cd669de5e3a504eae32d52f5ab48e471cad5f7e52e052508",
       "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/pine_tree_01/pine_tree_01_twig_diff_1k.jpg": "e649f0f9bc74d1af5f1a45eaf2fe7a29adaaddfab251f746b983da301e4b80e1"
     },
-    "bytes": 1280488,
-    "sha256": "69ac0c165c899cc96477441481b2d3f3b79155499deed0855c32599ff2ef9fe9",
+    "bytes": 2325040,
+    "sha256": "4f3d85f4c63274004a0c180cc384ce18341ecb6839feec75d9e16847d15b9394",
     "mesh": 1,
     "targetFraction": 0.16
   }

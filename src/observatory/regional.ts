@@ -322,6 +322,12 @@ export class RegionalScene {
       const pose=this.local.pose(view);this.orbit.target.copy(pose.target);this.camera.position.copy(pose.position);this.orbit.update();return;
     }
     this.orbit.minDistance=view==="coast"?2.1:4;
+    if(view==="mouth"&&this.spec.theme==="volcano"){
+      this.reframe(false);this.view=view;this.transition=undefined;this.orbit.minDistance=.62;
+      const x=this.spec.arcTransect?zao.vent:0,z=this.spec.arcTransect?0:-.33,y=this.height(x,z);
+      const goal=new T.Vector3(x,y+(this.spec.arcTransect?.015:this.spec.process==="hotspot"?.21:.11),z);
+      this.orbit.target.copy(goal);this.camera.position.copy(goal).add(new T.Vector3(.68,.65,-1.18));this.orbit.update();return;
+    }
     if(view==="coast"&&this.spec.coastLesson){
       this.reframe(false);this.orbit.minDistance=2.1;this.view=view;this.transition=undefined;
       this.orbit.target.set(-3.05,.012,-.35);this.camera.position.copy(this.orbit.target).add(new T.Vector3(-.76,1.76,2.05));this.orbit.update();return;

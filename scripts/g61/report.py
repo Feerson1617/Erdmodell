@@ -28,10 +28,10 @@ def compare(a,b):
     return len(x)==len(y) and all(math.isclose(i,j,abs_tol=.0005) if type(i) in [float,int] and type(j) in [float,int] else i==j for i,j in zip(x,y))
 for name,old in index['Vorher'].items():
     new=index['Nachher'][name]
-    different=name in ['04a-Lokale-Landschaft','05a-Gras-und-Eichen','17b-Spaltenlandschaft','17c-Lavafeld','10b-Kuestenausschnitt','13a-Uferwasser']
-    if different:assert new['view'] in ['ground','local'] and old['view']=='land'
+    different=name in ['04a-Lokale-Landschaft','05a-Gras-und-Eichen','17b-Spaltenlandschaft','17c-Lavafeld','10b-Kuestenausschnitt','13a-Uferwasser','19a-Vulkanoeffnung']
+    if different:assert (new['view'] in ['ground','local'] and old['view']=='land') or (new['view']=='mouth' and old['view']=='vent')
     else:assert compare(old['camera'],new['camera']), (name,old['camera'],new['camera'])
-    assert compare(old.get('phase'),new.get('phase')) and old.get('playing')==new.get('playing') and old.get('cut')==new.get('cut'),name
+    assert compare(old.get('phase'),new.get('phase')) and old.get('playing')==new.get('playing') and (name=='19a-Vulkanoeffnung' or old.get('cut')==new.get('cut')),name
     if name in ['03-Parkfield','10-Tohoku','10a-Kuestenrelief','16-Reykjanes','17-Basalt','21-Hawaii']:
         assert new['view']==old['view']=='land' and not new['cut'] and not old['cut'],name
     assert old['viewport']==new['viewport'] and all(old['resolution'][k]==new['resolution'][k] for k in ['width','height']),name
@@ -53,6 +53,9 @@ files['Quellen/G6.1-Nahlandschaften.txt']=root/'public/licenses/G6.1-Nahlandscha
 for p in sorted((root/'public/data/g61').glob('*.json')):files['Quellen/'+p.name]=p
 files['Wissenschaft/Nahmodelle.json']=out/'G61/Nahmodelle.json'
 checks=read('G61/Nahmodelle.json')
+for row in checks['roots']:
+    name='Nah-'+row['site']+'.jpg';files['Nahansichten/'+name]=out/'G61'/name
+assert checks['localFlow']['metres']>7 and checks['localFlow']['maxClimb']<.00001
 assert len(checks['lava'])==9 and len(checks['roots'])==6 and not checks['errors'] and not checks['net']
 for rows in runs.values():
     assert all(row['data']['renderCalls']>0 or row['data']['frames']>0 for row in rows if row.get('data'))
@@ -60,7 +63,7 @@ assert all(row['animation']['renderCalls']>0 and row['cameraMotion']['renderCall
 text=['# GeoRisiko G6.1 · Abnahme','',f"Commit `{raw['commit']}` · Actions-Lauf {raw['run']}.",
     f"Virtueller ARM64-Mac · {raw['hardware']['cpu']} · macOS {raw['hardware']['macOS']}. Der physische MacBook-Air-M1- und Smartboard-Test wurde auf Wunsch übersprungen.",
     '', '## Bildvergleich und Messverfahren','',
-    'Die Originalbilder in Vorher und Nachher stammen aus der offline geöffneten Einzeldatei. G6 wurde aus 0ba4a6c gebaut. Für sechs neue Nahansichten zeigt das Vorher-Bild den nächstliegenden regionalen Ausschnitt in G6. Diese Bildpaare haben ausdrücklich unterschiedliche Maßstäbe. Beide Versionen liefen nacheinander in eigenen Chrome-Profilen auf derselben Maschine. Fenstergröße, Kamerapose, Modellzeit, Pause und Zeichenfläche wurden paarweise geprüft. Die Messbank fixiert einen Framebuffer-Pixel je CSS-Pixel. Beim regulären 15-Minuten-Lauf regelt die App ihre Auflösung selbst.',
+    'Die Originalbilder in Vorher und Nachher stammen aus der offline geöffneten Einzeldatei. G6 wurde aus 0ba4a6c gebaut. Für sieben neue Nahansichten zeigt das Vorher-Bild den nächstliegenden regionalen Ausschnitt in G6. Diese Bildpaare haben ausdrücklich unterschiedliche Maßstäbe. Beide Versionen liefen nacheinander in eigenen Chrome-Profilen auf derselben Maschine. Fenstergröße, Kamerapose, Modellzeit, Pause und Zeichenfläche wurden paarweise geprüft. Die Messbank fixiert einen Framebuffer-Pixel je CSS-Pixel. Beim regulären 15-Minuten-Lauf regelt die App ihre Auflösung selbst.',
     '',f"SHA-256 des gebauten G6-Exports: {digest(root/'.scratch/g6-reference/artifacts/GeoRisiko-G6-Web-Test.html')}. SHA-256 von G6.1: {digest(root/'artifacts/GeoRisiko-G6.1-Web-Test.html')}.",
     '',f"{len(index['Vorher'])} Bildpaare. Die Messfenster umfassen 2,5 Sekunden nach Eingabe. Unter animation stehen eigene Messungen ab der angegebenen Startphase mit laufendem Modell. Gaps, Median, P95, längste Pause, Speicher, Dreiecke, Geometrien, Texturen und Zeichenaufrufe stehen in Messungen.json. Der Speicherwert summiert die RSS-Werte des Browser-Prozessbaums einschließlich gemeinsam genutzter Seiten.",
     '', '## Grafikprofile und Leistung','',
@@ -78,7 +81,7 @@ for scene in sorted({r['scene'] for r in long if r['width']==1920}):
     gaps=sorted(g for row in long if row['width']==1920 and row['scene']==scene for g in row['gaps']);text.append(f"| {scene} | {1000/statistics.mean(gaps):.1f} | {gaps[int(.95*(len(gaps)-1))]:.1f} | {max(gaps):.1f} |")
 text+=['','## Funktion, Umfang und Grenzen','',f"Geprüft wurden 30 Kontaktzustände, vier Wasserbilanzen, 5.819 Grenzabschnitte und 1.127 Subduktionspolungen. Die Klasse nutzte im automatisierten Durchlauf die Unterrichtsansichten, die Favoritenspeicherung, die Modellphasen und den Perspektivwechsel. Das Protokoll enthält außerdem Schalentests, Orte, Nyos, historische Rekonstruktionen, Zukunftsvergleiche und den Neustart des installierten Programms. {resources['resources']} Ressourcen des App-Archivs wurden byteweise mit dem Inhalt der HTML verglichen.",
     '', 'Die gestalterische Einordnung der Referenzregionen, Quellen, Profilstufen und verbleibenden Schwächen steht in Dokumentation/g61-landschaften.md. Leistungswerte gelten für die dokumentierte virtuelle Maschine.']
-text+=['','## Nahszenen, LOD und wissenschaftliche Prüfung','','Die Lage und Größen der Detailobjekte, die örtlichen Modellgrenzen, die einzelnen Vulkanformen sowie die Bedienung sind im ausgelieferten Kapitel Dokumentation/g61-landschaften.md beschrieben. Die sechs anders skalierten Vergleiche sind in der Galerie gekennzeichnet.','',
+text+=['','## Nahszenen, LOD und wissenschaftliche Prüfung','','Die Lage und Größen der Detailobjekte, die örtlichen Modellgrenzen, die einzelnen Vulkanformen sowie die Bedienung sind im ausgelieferten Kapitel Dokumentation/g61-landschaften.md beschrieben. Die sieben anders skalierten Vergleiche sind in der Galerie gekennzeichnet.','',
        'Die Prüfung kontrollierte die tatsächlich gezeichneten Lavageometrien zu drei Modellzeiten auf Island, Hawaii und am Zaozan. Je Region sind die verbleibende Länge, das Gefälle und der größte Höhenanstieg der Mittellinie in Wissenschaft/Nahmodelle.json enthalten. Für alle sechs lokalen Landschaften wurden Instanzpositionen mit der baryzentrischen Höhe ihrer gezeichneten Geländedreiecke verglichen.',
        '', '## Dauerlauf und Qualitätswechsel','',
        'Die identischen Browserfenster sind 1920 × 1080 CSS-Pixel groß. Die regionalen Zeichenflächen sind um die Bedienelemente kleiner. Die tatsächliche Breite und Höhe stehen in jeder Einzelaufnahme unter resolution. Bei ruhender Kamera kann die Zahl neu gezeichneter Bilder null betragen. Die Browseraufrufe laufen weiter.','',
@@ -93,7 +96,7 @@ report=out/'G6.1-Abnahme.md';report.write_text('\n'.join(text)+'\n');files['Abna
 html=['<!doctype html><html lang="de"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>GeoRisiko – Sichtprüfung G6.1</title><style>body{background:#172724;color:#ebf0eb;font:16px system-ui;margin:2vw}section{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,380px),1fr));gap:1vw}figure{margin:0}img{width:100%;height:auto}a{color:#c2ddc8}h2{margin-top:2rem}</style><h1>GeoRisiko G6.1 · Sichtprüfung</h1><p><a href="Abnahmebericht.md">Abnahmebericht mit Messwerten</a></p>']
 for name in index['Nachher']:
     html+=['<h2>'+escape(name)+'</h2>']
-    if index['Nachher'][name].get('view') in ['ground','local']:html.append('<p>G6 zeigt den nächstvergleichbaren regionalen Ausschnitt. G6.1 zeigt das lokale Metermodell.</p>')
+    if index['Nachher'][name].get('view') in ['ground','local','mouth']:html.append('<p>G6 zeigt den nächstvergleichbaren regionalen Ausschnitt. G6.1 zeigt das lokale Metermodell.</p>')
     html.append('<section>')
     for g in ['Vorher','Nachher','Vorher-Unterricht','Unterricht','Vorher-Maximal','Maximal']:
         if name in index[g]:

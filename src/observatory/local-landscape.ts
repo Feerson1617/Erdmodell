@@ -61,7 +61,7 @@ export class LocalLandscape{
       const mesh=new T.Mesh(g,ground);mesh.name="Nahgelände";mesh.receiveShadow=true;this.halves[half].add(mesh);
     }
     if(site==="island"){
-      this.lava=lavaTongue(3.4);this.lava.build(-2,-16,Math.PI*.49,52,0,(x,z)=>this.surface(x,z));this.root.add(this.lava.mesh);
+      this.lava=lavaTongue(3.9);this.lava.build(-2,-16,Math.PI*.49,52,0,(x,z)=>this.surface(x,z));this.root.add(this.lava.mesh);
     }
     if(site==="japan"){
       const water=new T.PlaneGeometry(axis.length-1,axis.length-1,axis.length-1,axis.length-1);water.rotateX(-Math.PI/2);
@@ -86,7 +86,8 @@ export class LocalLandscape{
     if(this.site==="island"){
       const fissure=x+2-1.9*Math.sin((z+16)*.045),cross=Math.abs(fissure);
       const shoulder=1.2*Math.exp(-((cross-3.3)**2)/3.4);
-      return -.078*z-2.15*Math.exp(-cross*cross/3.8)+shoulder+.85*(broad-.5)+.33*grain+.22*fine+
+      const rim=T.MathUtils.smoothstep(cross,.45,3.7);
+      return -.105*z-2.15*Math.exp(-cross*cross/3.8)+shoulder+rim*(.85*(broad-.5)+.33*grain+.22*fine)+
         outside*(.07+.13*noise(x*.003,z*.004))+this.regionalRise(x,z)*T.MathUtils.smoothstep(Math.hypot(x,z),72,480);
     }
     if(this.site!=="san"){
@@ -110,6 +111,7 @@ export class LocalLandscape{
       if(this.disposed){tex.dispose();return;}this.photo=tex;tex.colorSpace=T.SRGBColorSpace;tex.anisotropy=4;imagery.value=tex;hasPhoto.value=1;this.revision++;this.pending--;
     },undefined,()=>{this.pending--;this.revision++;});}
     const basalt=this.site==="island"||this.site==="hawaii",coast=this.site==="japan";
+    m.customProgramCacheKey=()=>"local-ground-"+(basalt?"basalt":coast?"coast":"soil");
     m.onBeforeCompile=s=>{
       Object.assign(s.uniforms,{faciesColor:{value:this.lib.color},faciesRelief:{value:this.lib.relief},detailGrade:this.grade,ortho:imagery,hasPhoto});
       s.vertexShader="varying vec3 metres;varying float incline;\n"+s.vertexShader.replace("#include <begin_vertex>","#include <begin_vertex>\nmetres=position;incline=1.-normal.y;");
