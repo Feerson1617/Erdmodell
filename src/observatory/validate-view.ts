@@ -19,7 +19,7 @@ export function readableView(e:unknown){
     const t=s.time;return record(t)&&one(t.scenario,models)&&one(t.comparison,models)&&number(t.year,-250,250)&&(t.direction===1||t.direction===-1)&&number(t.speed,1,30)&&flags(t,"compare playing trail follow showBoundaries")&&["layer","tracking","gnss"].every(k=>typeof t[k]==="string");
   }
   if(s.mode==="regional"){
-    const r=s.region;if(!record(r)||!record(r.settings)||!vec(r.position)||!vec(r.target)||!flag(r.cut)||!one(r.view,"land|overhead|cut|fault|focus|waves|water|ocean|coast|vent"))return false;
+    const r=s.region;if(!record(r)||!record(r.settings)||!vec(r.position)||!vec(r.target)||!flag(r.cut)||!one(r.view,"land|overhead|cut|fault|focus|waves|water|ocean|coast|vent|local|ground"))return false;
     const v=r.settings;
     return one(r.theme,"process|earthquake|volcano|risk|forces|lithosphere|magnet")&&(r.event===undefined||one(r.event,"strike|uplift|buried"))&&
       (r.coast===true||r.event==="strike"||typeof r.site==="string"&&Object.hasOwn(sites,r.site)||Number.isInteger(r.boundary)&&number(r.boundary,1,5819)||one(r.theme,"forces|lithosphere"))&&

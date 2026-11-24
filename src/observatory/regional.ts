@@ -1,5 +1,5 @@
 import {seaMaterial,waterSection,seabed} from "./sea-material";
-import {groundCover} from "./landscape-details";
+import {LocalLandscape,localView} from "./local-landscape";
 import {loadTexture,materials,decorateTerrain,quality,graphics,type Library} from "./graphics";
 import {coastalSand,coastalGrass} from "./coast-appearance";
 import * as T from "three";
@@ -37,11 +37,16 @@ function indexed(rows:number,cols:number,vertex:(i:number,j:number)=>number[],re
   g.setAttribute("uv",new T.Float32BufferAttribute(uv,2));g.setIndex(index);g.computeVertexNormals();return g;
 }
 export class RegionalScene {
+  local?:LocalLandscape;
+  get localActive(){return localView(this.view)&&!!this.local;}
+  get renderScene(){return this.localActive?this.local!.scene:this.scene;}
   lib?:Library;readonly grade={value:quality()};private relief?:T.Texture;
   private sunlight=new T.DirectionalLight(0xffdec0,2.25);private shadowState="";private terrainLOD:((distance:number,grade:number)=>void)[]=[];
   prepareRender(renderer:T.WebGLRenderer){
     if(!this.lib)return;
-    const q=this.grade.value=quality();this.sunlight.castShadow=q>0;const size=[512,1024,2048][q],shadow=this.sunlight.shadow;
+    const q=this.grade.value=quality();
+    if(this.localActive){this.local!.update(this.camera,this.progress,q);renderer.shadowMap.needsUpdate=true;return;}
+    this.sunlight.castShadow=q>0;const size=[512,1024,2048][q],shadow=this.sunlight.shadow;
     const samples=[1,2,8][q];for(const tex of [this.lib.color,this.lib.relief,this.lib.plants,this.colorMap,this.relief,this.contextMap]){
       if(tex&&tex.anisotropy!==samples){tex.anisotropy=samples;tex.needsUpdate=true;}
     }
@@ -133,7 +138,7 @@ export class RegionalScene {
   }
   get opening(){return this.reveal;}
   get viewSettled(){return !this.transition && Math.abs(this.reveal-Number(this.cut))<.012;}
-  reframe(cut:boolean){this.view=cut?"cut":"land";this.cut=cut;this.camera.position.set(cut?1.3:3.4,cut?2.1:4.5,cut?8.4:7.4);
+  reframe(cut:boolean){this.orbit.minDistance=4;this.orbit.maxDistance=22;this.camera.far=120;this.view=cut?"cut":"land";this.cut=cut;this.camera.position.set(cut?1.3:3.4,cut?2.1:4.5,cut?8.4:7.4);
     const goal=new T.Vector3(0,cut?-.68:0,cut?-.6:-.5),to=this.camera.position.clone();
     if(this.ready&&!matchMedia("(prefers-reduced-motion: reduce)").matches){this.camera.position.copy(this.lastCamera);this.transition={from:this.lastCamera.clone(),to,look:this.orbit.target.clone(),goal,fraction:0};}
     else this.orbit.target.copy(goal);this.orbit.update();}
@@ -182,7 +187,7 @@ export class RegionalScene {
     this.timings.dataMs=performance.now()-start;const build=performance.now();
     this.faultModel=new Fault(this.spec,(x,z)=>this.height(x,z));if(this.faultModel.waterEvent)this.water=new WaterSection(this.faultModel);this.timings.solverMs=performance.now()-build;
     this.nearSurface=this.height(this.faultModel.hx,0);this.ui.focus.value=this.faultModel.hy;
-    this.buildSurface();this.addVectors();this.addTrace();if(this.lib&&this.colorMap&&this.spec.site)groundCover(this,this.lib,this.colorMap);else this.groundDetails();this.buildQuake();this.buildExtras();this.ready=true;this.update(0);this.timings.geometryMs=performance.now()-build-this.timings.solverMs;
+    this.buildSurface();this.addVectors();this.addTrace();if(!this.spec.site)this.groundDetails();this.buildQuake();this.buildExtras();this.ready=true;this.update(0);this.timings.geometryMs=performance.now()-build-this.timings.solverMs;
   }
   get surfaceImage(){return this.colorMap;}
   private get metresPerUnit(){
@@ -299,18 +304,24 @@ export class RegionalScene {
   }
   waterHeight(x:number,t:number){if(!this.water)return 0;return this.water.sample(x,t);}
   cameraView(view:string){
+    const wasLocal=this.localActive;
     const origin=this.camera.position.clone(),look=this.orbit.target.clone();
     this.setCameraView(view);
-    if(this.transition||!this.ready||matchMedia("(prefers-reduced-motion: reduce)").matches)return;
+    if(wasLocal!==this.localActive||this.transition||!this.ready||matchMedia("(prefers-reduced-motion: reduce)").matches)return;
     const to=this.camera.position.clone(),goal=this.orbit.target.clone();
     if(origin.distanceToSquared(to)<.002)return;
     this.camera.position.copy(origin);this.orbit.target.copy(look);this.orbit.update();
     this.transition={from:origin,to,look,goal,fraction:0};
   }
   private setCameraView(view:string){
+    if(localView(view)&&this.spec.site&&this.lib){
+      this.local??=new LocalLandscape(this.spec.site,this.lib,this.grade);
+      this.view=view;this.cut=false;this.transition=undefined;this.camera.far=240;this.orbit.minDistance=.23;this.orbit.maxDistance=12;
+      const pose=this.local.pose(view);this.orbit.target.copy(pose.target);this.camera.position.copy(pose.position);this.orbit.update();return;
+    }
     this.orbit.minDistance=view==="coast"?2.1:4;
     if(view==="coast"&&this.spec.coastLesson){
-      this.reframe(false);this.view=view;this.transition=undefined;
+      this.reframe(false);this.orbit.minDistance=2.1;this.view=view;this.transition=undefined;
       this.orbit.target.set(-3.05,.012,-.35);this.camera.position.copy(this.orbit.target).add(new T.Vector3(-.76,1.76,2.05));this.orbit.update();return;
     }
     if(view==="land"||view==="overhead"){
@@ -328,7 +339,7 @@ export class RegionalScene {
     this.transition=undefined;this.camera.position.copy(to);this.orbit.target.copy(goal);this.orbit.update();
   }
   restoreCamera(view:string,cut:boolean,position:number[],target:number[]){
-    this.orbit.minDistance=view==="coast"?2.1:4;this.reframe(cut);this.transition=undefined;this.view=view;
+    this.setCameraView(view);this.cut=cut;this.transition=undefined;
     this.camera.position.fromArray(position);this.orbit.target.fromArray(target);this.orbit.update();
   }
   private addVectors(){
@@ -452,7 +463,7 @@ export class RegionalScene {
   get focus(){return [this.faultModel?.hx??0,this.ui.focus.value,0];}
   get epicenter(){return [this.faultModel?.hx??0,this.nearSurface,0];}
   dispose(){
-    this.disposed=true;this.orbit.dispose();const gs=new Set<T.BufferGeometry>(),ms=new Set<T.Material>();
+    this.disposed=true;this.local?.dispose();this.orbit.dispose();const gs=new Set<T.BufferGeometry>(),ms=new Set<T.Material>();
     this.scene.traverse(o=>{const m=o as T.Mesh;if(m instanceof T.InstancedMesh)m.dispose();if(m.geometry)gs.add(m.geometry);if(m.material)for(const a of Array.isArray(m.material)?m.material:[m.material])ms.add(a);});
     for(const g of gs)g.dispose();for(const m of ms)m.dispose();this.colorMap?.dispose();this.normalMap?.dispose();this.roughMap?.dispose();this.sky.dispose();this.contextMap?.dispose();this.envelope?.dispose();this.relief?.dispose();this.sunlight.shadow.dispose();
   }

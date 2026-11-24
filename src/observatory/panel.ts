@@ -151,9 +151,9 @@ export class Observatory {
     }else if(this.mode==="regional"&&this.region){
       const r=this.region,sp=r.spec;
       this.side.innerHTML='<p class="g-kicker">'+(sp.site?topicNames[sp.theme]:sp.theme==='forces'||sp.theme==='lithosphere'?'Schematisch vergrößerter Schnitt':'Vereinfachtes Modell dieser Grenzart')+'</p><h1>'+sp.name+'</h1><div class="g-stack">'+(sp.site?selectRegions(sp.theme,sp.site):'')+
-        (sp.geology?'<small>'+names[sp.geology.left]+' · '+names[sp.geology.right]+' · '+processNames[sp.geology.model]+'</small>':'')+'<small id="g-model-note">'+(sp.site?(sp.site==='san'&&sp.theme==='earthquake'?'Gelände aus Geodaten · Vergleichsweg und Untergrund schematisch':'Höhen aus Geodaten · Untergrund schematisch'):(sp.coastLesson?'Schematischer Küstenraum · helle Linie: ursprüngliches Ufer':sp.theme==='forces'||sp.theme==='lithosphere'?'Schematische Größen und Tiefen':'Lage und Grenzrichtung aus PB2002 · Untergrund schematisch'))+' · Höhen überhöht, Modellzeit verkürzt</small>'+
+        (sp.geology?'<small>'+names[sp.geology.left]+' · '+names[sp.geology.right]+' · '+processNames[sp.geology.model]+'</small>':'')+'<small id="g-model-note">'+(r.localActive?'Lokales Anschauungsmodell · Größen in Metern · Einzelobjekte illustrativ':sp.site?(sp.site==='san'&&sp.theme==='earthquake'?'Gelände aus Geodaten · Vergleichsweg und Untergrund schematisch':'Höhen aus Geodaten · Untergrund schematisch'):(sp.coastLesson?'Schematischer Küstenraum · helle Linie: ursprüngliches Ufer':sp.theme==='forces'||sp.theme==='lithosphere'?'Schematische Größen und Tiefen':'Lage und Grenzrichtung aus PB2002 · Untergrund schematisch'))+(r.localActive?'':' · Höhen überhöht, Modellzeit verkürzt')+'</small>'+
         (!r.ready?'<p role="status">'+(r.error||'Gelände wird geladen …')+'</p>':
-        button("g-cut",r.cut?"An die Oberfläche":"Untergrund öffnen")+'<label>Ansicht<select id="g-view">'+opts({land:"Landschaft",...(sp.geology?{overhead:"Plattenbewegung von oben"}:{}),cut:"Geologischer Schnitt",...(["earthquake","process"].includes(sp.theme)&&sp.process!=="complex"?{fault:"Störungsdetail"}:{}),...(sp.theme==="earthquake"?{focus:"Erdbebenherd",waves:"Wellenausbreitung"}:{}),...(sp.theme==="volcano"?{vent:"Vulkan und Ausbruch"}:{}),...(r.water?{water:"Entstehung am Meeresboden",ocean:"Ausbreitung im offenen Meer",coast:"Küstenwirkung · Modell"}:{})},r.view)+'</select></label>'+
+        button("g-cut",r.cut?"An die Oberfläche":"Untergrund öffnen")+'<label>Ansicht<select id="g-view">'+opts({land:"Regionalübersicht",...(sp.site==="san"?{local:"Lokaler Landschaftsausschnitt",ground:"Bodennahe Perspektive"}:{}),...(sp.geology?{overhead:"Plattenbewegung von oben"}:{}),cut:"Geologischer Schnitt",...(["earthquake","process"].includes(sp.theme)&&sp.process!=="complex"?{fault:"Störungsdetail"}:{}),...(sp.theme==="earthquake"?{focus:"Erdbebenherd",waves:"Wellenausbreitung"}:{}),...(sp.theme==="volcano"?{vent:"Vulkan und Ausbruch"}:{}),...(r.water?{water:"Entstehung am Meeresboden",ocean:"Ausbreitung im offenen Meer",coast:"Küstenwirkung · Modell"}:{})},r.view)+'</select></label>'+
         (sp.theme==='lithosphere'?'':'<label class="g-range"><span id="g-phase"></span><input id="g-progress" type="range" min="0" max="1" step=".001" value="'+r.progress+'"></label>'+
         '<div class="g-buttons">'+button("g-play","Abspielen")+button("g-step","Einzelschritt")+button("g-reset","Zurücksetzen")+'</div>')+
         '<label><input type="checkbox" id="g-names" '+(r.names?"checked":"")+'> Namen zeigen</label>'+
@@ -190,11 +190,11 @@ export class Observatory {
     r.orbit.enabled=true;this.world.nav.enabled=false;const canvas=this.world.gl.domElement;r.camera.aspect=canvas.clientWidth/canvas.clientHeight;r.camera.updateProjectionMatrix();
     r.update(dt);
     const state=[r.view,r.cut,r.opening.toFixed(4),r.vertical,r.coastal,r.front.visible,r.labels.visible,
-      canvas.width,canvas.height,graphics.revision,...r.camera.position.toArray().map(v=>v.toFixed(7)),...r.orbit.target.toArray().map(v=>v.toFixed(7)),...regionKeys.map(key=>r[key])].join("|");
+      canvas.width,canvas.height,r.local?.revision,graphics.revision,...r.camera.position.toArray().map(v=>v.toFixed(7)),...r.orbit.target.toArray().map(v=>v.toFixed(7)),...regionKeys.map(key=>r[key])].join("|");
     const start=r.timings.firstDrawMs===undefined?performance.now():0;
     graphics.idle=this.lastScene===r&&state===this.drawnState&&!r.playing&&r.viewSettled;
     if(!graphics.idle){
-      r.prepareRender(this.world.gl);this.world.gl.render(r.scene,r.camera);this.lastScene=r;this.drawnState=state;
+      r.prepareRender(this.world.gl);this.world.gl.render(r.renderScene,r.camera);this.lastScene=r;this.drawnState=state;
     }
     if(start)r.timings.firstDrawMs=performance.now()-start;
     this.profile.show(r,()=>{r.analysis=false;this.draw();});
@@ -218,7 +218,7 @@ export class Observatory {
     const byTheme:Partial<Record<Theme,string[]>>={process:["Ausgangszustand","Langsame Plattenbewegung","Gestein verformt sich","Grenzbereich verändert sich","Zustände vergleichen"],volcano:["Ausgangszustand","Material steigt auf","Gestein schmilzt teilweise","Magma steigt auf","Vulkanbildung"],magnet:["Rücken","Neuer Boden entsteht","Gestein kühlt ab","Magnetfeld wird aufgezeichnet","Älterer Boden wandert nach außen"],forces:["Wärme im Inneren","Mantelgestein bewegt sich","Dichte Lithosphäre sinkt","Zug an der Platte","Kräfte wirken zusammen"],risk:["Gleiches Modellbeben","Spannung steigt","Bruch am Herd","Erschütterung am Standort","Folgen vergleichen"]};
     if(byTheme[r.spec.theme])return byTheme[r.spec.theme]![Math.min(4,Math.floor(r.progress*5))];return r.progress<.05?"Ausgangszustand":r.progress<.35?"Spannung baut sich auf":r.progress<.47?"Bruch und Versatz":r.progress<.85?"Wellen breiten sich aus":"Nach dem Ereignis";}
   private updateLabels(r:RegionalScene){
-    if(!r.names){if(this.labels.childElementCount)this.labels.replaceChildren();return;}
+    if(!r.names||r.localActive){if(this.labels.childElementCount)this.labels.replaceChildren();return;}
     const positions:{name:string;p:T.Vector3}[]=[];
     if(r.cut&&r.spec.theme==="earthquake"){
       for(const [name,coords] of [["Erdbebenherd",r.focus],["Epizentrum",r.epicenter]] as const)positions.push({name,p:new T.Vector3(coords[0],coords[1],.085)});
@@ -319,7 +319,7 @@ export class Observatory {
     this.change("g-view",v=>{
       if(v==="coast"&&!r.spec.coastLesson){void this.switchEvent(r,{name:"Küstenwirkung · schematisches Profil",lat:38,lon:142,strike:0,process:"subduction",theme:"earthquake",coastLesson:true,event:"uplift"},"coast");return;}
       if(r.spec.coastLesson&&r.spec.theme==="earthquake"&&["water","ocean"].includes(v)){void this.switchEvent(r,reference("japan","earthquake"),v);return;}
-      r.cameraView(v);
+      r.cameraView(v);this.draw();
     });
     this.change("g-stage",v=>{r.playing=false;r.progress=Number(v);});
     this.action("g-before",()=>{r.playing=false;r.progress=0;});this.action("g-after",()=>{r.playing=false;r.progress=1;});
@@ -336,7 +336,7 @@ export class Observatory {
     this.action("g-risk",()=>void this.openRegion({...r.spec,theme:"risk"}));
   }
   private pickRegion(x:number,y:number){
-    const r=this.region;if(!r?.ready||document.body.classList.contains("observing"))return;
+    const r=this.region;if(!r?.ready||r.localActive||document.body.classList.contains("observing"))return;
     const rect=$("earth").getBoundingClientRect(),ray=new T.Raycaster();ray.params.Line.threshold=.09;
     ray.setFromCamera(new T.Vector2(2*(x-rect.x)/rect.width-1,1-2*(y-rect.y)/rect.height),r.camera);
     const hit=ray.intersectObjects(r.scene.children,true).find(h=>{
