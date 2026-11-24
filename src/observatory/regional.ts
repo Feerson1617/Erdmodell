@@ -140,10 +140,10 @@ export class RegionalScene {
   }
   get opening(){return this.reveal;}
   get viewSettled(){return !(this.localActive&&this.local!.pending)&&!this.transition && Math.abs(this.reveal-Number(this.cut))<.012;}
-  reframe(cut:boolean){this.orbit.minDistance=4;this.orbit.maxDistance=22;this.camera.far=120;this.view=cut?"cut":"land";this.cut=cut;this.camera.position.set(cut?1.3:3.4,cut?2.1:4.5,cut?8.4:7.4);
+  reframe(cut:boolean){const changeScale=this.localActive;this.orbit.minDistance=4;this.orbit.maxDistance=22;this.camera.far=120;this.view=cut?"cut":"land";this.cut=cut;this.camera.position.set(cut?1.3:3.4,cut?2.1:4.5,cut?8.4:7.4);
     const goal=new T.Vector3(0,cut?-.68:0,cut?-.6:-.5),to=this.camera.position.clone();
-    if(this.ready&&!matchMedia("(prefers-reduced-motion: reduce)").matches){this.camera.position.copy(this.lastCamera);this.transition={from:this.lastCamera.clone(),to,look:this.orbit.target.clone(),goal,fraction:0};}
-    else this.orbit.target.copy(goal);this.orbit.update();}
+    if(this.ready&&!changeScale&&!matchMedia("(prefers-reduced-motion: reduce)").matches){this.camera.position.copy(this.lastCamera);this.transition={from:this.lastCamera.clone(),to,look:this.orbit.target.clone(),goal,fraction:0};}
+    else{this.transition=undefined;this.orbit.target.copy(goal);}this.orbit.update();}
   private lastCamera=new T.Vector3(3.4,4.5,7.4);
   height(x:number,z:number){
     if(this.groundData){
@@ -460,7 +460,7 @@ export class RegionalScene {
     }
     if(this.waterColumn){const x=f.hx,h=this.height(x,0),top=this.waterHeight(x,t);this.waterColumn.visible=f.waterEvent&&t>=onset&&t<.67&&this.view!=="coast"&&this.view!=="ocean";
       const bed=this.water?.bed(x,t)??h;this.waterColumn.scale.y=Math.max(.001,top-bed);this.waterColumn.position.set(x,bed+this.waterColumn.scale.y/2,.065);}
-    for(const fn of this.motion)fn(t);this.orbit.update();this.lastCamera.copy(this.camera.position);
+    for(const fn of this.motion)fn(t);this.orbit.update();if(this.localActive)this.local!.clearGround(this.camera);this.lastCamera.copy(this.camera.position);
   }
   get focus(){return [this.faultModel?.hx??0,this.ui.focus.value,0];}
   get epicenter(){return [this.faultModel?.hx??0,this.nearSurface,0];}

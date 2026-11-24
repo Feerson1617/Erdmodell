@@ -38,11 +38,12 @@ def convert(spec):
         if len(idx)>900000:
             tri=idx.reshape(-1,3);edges=coo_matrix((np.ones(len(idx),np.uint8),(tri.ravel(),tri[:,[1,2,0]].ravel())),shape=(len(pos),len(pos))).tocsr()
             size,label=connected_components(edges,directed=False)
-            rng=np.random.default_rng(611);chosen=rng.random(size)<.019
+            rng=np.random.default_rng(611);canopy=name=='tree_small_02'
+            chosen=rng.random(size)<(.073 if canopy else .019)
             if size>200:
                 idx=tri[chosen[label[tri[:,0]]]].ravel()
                 counts=np.maximum(1,np.bincount(label));centres=np.stack([np.bincount(label,weights=pos[:,k])/counts for k in range(3)],axis=1)
-                pos=(centres[label]+(pos-centres[label])*2.25).astype('<f4')
+                pos=(centres[label]+(pos-centres[label])*(3.0 if canopy else 2.25)).astype('<f4')
         with tempfile.TemporaryDirectory() as d:
             td=Path(d);pos.tofile(td/'pos');idx.tofile(td/'idx')
             subprocess.run(['node',str(root/'scripts/g61/reduce.mjs'),d,str(ratio)],check=True)

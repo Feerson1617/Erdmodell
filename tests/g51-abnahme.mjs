@@ -65,7 +65,7 @@ export async function longClassroom(p,measure,readMemory){
   const {click,ready,visit,time}=controls(p);
   const display=await p.context().newCDPSession(p),start=performance.now(),samples=[],home=[];
   const sizes=[[1280,800],[1920,1080],[2560,1440]];
-  let n=0;
+  let n=0,localFavorite;
   try{
     while(performance.now()-start<900000){
       const [width,height]=sizes[Math.min(2,Math.floor((performance.now()-start)/300000))];
@@ -76,6 +76,11 @@ export async function longClassroom(p,measure,readMemory){
       if(n%4===2){await time();if(n%8===6){await p.selectOption("#g-scenario","aurica");await p.locator("#g-year").fill("160");await p.check("#g-compare");await p.waitForFunction(()=>window.geoObservatory().observatory.timeReady);}await click("g-time-play");}
       else{if(n%4===3){await click("nav-volcano");await ready();}else{await visit(n%4===0?"san":"japan");await click("g-cut");}if(n%8===0||n%8===3||n%8===5){
           await p.selectOption("#g-view","local");await ready();await p.selectOption("#g-view","ground");await ready();
+          if(n%8===0){
+            await click("saved-views");
+            if(!localFavorite){await p.fill("#view-name","Dauerlauf · Nahperspektive");await click("view-save");localFavorite=await p.locator("#saved-list").inputValue();await click("view-close");}
+            else{await p.selectOption("#saved-list",localFavorite);await click("view-apply");await p.waitForSelector(".classroom-views",{state:"hidden"});await ready();assert.equal(await p.locator("#g-view").inputValue(),"ground");}
+          }
         }
         await click("g-play");}
       samples.push({width,height,readyMs:performance.now()-loadStart,futureComparison:n%8===6,...await measure(label,15000)});

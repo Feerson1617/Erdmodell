@@ -1,0 +1,15 @@
+<!doctype html><canvas></canvas><script type="module">
+import * as T from 'three';
+import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+const renderer=new T.WebGLRenderer({canvas:document.querySelector('canvas'),antialias:true,alpha:true,preserveDrawingBuffer:true});
+renderer.setSize(512,512);renderer.setClearColor(0x000000,0);
+window.capture=async name=>{
+ const dry=name==="drygrass";if(dry)name="grass_medium_01";
+ const {scene}=await new GLTFLoader().loadAsync('/data/g61/'+name+'.glb'),box=new T.Box3().setFromObject(scene),size=box.getSize(new T.Vector3()),at=box.getCenter(new T.Vector3());
+ if(dry)scene.traverse(o=>{if(o.isMesh)o.material.onBeforeCompile=s=>{s.fragmentShader=s.fragmentShader.replace("#include <color_fragment>","#include <color_fragment>\nfloat blade=dot(diffuseColor.rgb,vec3(.2126,.7152,.0722));diffuseColor.rgb=vec3(.38,.25,.092)*(.53+2.3*sqrt(blade));");};});
+ const width=Math.max(size.y,Math.hypot(size.x,size.z))*.55,cam=new T.OrthographicCamera(-width,width,width,-width,.01,200);
+ scene.add(new T.HemisphereLight(0xf2f8ff,0xb2a687,1.7));const light=new T.DirectionalLight(0xffe8c4,2);light.position.set(-3,6,2);scene.add(light);
+ const out=[];for(let i=0;i<2;i++){cam.position.copy(at).add(new T.Vector3(Math.sin(i*1.57)*35,1,Math.cos(i*1.57)*35));cam.lookAt(at);renderer.render(scene,cam);out.push(renderer.domElement.toDataURL());}
+ return out;
+}
+</script>

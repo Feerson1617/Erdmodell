@@ -96,12 +96,26 @@ export function eruption(r:RegionalScene,x:number,top:number){
   const ash=new T.InstancedMesh(new T.PlaneGeometry(2,2),ashMaterial(),64);
   const clasts=new T.InstancedMesh(new T.IcosahedronGeometry(1,0),material(0x564138),26);ash.frustumCulled=clasts.frustumCulled=false;ash.material.addEventListener("dispose",()=>ash.material.map?.dispose());
   ash.userData.explanation={name:"Asche und Gas",answer:"Aufsteigendes Gas dehnt sich aus. Es kann zähe Schmelze zerreißen."};clasts.userData.explanation=ash.userData.explanation;r.scene.add(ash,clasts);
+  const gasMaterial=ash.material.clone();gasMaterial.color.set(0xc7d2d2);gasMaterial.opacity=.19;
+  const gas=new T.InstancedMesh(ash.geometry,gasMaterial,26);gas.frustumCulled=false;gas.name="Vulkanisches Gas";r.scene.add(gas);
+  const tint=new T.Color();
   const dummy=new T.Object3D();
   r.onAnimate(t=>{
     centres.forEach((m,i)=>{const age=hotspot?t*4+.92-i:1;const growth=T.MathUtils.clamp(age*1.6,.02,1);
       m.visible=age>0;const travel=hotspot?Math.max(0,age-1)*.92:0;
       const px=x-.64*travel,pz=z-.59*travel;m.position.set(px,r.height(px,pz)-.018,pz);m.scale.set(growth,growth*(1-.045*travel),growth);});
     channels.forEach(draw=>draw(t));
+    gas.visible=r.eruption==="effusive"&&t>.52;
+    if(gas.visible){
+      for(let i=0;i<gas.count;i++){
+        const age=Math.max(0,(t-.52)*2.6-i*.027)%1,a=i*2.399;
+        const slit=r.spec.site==="island"?.32*Math.sin(a):0;
+        dummy.position.set(x+slit+.49*age*age+.075*Math.sin(a+5*age),top+(hotspot?.22:r.spec.arcTransect?.015:.14)+.95*age,z+.09*Math.cos(a+age*4));
+        dummy.quaternion.copy(r.camera.quaternion);dummy.rotateZ(a+age*.6);
+        dummy.scale.setScalar(.21*Math.sin(Math.PI*age)*(.46+age));
+        dummy.updateMatrix();gas.setMatrixAt(i,dummy.matrix);
+      }gas.instanceMatrix.needsUpdate=true;
+    }
     ash.visible=clasts.visible=r.eruption==="explosive"&&t>.54;
     if(ash.visible)for(const [group,count] of [[ash,64],[clasts,26]] as const){
       for(let i=0;i<count;i++){
@@ -112,9 +126,11 @@ export function eruption(r:RegionalScene,x:number,top:number){
           dummy.position.set(x+Math.cos(a+age*4)*spread+(plume?.74*age*age+.09*Math.sin(age*15):0),top+(r.spec.arcTransect?.02:hotspot?.32:.143)+rise,z+Math.sin(a+age*4)*spread);
           radius=plume?(.13+.49*age)*(.76+.24*Math.cos(a+age*8)):.035*(1-age);
         }
-        if(group===ash){dummy.quaternion.copy(r.camera.quaternion);dummy.rotateZ(i*2.399);}else dummy.quaternion.identity();
+        if(group===ash){const sunward=.5+.5*Math.cos(a+.4);
+          tint.setRGB(.50+.34*age+.13*sunward,.47+.35*age+.13*sunward,.45+.38*age+.12*sunward);
+          ash.setColorAt(i,tint);dummy.quaternion.copy(r.camera.quaternion);dummy.rotateZ(i*2.399);}else dummy.quaternion.identity();
         dummy.scale.setScalar(radius);dummy.updateMatrix();group.setMatrixAt(i,dummy.matrix);
-      }group.instanceMatrix.needsUpdate=true;
+      }group.instanceMatrix.needsUpdate=true;if(group.instanceColor)group.instanceColor.needsUpdate=true;
     }
   });
 }

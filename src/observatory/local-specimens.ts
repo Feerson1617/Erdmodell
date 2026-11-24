@@ -5,7 +5,7 @@ const assets:Record<string,[string,number]>={oak:["tree_small_02",7.7],conifer:[
 type Part={geometry:T.BufferGeometry;material:T.MeshStandardMaterial};
 const cache=new Map<string,Promise<Part[]>>();
 export function scannedSpecimen(kind:string){
-  const ref=assets[kind];if(!ref)return;
+  const dry=kind==="drygrass";const ref=assets[dry?"grass":kind];if(!ref)return;
   let pending=cache.get(kind);
   if(!pending){
     const loader=new GLTFLoader();
@@ -17,7 +17,9 @@ export function scannedSpecimen(kind:string){
       scene.traverse(child=>{if(!(child instanceof T.Mesh))return;
         const geometry=child.geometry as T.BufferGeometry,material=child.material as T.MeshStandardMaterial;
         geometry.applyMatrix4(child.matrixWorld);geometry.translate(-origin.x,-origin.y,-origin.z);geometry.scale(factor,factor,factor);
-        material.roughness=.93;if(kind==="grass")material.color.setRGB(1.10,.89,.58);
+        material.roughness=.93;if(dry)material.onBeforeCompile=s=>{
+          s.fragmentShader=s.fragmentShader.replace("#include <color_fragment>","#include <color_fragment>\nfloat blade=dot(diffuseColor.rgb,vec3(.2126,.7152,.0722));diffuseColor.rgb=vec3(.38,.25,.092)*(.53+2.3*sqrt(blade));");
+        };
         if(material.map)material.map.anisotropy=4;parts.push({geometry,material});
       });return parts;
     }).catch(error=>{cache.delete(kind);throw error;});
@@ -26,7 +28,7 @@ export function scannedSpecimen(kind:string){
   return pending;
 }
 
-const distantRows:Record<string,[number,number]>={oak:[0,7.7],conifer:[2,10],shrub:[4,1.25],grass:[6,.62]};
+const distantRows:Record<string,[number,number]>={oak:[0,7.7],conifer:[2,10],shrub:[4,1.25],grass:[6,.62],drygrass:[10,.62]};
 let atlas:T.Texture|undefined;
 export function distantSpecimen(kind:string,onReady:()=>void){
   const row=distantRows[kind];if(!row)return;

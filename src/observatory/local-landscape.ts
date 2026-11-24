@@ -173,7 +173,10 @@ export class LocalLandscape{
       const span=i%3===0?58:154,x=(rng()-.5)*span,z=(rng()-.53)*span,moist=noise(x*.068,z*.068);
       const outcrop=1-Math.min(1,Math.abs(x-6-4*Math.sin(z*.084))/5);
       if(rng()<.24*outcrop+.025*moist)place("rock",x,z,.10+(rng()**3)*1.12);
-      else if(rng()<.24+.59*moist&&outcrop<.8)place("grass",x,z,.52+.82*rng());
+      else if(rng()<.19+.61*moist&&outcrop<.8){
+        const size=.47+.81*rng();place("grass",x,z,size);
+        if(moist>.51){const a=rng()*6.28;place("grass",x+.50*Math.cos(a),z+.50*Math.sin(a),size*.80);}
+      }
       if(i<135&&moist>.45)place("shrub",x,z,.56+1.1*rng());
     }
     for(let j=0;j<254;j++){
@@ -184,13 +187,13 @@ export class LocalLandscape{
     place("rock",2,0,1.32);place("rock",3,.8,.64);
     }
     for(const [key,matrices] of batches){
-      const [kind,side,variant]=key.split("/"),near=specimen(kind as Kind,29+Number(variant)*31),impostor=distantSpecimen(kind,()=>this.revision++),mid=impostor?.geom??specimen(kind as Kind,29+Number(variant)*31,true);
+      const [kind,side,variant]=key.split("/"),near=specimen(kind as Kind,29+Number(variant)*31),variantKind=kind==="grass"&&this.site==="san"?"drygrass":kind,impostor=distantSpecimen(variantKind,()=>this.revision++),mid=impostor?.geom??specimen(kind as Kind,29+Number(variant)*31,true);
       const material=kind==="rock"||kind==="moss"?this.stoneMaterial(kind==="moss"):mat;
       const group=new T.InstancedMesh(near,material,matrices.length);
       matrices.forEach((m,i)=>group.setMatrixAt(i,m));group.castShadow=kind!=="grass";group.receiveShadow=true;group.name=kind;
       const middle=new T.InstancedMesh(mid,impostor?.material??material,matrices.length);middle.castShadow=kind==="oak";middle.receiveShadow=true;
       this.halves[Number(side)].add(group,middle);const scans:T.InstancedMesh[]=[];this.sets.push({group,near,mid,matrices,middle,scans,type:kind});
-      const loading=scannedSpecimen(kind);if(loading)this.pending++;
+      const loading=scannedSpecimen(variantKind);if(loading)this.pending++;
       loading?.then(parts=>{
         if(this.disposed)return;
         for(const part of parts){const model=new T.InstancedMesh(part.geometry,part.material,matrices.length);
@@ -199,6 +202,10 @@ export class LocalLandscape{
         this.lastZone="";this.revision++;
       }).catch(e=>console.error("Nahdetail konnte nicht geladen werden",kind,e)).finally(()=>{this.pending--;this.revision++;});
     }
+  }
+  clearGround(camera:T.PerspectiveCamera){
+    const p=camera.position,bed=this.surface(p.x*10,p.z*10),floor=this.site==="japan"?Math.max(0,bed):bed;
+    p.y=Math.max(p.y,(floor+.72)*.1);
   }
   pose(view:string){
     const [x,z,tx,tz,eye]=this.site==="japan"?(view==="local"?[-12,32,12,-31,11.5]:[-4,11,13,-14,2.25]):this.site==="island"?(view==="local"?[17,26,-1,-10,7.2]:[5,5,-2,-13,2.5]):view===positions[0]?[22,37,0,-10,9]:[5,9,0,-7,1.9];

@@ -48,8 +48,8 @@
       "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/tree_small_02/tree_small_02_leaves_diff_1k.jpg": "261e7d7a5ac7d2e16ea8823ff8510be8f3f615999724232994039ad2885e5c36",
       "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/tree_small_02/tree_small_02_diff_1k.jpg": "4e0093f407b3a1120a36de49a48ebe5a465a9a9b77e361c7a3e66866e115e404"
     },
-    "bytes": 821436,
-    "sha256": "69ea5049e5367422f4051798bc30a967746c34db3d745d247b1c3b599cd09447",
+    "bytes": 1304492,
+    "sha256": "2d15e38cbb4bf5e9f527bd0b8e3a313dd8143e801182a848bd6c7dfa5a9f9d60",
     "mesh": 0,
     "targetFraction": 0.1
   },
