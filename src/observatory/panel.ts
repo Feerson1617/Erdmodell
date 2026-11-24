@@ -3,6 +3,7 @@ import type { World } from "../world";
 import { R } from "../geo";
 import {center, type Step} from "../tectonics/atlas";
 import {classify,localStrike,processNames,sites,type Site} from "./boundaries";
+import {TimeGlobe,scenarios,type Scenario} from "./time";
 import { MapLayers } from "./globe";
 import { RegionalScene, reference, type RegionSpec, type Theme } from "./regional";
 const $=<E extends HTMLElement=HTMLElement>(id:string)=>document.getElementById(id) as E;
@@ -139,9 +140,53 @@ export class Observatory {
   private extraInfo(r:RegionalScene){return r.spec.theme==="earthquake"?item("Was sind P- und S-Wellen?","Goldene Punkte schwingen vor und zurück. Das zeigt die schnellere P-Welle. Türkise Punkte schwingen quer zur Laufrichtung. Diese S-Welle läuft nur durch festes Material.")+item("Was zeigen die zwei Orte?","Der Bruch beginnt im Erdbebenherd. Direkt darüber liegt an der Oberfläche das Epizentrum.")+item("Wann entsteht ein Tsunami?","Wenn sich ein großer Teil des Meeresbodens hebt oder senkt, bewegt er die Wassersäule. Lange Wasserwellen laufen zur Küste und können dort höher werden."):"";}
   private bindExtra(_r:RegionalScene){}
   private pickRegion(_x:number,_y:number){}
-  private pickTime(_x:number,_y:number){}
-  private closeTime(){}
-  private drawTime(){}
-  private frameTime(_dt:number){return false;}
-  private timeDiagnostics(){return {};}
+  private timeline?:TimeGlobe;
+  openTime(){
+    this.base();this.mode="time";this.timeline=new TimeGlobe();this.mark();
+    this.world.nav.fly({lat:12,lon:4,d:15700,tilt:0,bearing:0});this.draw();
+  }
+  private pickTime(x:number,y:number){
+    const b=$("earth").getBoundingClientRect(),ray=new T.Raycaster();ray.setFromCamera(new T.Vector2((x-b.x)/b.width*2-1,1-(y-b.y)/b.height*2),this.world.nav.camera);
+    const name=this.timeline?.pick(ray);if(name)$("g-evidence-name").textContent=name;
+  }
+  private closeTime(){this.timeline?.dispose();this.timeline=undefined;$("g-split-caption")?.remove();}
+  private drawTime(){
+    const t=this.timeline;if(!t)return;
+    const labels={past:"Vergangenheit bis heute",ultima:"Pangaea Ultima",novo:"Novopangaea",aurica:"Aurica",amasia:"Amasia"};
+    this.side.innerHTML='<p class="g-kicker">Plattentektonik</p><h1>Zeitreise</h1><div class="g-stack"><h2 id="g-age"></h2><small id="g-certainty"></small>'+
+      '<label>Zeit wählen<input type="range" min="-250" max="'+(t.scenario==="past"?0:scenarios[t.scenario].end)+'" step=".1" id="g-year" value="'+t.year+'"></label>'+
+      '<div class="g-buttons">'+button("g-reverse","Rückwärts")+button("g-time-play","Abspielen")+button("g-today","Heute")+'</div>'+
+      '<label>Station<select id="g-station">'+opts({"-250":"Pangäa","-200":"Beginnende Aufspaltung","-150":"Weitere Trennung","-100":"Atlantik öffnet sich","-50":"Indien nähert sich Eurasien","0":"Gegenwart"},String(t.year))+'</select></label>'+
+      '<label>Zeitmodell<select id="g-scenario">'+opts(labels,t.scenario)+'</select></label>'+
+      (t.scenario!=="past"?'<label><input id="g-compare" type="checkbox" '+(t.compare?"checked":"")+'> Zwei Möglichkeiten vergleichen</label>':'')+
+      '<label>Tempo<select id="g-speed">'+opts({"3":"Langsam","7":"Normal","14":"Schnell"},String(t.speed))+'</select></label>'+
+      '<details id="g-evidence"><summary>Belege ansehen</summary><label>Hinweis im Globus<select id="g-evidence-kind">'+opts({"":"Ausblenden",margin:"Kontinentalränder",fossil:"Mesosaurus-Fundregionen",rock:"Alte Gebirgsgürtel",india:"Weg Indiens",australia:"Weg Australiens"},t.layer)+'</select></label><p id="g-evidence-name"></p><p id="g-evidence-info"></p>'+
+      button("g-magnet","Magnetstreifen am Rücken")+button("g-motion","Heutige Bewegung")+button("g-real-events","Beobachtete Erdbeben")+'</details>'+
+      item("Was zeigt das Modell?","Die hellen Flächen sind Kontinentalbereiche, auch unter flachem Meer. Die Linien zeigen rekonstruierte Plattengrenzen. Zwischen zwei berechneten Zeitpunkten werden beide Ansichten kurz überblendet.")+
+      item("Wie sicher ist die Zukunft?","Die vier Modelle nehmen unterschiedliche künftige Plattengrenzen an. Sie zeigen Möglichkeiten. Wo Küsten, Gebirge und Städte liegen werden, lässt sich daraus nicht ablesen.")+
+      button("g-to-atlas","Zum heutigen Plattenatlas")+button("g-world","Zum Globus")+'</div>';
+    const age=$<HTMLInputElement>("g-year");age.oninput=()=>{t.playing=false;t.setYear(Number(age.value));};
+    this.action("g-reverse",()=>{if(t.year<=-250)t.setYear(0);t.direction=-1;t.playing=true;});
+    this.action("g-time-play",()=>{if(t.playing){t.playing=false;return;}t.direction=1;if(t.year===(t.scenario==="past"?0:scenarios[t.scenario].end))t.setYear(t.scenario==="past"?-250:0);t.playing=true;});
+    this.action("g-today",()=>{t.playing=false;t.setYear(0);this.draw();});
+    this.change("g-speed",v=>{t.speed=Number(v);});
+    this.change("g-station",v=>{t.playing=false;t.setYear(Number(v));this.draw();});
+    this.change("g-scenario",v=>{t.playing=false;t.scenario=v as Scenario;t.setYear(v==="past"?Math.min(0,t.year):Math.min(Math.max(5,t.year),scenarios[t.scenario].end));this.draw();});
+    this.change("g-compare",()=>{if(t.year<=0)t.setYear(5);t.compare=!t.compare;this.draw();});
+    const text:Record<string,string>={margin:"Die Ränder Südamerikas und Afrikas liegen in der Rekonstruktion näher beieinander. Auch überflutete Teile gehören zum Kontinent.",fossil:"Reste des Süßwasserreptils Mesosaurus finden sich im Paraná- und im Karoo-Becken. Die Punkte markieren Fundregionen. Die Tiere lebten vor der hier gezeigten Zeit.",rock:"In den Appalachen und im kaledonischen Gebirgsgürtel finden sich Spuren einer gemeinsamen alten Gebirgsbildung. Die Punkte markieren Untersuchungsregionen.",india:"Indien wandert im Modell nach Norden.",australia:"Australien trennt sich von der Antarktis."};
+    this.change("g-evidence-kind",v=>{t.layer=v;if(t.year>0)t.setYear(0);$("g-evidence-info").textContent=text[v]||"";$("g-evidence-name").textContent="";});
+    $("g-evidence-info").textContent=text[t.layer]||"";
+    this.action("g-magnet",()=>void this.openRegion(reference("island","magnet")));this.action("g-real-events",()=>void this.openMap());
+    this.action("g-motion",()=>this.navigateBase("plates"));this.action("g-to-atlas",()=>this.navigateBase("plates"));
+    if(!$("g-split-caption")){const el=document.createElement("div");el.id="g-split-caption";$("earth").parentElement!.append(el);}
+  }
+  private frameTime(dt:number){
+    const t=this.timeline;if(!t)return false;t.render(dt,this.world.gl,this.world.nav.camera);
+    const year=Math.round(t.year);$("g-age").textContent=year<0?"Vor "+(-year)+" Mio. Jahren":year>0?"In "+year+" Mio. Jahren":"Heute";
+    $("g-certainty").textContent=t.error||(year>0?"Mögliche Zukunft – keine sichere Vorhersage":year<0?"Wissenschaftliche Rekonstruktion":"Heutige Kontinentalflächen im Rekonstruktionsmodell");
+    $("g-time-play").textContent=t.playing?"Pause":"Abspielen";$<HTMLInputElement>("g-year").value=String(t.year);
+    const caption=$("g-split-caption");if(caption){caption.hidden=!t.compare;caption.textContent=t.compare?scenarios[t.scenario].label+"　 /　 "+scenarios[t.second].label:"";}
+    return true;
+  }
+  private timeDiagnostics(){const t=this.timeline;return t?{year:t.year,scenario:t.scenario,compare:t.compare,timeReady:t.ready,timeError:t.error}:{};}
 }

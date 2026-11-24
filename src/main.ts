@@ -173,8 +173,9 @@ function renderSide() {
     if (advancedOpen && $("plateSettings")) $<HTMLDetailsElement>("plateSettings").open = true;
     bindPlateControls(side, world, renderSide);
     const extra=document.createElement("div");extra.className="g-atlas-tools";
-    extra.innerHTML='<button id="g-boundaries">Grenze untersuchen</button>'+(world.selectedBoundary?'<button id="g-selected">Prozess ansehen</button>':'');
+    extra.innerHTML='<button id="g-time">Zeitreise</button><button id="g-boundaries">Grenze untersuchen</button>'+(world.selectedBoundary?'<button id="g-selected">Prozess ansehen</button>':'');
     side.querySelector("h1")?.after(extra);
+    $("g-time").onclick=()=>observatory.openTime();
     $("g-boundaries").onclick=()=>void observatory.openMap("boundaries");
     if($("g-selected"))$("g-selected").onclick=()=>observatory.openBoundary(world.selectedBoundary!.step);
   }
