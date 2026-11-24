@@ -1,0 +1,50 @@
+{
+  "san": {
+    "name": "Kalifornien \u00b7 Parkfield",
+    "lat": 35.9,
+    "lon": -120.43,
+    "width": 38,
+    "strike": 138,
+    "process": "transform"
+  },
+  "japan": {
+    "name": "Japan \u00b7 T\u014dhoku",
+    "lat": 38.25,
+    "lon": 143.25,
+    "width": 320,
+    "strike": 13,
+    "process": "subduction"
+  },
+  "island": {
+    "name": "Island \u00b7 Reykjanes",
+    "lat": 63.88,
+    "lon": -22.45,
+    "width": 65,
+    "strike": 46,
+    "process": "ridge"
+  },
+  "himalaya": {
+    "name": "Himalaya \u00b7 Zentralnepal",
+    "lat": 28.1,
+    "lon": 84.8,
+    "width": 160,
+    "strike": 104,
+    "process": "collision"
+  },
+  "rift": {
+    "name": "Ostafrika \u00b7 Natronsee",
+    "lat": -2.59,
+    "lon": 35.95,
+    "width": 90,
+    "strike": 3,
+    "process": "rift"
+  },
+  "hawaii": {
+    "name": "Hawaii \u00b7 Inselkette",
+    "lat": 20.6,
+    "lon": -156.3,
+    "width": 420,
+    "strike": 131,
+    "process": "hotspot"
+  }
+}
