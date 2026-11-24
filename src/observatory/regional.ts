@@ -10,7 +10,7 @@ import { Fault, onset, pSpeed, sSpeed } from "./fault";
 import { geologySolids } from "./sections";
 let globalWindows:Promise<Int16Array>|undefined;
 export type Theme="process"|"earthquake"|"volcano"|"risk"|"forces"|"lithosphere"|"magnet";
-export type RegionSpec={site?:Site; name:string; process:Process; lat:number;lon:number; strike:number; azimuth?:number; geology?:Geology; comparison?:RegionSpec; theme:Theme};
+export type RegionSpec={site?:Site; name:string; process:Process; lat:number;lon:number; strike:number; azimuth?:number; geology?:Geology; comparison?:RegionSpec;coastLesson?:boolean; theme:Theme};
 export const reference=(site:Site,theme:Theme):RegionSpec=>({...sites[site],site,geology:referenceGeology(site),process:sites[site].process as Process,theme});
 export const phases=[0,.34,.49,.68,1];
 const clamp=T.MathUtils.clamp;
@@ -58,7 +58,7 @@ export class RegionalScene {
   private waterColumn?:T.Mesh; private nearSurface=0;private rockMaterial:T.Material[]=[];
   private people:T.Mesh[]=[];private route?:T.Line;private motion:((t:number)=>void)[]=[];
   progress=0;playing=false;slow=false;cut=false;names=false;vertical=true;stress=false;
-  protection=false;safeRoute=false;warning=false;relocate=false;exposure="dense";ready=false;error="";private disposed=false;private age=0;
+  soil="rock";eruption="effusive";coastal=false;protection=false;safeRoute=false;warning=false;relocate=false;exposure="dense";ready=false;error="";private disposed=false;private age=0;
   constructor(readonly spec:RegionSpec,canvas:HTMLCanvasElement){
     this.orbit=new OrbitControls(this.camera,canvas);this.orbit.target.set(0,0,0);
     this.orbit.enablePan=false;this.orbit.minDistance=4;this.orbit.maxDistance=22;this.orbit.maxPolarAngle=1.49;
@@ -88,6 +88,7 @@ export class RegionalScene {
         const far=(1-v)*((1-u)*hh[j]+u*hh[j+1])+v*((1-u)*hh[j+145]+u*hh[j+146]);blended=T.MathUtils.lerp(m,far,edge);}
       return blended/1000/(sites[this.spec.site!].width/12)*(this.spec.site==="japan"?4.7:2.4);
     }
+    if(this.spec.coastLesson)return -.48-.95*Math.tanh((x+2.45)*.85)+.42*Math.exp(-((x+4.95)**2)*1.3)+.035*Math.cos(z);
     if(this.windows && this.spec.geology){
       const u=clamp((x/12+.5)*6,0,6),v=clamp((z/9+.5)*6,0,6),i=Math.min(5,Math.floor(u)),j=Math.min(5,Math.floor(v)),dx=u-i,dy=v-j;
       const h=this.windows,k=i+j*7;return .00024*((1-dy)*((1-dx)*h[k]+dx*h[k+1])+dy*((1-dx)*h[k+7]+dx*h[k+8]));
@@ -133,7 +134,7 @@ export class RegionalScene {
   }
   private buildSurface(){
     const f=this.faultModel;
-    for(const side of [-1,1]){
+    for(const side of (this.spec.process==="rift"?[-1,0,1]:[-1,1])){
       const terrain=new T.MeshStandardMaterial({color:this.colorMap?0xffffff:0x93866b,roughness:.86,map:this.colorMap??null,normalMap:this.normalMap??null,normalScale:new T.Vector2(.75,.75),roughnessMap:this.roughMap??null,side:T.DoubleSide});
       terrain.onBeforeCompile=s=>{s.uniforms.opening=this.ui.opening;s.vertexShader="varying float restZ;\n"+s.vertexShader.replace("#include <begin_vertex>","#include <begin_vertex>\nrestZ=position.z;");s.fragmentShader="uniform float opening;varying float restZ;\n"+s.fragmentShader.replace("#include <color_fragment>","#include <color_fragment>\nif(restZ>4.52*(1.-opening))discard;");};
       if(this.contextMap){
@@ -143,12 +144,12 @@ export class RegionalScene {
           shader.fragmentShader="uniform sampler2D contextImage;varying vec2 landscapeXY;\n"+shader.fragmentShader.replace("#include <map_fragment>", "#include <map_fragment>\nfloat border=smoothstep(.78,1.,max(abs(landscapeXY.x)/6.,abs(landscapeXY.y)/4.5));diffuseColor.rgb=mix(diffuseColor.rgb,texture2D(contextImage,vec2(.5+landscapeXY.x/48.,.5-landscapeXY.y/36.)).rgb,border);");};
       }
       for(const front of [false,true]){
-        const g=indexed(36,64,(i,j)=>{const x=side<0?T.MathUtils.lerp(-6,f.trace,i/64):T.MathUtils.lerp(f.trace,6,i/64),z=(front?0:-4.5)+j/8;return [x,this.height(x,z)+.009,z,x/12+.5,.5-z/9];});
+        const g=indexed(36,64,(i,j)=>{const [a,b]=f.blockRange(side,f.top),x=T.MathUtils.lerp(Math.min(a,b),Math.max(a,b),i/64),z=(front?0:-4.5)+j/8;return [x,this.height(x,z)+.009,z,x/12+.5,.5-z/9];});
         this.bindRock(g,side);(front?this.front:this.scene).add(mesh(g,terrain,"Gelände"));
       }
     }
     geologySolids(this);
-    if(!["forces","lithosphere"].includes(this.spec.theme)&&(this.groundData?.some(h=>h<0)||this.windows?.some(h=>h<0))){
+    if(!["forces","lithosphere"].includes(this.spec.theme)&&(this.spec.coastLesson||this.groundData?.some(h=>h<0)||this.windows?.some(h=>h<0))){
       for(const front of [false,true]){
         const g=indexed(42,112,(i,j)=>{const x=-6+12*i/112,z=(front?0:-4.5)+4.5*j/42;return [x,0,z,i/112,j/42];});
         const water=new T.MeshStandardMaterial({color:0x287a88,roughness:.29,metalness:.16,transparent:true,opacity:.78,side:T.DoubleSide,depthWrite:false});

@@ -51,15 +51,16 @@ export function geologySolids(r:RegionalScene){
     return;
   }
   const ocean=["ridge","oceanTransform"].includes(p);
-  for(const side of [-1,1]){
-    const outer=side*6;
+  for(const side of (p==="rift"?[-1,0,1]:[-1,1])){
     const layers:[Rock,number,number][]=[["sediment",0,.045],[ocean?"basalt":"continental",.045,ocean?.14:.33],["mantle",ocean?.14:.33,.60],["warm",.60,1]];
     for(const [kind,a,b] of layers)solid(r,kind,side,(u,v,z)=>{
-      const depth=T.MathUtils.lerp(a,b,v),yAtTrace=T.MathUtils.lerp(f.top,floor,depth),seam=T.MathUtils.clamp(f.xAt(yAtTrace),-5.98,5.98);
+      const depth=T.MathUtils.lerp(a,b,v),yAtTrace=T.MathUtils.lerp(f.top,floor,depth);
+      const [seam,outer]=f.blockRange(side,yAtTrace);
       const x=T.MathUtils.lerp(seam,outer,u),h=r.height(x,z);
       const root=p==="collision"?1.18*Math.exp(-x*x*.23)*Math.sin(depth*Math.PI):0;
       const thinning=p==="rift"?.52*Math.exp(-x*x*.28)*Math.sin(depth*Math.PI):0;
-      const y=T.MathUtils.lerp(yAtTrace,T.MathUtils.lerp(h,floor,depth),Math.min(1,u*7));
+      const blend=side===0?Math.sin(u*Math.PI):Math.min(1,u*7);
+      const y=T.MathUtils.lerp(yAtTrace,T.MathUtils.lerp(h,floor,depth),blend);
       return [x,y-.008-root*u+thinning*u];
     });
   }

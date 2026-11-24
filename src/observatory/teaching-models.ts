@@ -1,3 +1,4 @@
+import {eruption} from "./eruption";
 import * as T from "three";
 import type { RegionalScene, Theme } from "./regional";
 
@@ -64,39 +65,43 @@ function magnetic(r:RegionalScene){
   flow(r,new T.CatmullRomCurve3([vec(.1,-1.7),vec(-.1,-.7),vec(0,r.height(0,0))]),0xeeb68a,"melt",8,.01,1);
 }
 function volcano(r:RegionalScene){
-  const k=r.spec.process,vent=k==="subduction"||k==="arc"?-2.7:0,top=r.height(vent,0);
-  if(k==="subduction"||k==="arc")flow(r,new T.CatmullRomCurve3([vec(-2,-2.35),vec(-2.17,-1.85),vec(-2.7,-1.45)]),0x8bd2d7,"fluid",7,.04,.61);
-  const plume=new T.CatmullRomCurve3([vec(vent+.2,-2.45),vec(vent-.17,-1.64),vec(vent,-.93),vec(vent,top+.03)]);
+  const k=r.spec.process,f=r.faultModel,vent=k==="subduction"||k==="arc"?T.MathUtils.clamp(f.trace+f.dipSign*5.4,-4.8,4.8):0,top=r.height(vent,-.33);
+  if(k==="subduction"||k==="arc")flow(r,new T.CatmullRomCurve3([vec(vent,f.interfaceY(vent)),vec(vent-.11,(f.interfaceY(vent)+top)/2),vec(vent,top-.93)]),0x8bd2d7,"fluid",7,.04,.61);
+  const plume=new T.CatmullRomCurve3([vec(vent+.2,top-2.15),vec(vent-.17,top-1.47),vec(vent,top-.93),vec(vent,top+.03)]);
   flow(r,plume,0xf2ad6c,k==="hotspot"?"hotspot":"melt",15,.12,.93);
   const reservoir=object(new T.IcosahedronGeometry(1,2),chips(0xb76d49),"chamber");reservoir.position.set(vent,-.98,.16);r.section.add(reservoir);
-  const cone=object(new T.ConeGeometry(.58,.65,40),chips(0x655d4d),"lava");r.scene.add(cone);
-  r.onAnimate(t=>{const f=T.MathUtils.smoothstep(t,.4,.95);reservoir.scale.set(.34+.28*f,.11+.075*f,.075);cone.scale.set(.85+.3*f,.1+.9*f,.85+.3*f);
-    cone.position.set(vent,top+cone.scale.y*.325,-.08);});
-  const lava=line(Array.from({length:28},(_,i)=>vec(vent+i/60,top+.63-i*.022,-.12+i*.008)),0xf4a16a,"lava");r.scene.add(lava);r.onAnimate(t=>{lava.visible=t>.67;lava.geometry.setDrawRange(0,Math.floor(28*T.MathUtils.smoothstep(t,.67,.94)));});
-  if(k==="hotspot"){
-    for(let i=0;i<5;i++){const mound=object(new T.ConeGeometry(.5,.68,32),chips(0x698063),"hotspot");r.scene.add(mound);r.onAnimate(t=>{const age=t*4.4-i;mound.visible=age>=0;
-      const z=-1.4+Math.max(0,age)*1.16,x=.32*Math.sin(age),f=T.MathUtils.clamp(age*2.7,.03,1);mound.scale.setScalar(f);mound.position.set(x,r.height(x,z)+.33*f,z);});}
-  }
+  reservoir.position.y=top-.91;r.onAnimate(t=>{const f=T.MathUtils.smoothstep(t,.18,.66);reservoir.scale.set(.34+.25*f,.11+.09*f,.095);});
+  eruption(r,vent,top);
 }
 function settlements(r:RegionalScene){
   const walls=chips(0xd8cbb1),roof=chips(0x805643),brace=chips(0x508980);
   const wallGeo=new T.BoxGeometry(.20,.28,.2),roofGeo=new T.ConeGeometry(.18,.105,4),braceGeo=new T.BoxGeometry(.027,.33,.025);
   const buildings:T.Group[]=[],baseX:number[]=[];
+  const sediment=object(new T.BoxGeometry(6.8,.27,.56),chips(0xb49b68),"shelter");
+  sediment.userData.explanation={name:"Lockerer Untergrund",answer:"Lockere Ablagerungen können die Erschütterung am Standort verstärken."};
+  sediment.position.set(0,r.height(0,0)-.15,.19);r.section.add(sediment);
   for(let i=0;i<30;i++){
-    const col=i%6,row=Math.floor(i/6);const x=-3.4+col*1.23,z=-2.02+row*.72;
+    const col=i%6,row=Math.floor(i/6),x=r.spec.coastLesson?-3.6+col*.15:-3.4+col*1.23,z=-2.04+row*.43;
     const g=new T.Group();g.userData.explanation=text.shelter;g.position.set(x,r.height(x,z),z);
     const wall=object(wallGeo,walls,"shelter"),cap=object(roofGeo,roof,"shelter");wall.position.y=.14;cap.position.y=.33;cap.rotation.y=Math.PI/4;
     const beam=object(braceGeo,brace,"shelter");beam.position.set(0,.15,.105);beam.rotation.z=.48;g.add(wall,cap,beam);r.settlement.add(g);buildings.push(g);baseX.push(x);
   }
-  const route=line(Array.from({length:28},(_,i)=>{const x=1-i*.16,z=-1.1+Math.sin(i/7)*.38;return vec(x,r.height(x,z)+.14,z);}),0xffde72,"route");r.settlement.add(route);
-  const beacon=object(new T.ConeGeometry(.12,.45,6),chips(0xe3a349),"route");beacon.position.set(1,r.height(1,-1.1)+.22,-1.1);r.settlement.add(beacon);
-  const walkers=new T.InstancedMesh(new T.SphereGeometry(.045,6,5),chips(0xf5d78a),10);r.settlement.add(walkers);const dummy=new T.Object3D();
-  r.onAnimate(t=>{route.visible=r.safeRoute&&r.exposure!=="empty";beacon.visible=r.warning&&r.exposure!=="empty";walkers.visible=route.visible&&r.warning;
-    for(let i=0;i<10;i++){const phase=T.MathUtils.clamp((t-.38)*1.8+i*.026,0,1),x=1-phase*4.32,z=-1.1+Math.sin(phase*27/7)*.38;dummy.position.set(x,r.height(x,z)+.17,z);dummy.updateMatrix();walkers.setMatrixAt(i,dummy.matrix);}walkers.instanceMatrix.needsUpdate=true;
-    buildings.forEach((g,i)=>{g.position.x=r.relocate?baseX[i]*.62-1.7:baseX[i];g.position.y=r.height(g.position.x,g.position.z);
-    const x=g.position.x;g.visible=r.exposure==="dense"||(r.exposure==="sparse"&&i%5===0);g.children[2].visible=r.protection;
-    const rel=(t-.42)*17.-Math.abs(x)*.69,shaking=rel>0?Math.sin(rel*13)*Math.exp(-rel*1.22):0;
-    const ground=x>0?1.65:.77;g.rotation.z=shaking*.13*ground*(r.protection?.44:1);});});
+  const routeStart=r.spec.coastLesson?-3.12:-1.5,routeEnd=r.spec.coastLesson?-5.03:-3.6;
+  const way=(t:number)=>{const x=T.MathUtils.lerp(routeStart,routeEnd,t),z=-1.35+.24*Math.sin(t*Math.PI);return vec(x,r.height(x,z)+.09,z);};
+  const route=line(Array.from({length:28},(_,i)=>way(i/27)),0xffde72,"route");r.settlement.add(route);
+  const beacon=object(new T.ConeGeometry(.12,.45,6),chips(0xe3a349),"route");beacon.position.copy(way(0));beacon.position.y+=.16;r.settlement.add(beacon);
+  const walkers=new T.InstancedMesh(new T.SphereGeometry(.052,7,5),chips(0xffdf85),10);r.settlement.add(walkers);const dummy=new T.Object3D();
+  const service=object(new T.BoxGeometry(.35,.10,.19),chips(0x5e9771),"shelter");service.userData.explanation={name:"Versorgung wiederherstellen",answer:"Mit Vorbereitung kann die Versorgung nach dem Ereignis früher wieder funktionieren."};service.position.copy(way(1));r.settlement.add(service);
+  r.onAnimate(t=>{sediment.visible=r.soil==="loose"&&!r.spec.coastLesson;route.visible=r.safeRoute&&r.exposure!=="empty";beacon.visible=r.warning&&r.exposure!=="empty";walkers.visible=route.visible&&r.warning;
+    const available=t<.49||t>(r.warning&&r.safeRoute?.77:.94);service.visible=r.exposure!=="empty";(service.material as T.MeshStandardMaterial).color.setHex(available?0x729f71:0x655d55);
+    for(let i=0;i<10;i++){dummy.position.copy(way(T.MathUtils.clamp((t-.36)*2.3+i*.016,0,1)));dummy.updateMatrix();walkers.setMatrixAt(i,dummy.matrix);}walkers.instanceMatrix.needsUpdate=true;
+    buildings.forEach((g,i)=>{const x=baseX[i]-(r.relocate&&r.spec.coastLesson?1.55:0),z=g.position.z,h=r.height(x,z);
+      const d=r.faultModel.offset(r.deformed,x,h,z,x>r.faultModel.trace?1:-1,t);
+      g.position.set(x+d.x,h+d.y,z);g.visible=r.exposure==="dense"||(r.exposure==="sparse"&&i%5===0);
+      g.children[2].visible=r.protection;
+      g.rotation.z=r.faultModel.shaking(t,x,h,z)*(r.soil==="loose"?2.3:1)*(r.protection?.56:1);
+    });
+  });
 }
 function witness(r:RegionalScene){
   for(const s of [-1,1]){

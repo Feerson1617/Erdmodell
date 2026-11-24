@@ -20,7 +20,7 @@ export class Fault {
     this.top=height(this.trace,0);
     this.hy=this.top-(this.kind==="interface"?.64:1.06);this.hx=this.xAt(this.hy);
     this.slipSign=this.kind==="normal"?-1:1;
-    this.waterEvent=spec.theme==="earthquake"&&this.kind==="interface"&&this.top<0;
+    this.waterEvent=(spec.theme==="earthquake"||Boolean(spec.coastLesson))&&this.kind==="interface"&&this.top<0;
   }
   // Slab2 active-source transect, relative to its shallowest constraint.
   xAt(y:number){
@@ -40,6 +40,14 @@ export class Fault {
       return this.top-(km-this.profile[0][1])*12*2.4/320;
     }
     return this.top-(x-this.trace)*this.dipSign*Math.tan(this.dip*Math.PI/180);
+  }
+  blockRange(side:number,y:number):[number,number]{
+    const seam=T.MathUtils.clamp(this.xAt(y),-5.98,5.98);
+    if(this.spec.process==="rift"){
+      const left=Math.min(0,seam),right=-left;
+      return side<0?[left,-6]:side>0?[right,6]:[left,right];
+    }
+    return side<0?[seam,-6]:[seam,6];
   }
   point(y:number,z=0){return new T.Vector3(this.xAt(y),y,z);}
   release(t:number,x:number,y:number,z:number){return smooth((t-onset-Math.hypot(x-this.hx,y-this.hy,z)/16)/.07);}
@@ -62,6 +70,16 @@ export class Fault {
       target.set(this.xAt(y+dy)-this.xAt(y),dy,0);
       // The nascent plate at a spreading axis and the hinterland separate over geologic time.
       if(slow&&this.spec.process==="ridge")target.set(side*.65*t,0,0);
+    }
+    if(this.spec.process==="rift"){
+      // Conjugate normal faults bound the central hanging block. Relative slip on each
+      // face is along dip. The footwalls move apart as the central block subsides.
+      const a=.46*strain,angle=this.dip*Math.PI/180;
+      target.set(side*a*Math.cos(angle),side===0?-a*Math.sin(angle):0,0);
+    }
+    if(slow&&this.spec.process==="collision"){
+      const h=Math.tanh(x/2.3),jacobian=1-.32*t*(1-h*h);
+      target.x-=.736*t*h;target.y+=(y+.85)*(1/jacobian-1);
     }
     if(quake)target.y+=this.shaking(t,x,y,z);
     return target;
