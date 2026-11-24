@@ -41,10 +41,14 @@ export class TimeGlobe {
     for(const entry of def.index){const a=[],ns=[];for(let i=entry.start;i<entry.start+entry.count;i++){
       const v=position(coords[2*i+1]/100,coords[i*2]/100,27);a.push(v.x,v.y,v.z);v.normalize();ns.push(v.x,v.y,v.z);}
       const g=new T.BufferGeometry();g.setAttribute("position",new T.Float32BufferAttribute(a,3));g.setAttribute("normal",new T.Float32BufferAttribute(ns,3));
-      const mat=new T.ShaderMaterial({side:T.DoubleSide,uniforms:{tone:{value:new T.Vector3().fromArray(tones[entry.pid])}},
+      const mat=new T.ShaderMaterial({side:T.DoubleSide,depthWrite:false,uniforms:{tone:{value:new T.Vector3().fromArray(tones[entry.pid])}},
         vertexShader:"varying vec3 n;void main(){n=normalize(normalMatrix*normal);gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}",
         fragmentShader:"uniform vec3 tone;varying vec3 n;void main(){float light=clamp(dot(normalize(n),normalize(vec3(-.4,.6,1.))),0.,1.);gl_FragColor=vec4(tone*(.72+.34*light),1.);}"});
-      for(const group of this.continents)group.add(new T.Mesh(g,mat));
+      // The ocean sphere clips the far side. A fixed cartographic order keeps overlapping
+      // source polygons legible without implying elevation or a local collision mechanism.
+      for(const group of this.continents){
+        const mesh=new T.Mesh(g,mat);mesh.renderOrder=group.children.length+1;group.add(mesh);
+      }
     }
     this.primary.scene.add(this.continents[0]);this.other.scene.add(this.continents[1]);
   }

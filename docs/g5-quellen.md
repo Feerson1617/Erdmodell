@@ -28,6 +28,8 @@ python scripts/g5/terrain.py
 
 Die sechs hochaufgelösten Oberflächen (-surface.webp) sind bearbeitete Ausschnitte von **EOxCloudless 2024 by EOX IT Services GmbH, contains modified Copernicus Sentinel data 2024**. Sie werden unter **CC BY-NC-SA 4.0** weitergegeben. Bearbeitung: gedrehtes regionales Raster, bilineare Abtastung, Bildkompression und NASA-Bathymetrie über offenen Wasserflächen. Die unveränderten Archivdaten bleiben getrennt. Abfrage, räumliche Ausdehnung und Prüfsumme je Bild stehen in terrain/surface-sources.json. Die Normalenkarten beruhen auf der feinen Reliefabweichung vom geglätteten Höhenraster. [EOX](https://cloudless.eox.at/) · [Lizenz](https://creativecommons.org/licenses/by-nc-sa/4.0/)
 
+Überlappende Kontinentalflächen der Zukunftsszenarien haben eine feste kartografische Zeichenreihenfolge. Die Farben kennzeichnen Modellblöcke. Aus der Überdeckung lässt sich keine Höhenlage oder Art der Kollision ablesen.
+
 Für die Zukunft werden die zehn Plattenkennungen der veröffentlichten Kontinentpolygone getrennt trianguliert. Die App dreht diese Körper mit den endlichen Rotationen aus den jeweiligen Szenarien. Zwischen jahresmillionengenauen Quaternionen wird auf der Einheitskugel interpoliert. Die historischen Zeitschnitte bleiben getrennte Rekonstruktionen. scripts/g5/future_mesh.py und scripts/g5/evidence.py erwarten als Argument den von sources.py erzeugten Ordner. scripts/g5/materials.py erzeugt die Satelliten- und Materialkarten.
 
 ## Strukturdaten der Referenzregionen
