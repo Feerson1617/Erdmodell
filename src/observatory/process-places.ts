@@ -128,6 +128,7 @@ export const regions: Record<string, [number, number]> = {
   Pazifik: [-12, -156],
   Asien: [34, 86],
   Afrika: [2, 23],
+  Europa: [52, 15],
   Atlantik: [5, -30],
   "Indischer Ozean": [-12, 82],
   Arktis: [72, 40],
@@ -136,4 +137,4 @@ export const regions: Record<string, [number, number]> = {
   Südamerika: [-17, -64],
   "Afrika und Arabien": [21, 37],
 };
-export const isContinent = (name: string) => ["Asien", "Afrika", "Südamerika", "Nordamerika"].includes(name);
+export const isContinent = (name: string) => ["Europa", "Asien", "Afrika", "Südamerika", "Nordamerika"].includes(name);

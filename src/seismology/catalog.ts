@@ -82,6 +82,9 @@ export const regionViews: Record<
   },
 };
 export const families = {
+  maars:{title:"Maarentstehung",variants:{maar:"Maarentstehung · mit See",dryMaar:"Trockenmaar"}},
+  eifel:{title:"Vulkaneifel",variants:{eifel:"Vulkaneifel · Übersicht",ulmen:"Ulmener Maar · Landschaft",aerial:"Ulmen · Draufsicht",lakeCut:"Idealisierter Seeschnitt"}},
+  lakes:{title:"Seen und Gase",variants:{mixing:"Chemisch stabile Tiefenschicht",turnover:"Jahreszeitliche Vollzirkulation",dissolved:"Gelöstes Kohlendioxid",lakeCompare:"Ulmener Maar und Nyos"}},
   plumbing: {title:"Magmatische Prozesse",variants:{storage:"Schmelze im festen Gestein",degassing:"Vulkanische Gase",contact:"Magma trifft Grundwasser"}},
   faults: {
     title: "Bruchmechanismen",
@@ -174,7 +177,9 @@ export function viewOptions(id: string): [string, string][] {
 // The link is a reversible change of scale or model, accessible alongside free navigation.
 export const connections: Record<string, [string, string]> = {
   shield:["lava","Lavafluss zeigen"], lava:["cone","Mit Japan vergleichen"],cone:["plume","Eruption zeigen"],plume:["storage","Magmatischer Untergrund"],
-  storage:["degassing","Gastransport"],degassing:["monitor","Zur Überwachung"],contact:["plume","Magmatische Eruption vergleichen"],
+  storage:["degassing","Gastransport"],degassing:["monitor","Zur Überwachung"],contact:["maar","Zur Maarentstehung"],
+  eifel:["ulmen","Nach Ulmen"],ulmen:["lakeCut","See im Schnitt"],aerial:["lakeCut","See im Schnitt"],lakeCut:["maar","Entstehung zeigen"],maar:["ulmen","Zum heutigen Maar"],dryMaar:["eifel","Zur Vulkaneifel"],
+  turnover:["mixing","Mit stabilem Tiefenwasser vergleichen"],mixing:["dissolved","Gelöstes Gas"],dissolved:["nyos-event","Nyos 1986"],lakeCompare:["ulmen","Nach Ulmen"],
   distribution: ["boundaries", "Grenzen zeigen"],
   boundaries: ["park", "Parkfield öffnen"],
   depthMap: ["observed", "Japan im Schnitt"],

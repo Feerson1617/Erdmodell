@@ -35,3 +35,7 @@ Die tatsächlichen Aufnahmen und Messwerte der jeweiligen Version stehen im Sich
 Jede Stufe benötigt eine eigene fachliche und visuelle Prüfung, die installierte App, die Offline-Datei, eine kontrollierte Vergleichsmessung und einen Dauerlauf. Das physische Zielgerät muss in der Cloud nicht verfügbar sein.
 
 Die eigenständige Tsunamivertiefung folgt nach G6.8. [Reihenfolge](roadmap.md)
+
+## G6.6 und G6.7
+
+Ausgangspunkt ist G6.5.1 (`1e760ba0`). G6.6 (`e2075569`) wurde im Offline-Browser anhand von sieben Vulkanszenen auf sichtbare Geometrie geprüft. G6.7 ergänzt das georeferenzierte Relief der Vulkaneifel, Ulmen, Maarbildung und vergleichende Seenkunde. Die Sichtprüfung des jeweiligen Produktlaufs enthält getrennte Protokolle für HTML und installierte App. [Fachstand Ulmen und Nyos](ulmener-maar-nyos.md) · [G6.6-Zwischenabnahme](g66-zwischenabnahme.json)

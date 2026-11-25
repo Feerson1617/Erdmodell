@@ -1,0 +1,36 @@
+{
+  "phase": "G66",
+  "frames": [
+    {
+      "id": "shield",
+      "foreground": 0.9145329540066383
+    },
+    {
+      "id": "lava",
+      "foreground": 0.6763474000316105
+    },
+    {
+      "id": "cone",
+      "foreground": 0.822694404931247
+    },
+    {
+      "id": "plume",
+      "foreground": 0.8919017701912438
+    },
+    {
+      "id": "storage",
+      "foreground": 0.3713351509404141
+    },
+    {
+      "id": "degassing",
+      "foreground": 0.3713351509404141
+    },
+    {
+      "id": "contact",
+      "foreground": 0.3707128180812391
+    }
+  ],
+  "movies": [],
+  "windows": [],
+  "errors": []
+}

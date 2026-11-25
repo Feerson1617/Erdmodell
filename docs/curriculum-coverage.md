@@ -142,3 +142,12 @@ Grundlagen sind die Fachanforderungen Geographie Schleswig-Holstein Sek. I 2015,
 ## G6.5.1 · Erdbewegung beobachten und vergleichen
 
 Für Jahrgang 9 verbinden Parkfield und Japan die regionale Orientierung mit dem allgemeinen Prozessmodell. Die Lehrkraft kann erst sichtbare Strukturen vergleichen lassen und danach einzelne Begriffe freigeben. Die zwei Stationen veranschaulichen bei unterschiedlicher Entfernung denselben Prozess. Bei den Standortmodellen bleibt die Entfernung konstant, während sich der Untergrund ändert. Diese kontrollierten Vergleiche konkretisieren räumliche Orientierung, Modellbildung und systemisches Denken gemäß den oben belegten Fachanforderungen, dem Leitfaden und dem schulinternen Curriculum.
+
+## Jahrgang 9 · Vulkanismus und das Ulmener Maar
+
+| Unterrichtsbezug | Beobachtung am Modell | Fachliche Reichweite |
+|---|---|---|
+| Plattentektonik und Vulkanismus räumlich einordnen | Japan, Hawaii und Vulkaneifel am Globus lokalisieren. Vulkanformen und Eruptionsprodukte vergleichen. | Subduktion, ozeanischer und intrakontinentaler Vulkanismus. Die Ursache des Eifelvulkanismus ist Gegenstand der Forschung. |
+| Das Zusammenwirken endogener Prozesse erklären | In aufeinanderfolgenden Modellphasen Kontakt mit Grundwasser, Auswurf, Einsenkung und Wallbildung beobachten. | Qualitative Prozessfolge, mehrere Explosionen und mögliche spätere Wasserfüllung. |
+| Geographische Informationen auswerten | Ufer und Siedlung von Ulmen im Luftbild finden und mit dem Seeprofil in Beziehung setzen. | Reale Oberfläche, idealisiertes Unterwasserrelief. Abweichende publizierte Tiefen sind im Fachbericht angegeben. |
+| Naturereignisse und Risiken beurteilen | Dichteunterschiede, gelöstes Gas, Freisetzung von 1986 und Tiefenwasserentgasung am Nyos untersuchen. Beide Seen anhand desselben Merkmals vergleichen. | Historische Beobachtung und allgemeiner Prozess sind gekennzeichnet. Die Lehrkraft moderiert die ergebnisoffene Bewertung der lokalen Messlage. |
