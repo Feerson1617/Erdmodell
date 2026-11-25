@@ -1,15 +1,38 @@
 import * as T from "three";
-import { basin, wilsonMotion, margin, clamp, geologyAt, spreading, subducts, type ProcessId } from "./tectonic-process";
+import landTextureUrl from "./land-material.webp";
+let terrainLibrary: Promise<T.Texture> | undefined;
+function landscapeMaterial() {
+  return (terrainLibrary ??= new T.TextureLoader()
+    .loadAsync(landTextureUrl)
+    .then((t) => {
+      t.colorSpace = T.SRGBColorSpace;
+      return t;
+    })
+    .catch((e) => {
+      terrainLibrary = undefined;
+      throw e;
+    }));
+}
+import {
+  basin,
+  wilsonMotion,
+  margin,
+  clamp,
+  geologyAt,
+  spreading,
+  subducts,
+  type ProcessId,
+} from "./tectonic-process";
 import { libraryGLSL, materials, quality } from "./graphics";
 
 export type Analysis = "natural" | "materials" | "age" | "magnet";
 const W = 4.8,
   D = 2.5;
 const color = (hex: number) => new T.Color(hex);
-const palette = [0xc4ae86, 0x9c7360, 0x8c8172, 0x4c5b61, 0x6e7555, 0x966851, 0x795345].map(color);
-const ocean = color(0x45616c),
-  land = color(0x81906e),
-  peak = color(0xccbda4),
+const palette = [0xc4ae86, 0x9c7360, 0x8c8172, 0x4c5b61, 0x737859, 0x797661, 0x795345].map(color);
+const ocean = color(0x355761),
+  land = color(0x5a7356),
+  peak = color(0x93867a),
   fissure = color(0x342e2b);
 const colorSnow = color(0xe1e6df);
 const ages = [0xec7959, 0xe5b77c, 0xd9c798, 0x8eaea7, 0x608bba].map(color);
@@ -27,11 +50,16 @@ class Grid {
     private ny: number,
     material: T.Material,
     private changingNormals = false,
+    surface = false,
   ) {
     const count = (nx + 1) * (ny + 1);
     this.positions = new T.BufferAttribute(new Float32Array(count * 3), 3).setUsage(T.DynamicDrawUsage);
     this.colors = new T.BufferAttribute(new Float32Array(count * 3), 3).setUsage(T.DynamicDrawUsage);
     this.previous = new T.BufferAttribute(new Float32Array(count * 3), 3).setUsage(T.DynamicDrawUsage);
+    this.geometry.setAttribute(
+      "terrainFace",
+      new T.BufferAttribute(new Float32Array(count).fill(surface ? 1 : 0), 1),
+    );
     this.geometry.setAttribute("previousPosition", this.previous);
     this.geometry.setAttribute("position", this.positions);
     this.geometry.setAttribute("color", this.colors);
@@ -107,6 +135,8 @@ export class PlateSection {
   private meltField: T.Mesh;
   private reservoir: T.Mesh;
   private mantleUp: T.ArrowHelper;
+  private fabric: T.InstancedMesh;
+  private thrusts = new T.Group();
   private ruler: T.Mesh;
   private disposed = false;
   constructor(
@@ -114,8 +144,8 @@ export class PlateSection {
     repaint: () => void,
   ) {
     this.rock = new T.MeshStandardMaterial({ vertexColors: true, side: T.DoubleSide, roughness: 0.91 });
-    const div = quality() === 0 ? 48 : quality()===2 ? 104 : 80;
-    this.surface = new Grid(div, Math.round(div * 0.55), this.rock, true);
+    const div = quality() === 0 ? 48 : quality() === 2 ? 104 : 80;
+    this.surface = new Grid(div, Math.round(div * 0.55), this.rock, true, true);
     this.front = new Grid(div, 30, this.rock);
     this.ends = [new Grid(28, 24, this.rock), new Grid(28, 24, this.rock), new Grid(div, 24, this.rock)];
     this.slab = new Grid(57, 7, this.rock);
@@ -134,6 +164,25 @@ export class PlateSection {
     this.water.position.y = -0.13;
     this.water.renderOrder = 2;
     this.group.add(this.water);
+    this.fabric = new T.InstancedMesh(
+      new T.IcosahedronGeometry(1, 1),
+      new T.MeshStandardMaterial({ color: 0xa4b9bc, roughness: 0.9 }),
+      8,
+    );
+    this.fabric.frustumCulled = false;
+    this.group.add(this.fabric, this.thrusts);
+    if (kind === "collision" || kind === "complex" || kind === "wilson") {
+      for (const side of [-1, 1])
+        for (const offset of [0.3, 0.85, 1.42]) {
+          const positions = new Float32Array(18 * 3);
+          const geo = new T.BufferGeometry();
+          geo.setAttribute("position", new T.BufferAttribute(positions, 3));
+          const line = new T.Line(geo, new T.LineBasicMaterial({ color: 0x433b38 }));
+          line.userData = { side, offset };
+          line.frustumCulled = false;
+          this.thrusts.add(line);
+        }
+    }
     const drop = new T.SphereGeometry(0.047, 8, 6);
     const particles = (hex: number, count: number) =>
       new T.InstancedMesh(
@@ -154,7 +203,7 @@ export class PlateSection {
     this.zone.frustumCulled = this.pillows.frustumCulled = false;
     this.group.add(this.pillows);
     this.pockets.add(this.zone);
-    this.fluids = particles(0x68c9d7, 17);
+    this.fluids = particles(0x4fd8eb, 17);
     this.melt = particles(0xffad5c, 21);
     this.pockets.add(this.fluids, this.melt);
     this.group.add(this.pockets);
@@ -171,22 +220,29 @@ export class PlateSection {
     }
     this.group.add(this.arrows, this.localArrows);
     for (const side of [-1, 1]) {
-      this.localArrows.add(new T.ArrowHelper(new T.Vector3(side,0,0),new T.Vector3(),.53,0x69d5cb,.19,.12));
+      this.localArrows.add(
+        new T.ArrowHelper(new T.Vector3(side, 0, 0), new T.Vector3(), 0.53, 0x69d5cb, 0.19, 0.12),
+      );
     }
-    const volume = (shade: number) => new T.Mesh(new T.IcosahedronGeometry(1, 2),
-      new T.MeshStandardMaterial({color: shade, emissive: 0x733719, emissiveIntensity:.32,
-        roughness:.84, flatShading:true}));
+    const volume = (shade: number) =>
+      new T.Mesh(
+        new T.IcosahedronGeometry(1, 2),
+        new T.MeshStandardMaterial({
+          color: shade,
+          emissive: 0x733719,
+          emissiveIntensity: 0.32,
+          roughness: 0.84,
+          flatShading: true,
+        }),
+      );
     this.meltField = volume(0xae6d45);
     this.reservoir = volume(0xe58c55);
-    this.mantleUp=new T.ArrowHelper(new T.Vector3(0,1,0),new T.Vector3(),.65,0xf3d995,.18,.13);
-    this.pockets.add(this.meltField,this.reservoir,this.mantleUp);
-    this.ruler = new T.Mesh(
-      new T.SphereGeometry(0.095, 12, 8),
-      new T.MeshBasicMaterial({ color: 0xffebae }),
-    );
+    this.mantleUp = new T.ArrowHelper(new T.Vector3(0, 1, 0), new T.Vector3(), 0.65, 0xf3d995, 0.18, 0.13);
+    this.pockets.add(this.meltField, this.reservoir, this.mantleUp);
+    this.ruler = new T.Mesh(new T.SphereGeometry(0.095, 12, 8), new T.MeshBasicMaterial({ color: 0xffebae }));
     this.group.add(this.ruler);
-    void materials()
-      .then((lib) => {
+    void Promise.all([materials(), landscapeMaterial()])
+      .then(([lib, terrain]) => {
         if (this.disposed) return;
         const m = this.rock;
         m.onBeforeCompile = (s) => {
@@ -196,15 +252,35 @@ export class PlateSection {
             detailGrade: { value: 1 },
             geometryFraction: this.fraction,
             naturalFacies: this.natural,
+            terrainAtlas: { value: terrain },
+            exampleTile: {
+              value:
+                kind === "collision" || kind === "wilson"
+                  ? 0
+                  : kind === "rift"
+                    ? 1
+                    : kind === "transform" || kind === "complex"
+                      ? 2
+                      : 3,
+            },
+            marineModel: {
+              value: ["ridge", "oceanTransform"].includes(kind)
+                ? 2
+                : ["arc", "hotspot"].includes(kind)
+                  ? 1
+                  : 0,
+            },
           });
           s.vertexShader =
-            "attribute vec3 previousPosition; uniform float geometryFraction; varying vec3 specimenPoint;\n" +
+            "attribute float terrainFace; varying float surfaceFace; attribute vec3 previousPosition; uniform float geometryFraction; varying vec3 specimenPoint;\n" +
             s.vertexShader.replace(
               "#include <begin_vertex>",
-              "#include <begin_vertex>\ntransformed=mix(previousPosition,position,geometryFraction);specimenPoint=transformed;",
+              "#include <begin_vertex>\nsurfaceFace=terrainFace;transformed=mix(previousPosition,position,geometryFraction);specimenPoint=transformed;",
             );
           s.fragmentShader =
-            "varying vec3 specimenPoint;uniform float naturalFacies;\n" + libraryGLSL + s.fragmentShader;
+            "varying float surfaceFace;uniform sampler2D terrainAtlas;uniform float exampleTile,marineModel;varying vec3 specimenPoint;uniform float naturalFacies;\n" +
+            libraryGLSL +
+            s.fragmentShader;
           s.fragmentShader = s.fragmentShader.replace(
             "#include <color_fragment>",
             `#include <color_fragment>
@@ -221,8 +297,20 @@ export class PlateSection {
           float fine=clamp(.73+1.1*sqrt(luma6(gravel)),.74,1.35);
           vec3 tint=clamp(stone/(luma6(stone)+.035),vec3(.54),vec3(1.55));
           float grain=mix(.74,1.24,smoothstep(.06,.48,luma6(gravel)));
-          float veins=.82+.18*cos(uv.y*48.+strata*1.9);
+          float veins=mix(.98,.91+.09*cos(uv.y*41.+strata*1.9),smoothstep(-1.25,-.32,p.y));
           diffuseColor.rgb*=mix(vec3(1.),mix(vec3(1.),tint,.46)*macro*fine*mix(veins,grain,ledge),naturalFacies);
+          if(surfaceFace>.5 && naturalFacies>.5){
+            vec2 tile=vec2(mod(exampleTile,2.),1.-floor(exampleTile/2.));
+            vec2 groundUV=p.xz*vec2(.24,.32);
+            vec3 regional=textureGrad(terrainAtlas,(tile+fract(groundUV)*.99+.005)*.5,dFdx(groundUV)*.5,dFdy(groundUV)*.5).rgb;
+            float sea=marineModel>1.5?1.:1.-smoothstep(-.17,-.045,p.y);
+            vec3 dry=regional*.76+vec3(.027,.030,.022);
+            if(exampleTile<.5)dry=mix(vec3(.12,.15,.083),dry,smoothstep(.29,.81,p.y));
+            if(marineModel>.5 && marineModel<1.5)dry=mix(vec3(.12,.145,.071),vec3(.128,.095,.079),smoothstep(.08,.62,p.y))*(.65+.73*luma6(stone));
+            dry=mix(dry,diffuseColor.rgb,smoothstep(.83,1.66,p.y)*.72);
+            vec3 basalt=diffuseColor.rgb*vec3(.48,.78,.89)*(.66+.48*smoothstep(.34,.9,n.y));
+            diffuseColor.rgb=mix(mix(diffuseColor.rgb,dry,.74),basalt,sea);
+          }
           vec2 detailNormal=fieldSample(faciesRelief,bedding*.66,facies).rg*2.-1.;`,
           );
           s.fragmentShader = s.fragmentShader.replace(
@@ -266,11 +354,12 @@ export class PlateSection {
         else c.copy(s.polarity > 0 ? positive : negative);
       } else {
         c.copy(g.ocean ? ocean : land);
-        if (g.ocean) c.multiplyScalar(.56 + .34*clamp(g.top+.71) + .12*Math.abs(Math.sin(4*x+z)));
+        if (g.ocean)
+          c.multiplyScalar(0.56 + 0.34 * clamp(g.top + 0.71) + 0.12 * Math.abs(Math.sin(4 * x + z)));
         else {
-          const relief = clamp((g.top-.36)*.78);
-          c.lerp(peak, relief).lerp(colorSnow, clamp((g.top-1.38)*1.75));
-          c.multiplyScalar(.83 + .18*Math.abs(Math.sin(z*3.4+Math.sin(x)*1.9)));
+          const relief = clamp((g.top - 0.36) * 0.78);
+          c.lerp(peak, relief).lerp(colorSnow, clamp((g.top - 1.38) * 1.75));
+          c.multiplyScalar(0.83 + 0.18 * Math.abs(Math.sin(z * 3.4 + Math.sin(x) * 1.9)));
         }
         if (analysis === "materials") c.copy(g.ocean ? palette[3] : palette[0]);
         else c.lerp(fissure, g.fault * 0.78);
@@ -288,7 +377,8 @@ export class PlateSection {
       const d = g.top - y,
         fold =
           k === "collision" || k === "complex" || k === "wilson"
-            ? (0.12 + .22*t) * Math.sin(x * (3 + t) + z * 0.48) * Math.exp(-x*x*.28) + .10*t*Math.tanh(9*(x-.42*y))
+            ? (0.12 + 0.22 * t) * Math.sin(x * (3 + t) + z * 0.48) * Math.exp(-x * x * 0.28) +
+              0.1 * t * Math.tanh(9 * (x - 0.42 * y))
             : 0;
       const l = (d + fold) / g.crust;
       const lid = g.crust + (g.ocean ? 0.3 + 0.33 * Math.sqrt(Math.abs(g.u) / W) : 0.5);
@@ -320,8 +410,7 @@ export class PlateSection {
     }
 
     const x0 = k === "wilson" ? basin(t) - 0.28 : 0;
-    const extension =
-      k === "wilson" ? clamp((t - 0.53) / 0.16) * clamp((0.89 - t) / 0.06) : 0.59 + 0.41 * t;
+    const extension = k === "wilson" ? clamp((t - 0.53) / 0.16) * clamp((0.89 - t) / 0.06) : 0.59 + 0.41 * t;
     if (open && !this.bodies) {
       this.bodies = [new SectionBody(this.rock), new SectionBody(this.rock)];
       this.bodies[0].group.name = "Abtauchende Lithosphäre";
@@ -352,6 +441,50 @@ export class PlateSection {
         c.copy(palette[4]).lerp(palette[5], depth * 0.65);
       });
     }
+    this.thrusts.visible = cut && (k !== "wilson" || t > 0.84);
+    if (this.thrusts.visible)
+      for (const obj of this.thrusts.children) {
+        const line = obj as T.Line,
+          attribute = line.geometry.getAttribute("position") as T.BufferAttribute;
+        const { side, offset } = line.userData;
+        for (let j = 0; j < attribute.count; j++) {
+          const f = j / (attribute.count - 1),
+            x = side * (offset * (1.14 - 0.27 * t) - 1.1 * f);
+          const g = geologyAt(k, x, edge, t);
+          attribute.setXYZ(j, x, g.top - 0.04 - g.crust * (0.73 * f + 0.18 * f * f), edge + 0.018);
+        }
+        attribute.needsUpdate = true;
+      }
+    this.fabric.visible = cut && (sub || k === "ridge" || k === "rift" || k === "collision");
+    if (this.fabric.visible) {
+      const marker = new T.Object3D();
+      for (let j = 0; j < 8; j++) {
+        const side = j % 2 ? 1 : -1;
+        let x = side * (0.22 + Math.floor(j / 2) * 0.75),
+          y = 0,
+          angle = 0;
+        if (sub) {
+          x = x0 - 3.7 + j * 0.58 + 0.9 * t;
+          const dx = x - x0;
+          y =
+            dx < 0
+              ? geologyAt(k, x, edge, t).top - 0.17
+              : geologyAt(k, x0, edge, t).top - 0.17 - 0.54 * dx - 0.19 * dx * dx;
+          angle = dx < 0 ? 0 : -Math.atan(0.54 + 0.38 * dx);
+        } else {
+          x += side * t * (k === "collision" ? -0.16 : k === "rift" ? 0.57 : 0.67);
+          const g = geologyAt(k, x, edge, t);
+          y = g.top - g.crust * (k === "collision" ? 0.52 : 0.3);
+          angle = k === "collision" ? side * 0.37 * t : 0;
+        }
+        marker.position.set(x, y, edge + 0.022);
+        marker.rotation.z = angle;
+        marker.scale.set(0.13, 0.033, 0.025);
+        marker.updateMatrix();
+        this.fabric.setMatrixAt(j, marker.matrix);
+      }
+      this.fabric.instanceMatrix.needsUpdate = true;
+    }
     this.slab.mesh.visible = sub && cut && !open;
     if (sub)
       this.slab.write((u, v, p, c) => {
@@ -362,22 +495,28 @@ export class PlateSection {
         p.set(x, Math.max(-2.55, y - v * 0.4), D + 0.013);
         c.copy(v < 0.4 ? palette[3] : palette[4]);
       });
-    this.pockets.visible = (sub || k === "ridge" || k === "hotspot") && cut && paths;
+    this.pockets.visible =
+      (k !== "wilson" || (extension * 2.4 > 1.65 && x0 + 1.9 < W)) &&
+      (sub || k === "ridge" || k === "hotspot") &&
+      cut &&
+      paths;
     this.fluids.visible = sub;
     if (this.pockets.visible) {
       const dummy = new T.Object3D();
-      const plume = k === "hotspot", axis = plume ? -1.55 : 0;
+      const plume = k === "hotspot",
+        axis = plume ? -1.55 : 0;
       const meltX = sub ? x0 + 1.33 : axis;
       const localTop = geologyAt(k, meltX, edge, t);
-      const roofY = localTop.top-localTop.crust;
-      const floorY = sub ? geologyAt(k,x0,edge,t).top-.05-.54*1.33-.19*1.33**2 : -2.0;
-      const height = Math.max(.10,roofY-floorY);
-      this.meltField.position.set(meltX, floorY + height*.51, edge+.025);
-      this.meltField.scale.set(sub ? .4 : .45, height*.42, .056);
-      this.meltField.rotation.z = sub ? -.32 : .13;
-      this.reservoir.position.set(meltX+.05,localTop.top-.24,edge+.05);
-      this.reservoir.scale.set(.20,.059,.045);
-      this.mantleUp.visible=!sub;this.mantleUp.position.set(axis,-2.4,edge+.09);
+      const roofY = localTop.top - localTop.crust;
+      const floorY = sub ? geologyAt(k, x0, edge, t).top - 0.05 - 0.54 * 1.33 - 0.19 * 1.33 ** 2 : -2.0;
+      const height = Math.max(0.1, roofY - floorY);
+      this.meltField.position.set(meltX, floorY + height * 0.51, edge + 0.025);
+      this.meltField.scale.set(sub ? 0.4 : 0.45, height * 0.42, 0.056);
+      this.meltField.rotation.z = sub ? -0.32 : 0.13;
+      this.reservoir.position.set(meltX + 0.05, localTop.top - 0.24, edge + 0.05);
+      this.reservoir.scale.set(0.2, 0.059, 0.045);
+      this.mantleUp.visible = !sub;
+      this.mantleUp.position.set(axis, -2.4, edge + 0.09);
       // Discrete melt-bearing volumes sit between the plate surface and the base of the overriding crust.
       for (let i = 0; i < 40; i++) {
         const px = k === "ridge" ? 0.44 * Math.sin(i * 2.3) : x0 + 0.94 + 0.56 * ((i * 0.618034) % 1),
@@ -392,8 +531,13 @@ export class PlateSection {
           floor + 0.04 + thickness * (0.24 + 0.52 * ((i * 0.321) % 1)),
           exposed ? D + 0.014 : pz,
         );
-        if (!sub) dummy.position.set(axis+.37*Math.sin(i*2.3),floorY+height*(.2+.64*((i*.417)%1)),edge+.065);
-        else if(exposed) dummy.position.z=edge+.066;
+        if (!sub)
+          dummy.position.set(
+            axis + 0.37 * Math.sin(i * 2.3),
+            floorY + height * (0.2 + 0.64 * ((i * 0.417) % 1)),
+            edge + 0.065,
+          );
+        else if (exposed) dummy.position.z = edge + 0.066;
         dummy.scale.set(
           0.072,
           k === "ridge" ? 0.06 : Math.min(0.056, thickness * 0.12),
@@ -423,10 +567,10 @@ export class PlateSection {
           if (!sub)
             dummy.position.set(
               axis + 0.15 * Math.sin(lane * 2.2) * (1 - f),
-              roofY-.18 + f * (localTop.top - roofY+.16),
+              roofY - 0.18 + f * (localTop.top - roofY + 0.16),
               edge + 0.08,
             );
-          dummy.scale.set(fluid ? 0.6 : 0.81, fluid ? 1.4 : 1.7, 0.68);
+          dummy.scale.set(fluid ? 0.84 : 1.04, fluid ? 1.65 : 1.9, 0.82);
           dummy.updateMatrix();
           mesh.setMatrixAt(i, dummy.matrix);
         }
@@ -451,14 +595,23 @@ export class PlateSection {
       }
       this.pillows.instanceMatrix.needsUpdate = true;
     }
-    this.water.scale.y=(edge+D)/(2*D); this.water.position.z=(edge-D)*.5;
+    const deepSea = k === "ridge" || k === "oceanTransform";
+    this.water.position.y = deepSea ? 0.72 : -0.13;
+    (this.water.material as T.MeshPhysicalMaterial).opacity = deepSea ? 0.075 : 0.19;
+    this.water.scale.y = (edge + D) / (2 * D);
+    this.water.position.z = (edge - D) * 0.5;
     this.water.visible =
-      !open && analysis === "natural" && !["transform", "collision", "complex"].includes(k);
+      !open &&
+      !["rift"].includes(k) &&
+      analysis === "natural" &&
+      !["transform", "collision", "complex"].includes(k);
     this.front.mesh.visible = cut;
     this.ends.forEach((e) => (e.mesh.visible = cut));
     this.arrows.visible = vectors;
     this.localArrows.visible = vectors && k === "wilson" && motion.spreadingRidge;
-    this.localArrows.children.forEach((arrow,i) => arrow.position.set(i ? .15 : -.15, geologyAt(k,0,0,t).top+.24,0));
+    this.localArrows.children.forEach((arrow, i) =>
+      arrow.position.set(i ? 0.15 : -0.15, geologyAt(k, 0, 0, t).top + 0.24, 0),
+    );
     for (const [i, a] of this.arrows.children.entries()) {
       const side = i === 0 ? -1 : 1,
         dir = ["rift", "ridge"].includes(k) ? side : k === "wilson" ? side * motion.outward : -side,
@@ -466,8 +619,9 @@ export class PlateSection {
       const arrow = a as T.ArrowHelper;
       arrow.position.set(side * 2.5, geologyAt(k, side * 2.5, 0, t).top + 0.38, 0);
       arrow.visible = (k !== "hotspot" || i === 1) && (k !== "wilson" || motion.outward !== 0);
-      if(k === "wilson") {
-        const x=side*(.65+margin(t)); arrow.position.set(x,geologyAt(k,x,0,t).top+.36,0);
+      if (k === "wilson") {
+        const x = side * (0.65 + margin(t));
+        arrow.position.set(x, geologyAt(k, x, 0, t).top + 0.36, 0);
       }
       if (k === "oceanTransform") arrow.position.set(0, geologyAt(k, 0, side, t).top + 0.4, side);
       arrow.setDirection(
@@ -486,10 +640,19 @@ export class PlateSection {
     this.ruler.position.set(km / 40, geologyAt(k, km / 40, 0, t).top + 0.1, 0);
   }
   motionSample() {
-    const read=(g:T.Group)=>g.children.filter(a=>a.visible && g.visible).map(a=>({
-      x:a.position.x, dir:new T.Vector3(0,1,0).applyQuaternion(a.quaternion).toArray()
-    }));
-    return {margins:read(this.arrows),ridge:read(this.localArrows),melt:this.pockets.visible,fluids:this.pockets.visible&&this.fluids.visible};
+    const read = (g: T.Group) =>
+      g.children
+        .filter((a) => a.visible && g.visible)
+        .map((a) => ({
+          x: a.position.x,
+          dir: new T.Vector3(0, 1, 0).applyQuaternion(a.quaternion).toArray(),
+        }));
+    return {
+      margins: read(this.arrows),
+      ridge: read(this.localArrows),
+      melt: this.pockets.visible,
+      fluids: this.pockets.visible && this.fluids.visible,
+    };
   }
   dispose() {
     this.disposed = true;

@@ -477,7 +477,7 @@ async function boot() {
     process:fields(world,["processDetail","processSite","processProgress","processPlaying","processLoop","processSlow","singlePlateName","smallPlateNames"]),
     nyos:fields(world.nyosLesson,lessonKeys),nyosDetail:world.nyosDetail
   });
-  classroomViews(observatory,observation,baseView,async b=>{
+  const restoreBase=async (b:ReturnType<typeof baseView>)=>{
     if(b.mode==="nyos")await world.nyos.load();
     navigate(b.mode);world.setStyle(b.style);
     if(b.mode==="inside"){world.shell.cut=b.shell.cut;world.shell.visible=[...b.shell.visible];world.shell.opacity=[...b.shell.opacity];world.shell.selected=b.shell.selected;world.shell.subdued=b.shell.subdued;world.shell.setComparison(b.shell.comparison);labels=b.labels;released.clear();b.released.forEach(i=>released.add(i));}
@@ -490,7 +490,9 @@ async function boot() {
       Object.assign(world,fields(b.process,["processProgress","processPlaying","processLoop","processSlow","singlePlateName","smallPlateNames"]));
     }
     renderSide();
-  },experience);
+  };
+  classroomViews(observatory,observation,baseView,restoreBase,experience);
+  experience?.bindBaseHistory(()=>{const b=baseView();b.nyos.playing=false;b.pairPlaying=false;b.process.processPlaying=false;return b;},restoreBase);
   for(const [id,run] of [["earthquake",()=>observatory.openMap()],["volcano",()=>observatory.openRegion(reference("hawaii","volcano"))],["risk",()=>observatory.openRegion(reference("san","risk"))]] as const){
     $("nav-"+id).classList.add("obsNav");$("nav-"+id).onclick=run;
   }

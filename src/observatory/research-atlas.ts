@@ -89,15 +89,15 @@ export class ResearchAtlas {
     this.state.profile = this.profile.endpoints;
     this.render();
   });
-  private tolerance=5;
+  private tolerance = 5;
   private reading?: HTMLElement;
   private rendering = false;
   constructor(
     private maps: MapLayers,
     view: HTMLElement,
     private selectStep: (step: Step) => void,
-    private orient: (p:GeoPoint) => void,
-    private openProcess: (step:Step) => void,
+    private orient: (p: GeoPoint) => void,
+    private openProcess: (step: Step) => void,
   ) {
     this.texture.colorSpace = T.SRGBColorSpace;
     this.globe.renderOrder = 4;
@@ -125,7 +125,7 @@ export class ResearchAtlas {
     ]);
     if (!this.plane.isConnected) return;
     this.data = data;
-    this.basemaps = {earth: basemap, relief, bathy};
+    this.basemaps = { earth: basemap, relief, bathy };
     this.background = basemap;
     this.profile.setData(data);
     if (this.state.profile) this.profile.restore(this.state.profile);
@@ -151,6 +151,7 @@ export class ResearchAtlas {
   dispose() {
     this.plane.parentElement?.classList.remove("research-flat");
     this.plane.remove();
+    this.gridImages.clear();
     this.globe.removeFromParent();
     this.globe.geometry.dispose();
     this.globe.material.dispose();
@@ -161,7 +162,9 @@ export class ResearchAtlas {
       (this.state.layers.includes(point.layer) ||
         (point.layer === "quakes" && this.state.layers.some((id) => id === "depth" || id === "magnitude"))) &&
       (point.layer !== "quakes" ||
-        (point.magnitude! >= this.state.magnitude && point.depth! <= this.state.depth && (!this.state.year || this.state.year === point.year)))
+        (point.magnitude! >= this.state.magnitude &&
+          point.depth! <= this.state.depth &&
+          (!this.state.year || this.state.year === point.year)))
     );
   }
   private features(step: Step) {
@@ -191,7 +194,11 @@ export class ResearchAtlas {
     };
     const base = parent.querySelector<HTMLSelectElement>("#research-base")!;
     base.value = this.state.base ?? "earth";
-    base.onchange = () => { this.state.base = base.value as ResearchState["base"]; legendAndFilters(); this.render(); };
+    base.onchange = () => {
+      this.state.base = base.value as ResearchState["base"];
+      legendAndFilters();
+      this.render();
+    };
     const layers = parent.querySelector("#research-layers")!,
       legend = parent.querySelector("#research-legend")!,
       filter = parent.querySelector("#research-filter")!;
@@ -207,7 +214,10 @@ export class ResearchAtlas {
       const baseKey = this.state.base ?? "earth";
       if (baseKey !== "earth") {
         const key = document.createElement("p");
-        key.textContent = baseKey === "bathy" ? "Helle Küstenschelfe · Petrol bis 1 km, Blau bis 3,5 km, Dunkelblau ab 6 km Tiefe. Georeferenziertes Relief, 0,5°." : "Grüne Tiefländer, ockerfarbene Hochlagen und helle Gipfel. Tiefen und Höhen aus dem globalen 0,5°-Raster.";
+        key.textContent =
+          baseKey === "bathy"
+            ? "Helle Küstenschelfe · Petrol bis 1 km, Blau bis 3,5 km, Dunkelblau ab 6 km Tiefe. Georeferenziertes Relief, 0,5°."
+            : "Grüne Tiefländer, ockerfarbene Hochlagen und helle Gipfel. Tiefen und Höhen aus dem globalen 0,5°-Raster.";
         legend.prepend(key);
       }
       const source = document.createElement("a");
@@ -232,7 +242,8 @@ export class ResearchAtlas {
             select = document.createElement("select");
           box.textContent = label;
           select.setAttribute("aria-label", label);
-          for (const value of values) select.add(new Option(value ? String(value) : "Alle Jahre", String(value)));
+          for (const value of values)
+            select.add(new Option(value ? String(value) : "Alle Jahre", String(value)));
           select.value = String(this.state[key] ?? 0);
           select.onchange = () => {
             this.state[key] = Number(select.value);
@@ -243,36 +254,71 @@ export class ResearchAtlas {
         }
     };
     const groups: [string, Layer[]][] = [
-      ["Platten und Bewegung", ["plates","bounds","vectors","gnss"]],
-      ["Erdbeben und Vulkanismus", ["quakes","depth","magnitude","volcano","hotspot"]],
-      ["Relief und Ozeanboden", ["ridge","trench","mountain","age","magnetic"]],
-      ["Kontinentaldrift", ["fossil","rock","ice"]],
+      ["Platten und Bewegung", ["plates", "bounds", "vectors", "gnss"]],
+      ["Erdbeben und Vulkanismus", ["quakes", "depth", "magnitude", "volcano", "hotspot"]],
+      ["Relief und Ozeanboden", ["ridge", "trench", "mountain", "age", "magnetic"]],
+      ["Kontinentaldrift", ["fossil", "rock", "ice"]],
     ];
     for (const [name, ids] of groups) {
       const group = document.createElement("fieldset");
       const title = document.createElement("legend");
-      title.textContent = name; group.append(title); layers.append(group);
+      title.textContent = name;
+      group.append(title);
+      layers.append(group);
       for (const id of ids) {
-      const label = atlasLayers[id];
-      const layer = id as Layer,
-        box = document.createElement("label"),
-        input = document.createElement("input");
-      input.type = "checkbox";
-      input.value = id;
-      input.checked = this.state.layers.includes(layer);
-      input.onchange = () => {
-        this.state.layers = this.state.layers.filter((v) => v !== layer);
-        if (input.checked) this.state.layers.push(layer);
-        legendAndFilters();
-        this.render();
-      };
-      box.append(input, document.createTextNode(" " + label));
-      group.append(box);
+        const label = atlasLayers[id];
+        const layer = id as Layer,
+          box = document.createElement("label"),
+          input = document.createElement("input");
+        input.type = "checkbox";
+        input.value = id;
+        input.checked = this.state.layers.includes(layer);
+        input.onchange = () => {
+          this.state.layers = this.state.layers.filter((v) => v !== layer);
+          if (input.checked) this.state.layers.push(layer);
+          legendAndFilters();
+          this.render();
+        };
+        box.append(input, document.createTextNode(" " + label));
+        group.append(box);
       }
     }
     this.profile.mount(parent.querySelector(".g-stack")!);
     legendAndFilters();
     this.render();
+  }
+  private gridImages = new Map<"age" | "magnetic", HTMLCanvasElement>();
+  private gridOverlay(layer: "age" | "magnetic", d: AtlasData) {
+    const cached = this.gridImages.get(layer);
+    if (cached) return cached;
+    const image = makeCanvas(w, h),
+      c = image.getContext("2d")!;
+    if (layer === "age") {
+      c.globalAlpha = 0.73;
+      for (let i = 0; i < d.age.length; i++) {
+        if (d.age[i] === -32768) continue;
+        const age = d.age[i] * 0.01 + 100;
+        const x = (i % 360) * 4 - 2,
+          y = Math.floor(i / 360) * 4 - 2;
+        c.fillStyle = colors[age < 10 ? 0 : age < 40 ? 1 : age < 80 ? 2 : age < 120 ? 3 : age < 160 ? 4 : 5];
+        c.fillRect(x, y, 4, 4);
+        if (x < 0) c.fillRect(x + w, y, 4, 4);
+      }
+      c.globalAlpha = 1;
+    }
+    if (layer === "magnetic")
+      for (let lat = -89; lat <= 89; lat++)
+        for (let lon = -180; lon < 180; lon++) {
+          const mag = gridValue(d.magnetic, lat, lon, 0.2, 800);
+          if (mag === undefined || Math.abs(mag) < 0.1) continue;
+          const [x, y] = xy(lat, lon);
+          c.fillStyle = mag > 0 ? "#ff8375" : "#8bbaff";
+          c.globalAlpha = Math.min(0.85, 0.14 + Math.sqrt(Math.abs(mag)) * 0.055);
+          c.fillRect(x - 2, y - 2, 4, 4);
+          c.globalAlpha = 1;
+        }
+    this.gridImages.set(layer, image);
+    return image;
   }
   private render() {
     if (!this.rendering) return;
@@ -287,32 +333,11 @@ export class ResearchAtlas {
       return;
     }
     const layers = new Set(this.state.layers);
-    if (this.state.base && this.state.base !== "earth") c.drawImage(this.basemaps![this.state.base], 0, 0, w, h);
+    if (this.state.base && this.state.base !== "earth")
+      c.drawImage(this.basemaps![this.state.base], 0, 0, w, h);
     if (layers.has("plates")) c.drawImage(this.plateColor, 0, 0);
-    if (layers.has("age")) {
-      c.globalAlpha = 0.73;
-      for (let i = 0; i < d.age.length; i++) {
-        if (d.age[i] === -32768) continue;
-        const age = d.age[i] * 0.01 + 100;
-        const x = (i % 360) * 4 - 2,
-          y = Math.floor(i / 360) * 4 - 2;
-        c.fillStyle = colors[age < 10 ? 0 : age < 40 ? 1 : age < 80 ? 2 : age < 120 ? 3 : age < 160 ? 4 : 5];
-        c.fillRect(x, y, 4, 4);
-        if (x < 0) c.fillRect(x + w, y, 4, 4);
-      }
-      c.globalAlpha = 1;
-    }
-    if (layers.has("magnetic"))
-      for (let lat = -89; lat <= 89; lat++)
-        for (let lon = -180; lon < 180; lon++) {
-          const mag = gridValue(d.magnetic, lat, lon, 0.2, 800);
-          if (mag === undefined || Math.abs(mag) < 0.1) continue;
-          const [x, y] = xy(lat, lon);
-          c.fillStyle = mag > 0 ? "#ff8375" : "#8bbaff";
-          c.globalAlpha = Math.min(.85,.14+Math.sqrt(Math.abs(mag))*.055);
-          c.fillRect(x-2,y-2,4,4);
-          c.globalAlpha=1;
-        }
+    for (const layer of ["age", "magnetic"] as const)
+      if (layers.has(layer)) c.drawImage(this.gridOverlay(layer, d), 0, 0);
     const line = (x: number, y: number, dx: number, dy: number) => {
       for (const off of [0, dx > 0 ? -w : w]) {
         c.beginPath();
@@ -399,11 +424,17 @@ export class ResearchAtlas {
       c.strokeText(i ? "B" : "A", x + 6, y - 6);
       c.fillText(i ? "B" : "A", x + 6, y - 6);
     });
-    if(this.state.selected){
-      const [sx,sy]=xy(this.state.selected.lat,this.state.selected.lon);
-      for(const off of [-w,0,w]){
-        c.beginPath();c.arc(sx+off,sy,8,0,2*Math.PI);
-        c.lineWidth=4;c.strokeStyle="#233439";c.stroke();c.lineWidth=1.5;c.strokeStyle="#fff";c.stroke();
+    if (this.state.selected) {
+      const [sx, sy] = xy(this.state.selected.lat, this.state.selected.lon);
+      for (const off of [-w, 0, w]) {
+        c.beginPath();
+        c.arc(sx + off, sy, 8, 0, 2 * Math.PI);
+        c.lineWidth = 4;
+        c.strokeStyle = "#233439";
+        c.stroke();
+        c.lineWidth = 1.5;
+        c.strokeStyle = "#fff";
+        c.stroke();
       }
     }
     this.texture.needsUpdate = true;
@@ -417,7 +448,11 @@ export class ResearchAtlas {
       this.reading.textContent = "Ein Klick auf die Karte zeigt die verfügbaren Werte am Ort.";
   }
   pickAt(lat: number, lon: number, tolerance: number) {
-    if (!this.profile.take({ lat, lon })) {this.state.selected={lat,lon};this.tolerance=tolerance;this.render();}
+    if (!this.profile.take({ lat, lon })) {
+      this.state.selected = { lat, lon };
+      this.tolerance = tolerance;
+      this.render();
+    }
   }
   private inspect(lat: number, lon: number, tolerance: number) {
     const d = this.data;
@@ -442,7 +477,9 @@ export class ResearchAtlas {
     ] as const) {
       if (!l.has(key)) continue;
       const val = gridValue(d[key], lat, lon, scale, offset);
-      parts.push(atlasLayers[key] + " · 1°-Raster · " + (val === undefined ? "ohne Daten" : decimal(val) + " " + unit));
+      parts.push(
+        atlasLayers[key] + " · 1°-Raster · " + (val === undefined ? "ohne Daten" : decimal(val) + " " + unit),
+      );
     }
     if (["bounds", "ridge", "trench", "mountain"].some((k) => l.has(k as Layer))) {
       const step = this.maps.nearestStep(
@@ -455,7 +492,8 @@ export class ResearchAtlas {
         parts.push(
           "PB2002 #" + step[0] + " · " + k.pair + " · " + decimal(k.speed) + " mm/Jahr · " + k.azimuth + "°",
         );
-        this.selectStep(step); selected=step;
+        this.selectStep(step);
+        selected = step;
       }
     }
     const nearby = d.points
@@ -475,9 +513,12 @@ export class ResearchAtlas {
       }),
     );
     if (selected) {
-      const step=selected, button=document.createElement("button");
-      button.id="research-process";button.textContent="Prozess dieses Grenzabschnitts öffnen";
-      button.onclick=()=>this.openProcess(step); this.reading.append(button);
+      const step = selected,
+        button = document.createElement("button");
+      button.id = "research-process";
+      button.textContent = "Prozess dieses Grenzabschnitts öffnen";
+      button.onclick = () => this.openProcess(step);
+      this.reading.append(button);
     }
   }
 }

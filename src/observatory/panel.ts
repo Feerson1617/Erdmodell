@@ -50,7 +50,7 @@ export class Observatory {
   private research?:ResearchAtlas;
   private studio?:TectonicStudio;
   openStudio(state?:Partial<StudioState>){
-    this.base();this.mode="studio";this.world.nav.enabled=false;this.mark();
+    this.base(true);this.mode="studio";this.world.nav.enabled=false;this.mark();
     this.studio=new TectonicStudio(this.world.gl,state,()=>void this.openResearch({flat:true,layers:["bounds","age"],magnitude:6,depth:750}),
       id=>this.visitPlace?.(id), model=>this.visitModel?.(model));
     this.draw();
@@ -102,7 +102,10 @@ export class Observatory {
     this.closeTime();delete document.body.dataset.observatory;
     document.querySelectorAll(".obsNav").forEach(b=>b.removeAttribute("aria-current"));
   }
-  private base(){this.close();this.world.globe(true);this.world.nav.minimumDistance=2300;}
+  private base(keepCamera=false){
+    const nav=this.world.nav,pose={...nav.pose};this.close();this.world.globe(true);nav.minimumDistance=2300;
+    if(keepCamera){nav.stop();nav.pose={...pose};nav.goal={...pose};}
+  }
   private mark(){
     document.body.dataset.observatory=this.mode;$("desk").dataset.mode="observatory";this.side.hidden=false;
     document.querySelectorAll("nav button").forEach(b=>b.removeAttribute("aria-current"));
@@ -111,7 +114,7 @@ export class Observatory {
     $("pins").replaceChildren();$("platePins").replaceChildren();
   }
   async openMap(purpose:"events"|"boundaries"="events",keepCamera=false){
-    this.base();this.mode="map";this.mapPurpose=purpose;this.theme="earthquake";this.mark();
+    this.base(keepCamera);this.mode="map";this.mapPurpose=purpose;this.theme="earthquake";this.mark();
     if(!keepCamera)this.world.nav.fly({lat:purpose==="events"?12:15,lon:purpose==="events"?-146:-20,d:15300,tilt:0,bearing:0},true);
     void materials().then(lib=>{if(this.mode==="map"){this.world.gl.initTexture(lib.color);this.world.gl.initTexture(lib.relief);}}).catch(()=>{});
     this.world.nav.minimumDistance=150;this.maps.group.visible=true;this.maps.events.visible=purpose==="events";this.maps.boundaries.visible=true;

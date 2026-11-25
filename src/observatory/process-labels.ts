@@ -29,7 +29,7 @@ export function processFeatures(k: ProcessId, t: number): Feature[] {
   switch (k) {
     case "ridge":
       return [
-        at("Druckentlastung", .18, -1.03, "Aufsteigender Mantel schmilzt bei sinkendem Druck teilweise."),
+        at("Druckentlastung", 0.18, -1.03, "Aufsteigender Mantel schmilzt bei sinkendem Druck teilweise."),
         at("Rückenachse", 0, top(0), "Magma erstarrt. Neue Kruste wächst auf beiden Flanken."),
         at(
           "Ozeanische Lithosphäre",
@@ -39,9 +39,7 @@ export function processFeatures(k: ProcessId, t: number): Feature[] {
         ),
       ];
     case "rift":
-      return [
-        at("Grabensohle", 0, top(0), "Der gedehnte Zentralbereich sinkt zwischen Abschiebungen ein."),
-      ];
+      return [at("Grabensohle", 0, top(0), "Der gedehnte Zentralbereich sinkt zwischen Abschiebungen ein.")];
     case "collision":
       return [
         at(
@@ -70,8 +68,8 @@ export function processFeatures(k: ProcessId, t: number): Feature[] {
           top(0) - 0.2 - 0.54 * (x + 0.4) - 0.19 * (x + 0.4) ** 2,
           "Die ozeanische Lithosphäre taucht in den Mantel ein.",
         ),
-        at("Fluidweg",1.05,slab+.15,"Wasserhaltige Minerale der Unterplatte geben Fluide ab."),
-        at("Magmaaufstieg",1.46,top(1.46)-.24,"Ein Teil der Schmelze steigt durch die Oberplatte auf."),
+        at("Fluidweg", 1.05, slab + 0.15, "Wasserhaltige Minerale der Unterplatte geben Fluide ab."),
+        at("Magmaaufstieg", 1.46, top(1.46) - 0.24, "Ein Teil der Schmelze steigt durch die Oberplatte auf."),
       ];
     }
     case "transform":
@@ -100,15 +98,23 @@ export function processFeatures(k: ProcessId, t: number): Feature[] {
           point: new T.Vector3(-1.55, geologyAt(k, -1.55, 0, t).top, 0),
           explanation: "Neue Vulkanbauten entstehen über der länger bestehenden Quelle.",
         },
-        {name:"Schmelzregion",point:new T.Vector3(-1.55,-1.18,.08),explanation:"Heißer Mantel steigt auf und schmilzt bei sinkendem Druck teilweise."},
-        {name:"Älterer Vulkanbau",point:new T.Vector3(-1.55+(2+t)*1.05,geologyAt(k,-1.55+(2+t)*1.05,0,t).top,0),explanation:"Die bewegte Platte trägt diesen Bau von der Schmelzregion fort."},
+        {
+          name: "Schmelzregion",
+          point: new T.Vector3(-1.55, -1.18, 0.08),
+          explanation: "Heißer Mantel steigt auf und schmilzt bei sinkendem Druck teilweise.",
+        },
+        {
+          name: "Älterer Vulkanbau",
+          point: new T.Vector3(-1.55 + (2 + t) * 1.05, geologyAt(k, -1.55 + (2 + t) * 1.05, 0, t).top, 0),
+          explanation: "Die bewegte Platte trägt diesen Bau von der Schmelzregion fort.",
+        },
       ];
     case "wilson":
       return [
         at(
           t < 0.19 ? "Graben" : t < 0.79 ? "Ozeanbecken" : "Kollisionszone",
-          basin(t)*.65,
-          top(basin(t)*.65),
+          basin(t) * 0.65,
+          top(basin(t) * 0.65),
           wilsonMotion(t).reading,
         ),
       ];
