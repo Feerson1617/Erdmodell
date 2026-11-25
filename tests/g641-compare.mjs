@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { mkdir, writeFile } from "node:fs/promises";
 import { resolve, join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { metrics } from "./g641-classroom.mjs";
+import { metrics, waitForNyosLake } from "./g641-classroom.mjs";
 const root = process.env.G641_OUT || "test-results/G641/Vergleich";
 const browser = await chromium.launch(
   process.env.G6_NATIVE_GPU
@@ -137,6 +137,7 @@ try {
             await click("geo-tools");
           }
         }
+        if (v === "nyos") await waitForNyosLake(page);
         if (v === "quake" || v === "sea") await ready();
         await page.waitForTimeout(650);
         await shot(name);

@@ -31,6 +31,14 @@ export async function metrics(page) {
     };
   });
 }
+export const waitForNyosLake = (page) =>
+  page.waitForFunction(() => {
+    const w = window.geoObservatory();
+    return (
+      w.mode === "nyos" && w.nyos.view === "event" && w.nyos.ready && w.nyos.localWeight > 0.9 && !w.flying
+    );
+  });
+
 export async function exercise(page, out, { group = "all", film = false, board = false } = {}) {
   await mkdir(out, { recursive: true });
   const log = {
@@ -357,6 +365,7 @@ export async function exercise(page, out, { group = "all", film = false, board =
             await tools(true);
             await click("nyos-event");
             await tools(false);
+            await waitForNyosLake(page);
             const note = page.locator("#modelnote");
             await note.waitFor({ state: "visible" });
             const rect = await note.boundingBox();
