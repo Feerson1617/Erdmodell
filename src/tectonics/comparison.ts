@@ -8,6 +8,10 @@ export function poleVector(pole:number[]) {
   return position(pole[0],pole[1]).normalize().multiplyScalar(pole[2]*RAD);
 }
 
+export function relativeVelocity(axis:T.Vector3,anchor:T.Vector3,side:number){
+  return axis.clone().cross(anchor).normalize().multiplyScalar(side===0?1:-1);
+}
+
 /** Two pieces of lithosphere at one observed boundary, in a symmetric local reference frame. */
 export class BoundaryComparison {
   readonly group = new T.Group();
@@ -21,6 +25,8 @@ export class BoundaryComparison {
   private readonly centres:T.Vector3[]=[];
   private readonly samples:T.Vector3[][]=[];
   private readonly texture=rockTexture();
+  readonly vectors=new T.Group();
+  private readonly vectorDirections:T.Vector3[]=[];
   private progress=0;
 
   constructor(readonly step:Step, poles:number[][], tones:T.Color[]) {
@@ -36,7 +42,7 @@ export class BoundaryComparison {
     const lever=this.axis.clone().cross(up).length()*R;
     // Keep the samples small compared with their distance from the relative rotation pole.
     const unit=clamp(lever/450,.7,9);
-    this.span=unit*22;
+    this.span=unit*(15.5+3*Math.abs(direction.dot(this.right)));
     this.angle=Math.min(.12,unit*12/lever);
     const travel=this.angle*lever/unit;
     const gap=2.5+Math.max(0,direction.dot(this.right))*travel;
@@ -59,6 +65,10 @@ export class BoundaryComparison {
     field.setAttribute("position",new T.Float32BufferAttribute(vertices,3));field.setAttribute("color",new T.Float32BufferAttribute(fieldColors,4));field.setIndex(indices);field.computeVertexNormals();
     this.group.add(new T.Mesh(field,new T.MeshStandardMaterial({vertexColors:true,transparent:true,depthWrite:false,roughness:1,side:T.DoubleSide})));
 
+    // A dotted reference through the midpoint records the original boundary orientation.
+    const seam=Array.from({length:23},(_,i)=>globePoint(0,.65,-10+i*.91));
+    const baseline=new T.Line(new T.BufferGeometry().setFromPoints(seam),new T.LineDashedMaterial({color:0xf1d392,dashSize:unit*.8,gapSize:unit*.48}));
+    baseline.computeLineDistances();this.group.add(baseline,this.vectors);
     this.bodies=codes.map((code,i)=>{
       const middle=(i===0?-1:1)*(gap/2+5.7);
       const mat=new T.MeshStandardMaterial({map:this.texture,vertexColors:true,roughness:.94});
@@ -82,6 +92,17 @@ export class BoundaryComparison {
         coords.setXYZ(j,v.x,v.y,v.z);
       }
       body.geometry.computeVertexNormals();body.geometry.computeBoundingSphere();
+      // v = ω × r, with opposite half rotations in the symmetric local frame.
+      const origin=globePoint(middle,5.0,.5);
+      const velocity=relativeVelocity(this.axis,origin,i);
+      const vector=new T.Group();
+      const material=new T.MeshStandardMaterial({color:0xffe6a6,emissive:0x544024,roughness:.76});
+      const shaft=new T.Mesh(new T.CylinderGeometry(.22*unit,.22*unit,4.2*unit,10),material);
+      const head=new T.Mesh(new T.ConeGeometry(.66*unit,1.7*unit,16),material);
+      shaft.position.y=1.9*unit;head.position.y=4.7*unit;
+      vector.add(shaft,head);vector.position.copy(origin).addScaledVector(velocity,-1.65*unit);
+      vector.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),velocity);
+      const pivot=new T.Group();pivot.add(vector);this.vectors.add(pivot);this.vectorDirections.push(velocity);
       this.centres.push(globePoint(middle+(i===0?-1:1)*2.8,4,-6.7));
       this.samples.push([0,18,12*19+9,24*19,25*19].map(j=>new T.Vector3().fromBufferAttribute(coords,j)));
       return body;
@@ -90,6 +111,7 @@ export class BoundaryComparison {
   setTime(progress:number) {
     this.progress=progress;
     this.bodies.forEach((b,i)=>b.quaternion.setFromAxisAngle(this.axis,(i===0?.5:-.5)*progress*this.angle));
+    this.vectors.children.forEach((v,i)=>v.quaternion.copy(this.bodies[i].quaternion));
     this.group.updateMatrixWorld(true);
   }
   labels(camera:T.Camera,width:number,height:number) {
@@ -101,7 +123,7 @@ export class BoundaryComparison {
   }
   diagnostics(camera:T.Camera,width:number,height:number) {
     return {step:this.step[0],progress:this.progress,site:this.site,angle:this.angle,
-      right:this.right.toArray(),axis:this.axis.toArray(),labels:this.labels(camera,width,height),
+      arrows:this.vectors.visible,directions:this.vectorDirections.map(v=>v.toArray()),right:this.right.toArray(),axis:this.axis.toArray(),labels:this.labels(camera,width,height),
       bodies:this.bodies.map((b,i)=>({code:b.name,quaternion:b.quaternion.toArray(),
         points:this.samples[i].map(v=>b.localToWorld(v.clone()).toArray())}))};
   }
@@ -114,7 +136,7 @@ export class BoundaryComparison {
   }
   dispose() {
     this.group.removeFromParent();
-    this.group.traverse(o=>{if(o instanceof T.Mesh){o.geometry.dispose();o.material.dispose();}});
+    this.group.traverse(o=>{if(o instanceof T.Mesh||o instanceof T.Line){o.geometry.dispose();o.material.dispose();}});
     this.texture.dispose();
   }
 }

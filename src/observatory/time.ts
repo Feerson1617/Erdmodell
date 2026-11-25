@@ -30,11 +30,32 @@ export class TimeGlobe {
   private cache=new Map<string,{used:number;promise:Promise<T.Texture>;texture?:T.Texture}>();private stamp=0;private disposed=false;
   private channels=["",""];private displayed=["",""];private previousMarks="";
   year=-250;scenario:Scenario="past";compare=false;direction=1;speed=7;playing=false;layer="";error="";
-  get ready(){return Boolean(this.displayed[0] && this.displayed[0]===this.channels[0] && (this.model==="past" || this.models) && (!this.compare || (this.displayed[1] && this.displayed[1]===this.channels[1])));}
+  get ready(){return Boolean(this.displayed[0] && this.displayed[0]===this.channels[0] && (this.model==="past"?this.reconstruction.ready:this.models) && (!this.compare || (this.displayed[1] && this.displayed[1]===this.channels[1])));}
   reconstruction=new Reconstructions(this.primary.material.uniforms);
   gnss="";tracking="";trail=false;follow=false;showBoundaries=false;comparison:Scenario="novo";
   constructor(){this.primary.scene.add(this.markers,this.reconstruction.land,this.reconstruction.track,this.reconstruction.lines[0]);this.other.scene.add(this.reconstruction.lines[1]);
     void this.reconstruction.load().catch(()=>{if(!this.disposed)this.error="Die Kontinentalblöcke konnten nicht geladen werden. Die Karte zeigt den berechneten Zeitschnitt.";});void fetch(localAsset("data/g5/evidence.json")).then(r=>r.json()).then(data=>{this.evidence=data;this.previousMarks="";}).catch(()=>{this.error="Belegorte konnten nicht geladen werden.";});}
+  overview=true;
+  readonly splitCameras=[new T.PerspectiveCamera(),new T.PerspectiveCamera()];
+  private centres:T.Vector3[]=[];private weights:number[]=[];private codes:number[]=[];
+  private pairRotation=new T.Quaternion();private alignment="";
+  private focusKey(){return this.scenario+"/"+this.second;}
+  centre(side:number){
+    const v=new T.Vector3();
+    this.continents[side].children.forEach((mesh,i)=>v.addScaledVector(this.centres[i].clone().applyQuaternion(mesh.quaternion),this.weights[i]));
+    if(v.lengthSq()<1)return;
+    v.normalize();return {lat:T.MathUtils.radToDeg(Math.asin(v.y)),lon:T.MathUtils.radToDeg(Math.atan2(v.x,v.z))};
+  }
+  align(){
+    this.rotate(this.scenario,0);this.rotate(this.second,1);
+    const a=this.centre(0),b=this.centre(1);if(!a||!b)return;
+    const orientation=(p:typeof a)=>new T.Quaternion().setFromEuler(new T.Euler(-p.lat*Math.PI/180,p.lon*Math.PI/180,0,"YXZ"));
+    this.pairRotation.copy(orientation(b)).multiply(orientation(a).invert());this.alignment=this.focusKey();return a;
+  }
+  futureLabels(side:number){
+    const names:Record<number,string>={101:"Nordamerika",201:"Südamerika",301:"Eurasischer Bereich",701:"Afrika",801:"Australien",802:"Antarktischer Bereich"};
+    return this.continents[side].children.flatMap((m,i)=>names[this.codes[i]]?[{name:names[this.codes[i]],p:this.centres[i].clone().applyQuaternion(m.quaternion).multiplyScalar(R+32)}]:[]);
+  }
   private rotating?:Promise<void>;private models?:Record<string,number[][][]>;private continents=[new T.Group(),new T.Group()];
   private async buildContinents(){
     const [data,angles]=await Promise.all([fetch(localAsset("data/g5/time/future.i16")),fetch(localAsset("data/g5/time/future-rotations.json"))]);
@@ -46,6 +67,12 @@ export class TimeGlobe {
     for(const entry of def.index){const a=[],ns=[];for(let i=entry.start;i<entry.start+entry.count;i++){
       const v=position(coords[2*i+1]/100,coords[i*2]/100,27);a.push(v.x,v.y,v.z);v.normalize();ns.push(v.x,v.y,v.z);}
       const g=new T.BufferGeometry();g.setAttribute("position",new T.Float32BufferAttribute(a,3));g.setAttribute("normal",new T.Float32BufferAttribute(ns,3));
+      // Integrate the published triangulation by surface area; vertex density alone biases the centre.
+      const sum=new T.Vector3(),u=new T.Vector3(),v=new T.Vector3(),w=new T.Vector3();let area=0;
+      const pos=g.attributes.position;
+      for(let i=0;i+2<pos.count;i+=3){u.fromBufferAttribute(pos,i);v.fromBufferAttribute(pos,i+1);w.fromBufferAttribute(pos,i+2);
+        const weight=v.clone().sub(u).cross(w.clone().sub(u)).length();sum.addScaledVector(u.clone().add(v).add(w).normalize(),weight);area+=weight;}
+      this.centres.push(sum.normalize());this.weights.push(area);this.codes.push(entry.pid);
       const mat=new T.ShaderMaterial({side:T.DoubleSide,depthWrite:false,uniforms:{tone:{value:new T.Vector3().fromArray(tones[entry.pid])}},
         vertexShader:"varying vec3 n;void main(){n=normalize(normalMatrix*normal);gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}",
         fragmentShader:"uniform vec3 tone;varying vec3 n;void main(){float light=clamp(dot(normalize(n),normalize(vec3(-.4,.6,1.))),0.,1.);gl_FragColor=vec4(tone*(.72+.34*light),1.);}"});
@@ -106,8 +133,12 @@ export class TimeGlobe {
       const [lat,lon]=e.coords[slice];const m=new T.Mesh(this.pinGeo,this.pinMat);m.position.copy(position(lat,lon,72));m.name=e.name;this.markers.add(m);}
   }
   private pinGeo=new T.SphereGeometry(93,12,8);private pinMat=new T.MeshBasicMaterial({color:0xffae62});
+  private lastImage="";cached=false;
   render(dt:number,gl:T.WebGLRenderer,camera:T.PerspectiveCamera){
-    if(this.playing){const max=this.scenario==="past"?0:scenarios[this.scenario].end;this.setYear(this.year+dt*this.speed*this.direction);if(this.year===max||this.year===-250)this.playing=false;}
+    if(this.playing){const max=this.scenario==="past"?0:Math.min(scenarios[this.scenario].end,this.compare?scenarios[this.second].end:Infinity);this.setYear(this.year+dt*this.speed*this.direction);if(this.year===max||this.year===-250)this.playing=false;}
+    const image=[this.model,this.second,this.compare,this.overview,this.year,this.layer,this.tracking,this.trail,this.gnss,this.showBoundaries,this.evidence.length,this.reconstruction.ready,this.displayed.join(),gl.domElement.width,gl.domElement.height,camera.aspect,camera.fov,...camera.matrixWorld.elements].join("|");
+    this.cached=this.ready&&!this.playing&&this.lastImage===image;if(this.cached)return true;
+    this.lastImage=image;
     this.reconstruction.draw(Math.abs(this.year),this.model==="past",this.tracking,this.trail);
     this.primary.material.uniforms.rigid.value=+(this.model==="past"&&this.reconstruction.ready);
     this.reconstruction.boundaries(this.model,this.year,0,this.showBoundaries);
@@ -118,8 +149,11 @@ export class TimeGlobe {
       this.rotate(this.second,1);this.prepare(this.second,1);
       if(!this.other.sphere.visible){gl.render(this.primary.scene,camera);return true;}
       const w=gl.domElement.clientWidth,h=gl.domElement.clientHeight,aspect=camera.aspect,fov=camera.fov;
-      const split=Math.floor(w/2);gl.setScissorTest(true);camera.aspect=split/h;camera.fov=fov/Math.min(1,camera.aspect*.91);camera.updateProjectionMatrix();
-      for(const [i,view] of [this.primary,this.other].entries()){const width=i?w-split:split;gl.setViewport(i*split,0,width,h);gl.setScissor(i*split,0,width,h);gl.render(view.scene,camera);}
+      const split=Math.floor(w/2);gl.setScissorTest(true);
+      if(this.alignment!==this.focusKey())this.align();
+      for(const [i,view] of [this.primary,this.other].entries()){const width=i?w-split:split;gl.setViewport(i*split,0,width,h);gl.setScissor(i*split,0,width,h);const eye=this.splitCameras[i];eye.copy(camera);eye.aspect=width/h;eye.fov=fov/Math.min(1,eye.aspect*.91);
+        if(i&&this.overview){eye.position.applyQuaternion(this.pairRotation);eye.quaternion.premultiply(this.pairRotation);}
+        eye.updateProjectionMatrix();eye.updateMatrixWorld();gl.render(view.scene,eye);}
       gl.setScissorTest(false);gl.setViewport(0,0,w,h);camera.aspect=aspect;camera.fov=fov;camera.updateProjectionMatrix();
     }else gl.render(this.primary.scene,camera);
     return true;

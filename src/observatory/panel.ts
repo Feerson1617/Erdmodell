@@ -2,7 +2,7 @@ import {boundaryLesson} from "../tectonics/learning";
 import {assumptions,learningFields,regionalReading,timeReading,setReading} from "./lesson";
 import {project,AnnotationLayer} from "../annotations";
 import {ObjectLabels} from "./object-labels";
-import {allowsLabel,claimObject} from "./reveal";
+import {beginCandidates,allowsLabel,claimObject} from "./reveal";
 import {graphics,quality,materials} from "./graphics";
 import {WaterProfile} from "./water-profile";
 import {fields, regionKeys, timeKeys} from "./saved-state";
@@ -14,7 +14,7 @@ import underwater from "./transform-sea.json";
 import * as T from "three";
 import { addTeachingModels,topicNames,explanations } from "./teaching-models";
 import type { World } from "../world";
-import { R } from "../geo";
+import { R,position } from "../geo";
 import {center, names, type Step} from "../tectonics/atlas";
 import {geology,classify,localStrike,processNames,sites,type Site} from "./boundaries";
 import viewCentres from "./time-focus.json";
@@ -197,6 +197,7 @@ export class Observatory {
         };
         if(r.localStill)for(const id of ["g-play","g-step","g-progress","g-reset","g-before","g-after","g-stage"]){const el=$(id) as HTMLButtonElement|null;if(el)el.disabled=true;}
       }
+      if(sp.geology&&sp.geology.id===this.returnPairId&&this.returnPair){const back=document.createElement("button");back.id="g-return-pair";back.textContent="Zurück zum Grenzvergleich";this.side.querySelector("h1")?.after(back);back.onclick=this.returnPair;}
       this.change("g-site",v=>{if(v)void this.openRegion(reference(v as Site,sp.theme));});
       this.action("g-cut",()=>{r.reframe(!r.cut);this.draw();});this.action("g-play",()=>{if(r.progress>=1)r.progress=0;r.playing=!r.playing;});
       this.action("g-step",()=>r.step());this.action("g-reset",()=>{r.progress=0;r.playing=false;});
@@ -211,6 +212,14 @@ export class Observatory {
     }else this.drawTime();
     this.action("g-world",()=>this.navigateBase("globe"));if(this.message){const p=document.createElement("p");p.textContent=this.message;this.side.append(p);}
   }
+  returnPairId?:number;
+  returnPair?:()=>void;
+  private lastLabelsRendered=false;
+  get subject(){
+    if(this.mode==="regional"){const s=this.region?.spec;return [s?.theme,s?.site,s?.geology?.id,s?.process,s?.event,s?.coastLesson].join("/");}
+    if(this.mode==="time")return "time/"+this.timeline?.model;
+    return this.mode==="map"?"map/"+this.mapPurpose:[this.world.mode,this.world.mosaic?.pair?.step[0],this.world.processSite,this.world.mode==="nyos"?this.world.nyosLesson.view:""].join("/");
+  }
   private lastScene?:RegionalScene;
   private drawnState="";private readingState="";
   private frame(dt:number){
@@ -220,7 +229,7 @@ export class Observatory {
     if(!this.mode)return false;
     if(this.mode==="time")return this.frameTime(dt);
     const r=this.region;
-    if(this.mode==="regional"&&(!r?.ready||this.switching||this.world.nav.flight)){graphics.scope="loading";graphics.activity="load";return false;}
+    if(this.mode==="regional"&&(!r?.ready||this.switching||this.world.nav.flight)){if(this.lastLabelsRendered){this.objectLabels.clear();this.lastLabelsRendered=false;}graphics.scope="loading";graphics.activity="load";return false;}
     if(!r||!r.ready||this.world.nav.flight)return false;
     r.orbit.enabled=true;this.world.nav.enabled=false;const canvas=this.world.gl.domElement;r.camera.aspect=canvas.clientWidth/canvas.clientHeight;r.camera.updateProjectionMatrix();
     r.update(dt);
@@ -244,7 +253,7 @@ export class Observatory {
     const play=$("g-play");
     if(play){setReading("g-play",r.playing?"Pause":"Abspielen");setReading("g-phase","Modellzeit");const range=$<HTMLInputElement>("g-progress");if(document.activeElement!==range&&+range.value!==r.progress)range.value=String(r.progress);}
     const stage=$<HTMLSelectElement>("g-stage");if(stage&&document.activeElement!==stage){stage.value=["0",".30",".49",".53","1"].reduce((a,b)=>Math.abs(+a-r.progress)<Math.abs(+b-r.progress)?a:b);}
-    this.objectLabels.draw(r,state,allowsLabel);return true;
+    this.objectLabels.draw(r,state,allowsLabel);this.lastLabelsRendered=true;return true;
   }
   private regionText(g:ReturnType<typeof geology>){
     const card=(a:number)=>["Norden","Nordosten","Osten","Südosten","Süden","Südwesten","Westen","Nordwesten"][Math.round(a/45)%8];
@@ -267,7 +276,7 @@ export class Observatory {
       await this.openMap(s.map.purpose);m.events.visible=s.map.events;m.boundaries.visible=s.map.lines;m.depth=s.map.depth;m.recolor();
       m.selectStep(m.steps.find(step=>step[0]===s.map.step));m.event=m.rows.find(row=>row[0]===s.map.event);
     }else if(s.mode==="time"&&s.time){
-      this.openTime();const t=this.timeline!;Object.assign(t,fields(s.time,timeKeys));t.setYear(s.time.year);
+      this.openTime();const t=this.timeline!;Object.assign(t,fields(s.time,timeKeys));t.overview=s.time.overview!==false;t.setYear(s.time.year);
     }else if(s.mode==="regional"&&s.region){
       const v=s.region;
       let spec:RegionSpec;
@@ -288,7 +297,7 @@ export class Observatory {
       r.cameraView(i<5?"overhead":i===5?"waves":i===6?"cut":"water");r.progress=[0,0,0,.30,.49,.53,0,.48][i];r.stress=i===3;}
     this.draw();
   }
-  diagnostics(){const r=this.region;return {graphics:{profile:graphics.profile,grade:quality()},mode:this.mode,purpose:this.mapPurpose,mapLayers:{events:this.maps.events.visible,lines:this.maps.boundaries.visible,depth:this.maps.depth},camera:r?.ready?{position:r.camera.position.toArray(),target:r.orbit.target.toArray()}:undefined,settings:r?fields(r,regionKeys):undefined,timings:r?.timings,switching:this.switching,analysis:r?.analysis,view:r?.view,event:r?.spec.event,playing:r?.playing,vectors:r?.vectors,coastLesson:r?.spec.coastLesson,site:r?.spec.site,geology:r?.spec.geology,physics:r?.ready?r.physicalState():undefined,process:r?.spec.process,theme:this.theme,ready:!this.switching&&(r?.ready??(this.maps.steps.length>0)),progress:r?.progress,cut:r?.cut,viewSettled:r?.viewSettled,focus:r?.faultModel?.kind==="unknown"?undefined:r?.focus,epicenter:r?.faultModel?.kind==="unknown"?undefined:r?.epicenter,events:this.maps.rows.length,steps:this.maps.steps.length,selected:this.maps.selectedStep?.[0],...this.timeDiagnostics()};}
+  diagnostics(){const r=this.region;return {selection:this.objectLabels.audit,graphics:{profile:graphics.profile,grade:quality()},mode:this.mode,purpose:this.mapPurpose,mapLayers:{events:this.maps.events.visible,lines:this.maps.boundaries.visible,depth:this.maps.depth},camera:r?.ready?{position:r.camera.position.toArray(),target:r.orbit.target.toArray()}:undefined,settings:r?fields(r,regionKeys):undefined,timings:r?.timings,switching:this.switching,analysis:r?.analysis,view:r?.view,event:r?.spec.event,playing:r?.playing,vectors:r?.vectors,coastLesson:r?.spec.coastLesson,site:r?.spec.site,geology:r?.spec.geology,physics:r?.ready?r.physicalState():undefined,process:r?.spec.process,theme:this.theme,ready:!this.switching&&(r?.ready??(this.maps.steps.length>0)),progress:r?.progress,cut:r?.cut,viewSettled:r?.viewSettled,focus:r?.faultModel?.kind==="unknown"?undefined:r?.focus,epicenter:r?.faultModel?.kind==="unknown"?undefined:r?.epicenter,events:this.maps.rows.length,steps:this.maps.steps.length,selected:this.maps.selectedStep?.[0],...this.timeDiagnostics()};}
   private enrich(r:RegionalScene){addTeachingModels(r);}
   private extraControls(r:RegionalScene){
     if(r.spec.theme==="volcano")return '<label>Modellausbruch<select id="g-eruption">'+opts({effusive:"Lava fließt aus",explosive:"Asche und Gase steigen auf"},r.eruption)+'</select></label>';
@@ -376,11 +385,12 @@ export class Observatory {
   }
   private focusTime(){
     const t=this.timeline;if(!t)return;
+    if(t.compare&&t.overview){const centre=t.align();if(centre){this.world.nav.fly({...centre,d:17400,tilt:0,bearing:0},true);return;}}
     const [lat,lon]=viewCentres[t.model][Math.round(Math.abs(t.year)/5)];
     // Look across the assembly so both the continental margins and the ocean are visible.
     this.world.nav.fly({lat:lat*.6+12,lon:lon+32,d:17900,tilt:0,bearing:0},true);
   }
-  private closeTime(){this.timeline?.dispose();this.timeline=undefined;$("g-split-caption")?.remove();}
+  private closeTime(){this.timePins.clear();this.timeline?.dispose();this.timeline=undefined;$("g-split-caption")?.remove();}
   private drawTime(){
     const t=this.timeline;if(!t)return;
     const labels={past:"Vergangenheit bis heute",ultima:"Pangaea Ultima",novo:"Novopangaea",aurica:"Aurica",amasia:"Amasia"};
@@ -391,7 +401,7 @@ export class Observatory {
       '<label>Zeitmodell<select id="g-scenario">'+opts(labels,t.scenario)+'</select></label>'+
       (t.scenario==="past"?'<details id="g-tracking" open><summary>Kontinent verfolgen</summary><label>Kontinentalbereich<select id="g-track">'+opts({"":"Ausblenden",...Object.fromEntries(Object.entries(tracks).map(([k,v])=>[k,v[0]]))},t.tracking)+'</select></label><label><input id="g-trail" type="checkbox" '+(t.trail?"checked":"")+'> Bewegungsspur</label><label><input id="g-follow" type="checkbox" '+(t.follow?"checked":"")+'> Kamera folgt</label></details>':
       '<label><input id="g-compare" type="checkbox" '+(t.compare?"checked":"")+'> Zwei Möglichkeiten vergleichen</label>'+
-      (t.compare?'<label>Zweites Modell<select id="g-second">'+opts(Object.fromEntries(Object.entries(labels).filter(([k])=>k!=="past"&&k!==t.scenario)),t.second)+'</select></label><small>Gemeinsamer Zeitraum bis +'+Math.min(scenarios[t.scenario].end,scenarios[t.second].end)+' Mio. Jahre. '+assumptions[t.second]+'</small>':'')+
+      (t.compare?'<label>Zweites Modell<select id="g-second">'+opts(Object.fromEntries(Object.entries(labels).filter(([k])=>k!=="past"&&k!==t.scenario)),t.second)+'</select></label><label>Perspektive<select id="g-compare-camera">'+opts({overview:"Kontinentalanordnungen im Überblick",same:"Gleiche Perspektive"},t.overview?"overview":"same")+'</select></label><small>Gemeinsamer Zeitraum bis +'+Math.min(scenarios[t.scenario].end,scenarios[t.second].end)+' Mio. Jahre. '+assumptions[t.second]+'</small>':'')+
       '<label><input type="checkbox" id="g-future-lines" '+(t.showBoundaries?"checked":"")+'> Modellgrenzen zeigen</label><small>'+assumptions[t.scenario]+'</small>')+
       '<label>Tempo<select id="g-speed">'+opts({"3":"Langsam","7":"Normal","14":"Schnell"},String(t.speed))+'</select></label>'+
       '<details id="g-evidence"><summary>Belege ansehen</summary><label>Hinweis im Globus<select id="g-evidence-kind">'+opts({"":"Ausblenden",margin:"Kontinentalränder",fossil:"Mesosaurus-Fundregionen",rock:"Alte Gebirgsgürtel",india:"Weg Indiens",australia:"Weg Australiens"},t.layer)+'</select></label><p id="g-evidence-name"></p><p id="g-evidence-info"></p>'+
@@ -402,7 +412,8 @@ export class Observatory {
       button("g-to-atlas","Zum heutigen Plattenatlas")+button("g-world","Zum Globus")+'</div>';
     this.change("g-track",v=>{t.tracking=v;const point=t.reconstruction.at(Math.abs(t.year),v);if(point)this.world.nav.fly({...point,d:16800,tilt:0,bearing:0},true);});
     this.change("g-trail",()=>{t.trail=!t.trail;});this.change("g-follow",()=>{t.follow=!t.follow;});
-    this.change("g-second",v=>{t.comparison=v as Scenario;t.setYear(t.year);this.draw();});
+    this.change("g-second",v=>{t.comparison=v as Scenario;t.setYear(t.year);if(t.overview)this.focusTime();this.draw();});
+    this.change("g-compare-camera",v=>{t.overview=v==="overview";if(t.overview)this.focusTime();this.timeKey="";});
     this.change("g-future-lines",()=>{t.showBoundaries=!t.showBoundaries;});
     const gnssInfo=(id:string)=>{const station=gnss.find(s=>s.id===id)!;
       const az=(Math.atan2(station.east,station.north)*180/Math.PI+360)%360;
@@ -419,7 +430,7 @@ export class Observatory {
     this.change("g-speed",v=>{t.speed=Number(v);});
     this.change("g-station",v=>{t.playing=false;t.setYear(Number(v));this.draw();});
     this.change("g-scenario",v=>{t.playing=false;t.scenario=v as Scenario;t.setYear(v==="past"?Math.min(0,t.year):Math.min(Math.max(5,t.year),scenarios[t.scenario].end));this.draw();});
-    this.change("g-compare",()=>{if(t.year<=0)t.setYear(5);t.compare=!t.compare;this.draw();});
+    this.change("g-compare",()=>{if(t.year<=0)t.setYear(5);t.compare=!t.compare;if(t.compare&&t.overview)this.focusTime();this.draw();});
     const text:Record<string,string>={margin:"Die Ränder Südamerikas und Afrikas liegen in der Rekonstruktion näher beieinander. Auch überflutete Teile gehören zum Kontinent.",fossil:"Reste des Süßwasserreptils Mesosaurus finden sich im Paraná- und im Karoo-Becken. Die Punkte markieren Fundregionen. Die Tiere lebten vor der hier gezeigten Zeit.",rock:"In den Appalachen und im kaledonischen Gebirgsgürtel finden sich Spuren einer gemeinsamen alten Gebirgsbildung. Die Punkte markieren Untersuchungsregionen.",india:"Indien wandert im Modell nach Norden.",australia:"Australien trennt sich von der Antarktis."};
     this.change("g-evidence-kind",v=>{t.layer=v;if(t.year>0)t.setYear(0);const point=t.evidenceCentre();if(point)this.world.nav.fly({...point,d:16700,tilt:0,bearing:0},true);$("g-evidence-info").textContent=text[v]||"";$("g-evidence-name").textContent="";});
     $("g-evidence-info").textContent=text[t.layer]||"";
@@ -429,31 +440,46 @@ export class Observatory {
   }
   private frameTime(dt:number){
     graphics.scope="time";graphics.activity=this.timeline?.playing?"animation":"still";
-    const t=this.timeline;if(!t)return false;const rendered=t.render(dt,this.world.gl,this.world.nav.camera);
+    const t=this.timeline;if(!t)return false;const rendered=t.render(dt,this.world.gl,this.world.nav.camera);if(t.cached){graphics.idle=true;graphics.activity="cached";}
     if(t.follow&&t.tracking&&t.year<=0&&!this.world.nav.flight){
       const v=t.reconstruction.at(Math.abs(t.year),t.tracking);if(v){this.world.nav.goal.lat=v.lat;this.world.nav.goal.lon=v.lon;}
     }
     const [name,meaning]=timeReading(t);setReading("learn-station",name);setReading("learn-history",meaning);
     const camera=this.world.nav.camera,canvas=this.world.gl.domElement;
-    const key=[t.ready,Math.round(t.year*10),t.layer,t.gnss,t.tracking,t.compare,t.markers.children.length,canvas.clientWidth,canvas.clientHeight,document.body.dataset.reveal,...camera.matrixWorld.elements].join("/");
-    if(key!==this.timeKey){this.timeKey=key;
+    const key=[t.ready,t.reconstruction.ready,t.overview,t.scenario,t.second,Math.round(t.year*10),t.layer,t.gnss,t.tracking,t.compare,t.markers.children.length,canvas.clientWidth,canvas.clientHeight,document.body.dataset.reveal,...camera.matrixWorld.elements].join("/");
+    if(key!==this.timeKey){this.timeKey=key;beginCandidates();
       const points=t.markers.children.filter(o=>o.name).map(o=>({name:o.name,p:o.position}));
       if(t.year<=0&&!t.gnss&&!t.layer){
         const order=[...new Set([t.tracking,"701","201","501","101","801"].filter(Boolean))];
+        if(t.year===0)points.push({name:"Atlantischer Ozean",p:position(4,-29,28)});
+        if(t.year<=-230){const [lat,lon]=viewCentres.past[Math.round(-t.year/5)];points.push({name:"Panthalassa",p:position(-lat,lon+180,28)});}
         for(const code of order){
           const at=t.reconstruction.at(Math.abs(t.year),code);
-          if(at)points.push({name:tracks[code][0],p:at.v.clone().normalize().multiplyScalar(R+29)});
+          const age=-t.year;
+          const place=code==="701"&&age>=175?(age>=220?"Afrika · Pangäa":"Afrika · Gondwana"):code==="101"&&age>=175&&age<220?"Nordamerika · Laurasia":tracks[code][0];
+          if(at)points.push({name:place,p:at.v.clone().normalize().multiplyScalar(R+29)});
         }
       }
       const labels=points.flatMap(({name,p},i)=>{const xy=project(p,camera,canvas.clientWidth,canvas.clientHeight);
         return xy&&p.dot(camera.position.clone().sub(p))>0&&allowsLabel(name,i)?[{id:name,name,text:t.gnss?"Satellitenmessungen zeigen die heutige Bewegung.":meaning,...xy}]:[];}).slice(0,4);
-      this.timePins.draw(t.compare?[]:labels,[$("obswitch"),$("observation-controls")],this.timeLayout);
+      if(t.compare){
+        labels.length=0;const half=Math.floor(canvas.clientWidth/2);
+        for(const side of [0,1]){const eye=t.splitCameras[side];
+          for(const {name,p} of t.futureLabels(side)){if(p.dot(eye.position.clone().sub(p))<=0)continue;
+            const xy=project(p,eye,half,canvas.clientHeight),id=(side?"rechts-":"links-")+name;
+            if(xy&&allowsLabel(id)&&labels.filter(v=>v.id.startsWith(side?"rechts":"links")).length<2)labels.push({id,name,text:assumptions[side?t.second:t.scenario],x:xy.x+side*half,y:xy.y});
+          }
+        }
+      }
+      this.timePins.draw(labels,[$("obswitch"),$("observation-controls")],this.timeLayout);
     }
     const station=$<HTMLSelectElement>("g-station");if(station)station.value=String(t.year);const year=Math.round(t.year);$("g-age").textContent=year<0?"Vor "+(-year)+" Mio. Jahren":year>0?"In "+year+" Mio. Jahren":"Heute";
     $("g-certainty").textContent=t.error||(!rendered?"Rekonstruktion wird geladen …":year>0?"Mögliche Zukunft – keine sichere Vorhersage":year<0?"Wissenschaftliche Rekonstruktion":"Heutige Kontinentalflächen im Rekonstruktionsmodell");
     $("g-time-play").textContent=t.playing?"Pause":"Abspielen";$<HTMLInputElement>("g-year").value=String(t.year);
-    const caption=$("g-split-caption");if(caption){caption.hidden=!t.compare;caption.textContent=t.compare?scenarios[t.scenario].label+"　 /　 "+scenarios[t.second].label:"";}
+    const caption=$("g-split-caption");if(caption){caption.hidden=!t.compare;if(t.compare){const key=[t.scenario,t.second,t.overview].join("/");
+      if(caption.dataset.pair!==key){caption.dataset.pair=key;caption.replaceChildren(...[t.scenario,t.second].map(id=>{const block=document.createElement("div"),name=document.createElement("strong"),info=document.createElement("span");
+      name.textContent=scenarios[id].label;info.textContent=assumptions[id];block.append(name,info);return block;}));}caption.dataset.camera=t.overview?"Je Globus auf seine Kontinente ausgerichtet":"Gleiche geografische Perspektive";}}
     return rendered;
   }
-  private timeDiagnostics(){const t=this.timeline;return t?{year:t.year,scenario:t.scenario,compare:t.compare,futureLines:t.showBoundaries,timeReady:t.ready,timeError:t.error,rigid:t.reconstruction.ready,tracking:t.tracking,tracked:t.reconstruction.at(Math.abs(t.year),t.tracking)?.v.toArray(),second:t.second}:{};}
+  private timeDiagnostics(){const t=this.timeline;return t?{year:t.year,scenario:t.scenario,overview:t.overview,cameras:t.compare?t.splitCameras.map(c=>c.position.toArray()):undefined,compare:t.compare,futureLines:t.showBoundaries,timeReady:t.ready,timeError:t.error,rigid:t.reconstruction.ready,tracking:t.tracking,tracked:t.reconstruction.at(Math.abs(t.year),t.tracking)?.v.toArray(),second:t.second}:{};}
 }

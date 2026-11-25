@@ -1,5 +1,6 @@
 import {nyosLabels} from "./nyos/labels";
-import {allowsLabel,claimObject} from "./observatory/reveal";
+import {discussion} from "./observatory/discussion";
+import {beginCandidates,allowsLabel,claimObject} from "./observatory/reveal";
 import {installProfiles} from "./observatory/graphics";
 import {classroomViews} from "./observatory/classroom-views";
 import {fields,lessonKeys} from "./observatory/saved-state";
@@ -191,7 +192,12 @@ function renderSide() {
     const extra=document.createElement("div");extra.className="g-atlas-tools";
     extra.innerHTML='<button id="g-time">Zeitreise</button><button id="g-forces">Plattenantrieb</button><button id="g-boundaries">Grenze untersuchen</button>'+(world.selectedBoundary?'<button id="g-selected">Prozess ansehen</button>':'');
     if(world.mosaic?.pair){extra.hidden=true;side.append(extra);}else side.querySelector("h1")?.after(extra);
-    if($("pair-process"))$("pair-process").onclick=()=>observatory.openBoundary(world.mosaic!.pair!.step,"process");
+    if($("pair-process"))$("pair-process").onclick=()=>{
+      const m=world.mosaic!,step=m.pair!.step,pose={...world.nav.pose},time=m.progress,arrows=m.pair!.vectors.visible;
+      observatory.returnPairId=step[0];observatory.returnPair=()=>{navigate("plates");world.comparePlates(false,step[0]);m.progress=time;m.pair!.setTime(time);m.pair!.vectors.visible=arrows;world.nav.fly(pose,true);renderSide();};
+      void observatory.openBoundary(step,"process");
+    };
+    if($("pair-forces"))$("pair-forces").onclick=()=>observatory.openConcept("forces");
     $("g-forces").onclick=()=>observatory.openConcept("forces");
     $("g-time").onclick=()=>observatory.openTime();
     $("g-boundaries").onclick=()=>void observatory.openMap("boundaries");
@@ -393,6 +399,7 @@ function updatePins() {
   if (annotationKey === key) return;
   annotationKey = key;
   const obstacles = pinObstacles;
+  if(!observatory.mode)beginCandidates();
   const inLesson=document.body.classList.contains("observing")&&!friday;
   shellPins.draw(world.mode==="nyos"?nyosLabels(world,dimensions.clientWidth,dimensions.clientHeight).filter((a,i)=>allowsLabel(a.id,i)):world.mode === "inside" && (labels || released.size || inLesson) ? world.layerMarkers(released,labels||inLesson).filter((a,i)=>allowsLabel(a.id,i)) : [],obstacles,layoutRevision);
   const plates = world.mode === "plates" && (o.names || inLesson || world.singlePlateName || world.mosaic?.pair)
@@ -456,12 +463,12 @@ async function boot() {
     warn("Ersatzansicht · lokale Weltkarte");
     return;
   }
-  const observation=new Observation();
+  const observation=new Observation(()=>observatory.subject);
   observatory=new Observatory(world,side,navigate);
   const baseView=()=>({
     mode:world.mode,site:world.region.id,style:world.style,labels,released:[...released],
     shell:{...fields(world.shell,["cut","selected","subdued"]),visible:[...world.shell.visible],opacity:[...world.shell.opacity],comparison:world.shell.expanded?"expanded" as const:world.shell.lithosphere?"lithosphere" as const:"reference" as const},
-    plates:{...world.plateOptions},profile:world.profileCode,pair:Boolean(world.mosaic?.pair),pairStep:world.mosaic?.pair?.step[0],pairTime:world.mosaic?.progress??0,pairPlaying:world.mosaic?.playing??false,
+    plates:{...world.plateOptions},profile:world.profileCode,pair:Boolean(world.mosaic?.pair),pairStep:world.mosaic?.pair?.step[0],arrows:world.mosaic?.pair?.vectors.visible,pairTime:world.mosaic?.progress??0,pairPlaying:world.mosaic?.playing??false,
     process:fields(world,["processDetail","processSite","processProgress","processPlaying","processLoop","processSlow","singlePlateName","smallPlateNames"]),
     nyos:fields(world.nyosLesson,lessonKeys),nyosDetail:world.nyosDetail
   });
@@ -474,7 +481,7 @@ async function boot() {
     if(b.mode==="plates"){
       await world.loadClassroomAtlas(Boolean(b.process.processSite));world.setPlateOptions(b.plates);
       if(b.process.processSite)world.visit(b.process.processSite,!b.process.processDetail);
-      else if(b.profile&&world.profiles[b.profile]){world.inspectPlate(b.profile);if(b.pair){world.comparePlates(false,b.pairStep);if(world.mosaic){world.mosaic.progress=b.pairTime;world.mosaic.playing=b.pairPlaying;}}}
+      else if(b.profile&&world.profiles[b.profile]){world.inspectPlate(b.profile);if(b.pair){world.comparePlates(false,b.pairStep);if(world.mosaic){world.mosaic.progress=b.pairTime;world.mosaic.pair?.setTime(b.pairTime);if(world.mosaic.pair)world.mosaic.pair.vectors.visible=b.arrows!==false;world.mosaic.playing=b.pairPlaying;}}}
       Object.assign(world,fields(b.process,["processProgress","processPlaying","processLoop","processSlow","singlePlateName","smallPlateNames"]));
     }
     renderSide();
@@ -540,7 +547,9 @@ async function boot() {
   });
   let lastHud = 0;
   let lastBearing = NaN;
+  const updateDiscussion=discussion(observatory);
   world.onFrame = () => {
+    updateDiscussion();
     observation.update();
     if(observatory.mode){if(status.textContent)status.textContent="";return;}
     if (world.mode==="inside"||world.mode==="plates") updatePins();

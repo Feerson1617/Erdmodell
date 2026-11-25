@@ -10,7 +10,7 @@ import traces from "./traces.json";
 import { localAsset } from "../assets";
 import { sites, referenceGeology, type Geology, type Process, type Site } from "./boundaries";
 
-import { WaterSection } from "./water";
+import { coastHeight, WaterSection } from "./water";
 import { waveAnalysis } from "./wavefronts";
 import { Fault, onset, pSpeed, sSpeed } from "./fault";
 import { geologySolids } from "./sections";
@@ -158,10 +158,7 @@ export class RegionalScene {
         const far=(1-v)*((1-u)*hh[j]+u*hh[j+1])+v*((1-u)*hh[j+145]+u*hh[j+146]);blended=T.MathUtils.lerp(m,far,edge);}
       return blended/1000/((this.spec.width??sites[this.spec.site!].width)/12)*(this.spec.site==="japan"?4.7:2.4);
     }
-    if(this.spec.coastLesson){
-      const slope=-.48-.95*Math.tanh((x+2.45)*.85);
-      return (slope>0?.26*slope:slope)+.42*Math.exp(-((x+4.95)**2)*1.3);
-    }
+    if(this.spec.coastLesson)return coastHeight(x);
     if(this.windows && this.spec.geology){
       const u=clamp((x/12+.5)*6,0,6),v=clamp((z/9+.5)*6,0,6),i=Math.min(5,Math.floor(u)),j=Math.min(5,Math.floor(v)),dx=u-i,dy=v-j;
       const h=this.windows,k=i+j*7;return .00024*((1-dy)*((1-dx)*h[k]+dx*h[k+1])+dy*((1-dx)*h[k+7]+dx*h[k+8]));

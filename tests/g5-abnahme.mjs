@@ -6,14 +6,14 @@ import {tmpdir} from "node:os";
 import {spawnSync} from "node:child_process";
 
 
-export async function screencast(page,dir,name,perform) {
+export async function screencast(page,dir,name,perform,options={}) {
   const scratch=await mkdtemp(join(tmpdir(),"georisiko-film-")),cdp=await page.context().newCDPSession(page);
   const frames=[],writes=[];
   cdp.on("Page.screencastFrame",ev=>{const file=String(frames.length).padStart(6,"0")+".jpg";
     frames.push({file,time:ev.metadata.timestamp});writes.push(writeFile(join(scratch,file),Buffer.from(ev.data,"base64")));
     void cdp.send("Page.screencastFrameAck",{sessionId:ev.sessionId}).catch(()=>{});
   });
-  await cdp.send("Page.startScreencast",{format:"jpeg",quality:76,maxWidth:960,maxHeight:600,everyNthFrame:2});
+  await cdp.send("Page.startScreencast",{format:"jpeg",quality:76,maxWidth:960,maxHeight:600,everyNthFrame:2,...options});
   try{await page.waitForTimeout(320);await perform();await page.waitForTimeout(480);}
   finally{await cdp.send("Page.stopScreencast");await cdp.detach();await Promise.all(writes);}
   assert.ok(frames.length>=5,name+" sichtbare Filmframes");

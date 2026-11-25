@@ -356,7 +356,7 @@ export class World {
       if (!active && this.mosaic.group.visible) { this.mosaic.close(); this.profileCode = ""; }
       this.mosaic.selected = active ? plate : "";
     }
-    this.nav.minimumDistance = active ? (this.mosaic?.pair ? 160 : 340) : .06;
+    this.nav.minimumDistance = active ? (this.mosaic?.pair ? 18 : 340) : .06;
     if (active && !this.nav.flight && this.nav.goal.d < this.nav.minimumDistance) this.nav.fly({...this.nav.goal, d: 500});
     this.atlas.setLayers(this.mode === "plates" && !this.mosaic?.pair && boundaries, types, types && category !== "all" ? category : null, active ? null : plate || null);
   }
@@ -412,7 +412,9 @@ export class World {
       this.inspectPlate(code);
       const pair=this.mosaic.beginPair(step??this.atlas.steps[profile.step-1]);
       this.updatePlateLayers();
-      const d=Math.max(180,pair.span/(.86*this.fitSlope()));
+      // This view docks the explanation alongside the canvas. Fit the end positions within its own viewport.
+      const desk=document.getElementById("desk")!;desk.classList.add("pair-layout");this.resize();
+      const d=Math.max(20,pair.span/(.89*this.fitSlope()));
       this.nav.fly({...pair.site,d,tilt:32,bearing:pair.heading},true);
     }
     if (autoplay) this.mosaic.play();

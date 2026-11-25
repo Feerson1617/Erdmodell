@@ -64,7 +64,7 @@ function solid(r:RegionalScene,kind:Rock,side:number,point:(u:number,v:number,z:
   const g=new T.BufferGeometry();g.setIndex(indices);g.setAttribute("position",new T.Float32BufferAttribute(pos,3));g.computeVertexNormals();
   g.setAttribute("bedFraction",new T.Float32BufferAttribute(parameters.filter((_,i)=>i%2===1),1));
   g.setAttribute("geologyCoord",g.attributes.position.clone());
-  const m=new T.Mesh(g,material(kind,r,Boolean(label)));m.name=label??(kind==="basalt"&&r.faultModel.kind==="interface"&&side===-r.faultModel.dipSign?"Abtauchende ozeanische Kruste":palette[kind][1]);m.userData.explanation={name:m.name,answer:palette[kind][2]};r.section.add(m);
+  const m=new T.Mesh(g,material(kind,r,Boolean(label)));m.name=label??(kind==="basalt"&&r.faultModel.kind==="interface"&&side===-r.faultModel.dipSign?"Abtauchende ozeanische Kruste":r.faultModel.kind==="interface"&&side===r.faultModel.dipSign&&["basalt","continental"].includes(kind)?"Kruste der Oberplatte":palette[kind][1]);m.userData.explanation={name:m.name,answer:palette[kind][2]};r.section.add(m);
   if(label&&r.spec.process==="ridge"){g.setAttribute("sectionU",new T.Float32BufferAttribute(parameters.filter((_,i)=>i%2===0),1));g.setAttribute("coupling",new T.Float32BufferAttribute(new Float32Array(pos.length/3*2),2));m.frustumCulled=false;}
   else r.bindRock(g,side,(i,z)=>point(parameters[i*2],parameters[i*2+1],z)[1]);
   return m;

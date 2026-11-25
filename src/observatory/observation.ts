@@ -2,25 +2,26 @@ import {chosenReading,channels,disclosed,nextLabel,resetReveals,reveal,revealAll
 const el=(id:string)=>document.getElementById(id);
 const neutral=["Erde","Inneres","Karte","Ereignis","Berg","Siedlung","See","Orte"];
 const buttons:Record<string,string>={
-  "g-local-process":"Regionalmodell öffnen","g-play":"Abspielen","g-step":"Schritt","g-before":"Vorher","g-after":"Nachher","g-reset":"Zurücksetzen",
+  "nyos-lake":"See","nyos-section":"Seeschnitt","nyos-event":"Ereignis","nyos-protection":"Vorsorge","atlasReset":"Zurücksetzen","atlasWorld":"Zur Weltansicht","pair-step":"Einzelschritt","pair-process":"Prozessmodell","g-return-pair":"Zurück zum Vergleich","g-local-process":"Regionalmodell öffnen","g-play":"Abspielen","g-step":"Schritt","g-before":"Vorher","g-after":"Nachher","g-reset":"Zurücksetzen",
   "g-time-play":"Abspielen","g-reverse":"Rückwärts","g-today":"Heute","g-time":"Zeit wählen","g-boundaries":"Linien wählen",
   "g-quake-explain":"Ereignis öffnen","g-quake-from-process":"Ereignis öffnen","g-cut":"Untergrund","g-segment":"Modell öffnen","g-map":"Zur Karte","g-map-overview":"Weltübersicht","g-depth-open":"Messpunkte im Schnitt",
   "cut":"Ansicht wechseln","scale":"Größe vergleichen","nyos-play":"Abspielen","nyos-reset":"Zurücksetzen","atlasPlay":"Abspielen","playProcess":"Abspielen"};
-const inputs:Record<string,string>={"g-water-profile":"Wasserprofil","g-detail":"Teilchen","g-compare":"Vergleich","g-future-lines":"Modellgrenzen","g-protect":"Bauweise","g-route":"Fluchtweg","g-warning":"Warnung","g-relocate":"Höherer Standort","g-quakes":"Ereignispunkte","g-lines":"Grenzlinien","g-depth":"Tiefe","g-stress":"Spannung","g-vectors":"Bewegungspfeile","g-p":"P · gold","g-s":"S · türkis","g-follow":"Kamera folgt","g-trail":"Spur"};
-const selects:Record<string,string>={"g-example":"Grenzabschnitt","g-second":"Zweites Zeitmodell","g-risk-kind":"Gefahr","g-risk-site":"Standort","g-soil":"Baugrund","g-exposure":"Besiedlung","g-launch":"Ort","g-site":"Region","g-view":"Ansicht","g-stage":"Zustand","g-sea":"Meeresereignis","g-scenario":"Zeitmodell","g-station":"Zeitsprung","g-track":"Bereich verfolgen"};
+const inputs:Record<string,string>={"pair-arrows":"Bewegungspfeile","nyos-dissolved":"Farbe im Wasser","nyos-air":"Farbe in der Luft","g-water-profile":"Wasserprofil","g-detail":"Teilchen","g-compare":"Vergleich","g-future-lines":"Modellgrenzen","g-protect":"Bauweise","g-route":"Fluchtweg","g-warning":"Warnung","g-relocate":"Höherer Standort","g-quakes":"Ereignispunkte","g-lines":"Grenzlinien","g-depth":"Tiefe","g-stress":"Spannung","g-vectors":"Bewegungspfeile","g-p":"P · gold","g-s":"S · türkis","g-follow":"Kamera folgt","g-trail":"Spur"};
+const selects:Record<string,string>={"g-compare-camera":"Perspektive","nyos-measure":"Maßnahme","pair-examples":"Grenzvergleich","g-example":"Grenzabschnitt","g-second":"Zweites Zeitmodell","g-risk-kind":"Gefahr","g-risk-site":"Standort","g-soil":"Baugrund","g-exposure":"Besiedlung","g-launch":"Ort","g-site":"Region","g-view":"Ansicht","g-stage":"Zustand","g-sea":"Meeresereignis","g-scenario":"Zeitmodell","g-station":"Zeitsprung","g-track":"Bereich verfolgen"};
 const views:Record<string,string>={land:"Regionalübersicht",local:"Nahmodell",ground:"Bodennah",overhead:"Von oben",cut:"Untergrund",fault:"Kontakt",focus:"Ausgangspunkt",waves:"Ausbreitung",water:"Meeresboden",ocean:"Offenes Meer",coast:"Küste · Modell",vent:"Detail",mouth:"Öffnung"};
 type Field=HTMLButtonElement|HTMLSelectElement|HTMLInputElement;
 export class Observation{
   readonly toggle=document.createElement("button");private controls=document.createElement("section");active=false;
   private readRoot:Node|null=null;private bindings:{source:Field;control:Field}[]=[];private root:Node|null=null;private readonly nav=[...document.querySelectorAll("header nav button span")];
   private readonly original=this.nav.map(s=>s.textContent!);
-  constructor(){
+  private currentSubject="";private retain=false;
+  constructor(private subject:()=>string){
     this.toggle.id="obswitch";this.toggle.textContent="Beobachten";this.toggle.setAttribute("aria-pressed","false");
     this.controls.id="observation-controls";this.controls.hidden=true;this.controls.setAttribute("aria-label","Beobachtungssteuerung");
     document.querySelector(".view")!.append(this.toggle,this.controls);this.toggle.onclick=()=>this.set(!this.active);
   }
   set(value:boolean){
-    resetReveals();this.active=value;document.body.classList.toggle("observing",value);this.controls.hidden=!value;
+    this.currentSubject=this.subject();resetReveals();this.active=value;document.body.classList.toggle("observing",value);this.controls.hidden=!value;
     this.toggle.setAttribute("aria-pressed",String(value));this.toggle.textContent=value?"Zum Erklären":"Beobachten";
     this.nav.forEach((s,i)=>{s.textContent=value?neutral[i]:this.original[i];});el("sidebar")!.inert=value;this.root=null;this.update();
   }
@@ -32,7 +33,7 @@ export class Observation{
       let control:Field;
       if(source instanceof HTMLSelectElement){
         const s=document.createElement("select");s.setAttribute("aria-label",selects[id]);
-        [...source.options].forEach((o,i)=>{const label=id==="g-example"&&o.value&&!(o.parentElement instanceof HTMLOptGroupElement)?"Abschnitt "+o.value:id==="g-view"?views[o.value]:id==="g-stage"?"Zustand "+(i+1):id==="g-sea"?"Ereignis "+["B","A","C"][i]:o.text;
+        [...source.options].forEach((o,i)=>{const label=id==="pair-examples"&&o.value?o.text.split(" · ")[0]:id==="g-example"&&o.value&&!(o.parentElement instanceof HTMLOptGroupElement)?"Abschnitt "+o.value:id==="g-view"?views[o.value]:id==="g-stage"?"Zustand "+(i+1):id==="g-sea"?"Ereignis "+["B","A","C"][i]:o.text;
           s.add(new Option(label??o.text,o.value));});
         s.onchange=()=>{source.value=s.value;source.dispatchEvent(new Event("change"));};control=s;
       }else if(source instanceof HTMLInputElement&&source.type==="range"){
@@ -52,12 +53,15 @@ export class Observation{
       else if(b.dataset.release==="pick")document.body.setAttribute("data-choose-object","");
       else if(b.dataset.release==="all")revealAll();else resetReveals();this.update();};
     const insight=document.createElement("div");insight.id="observe-insight";this.controls.append(tools,insight);
+    const keep=document.createElement("label"),box=document.createElement("input");box.type="checkbox";box.checked=this.retain;box.onchange=()=>this.retain=box.checked;keep.append(box," Freigaben beim Themenwechsel behalten");tools.append(keep);
     const note=document.createElement("small");note.id="observe-note";this.controls.append(note);
   }
   update(){
     if(!this.active)return;
+    const subject=this.subject();if(subject!==this.currentSubject){if(!this.retain)resetReveals();this.currentSubject=subject;}
     const sidebar=el("sidebar")!,root=sidebar.firstChild;if(root!==this.root||!this.controls.childElementCount){this.root=root;this.build();}
     for(const {source,control} of this.bindings){
+      if(source.id==="nyos-air")control.hidden=Boolean(source.closest("[hidden]"));
       if(control.disabled!==source.disabled)control.disabled=source.disabled;
       if(source instanceof HTMLInputElement&&source.type==="checkbox")control.setAttribute("aria-pressed",String(source.checked));
       else if(control instanceof HTMLSelectElement||control instanceof HTMLInputElement){if(control.value!==source.value)control.value=source.value;}

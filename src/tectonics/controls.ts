@@ -86,7 +86,7 @@ export function plateControls(world: World) {
     ${check("atlasSlow","Langsamer",world.mosaic?.slow ?? false)}`;
   const pair=world.mosaic?.pair;
   if (pair && profile) {
-    return `<div class="pair-navigation"><label>Grenzvergleich<select id="pair-examples">${Object.entries({...teachingSteps,[pair.step[0]]:boundaryLesson(pair.step).place}).map(([id,text])=>`<option value="${id}" ${Number(id)===pair.step[0]?"selected":""}>${text}</option>`).join("")}</select></label>${playback}</div>${comparisonLesson(pair.step)}<div id="pair-object" hidden></div><button id="atlasWorld" class="atlasReturn">Zur Weltansicht</button><div hidden>${picker}</div>`;
+    return `<div class="pair-navigation"><label>Grenzvergleich<select id="pair-examples">${Object.entries({...teachingSteps,[pair.step[0]]:boundaryLesson(pair.step).place}).map(([id,text])=>`<option value="${id}" ${Number(id)===pair.step[0]?"selected":""}>${text}</option>`).join("")}</select></label>${playback}<div class="g-buttons"><button id="pair-step">Einzelschritt</button>${check("pair-arrows","Bewegungspfeile",pair.vectors.visible)}</div></div>${comparisonLesson(pair.step)}<div id="pair-object" hidden></div><button id="atlasWorld" class="atlasReturn">Zur Weltansicht</button><div hidden>${picker}</div>`;
 
   }
   const title=profile ? `<div class="panelHead"><h1 data-teach="terms">Plattentektonik</h1><button id="atlasAll" aria-label="Steckbrief schließen" title="Schließen">×</button></div>` : '<h1 data-teach="terms">Plattentektonik</h1>';
@@ -185,6 +185,9 @@ export function bindPlateControls(
       world.inspectPlate(select.value);
       refresh("plateSelect");
     };
+  bindCheck("pair-arrows",on=>{if(world.mosaic?.pair)world.mosaic.pair.vectors.visible=on;});
+  const step=side.querySelector<HTMLButtonElement>("#pair-step");
+  if(step)step.onclick=()=>{const m=world.mosaic!;m.playing=false;m.progress=Math.min(1,m.progress+.1);m.pair?.setTime(m.progress);};
   const pairs = side.querySelector<HTMLSelectElement>("#pair-examples");
   if(pairs)pairs.onchange=()=>{if(pairs.value){world.comparePlates(false,Number(pairs.value));refresh("pair-examples");}};
   const region = side.querySelector<HTMLSelectElement>("#tectonicSite")!;
