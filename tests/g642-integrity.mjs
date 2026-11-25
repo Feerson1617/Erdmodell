@@ -309,6 +309,12 @@ export async function integrity(page, out, { native, app, film }) {
           [width, height],
         );
       else await page.setViewportSize({ width, height });
+      await page.waitForFunction(([w, h]) => innerWidth === w && innerHeight === h, [width, height]);
+      const nativeWindow = native ? await app.evaluate(({ BrowserWindow, screen }) => ({
+        content: BrowserWindow.getAllWindows()[0].getContentSize(),
+        display: screen.getPrimaryDisplay().size,
+      })) : undefined;
+      if (native) assert.deepEqual(nativeWindow.content, [width, height], "Native Fenstermaße");
       await page.waitForTimeout(230);
       const ui = await page.evaluate(() => {
         const box = (e) => e.getBoundingClientRect(),
@@ -349,7 +355,7 @@ export async function integrity(page, out, { native, app, film }) {
           if (Math.abs(im.data[i] - 22) + Math.abs(im.data[i + 1] - 45) + Math.abs(im.data[i + 2] - 55) > 40)
             solid++;
         }
-      sizes.push({ ...ui, foreground: solid / total, modelArea: (await metrics(page)).usable });
+      sizes.push({ ...ui, nativeWindow, foreground: solid / total, modelArea: (await metrics(page)).usable });
       await shot("Fenster-" + width);
     }
     assert.deepEqual(errors, []);

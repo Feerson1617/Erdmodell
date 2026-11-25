@@ -17,7 +17,7 @@ const time = performance.now(),
 const app = native
   ? await _electron.launch({
       executablePath: (await readFile("test-results/mac/executable-path.txt", "utf8")).trim(),
-      args: ["--force-device-scale-factor=1", "--user-data-dir=" + join(out, "Profil")],
+      args: ["--georisiko-window-test", "--force-device-scale-factor=1", "--user-data-dir=" + join(out, "Profil")],
       timeout: 90000,
     })
   : null;
@@ -60,6 +60,8 @@ try {
   if (group === "all" || group === "integritaet")
     await integrity(page, out, { native, app, film: process.env.G642_FILM === "1" });
   if (process.argv.includes("--long")) {
+    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].setContentSize(1366, 768));
+    await page.waitForFunction(() => innerWidth === 1366 && innerHeight === 768);
     const start = performance.now(),
       rows = [];
     const set = async (k) => {

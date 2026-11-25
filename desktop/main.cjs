@@ -18,6 +18,8 @@ function togglePresentation() {
 function createWindow() {
   if (window) { window.show(); return; }
   const win = new BrowserWindow({ title: "GeoRisiko", width: 1366, height: 850, minWidth: 740, minHeight: 530,
+    // The virtual Mac display can be shorter than a classroom presentation window.
+    enableLargerThanScreen: app.commandLine.hasSwitch("georisiko-window-test"),
     backgroundColor: "#0a1318", show: false, webPreferences: {
       session: localSession, preload: join(__dirname, "preload.cjs"), sandbox: true, contextIsolation: true,
       nodeIntegration: false, webSecurity: true, webviewTag: false, devTools: false, spellcheck: false

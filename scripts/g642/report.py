@@ -43,8 +43,11 @@ for result in navigation:
     back = next(r for r in result["matrix"] if r["route"]=="Zurueck-Deutschland")
     assert back["rendered"]["globe"] and not back["rendered"]["nyos"]
     assert back["pixelvergleich"]["deutschland"] < back["pixelvergleich"]["nyos"]
-    assert {s["width"] for s in result["sizes"]} >= {740,900,1280,1366,1920,2560}
+    assert {(s["width"], s["height"]) for s in result["sizes"]} == {
+        (740,530),(900,600),(1280,720),(1366,768),(1920,1080),(2560,1440)
+    }
     assert all(not s["clipped"] and not s["covered"] for s in result["sizes"])
+assert all(s["nativeWindow"]["content"] == [s["width"], s["height"]] for s in navigation[1]["sizes"])
 assert (web / "G-Navigation-und-Rueckweg.mp4").is_file()
 docs = root / "Dokumentation"
 docs.mkdir(exist_ok=True)
@@ -134,9 +137,11 @@ for row in navigation[0]["matrix"]:
     report.append(f"| {row['from']} | {row['requested']} | {row['path']} | {row['pose'][0]:.2f}, {row['pose'][1]:.2f} |")
 report += ["", "## Modellgröße und kleine Fenster", "",
            "Die Stichprobe misst den vom Hintergrund abweichenden Anteil im sichtbaren Prozessbild einschließlich seiner Beschriftungen. Sie ergänzt die Messung der verfügbaren Canvasfläche.", "",
-           "| Fenster | Modellfläche | Vordergrundanteil im Bild | sichtbare Fachbegriffe |", "|---|---:|---:|---:|"]
-for item in navigation[0]["sizes"]:
-    report.append(f"| {item['width']} × {item['height']} | {100*item['modelArea']:.1f} % | {100*item['foreground']:.1f} % | {item['cards']} |")
+           "Breite und Höhe wurden am Renderer kontrolliert, in der installierten App zusätzlich am nativen Fenster. Für die große Präsentationsfläche durfte das Testfenster über den virtuellen Bildschirm hinausreichen. Der anschließende Dauerlauf nutzte 1366 × 768 Pixel.", "",
+           "| Produkt | Fenster | Modellfläche | Vordergrundanteil im Bild | sichtbare Fachbegriffe |", "|---|---|---:|---:|---:|"]
+for product, measurements in zip(["Offline-HTML", "Native App"], navigation):
+  for item in measurements["sizes"]:
+    report.append(f"| {product} | {item['width']} × {item['height']} | {100*item['modelArea']:.1f} % | {100*item['foreground']:.1f} % | {item['cards']} |")
 report += ["", "## Aktualisierung der Beschriftung", "", "Beobachtete DOM-Mutationen am Modell in dreisekündigen Messfenstern, einschließlich Positions- und Sichtbarkeitsänderungen.", "", "| Version | Modelle | animiert | Änderungen |", "|---|---:|---|---:|"]
 for label, run in [("G6.4.1", a), ("G6.4.2", b)]:
     for item in run["samples"]:
