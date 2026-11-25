@@ -28,8 +28,13 @@ export function plumbing(s: Stage) {
         vec(1.12, 1.45, 0.25),
       ];
   const path = new T.CatmullRomCurve3(knots);
-  if (wet)
-    s.box(1.65, -0.55, 0.1, 2.85, 0.19, 0.15, 0x508ea1, "Grundwasserleiter");
+  if (wet) {
+    for(let i=0;i<42;i++){
+      const x=.23+(i%21)*.135, y=-.45+Math.floor(i/21)*.15+.045*Math.sin(i*2);
+      const pore=s.dot(vec(x,y,.20),0x5594a4,.052,"Wasserführende Poren");
+      pore.scale.set(1.35,.68,.75);
+    }
+  }
   else s.line(knots, 0xa9aca0, "Kluft");
   const bubbles = Array.from({ length: 27 }, () =>
     s.dot(

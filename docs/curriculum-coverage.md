@@ -151,3 +151,15 @@ Für Jahrgang 9 verbinden Parkfield und Japan die regionale Orientierung mit dem
 | Das Zusammenwirken endogener Prozesse erklären | In aufeinanderfolgenden Modellphasen Kontakt mit Grundwasser, Auswurf, Einsenkung und Wallbildung beobachten. | Qualitative Prozessfolge, mehrere Explosionen und mögliche spätere Wasserfüllung. |
 | Geographische Informationen auswerten | Ufer und Siedlung von Ulmen im Luftbild finden und mit dem Seeprofil in Beziehung setzen. | Reale Oberfläche, idealisiertes Unterwasserrelief. Abweichende publizierte Tiefen sind im Fachbericht angegeben. |
 | Naturereignisse und Risiken beurteilen | Dichteunterschiede, gelöstes Gas, Freisetzung von 1986 und Tiefenwasserentgasung am Nyos untersuchen. Beide Seen anhand desselben Merkmals vergleichen. | Historische Beobachtung und allgemeiner Prozess sind gekennzeichnet. Die Lehrkraft moderiert die ergebnisoffene Bewertung der lokalen Messlage. |
+
+## G6.8 · Jahrgang 9 und Unterrichtsbesuch
+
+| Kompetenzbezug | Modellhandlung | Gegenstand der Erarbeitung |
+|---|---|---|
+| Räumliche Orientierung, F1/F2 | Auf dem Globus Eifel und Kamerun verorten, regionale Oberfläche und lokales Profil aufrufen | Die Lehrkraft kann Ausschnittbreite, Höhenüberhöhung und gleichen Profilmaßstab gegenüberstellen. |
+| Struktur, Funktion und Prozess, F2 S4/S7 | Porenwasser, Kontakt, Auswurf, Tuffwall und spätere Seeentwicklung beobachten | Eine Geländeform mit zeitlich verschiedenen Vorgängen erklären. |
+| Systemisches Denken und Modellkritik | Zwei Zirkulationstypen und zwei Sättigungsbedingungen vergleichen | Temperatur, Dichte, Druck und Gaszufuhr als unterschiedliche Einflussfaktoren untersuchen. |
+| Erkenntnisgewinnung und Kommunikation | Historische Tiefenprofile aus Nyos neben Datenlücken für Ulmen betrachten | Beobachtung, Ableitung und fehlende Evidenz unterscheiden. |
+| Mensch–Umwelt-Beziehungen, F4 S19/S20 | Ulmener Gewässerbewirtschaftung und kontrollierte Entgasung am Nyos vergleichen | Zweck und Grenzen verschiedener Eingriffe diskutieren. Die Gewichtung gesellschaftlicher Fragen liegt bei der Lerngruppe. |
+
+[Bedienübersicht](g68-lehrkraft.md) · [Quellen und Modellgrenzen](g68-datengrundlage.md)

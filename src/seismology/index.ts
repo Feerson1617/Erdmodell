@@ -2,7 +2,12 @@ import { Stage, type SeismicState } from "./stage";
 import { familyOf, titleFor, viewOptions } from "./catalog";
 import { faultStudy, intrusion, japan, sources } from "./geology";
 import {maar} from "./maar";
-import {eifelTerrain,lakeSection} from "./lakes";
+import {lakeSection} from "./lakes";
+import {lakeAtlas} from "./lake-atlas";
+import {gasColumn,mixingSection} from "./water-column";
+import {contactDetail} from "./contact-detail";
+import {compareBasins,historicalProfiles} from "./lake-comparison";
+import {volcanoForms} from "./volcano-forms";
 import { plumbing } from "./volcanism";
 import { earthPaths, magmaChart, realRecord, waveField } from "./waves";
 import type { WebGLRenderer } from "three";
@@ -14,9 +19,15 @@ export function createSeismic(
 ) {
   const stage = new Stage(gl, id),
     f = familyOf(id);
-  if(f==="maars")maar(stage);
-  else if(f==="eifel"&&id!=="lakeCut")eifelTerrain(stage);
-  else if(f==="lakes"||id==="lakeCut")lakeSection(stage);
+  if(id==="contactDetail")contactDetail(stage);
+  else if(id==="forms")volcanoForms(stage);
+  else if(id==="lakeCompare")compareBasins(stage);
+  else if(id==="profiles"||id==="conductivity")historicalProfiles(stage);
+  else if(id==="landCompare"||f==="eifel"&&id!=="lakeCut")lakeAtlas(stage);
+  else if(["mixCompare","mixing","turnover"].includes(id))mixingSection(stage);
+  else if(f==="lakes")gasColumn(stage);
+  else if(f==="maars")maar(stage);
+  else if(id==="lakeCut")lakeSection(stage);
   else if(f==="plumbing")plumbing(stage);
   else if (f === "faults") faultStudy(stage);
   else if (f === "core") earthPaths(stage);

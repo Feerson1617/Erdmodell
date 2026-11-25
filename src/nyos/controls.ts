@@ -65,7 +65,7 @@ function details(world: World) {
   if (state.view === "event") return `<p id="nyos-phase" data-teach="phase" class="nyosCaption" aria-live="polite">${eventCaption(state.progress)}</p>
     ${playback(state)}${dissolvedControl(state)}
     <div id="nyos-air-control" hidden>${check("air", "Gas in der Luft zeigen", state.air)}
-      <p id="nyos-air-key" class="nyosKey dissolvedKey" hidden>CO₂ ist farblos. Die Analysefarbe zeigt eine mögliche Ausbreitung im Relief. Verlauf und Reichweite sind schematisch.</p></div>
+      <p id="nyos-air-key" class="nyosKey atmosphericKey" hidden>CO₂ ist farblos. Ocker zeigt eine mögliche Ausbreitung im Relief. Verlauf und Reichweite sind schematisch.</p></div>
     <div id="nyos-places" hidden>${historicPlaces}</div>`;
   return `<p data-teach="cause" class="nyosCaption">Leichteres Wasser liegt oben. Das dichtere Tiefenwasser mischt sich nur wenig mit ihm.</p>
     ${dissolvedControl(state)}`;

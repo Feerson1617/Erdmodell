@@ -127,11 +127,14 @@ function reliefIllustration(terrain: NyosTerrain) {
         float along = smoothstep(0.,.10,t) * (1. - smoothstep(head-.18,head,t))
                       * (1.-smoothstep(.66,1.,t));
         float x = vEventUv.x*2.-1.;
-        float soft = exp(-4.*x*x);
+        // Illustrative crosswind and progressive dilution over the sampled hollow.
+        float drift=.27*t*sin(4.2*t+2.5*eventTime);
+        float spread=.42+.24*t;
+        float soft = exp(-pow(abs(x-drift)/spread,2.));
         float strands = .5+.5*cos(13.*x + sin(8.*t - 4.*eventTime));
         float opacity = along * soft * (.35 + .37*strands) * (1.-.32*t);
         if (opacity < .025) discard;
-        gl_FragColor = vec4(mix(vec3(.48,.29,.61),vec3(.76,.60,.85),strands),opacity);
+        gl_FragColor = vec4(mix(vec3(.62,.51,.34),vec3(.86,.79,.63),strands),opacity);
         #include <colorspace_fragment>
       }
     `,

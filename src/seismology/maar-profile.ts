@@ -26,3 +26,13 @@ export const lakeDimensions = {
   ulmen: { span: 340, depth: 38 },
   nyos: { span: 1800, depth: 208 },
 };
+
+// Intersect a horizontal water level with the inner crater slope on each ray.
+export function shoreRadius(angle:number,level:number){
+  let lo=0,hi=3.6;
+  for(let n=0;n<19;n++){
+    const r=(lo+hi)/2;
+    if(surfaceHeight(r*Math.cos(angle),-r*Math.sin(angle),1)<level)lo=r;else hi=r;
+  }
+  return (lo+hi)/2;
+}

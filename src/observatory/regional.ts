@@ -207,7 +207,7 @@ export class RegionalScene {
     }
     if(!this.spec.site){this.lib=await materials();if(this.disposed)return;this.sunlight.castShadow=true;}
     this.timings.dataMs=performance.now()-start;const build=performance.now();
-    this.faultModel=new Fault(this.spec,(x,z)=>this.height(x,z));if(this.faultModel.waterEvent)this.water=new WaterSection(this.faultModel);this.timings.solverMs=performance.now()-build;
+    this.faultModel=new Fault(this.spec,(x,z)=>this.height(x,z));if(this.spec.theme!=="volcano"&&this.faultModel.waterEvent)this.water=new WaterSection(this.faultModel);this.timings.solverMs=performance.now()-build;
     this.nearSurface=this.height(this.faultModel.hx,0);this.ui.focus.value=this.faultModel.hy;
     this.buildSurface();this.addVectors();this.addTrace();if(!this.spec.site)this.groundDetails();this.buildQuake();this.buildExtras();this.ready=true;this.update(0);this.timings.geometryMs=performance.now()-build-this.timings.solverMs;
   }
