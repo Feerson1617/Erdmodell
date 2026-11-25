@@ -65,6 +65,13 @@ export function modelTitle(o: Observatory, w: World) {
   }[w.mode];
 }
 export function timeCaption(o: Observatory, w: World) {
+  if(o.study){const id=o.study.view,t=o.study.time;
+    if(id==="record")return "11. März 2011 · "+new Date(Date.UTC(2011,2,11,5,55)+Math.min(1259,t*1260)*1000).toISOString().slice(11,19)+" UTC";
+    if(["observed","slab","shallowDeep"].includes(id))return "Katalogzeitraum 2019–2023";
+    if(["rays","conversion"].includes(id))return "Laufzeit im Referenzmodell · "+Math.round(t*1600)+" s";
+    if(["particles","surface","stations","sites","distance"].includes(id))return "Modellzeit · "+(t*28).toFixed(1).replace(".",",")+" s";
+    return "Modellphase · "+Math.round(t*100)+" %";
+  }
   const t = o.timeState,
     s = o.studioState;
   if (t) {

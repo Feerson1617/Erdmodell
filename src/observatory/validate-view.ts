@@ -1,3 +1,4 @@
+import {validSeismic} from "../seismology";
 import {validStudio} from "./tectonic-studio";
 import { atlasLayers } from "./research-data";
 import sites from "./sites.json";
@@ -16,6 +17,7 @@ export function readableView(e:unknown){
   const b=e.base,s=e.scene,p=s.pose,m=s.map;
   if(!record(p)||!number(p.lat,-90,90)||!number(p.lon)||!number(p.d,.001,1e6)||!number(p.bearing)||!number(p.tilt)||!record(m)||!one(m.purpose,"events|boundaries")||!flags(m,"events lines depth"))return false;
   if(!one(b.mode,"globe|inside|nyos|place|plates")||!one(b.style,"A|B"))return false;
+  if(s.mode==="seismic")return validSeismic(s.study);
   if(s.mode==="studio")return validStudio(s.studio);
   if(s.mode==="map"){
     const atlas=m.research,rates=m.rates;

@@ -13,7 +13,7 @@ jobs:
     timeout-minutes: 85
     env:
       CSC_FOR_PULL_REQUEST: 'true'
-      G642_OUT: test-results/G642/App
+      G65_OUT: test-results/G65/App
     steps:
       - uses: actions/checkout@v4
         with:
@@ -24,8 +24,9 @@ jobs:
           cache: npm
       - run: npm ci && npm run mac:build
       - run: bash scripts/mount-macos.sh
-      - run: python3 scripts/g52/product-check.py artifacts/macos/GeoRisiko-G6.4.2-macOS-arm64-app.zip artifacts/GeoRisiko-G6.4.2-Web-Test.html test-results/G642/Ressourcen.json
-      - run: node tests/g642-product.mjs --installed --long
+      - run: python3 scripts/g52/product-check.py artifacts/macos/GeoRisiko-G6.5-macOS-arm64-app.zip artifacts/GeoRisiko-G6.5-Web-Test.html test-results/G65/Ressourcen.json
+      - run: node tests/g65-science.mjs test-results/G65/App
+      - run: node tests/g65-product.mjs --installed --long
       - if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -33,31 +34,31 @@ jobs:
           path: |
             test-results/mac/installation.log
             test-results/mac/SHA256.txt
-            test-results/G642/**/*.json
-            test-results/G642/**/*.jpg
-            !test-results/G642/App/Profil/**
+            test-results/G65/**/*.json
+            test-results/G65/**/*.jpg
+            !test-results/G65/App/Profil/**
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
-          path: artifacts/macos/GeoRisiko-G6.4.2-macOS-arm64.dmg
+          path: artifacts/macos/GeoRisiko-G6.5-macOS-arm64.dmg
           archive: false
           if-no-files-found: error
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
-          path: artifacts/macos/GeoRisiko-G6.4.2-macOS-arm64-app.zip
+          path: artifacts/macos/GeoRisiko-G6.5-macOS-arm64-app.zip
           archive: false
           if-no-files-found: error
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
-          path: artifacts/GeoRisiko-G6.4.2-Web-Test.html
+          path: artifacts/GeoRisiko-G6.5-Web-Test.html
           archive: false
           if-no-files-found: error
   classroom:
-    name: Offline-HTML · Unterricht A bis F mit Originalfilmen
+    name: Offline-HTML · Seismologie A bis G und Bestand H
     runs-on: macos-26
     timeout-minutes: 55
     env:
-      G642_FILM: '1'
-      G642_OUT: test-results/G642/HTML
+      G65_FILM: '1'
+      G65_OUT: test-results/G65/HTML
     steps:
       - uses: actions/checkout@v4
         with:
@@ -69,14 +70,14 @@ jobs:
       - run: npm ci && npm run build && npm run standalone
       - run: command -v ffmpeg || brew install ffmpeg
       - run: npx playwright install chromium
-      - run: node tests/g642-product.mjs
+      - run: node tests/g65-product.mjs
       - if: always()
         uses: actions/upload-artifact@v4
         with:
           name: Offline-Pruefung
-          path: test-results/G642/HTML/
+          path: test-results/G65/HTML/
   comparison:
-    name: Identischer Renderer · G6.4.1 und G6.4.2
+    name: Identischer Renderer · G6.4.2 und G6.5
     runs-on: macos-26
     timeout-minutes: 50
     steps:
@@ -90,18 +91,18 @@ jobs:
       - run: npm ci
       - uses: actions/checkout@v4
         with:
-          ref: 81b4794fa7b1abcbe1d4b781904bcdb5281cb09a
+          ref: 560232bb84234fa47147d69f9e9d544b7ee5c335
           path: .scratch/g64
       - run: |
           npm --prefix .scratch/g64 run build && npm --prefix .scratch/g64 run standalone
           npm run build && npm run standalone
           npx playwright install chromium
-      - run: node tests/g642-compare.mjs .scratch/g64/artifacts/GeoRisiko-G6.4.1-Web-Test.html artifacts/GeoRisiko-G6.4.2-Web-Test.html
+      - run: node tests/g65-compare.mjs .scratch/g64/artifacts/GeoRisiko-G6.4.2-Web-Test.html artifacts/GeoRisiko-G6.5-Web-Test.html
       - if: always()
         uses: actions/upload-artifact@v4
         with:
           name: Direktvergleich
-          path: test-results/G642/Vergleich/
+          path: test-results/G65/Vergleich/
   package:
     name: Sichtprüfung und Prüfsummen
     runs-on: ubuntu-24.04
@@ -122,9 +123,9 @@ jobs:
         with:
           name: Direktvergleich
           path: test-results/Abnahme/Vergleich
-      - run: python3 scripts/g642/report.py
+      - run: python3 scripts/g65/report.py
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
-          path: artifacts/GeoRisiko-G6.4.2-Sichtpruefung.zip
+          path: artifacts/GeoRisiko-G6.5-Sichtpruefung.zip
           archive: false
           if-no-files-found: error

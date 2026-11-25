@@ -99,6 +99,7 @@ export class ResearchAtlas {
     private selectStep: (step: Step) => void,
     private orient: (p: GeoPoint) => void,
     private openProcess: (step: Step) => void,
+    private openStudy?: (id:string)=>void,
   ) {
     this.texture.colorSpace = T.SRGBColorSpace;
     this.globe.renderOrder = 4;
@@ -362,14 +363,13 @@ export class ResearchAtlas {
       c.strokeStyle = "#1c2d34";
       c.lineWidth = 0.85;
       c.beginPath();
-      c.arc(
+      if(p.layer==="volcano"){c.moveTo(x,y-3.6);c.lineTo(x+3.4,y+2.7);c.lineTo(x-3.4,y+2.7);c.closePath();}
+      else c.arc(
         x,
         y,
         p.layer === "quakes" && layers.has("magnitude")
           ? 2 + (p.magnitude! - 6) * 2.2
-          : p.layer === "volcano"
-            ? 2.1
-            : 3.2,
+          : 3.2,
         0,
         2 * Math.PI,
       );
@@ -513,6 +513,10 @@ export class ResearchAtlas {
         return p;
       }),
     );
+    if(nearby.some(n=>n.p.layer==="quakes")&&this.openStudy){
+      const hint=document.createElement("p");hint.textContent="Der Katalog gibt Ort, Tiefe und Magnitude an. Der Bruchmechanismus dieses Ereignisses bleibt hier offen.";
+      const open=document.createElement("button");open.textContent="Allgemeines Bruchmodell";open.onclick=()=>this.openStudy?.("strike");this.reading.append(hint,open);
+    }
     if (selected) {
       const step = selected,
         button = document.createElement("button");

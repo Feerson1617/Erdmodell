@@ -127,3 +127,14 @@ Zuordnung zu den Fachanforderungen Geographie Schleswig-Holstein 2015, S. 18–1
 | Systemisches Denken und funktionaler Medieneinsatz | Historische Zeit, hypothetische Zukünfte und beobachtete oder modellierte Kartenebenen | Lokale Offline-Galerie, Legenden und Zeitangaben in der Hauptansicht |
 
 Unterrichtsgespräch und Sicherung gestaltet die Lerngruppe mit der Lehrkraft. Quellen und curriculare Einordnung bleiben in dieser Dokumentation.
+
+## G6.5 · Jahrgang 9, Naturgefahren und Aufbau der Erde
+
+| Fachlicher Bezug | Anschauung und Maßstab | Wissenschaftliche Grenze |
+|---|---|---|
+| Räumliche Orientierung, allgemeine und regionale Geographie | Globale Verteilung, Parkfield, Tōhoku und Zentralnepal, lokale Messstation | Kataloggrenzen und Projektion der Tiefen |
+| Struktur, Funktion und Prozess | Herd, Störungsfläche, elastische Deformation, bleibender Versatz und vorübergehende Schwingung | Mechanismen und Bewegungsüberhöhung der Modelle |
+| Systemisches Denken | Subduktion, Fluide, Teilaufschmelzung und spröder Bruch | Gemeinsame Ursachen, mehrere mögliche Verläufe |
+| Naturrisiken | Gleiche Quelle, unterschiedliche Untergründe und Standorte, gemeinsame Auswertung von Überwachungsdaten | Grenzen von Intensitätsaussagen und Vorhersagen |
+
+Grundlagen sind die Fachanforderungen Geographie Schleswig-Holstein Sek. I 2015, der Leitfaden 2016 und das schulinterne Fachcurriculum der ETS Tönning/Friedrichstadt für Jahrgang 9. Aufgaben, Diskussion und Sicherung verbleiben bei der Lehrkraft. [Fachprüfung und Darstellungen](g65-erdbeben.md)

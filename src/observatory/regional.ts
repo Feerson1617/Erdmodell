@@ -1,3 +1,4 @@
+import {addRupturePatch} from "../seismology/regional-rupture";
 import {names} from "../tectonics/atlas";
 import {seaMaterial,waterSection,seabed} from "./sea-material";
 import {LocalLandscape,localView} from "./local-landscape";
@@ -111,6 +112,7 @@ export class RegionalScene {
   showP=true;showS=true;detail=false;phasesShown=true;water?:WaterSection;private waves:T.Mesh[]=[];private fault!:T.Line;private rupture!:T.Line;
   private waterColumn?:T.Mesh; private nearSurface=0;private rockMaterial:T.Material[]=[];
   private people:T.Mesh[]=[];private route?:T.Line;private motion:((t:number)=>void)[]=[];
+  ruptureAnalysis=false;
   progress=0;playing=false;slow=false;cut=false;names=true;moreNames=false;vertical=true;stress=false;
   soil="rock";eruption="effusive";coastal=false;protection=false;safeRoute=false;warning=false;relocate=false;exposure="dense";ready=false;error="";private disposed=false;private age=0;
   constructor(readonly spec:RegionSpec,canvas:HTMLCanvasElement){
@@ -468,7 +470,7 @@ export class RegionalScene {
     this.fault=path(points,0x463e36,"Störungsfläche");this.section.add(this.fault);
     Object.defineProperty(this.fault.userData,"explanation",{get:()=>this.progress<onset?{name:"Blockierter Kontakt",answer:"Hier hält ein Teil der Störung fest. Umgebendes Gestein kann sich elastisch verformen."}:{name:"Störungsfläche",answer:"Auf dieser Fläche hat sich das Gestein gegeneinander verschoben."}});
     this.rupture=path(Array.from({length:49},()=>origin.clone()),0xffcf89,"Bruchfront");this.section.add(this.rupture);
-    this.waves=waveAnalysis(this);
+    this.waves=waveAnalysis(this);addRupturePatch(this);
   }
   private buildExtras(){
     this.extraBuilder?.(this);
