@@ -505,10 +505,12 @@ export class GeographicExperience {
     this.focus = {};
     if(value==="nyos-event"||value==="nyos-pipe"){
       this.navigate("nyos");
-      this.world.showNyos(value==="nyos-event"?"event":"protection");
-      this.world.nyosLesson.dissolved=true;this.world.nyosLesson.air=value==="nyos-event";
-      const btn=document.querySelector<HTMLButtonElement>(value==="nyos-event"?"#nyos-event":"#nyos-protection");btn?.click();
-      this.world.nyosLesson.dissolved=true;this.world.nyosLesson.air=value==="nyos-event";return;
+      const event=value==="nyos-event";
+      const tab=document.querySelector<HTMLButtonElement>(event?"#nyos-event":"#nyos-protection");
+      if(tab)tab.click();else this.world.showNyos(event?"event":"protection");
+      this.world.nyosLesson.dissolved=true;
+      this.world.nyosLesson.air=event;
+      return;
     }
     if(value.startsWith("seismic-")){
       this.awaiting=true;

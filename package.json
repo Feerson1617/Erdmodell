@@ -9,7 +9,7 @@
     "build": "npm run check && vite build",
     "preview": "vite preview",
     "test": "npm run test:data && npm run test:g1 && npm run test:g2 && npm run test:nyos && npm run test:grundlagen",
-    "test:data": "node tests/resolution.mjs && node tests/site-data.mjs && node tests/plate-data.mjs && node tests/occlusion.mjs && node tests/mac-protokoll.mjs && node tests/g61-cadence.mjs && node tests/g62-boundaries.mjs && node tests/g63-science.mjs && node tests/g64-source-data.mjs && node tests/g64-geology.mjs && node tests/g641-science.mjs && node tests/g65-science.mjs",
+    "test:data": "node tests/resolution.mjs && node tests/site-data.mjs && node tests/plate-data.mjs && node tests/occlusion.mjs && node tests/mac-protokoll.mjs && node tests/g61-cadence.mjs && node tests/g62-boundaries.mjs && node tests/g63-science.mjs && node tests/g64-source-data.mjs && node tests/g64-geology.mjs && node tests/g641-science.mjs && node tests/g65-science.mjs && node tests/g67-science.mjs",
     "test:g1": "node tests/classroom.mjs && node tests/browser.mjs",
     "test:g2": "node tests/tectonics.mjs",
     "test:nyos": "node tests/nyos.mjs",

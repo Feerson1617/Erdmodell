@@ -19,3 +19,7 @@ Das LfU-Downloadregister enthält keine Karte zum Herunterladen. Verwendet wird 
 - [Kusakabe et al. 2008, CO₂ vor und während der Entgasung](https://doi.org/10.2343/geochemj.42.93) · [Kling et al. 2005, Messungen zur Entgasung](https://doi.org/10.1073/pnas.0502274102)
 
 Die dynamische Maarbildung ist ein qualitatives Modell wiederholter Explosionen und Einsenkung. Die Farben des Grundwasserleiters, gelöster Stoffe und des farblosen CO₂ sind Analysefarben. Modellzeiten, Partikelzahlen und Auslenkungen tragen keine quantitative Gefährdungsaussage. Für Ulmen wird weder ein Gasausbruch simuliert noch ein Gefährdungsurteil abgegeben.
+
+Kling et al. berichten für Nyos im Jahr 2001 einen maximalen Gesamtgasdruck von 15,6 bar. Das ist ein historischer Partialdrucksummenwert. Für den Sättigungsgrad muss man ihn mit dem absoluten Umgebungsdruck am jeweiligen Messpunkt vergleichen. Konzentration, Gasdruck und Sättigung sind unterschiedliche Größen. Die Vergleichsansicht führt sie getrennt auf. Die Lokalisationen der Eifelmaare und der Burg wurden mit Koordinaten und amtlichem Orthofoto abgeglichen. [Kling et al. 2005](https://doi.org/10.1073/pnas.0502274102)
+
+Beide DSM-Ausschnitte liefern am Prüfpunkt 50,2106° N und 6,9828° E einen Rasterwert von 424 m. Der LfU-Stammdatenwert für den Seespiegel beträgt 413,1 m ü. NN. Die Produkte unterscheiden sich in Datenerhebung, Bezugszeit und Höhenbezug. Die Oberfläche eines DSM ist keine örtliche Pegelmessung. Aus der Differenz wird kein Wasserstandsverlauf abgeleitet.

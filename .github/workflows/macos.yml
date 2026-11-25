@@ -25,7 +25,7 @@ jobs:
       - run: npm ci && npm run mac:build
       - run: bash scripts/mount-macos.sh
       - run: python3 scripts/g52/product-check.py artifacts/macos/GeoRisiko-G6.7-macOS-arm64-app.zip artifacts/GeoRisiko-G6.7-Web-Test.html test-results/G65/Ressourcen.json
-      - run: node tests/g65-science.mjs test-results/G65/App
+      - run: node tests/g65-science.mjs test-results/G65/App && node tests/g67-science.mjs test-results/G65/App
       - run: node tests/g65-product.mjs --installed --long
       - if: always()
         uses: actions/upload-artifact@v4

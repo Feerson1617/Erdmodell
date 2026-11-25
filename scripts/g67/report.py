@@ -30,12 +30,14 @@ lines = ["# GeoRisiko G6.7 · Produktabnahme","",f"Geprüfter Commit `{commit}`.
 for folder in (web,native):
     meta, product = read(folder/"Produkt.json"),read(folder/"G67.json")
     assert meta["commit"] == commit and not meta["network"]
+    assert set(product["routes"]) == set("ABCDEFG")
     assert not product["errors"] and set(map(tuple,product["windows"])) == sizes
     assert len(product["frames"]) >= 29 and all(f["foreground"]>.008 for f in product["frames"])
     for source in ["Seismische-Integritaet","Seismologie","Geographische-Abnahme","Bedienpruefung"]:
         test=read(folder/(source+".json"))
         assert test["complete"] and not test["errors"]
     lines.append(f"- {meta['product']} auf {meta['platform']} ({meta['arch']}). {len(product['frames'])} auf sichtbare Geometrie geprüfte Vulkan- und Seenansichten. Niedrigster gemessener Vordergrundanteil {min(f['foreground'] for f in product['frames']):.1%}. Sechs Fenstergrößen von 740 × 530 bis 2560 × 1440.")
+assert read(native/"Vulkan-Fachpruefung.json")["lakeDimensions"]["ulmen"]["depth"] == 38
 assert meta["arch"]=="arm64" and meta["platform"]=="darwin"
 films=read(web/"G67.json")["movies"]
 assert len(films)==3 and all(f["seconds"]>=18 and f["frames"]>=35 for f in films)
