@@ -2,163 +2,129 @@ name: GeoRisiko · macOS ARM64
 on: [pull_request, workflow_dispatch]
 permissions:
   contents: read
+env:
+  ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+  G6_NATIVE_GPU: '1'
+  TEST_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
 jobs:
   mac:
-    name: Apple Silicon · App, DMG und Offline-Prüfung
+    name: Installierte ARM64-App und 15-Minuten-Dauerlauf
     runs-on: macos-26
-    timeout-minutes: 110
+    timeout-minutes: 85
     env:
-      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
-      # Ad-hoc identity '-' uses no signing secrets or Developer ID.
       CSC_FOR_PULL_REQUEST: 'true'
+      G641_OUT: test-results/G641/App
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
-          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: '24'
           cache: npm
-      - run: npm ci
-      - run: npm run mac:build
+      - run: npm ci && npm run mac:build
       - run: bash scripts/mount-macos.sh
-      - name: Bedienfilm vorbereiten
-        run: command -v ffmpeg || brew install ffmpeg
-      - name: Installierte App und Einzeldatei am selben Mac bedienen und messen
-        env:
-          TEST_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
-        run: node tests/mac-abnahme.mjs
-      - name: Fachliche Messprotokolle der exportierten HTML erzeugen
-        env:
-          G6_NATIVE_GPU: '1'
-        run: |
-          python3 scripts/g52/product-check.py artifacts/macos/GeoRisiko-G6.4-macOS-arm64-app.zip artifacts/GeoRisiko-G6.4-Web-Test.html test-results/mac/G52/Ressourcen.json
-          npx playwright install chromium
-          G51_PHYSICS_LOG=test-results/mac/G51/Mechanik.json node tests/g51-physics.mjs
-          node tests/g51-time.mjs > test-results/mac/G51/Zeitreise.log
-          G521_OUT=test-results/mac/G521 node tests/g521-observation.mjs
-          G521_OUT=test-results/mac/G521 node tests/g521-storage.mjs
-          G521_OUT=test-results/mac/G521 node tests/g521-water.mjs
-          G521_OUT=test-results/mac/G521 node tests/g521-geometry.mjs
-          G61_OUT=test-results/mac/G61 node tests/g61-process.mjs
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
-        with:
-          path: artifacts/macos/GeoRisiko-G6.4-macOS-arm64.dmg
-          archive: false
-          if-no-files-found: error
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
-        with:
-          path: artifacts/macos/GeoRisiko-G6.4-macOS-arm64-app.zip
-          archive: false
-          if-no-files-found: error
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
-        with:
-          path: artifacts/GeoRisiko-G6.4-Web-Test.html
-          archive: false
-          if-no-files-found: error
+      - run: python3 scripts/g52/product-check.py artifacts/macos/GeoRisiko-G6.4.1-macOS-arm64-app.zip artifacts/GeoRisiko-G6.4.1-Web-Test.html test-results/G641/Ressourcen.json
+      - run: node tests/g641-product.mjs --installed --long
       - if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: mac-protokoll
+          name: Native-Pruefung
           path: |
-            test-results/mac/*.log
-            test-results/mac/*.json
+            test-results/mac/installation.log
             test-results/mac/SHA256.txt
-            test-results/mac/G51/*.json
-            test-results/mac/G51/Zeitreise.log
-            test-results/mac/G52/*.json
-            test-results/mac/G521/*.json
-            test-results/mac/G61/*.json
-            test-results/mac/G64-Nativ/**/*
+            test-results/G641/**/*.json
+            test-results/G641/**/*.jpg
+            !test-results/G641/App/Profil/**
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          path: artifacts/macos/GeoRisiko-G6.4.1-macOS-arm64.dmg
+          archive: false
+          if-no-files-found: error
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          path: artifacts/macos/GeoRisiko-G6.4.1-macOS-arm64-app.zip
+          archive: false
+          if-no-files-found: error
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          path: artifacts/GeoRisiko-G6.4.1-Web-Test.html
+          archive: false
+          if-no-files-found: error
   classroom:
-    name: Unterricht und Originalaufnahmen · G6.3.1 und G6.4
+    name: Offline-HTML · Unterricht A bis F mit Originalfilmen
     runs-on: macos-26
-    timeout-minutes: 75
+    timeout-minutes: 55
     env:
-      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
-      G6_NATIVE_GPU: '1'
-      G63_OUT: test-results/mac/G63
+      G641_FILM: '1'
+      G641_OUT: test-results/G641/HTML
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
-          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: '24'
+          cache: npm
+      - run: npm ci && npm run build && npm run standalone
+      - run: command -v ffmpeg || brew install ffmpeg
+      - run: npx playwright install chromium
+      - run: node tests/g641-product.mjs
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Offline-Pruefung
+          path: test-results/G641/HTML/
+  comparison:
+    name: Identischer Renderer · G6.4 und G6.4.1
+    runs-on: macos-26
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
           cache: npm
       - run: npm ci
       - uses: actions/checkout@v4
         with:
-          ref: f3b752d4dcf941865f6e5b45ab44bd878c6ccedf
-          path: .scratch/g63-reference
-          persist-credentials: false
-      - run: command -v ffmpeg || brew install ffmpeg
-      - name: Für alle G6.3-Vergleiche dieselbe Chromium-Version installieren
-        run: npx playwright install chromium
-      - name: Beide versandfertigen Einzeldateien bilden
-        run: |
-          npm --prefix .scratch/g63-reference run build
-          npm --prefix .scratch/g63-reference run standalone
-          npm run build
-          npm run standalone
-      - run: node tests/g63-science.mjs
-      - name: Präsentationsabläufe und Vulkanvergleich aufzeichnen
-        run: |
-          node tests/g63-classroom.mjs .scratch/g63-reference/artifacts/GeoRisiko-G6.3.1-Web-Test.html --before
-          node tests/g63-classroom.mjs artifacts/GeoRisiko-G6.4-Web-Test.html
-      - name: Vulkanische Referenzregionen und Schmelzquellen im gerenderten Schnitt
-        run: |
-          node tests/g631-volcano.mjs .scratch/g63-reference/artifacts/GeoRisiko-G6.3.1-Web-Test.html --before
-          node tests/g631-volcano.mjs artifacts/GeoRisiko-G6.4-Web-Test.html
-      - name: Geologische Modelle, Kartenebenen, Messungen und Smartboards
-        env:
-          G64_OUT: test-results/mac/G63/Plattentektonik
-          G64_FILM: '1'
-        run: |
-          node tests/g64-source-data.mjs
-          node tests/g64-geology.mjs
-          node tests/g64-atlas.mjs artifacts/GeoRisiko-G6.4-Web-Test.html
-          node tests/g64-classroom.mjs artifacts/GeoRisiko-G6.4-Web-Test.html
-          node tests/g64-render.mjs artifacts/GeoRisiko-G6.4-Web-Test.html
-      - name: Materialanker, verdeckte Flächen und Szenenwechsel
-        run: node tests/g63-anchors.mjs artifacts/GeoRisiko-G6.4-Web-Test.html
-      - name: Szenenwechsel während der laufenden Grafikvorbereitung
-        run: node tests/g631-scene-lifetime.mjs artifacts/GeoRisiko-G6.4-Web-Test.html
-      - name: Gleiche Zukunftsgeometrie in vier Szenarien fotografisch prüfen
-        run: node tests/g631-future-pixels.mjs .scratch/g63-reference/artifacts/GeoRisiko-G6.3.1-Web-Test.html artifacts/GeoRisiko-G6.4-Web-Test.html
-      - name: Kontrollierter Küstenvergleich bei gleicher Framebufferauflösung
-        run: node tests/g63-performance.mjs .scratch/g63-reference/artifacts/GeoRisiko-G6.3.1-Web-Test.html artifacts/GeoRisiko-G6.4-Web-Test.html
+          ref: 95de9c09546e6fca83c7d1af0875818ae2f07e39
+          path: .scratch/g64
+      - run: |
+          npm --prefix .scratch/g64 run build && npm --prefix .scratch/g64 run standalone
+          npm run build && npm run standalone
+          npx playwright install chromium
+      - run: node tests/g641-compare.mjs .scratch/g64/artifacts/GeoRisiko-G6.4-Web-Test.html artifacts/GeoRisiko-G6.4.1-Web-Test.html
       - if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Unterrichtsprotokoll
-          path: |
-            test-results/mac/G63/**/*.json
-            test-results/mac/G63/**/*.jpg
-            !test-results/mac/G63/**/frames-*/**
-            test-results/mac/G63/**/*.mp4
+          name: Direktvergleich
+          path: test-results/G641/Vergleich/
   package:
-    name: Fachbericht und Sichtprüfung
+    name: Sichtprüfung und Prüfsummen
     runs-on: ubuntu-24.04
-    needs: [mac, classroom]
+    needs: [mac, classroom, comparison]
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
-          persist-credentials: false
       - uses: actions/download-artifact@v4
         with:
-          name: mac-protokoll
-          path: test-results/mac
+          name: Native-Pruefung
+          path: test-results/Abnahme/Nativ
       - uses: actions/download-artifact@v4
         with:
-          name: Unterrichtsprotokoll
-          path: test-results/mac/G63
-      - run: python3 scripts/g64/report.py
+          name: Offline-Pruefung
+          path: test-results/Abnahme/HTML
+      - uses: actions/download-artifact@v4
+        with:
+          name: Direktvergleich
+          path: test-results/Abnahme/Vergleich
+      - run: python3 scripts/g641/report.py
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
-          path: artifacts/GeoRisiko-G6.4-Sichtpruefung.zip
+          path: artifacts/GeoRisiko-G6.4.1-Sichtpruefung.zip
           archive: false
           if-no-files-found: error

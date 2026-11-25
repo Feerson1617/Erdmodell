@@ -1,39 +1,36 @@
 name: GeoRisiko · Browserregression
 on: [pull_request, workflow_dispatch]
-env:
-  ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
 permissions:
   contents: read
+env:
+  ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
 jobs:
   build:
     runs-on: ubuntu-24.04
-    timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '24'
           cache: npm
       - run: npm ci
-      - run: npm run build
+      - run: npm run build && npm run standalone
       - run: npm run test:data
       - uses: actions/upload-artifact@v4
         with:
           name: Produktionsbuild
-          path: dist/
-          overwrite: true
-          if-no-files-found: error
-
-  test:
-    name: Browserprüfung ${{ matrix.suite }}
+          path: |
+            dist/
+            artifacts/GeoRisiko-G6.4.1-Web-Test.html
+  browser:
     needs: build
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
-        suite: [g1, g2, nyos, grundlagen, vergleich, freitag, plattenatlas, g5]
-    runs-on: ubuntu-24.04
+        suite: [raum, atlas, modelle, bestand, freitag]
     container: mcr.microsoft.com/playwright:v1.56.1-noble@sha256:f1e7e01021efd65dd1a2c56064be399f3e4de00fd021ac561325f2bfbb2b837a
     timeout-minutes: 45
     steps:
@@ -42,51 +39,23 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '24'
           cache: npm
-      - run: npm ci
-      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - run: npm ci && git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - uses: actions/download-artifact@v4
         with:
           name: Produktionsbuild
-          path: dist/
-      - if: matrix.suite == 'g1'
-        run: node tests/gate.mjs
-      - name: Geprüften G4.2-Stand für denselben Browserlauf laden
-        if: matrix.suite == 'vergleich'
-        uses: actions/checkout@v4
-        with:
-          ref: 441f1480b6fc1d65faf5ef5b06882ccdc6775656
-          path: .scratch/g421-reference
-      - name: Referenz mit identischen Abhängigkeiten bauen
-        if: matrix.suite == 'vergleich'
-        run: npm --prefix .scratch/g421-reference run build
-      - name: Gesicherten G4.2.1-Build für den Schalenvergleich vorbereiten
-        if: matrix.suite == 'freitag'
-        uses: actions/checkout@v4
-        with:
-          ref: 1caab5e3578cff1c92814ccb781f3069f9be3dbd
-          path: .scratch/g422-reference
+      - if: matrix.suite != 'freitag'
+        env:
+          G641_GROUP: ${{ matrix.suite }}
+          TEST_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: node tests/g641-product.mjs
       - if: matrix.suite == 'freitag'
-        run: npm --prefix .scratch/g422-reference run build
-      - name: Videodecoder für die Kontrolle des Bildausschnitts vorbereiten
-        if: matrix.suite == 'freitag' || matrix.suite == 'plattenatlas'
         run: |
           if ! command -v ffmpeg >/dev/null; then apt-get update && apt-get install -y ffmpeg; fi
-      - run: npm run test:${{ matrix.suite }}
-      - name: Vergleichsansichten am unveränderten G4.2-Build aufnehmen
-        if: matrix.suite == 'vergleich'
-        run: REFERENCE_BUILD=.scratch/g421-reference/dist TEST_ENGINES=chromium node tests/grundlagen.mjs
-      - name: Kamerafahrt zu Hooge aufnehmen und auswerten
-        if: matrix.suite == 'g1'
-        run: |
-          if ! command -v ffmpeg >/dev/null; then apt-get update && apt-get install -y ffmpeg; fi
-          npm run audit
-      - uses: actions/upload-artifact@v4
-        if: always()
+          node tests/freitag.mjs
+      - if: always()
+        uses: actions/upload-artifact@v4
         with:
-          name: Browsertests-${{ matrix.suite }}
+          name: Browser-${{ matrix.suite }}
           path: test-results/
-          overwrite: true
-          if-no-files-found: warn
-

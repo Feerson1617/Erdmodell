@@ -21,6 +21,7 @@ export const atlasLayers = {
   gnss: "GNSS-Vektoren",
   fossil: "Fossilfundregionen",
   rock: "Geologische Entsprechungen",
+  ice: "Ehemalige Vereisung",
 };
 export type Layer = keyof typeof atlasLayers;
 export type AtlasPoint = {
@@ -41,6 +42,7 @@ const color: Partial<Record<Layer, string>> = {
   gnss: "#70f5dc",
   fossil: "#bcdf7e",
   rock: "#eab6ee",
+  ice: "#a4d9f4",
   mountain: "#fedba3",
   vectors: "#fff5ad",
 };
@@ -136,7 +138,7 @@ export async function loadResearch(m: MapLayers) {
     });
   }
   for (const e of evidence) {
-    if (e.kind !== "rock" && e.kind !== "fossil") continue;
+    if (e.kind !== "rock" && e.kind !== "fossil" && e.kind !== "ice") continue;
     const [lat, lon] = e.coords[0];
     points.push({
       lat,
@@ -144,7 +146,7 @@ export async function loadResearch(m: MapLayers) {
       title: e.name,
       layer: e.kind,
       detail:
-        e.kind === "rock"
+        e.kind === "ice" ? "Spätpaläozoische glaziale Ablagerungen. Die Markierung bezeichnet eine Beckenregion." : e.kind === "rock"
           ? "Vergleichsregion eines alten Gebirgsgürtels. Der Punkt bezeichnet einen ausgedehnten Raum."
           : "Mesosaurus-Fundregion. Die Lage bezeichnet das Sedimentbecken.",
     });

@@ -1,3 +1,4 @@
+import { places, referenceFor, wilsonPlaces } from "./process-places";
 import { earthFeatures, processFeatures, type Feature } from "./process-labels";
 import * as T from "three";
 import { PlateSection, type Analysis } from "./plate-section";
@@ -6,6 +7,7 @@ import {
   processes,
   explanations,
   wilsonStages,
+  wilsonMotion,
   subducts,
   spreading,
   clamp,
@@ -34,6 +36,8 @@ const field = (title: string, id: string, entries: Record<string, string>, activ
   "<label>" + title + '<select id="' + id + '">' + options(entries, active) + "</select></label>";
 const check = (id: string, label: string, on: boolean) =>
   '<label><input id="' + id + '" type="checkbox" ' + (on ? "checked" : "") + ">" + label + "</label>";
+const canMelt = (k: ProcessId) => subducts(k) || k === "ridge" || k === "hotspot" || k === "wilson";
+const underwater = (k: ProcessId) => ["ridge", "arc", "oceanTransform", "hotspot"].includes(k);
 const defaults = () => ({
   interior: false,
   division: "composition" as Division,
@@ -45,8 +49,8 @@ const defaults = () => ({
   time: 0,
   playing: false,
   analysis: "natural" as Analysis,
-  paths: false,
-  vectors: false,
+  paths: true,
+  vectors: true,
   rate: 25,
   km: 80,
   measure: false,
@@ -111,13 +115,17 @@ export class TectonicStudio {
   private prior = "";
   private lastGeometry = "";
   private panelsKey = "";
-  private pins: { button: HTMLButtonElement; index: number; cell: number }[] = [];
+  private labelResize = new ResizeObserver(() => {
+    this.prior = "";
+  });
+  private pins: { button: HTMLButtonElement; leader: HTMLElement; index: number; cell: number }[] = [];
   private side?: HTMLElement;
   constructor(
     private gl: T.WebGLRenderer,
     initial?: Partial<StudioState>,
     private atlas = () => {},
     private region: (id: string) => void = () => {},
+    private locate?: (model: ProcessId) => void,
   ) {
     this.state = { ...defaults(), ...structuredClone(initial ?? {}) };
     this.overlay.className = "studio-overlay";
@@ -169,10 +177,22 @@ export class TectonicStudio {
     );
     this.build();
   }
+  private normalizeContext() {
+    const s = this.state;
+    const active = s.focus < 0 ? s.models : [s.models[s.focus]];
+    if ((s.view === "wedge" && !active.every(subducts)) || (s.view === "seabed" && !active.every(underwater)))
+      s.view = "block";
+    if (!active.every((id) => id === "ridge")) {
+      if (s.analysis === "age" || s.analysis === "magnet") s.analysis = "natural";
+      s.measure = false;
+    }
+    if (!active.some(canMelt)) s.paths = false;
+  }
   private build() {
     for (const row of this.rows) row.body.dispose();
+    this.normalizeContext();
     const s = this.state;
-    if (s.view === "wedge" && !s.models.some(subducts)) s.view = "block";
+    s.playing = false;
     const repaint = () => {
       this.textureRevision++;
     };
@@ -194,21 +214,38 @@ export class TectonicStudio {
       k = s.models[Math.max(0, s.focus)],
       g = s.interior ? layersFor(s.division) : [];
     const models = { ...processes, earth: "Erdinneres" };
-    const analogues: Partial<Record<ProcessId, [string, string]>> = {
-      ridge: ["2308", "Gakkelrücken"],
-      rift: ["rift", "Ostafrika"],
-      subduction: ["japan", "Japan"],
-      arc: ["1510", "Tonga"],
-      collision: ["himalaya", "Himalaya"],
-      transform: ["san", "Parkfield"],
-      hotspot: ["hawaii", "Hawaii"],
-    };
-    const analogue = analogues[k];
+    const active = s.focus < 0 ? s.models : [k];
+    const sharing = active.every((id) => id === k);
+    const hasMelt = active.some(canMelt);
+    const hasMeltPreset = sharing && canMelt(k) && k !== "wilson";
+    const preset = (() => {
+      if (s.analysis !== "natural") return s.vectors && !s.paths ? s.analysis : "custom";
+      if (!s.vectors) return s.paths && hasMeltPreset ? "melt" : "custom";
+      return hasMelt && !s.paths ? "movement" : "full";
+    })();
+    const place =
+      k === "wilson" ? wilsonPlaces[Math.min(8, Math.floor(s.time * 8 + 0.0001))] : referenceFor[k];
+    const analogue = places[place];
     side.innerHTML =
       '<p class="g-kicker">Plattentektonik</p><h1>' +
       (s.interior ? "Erdinneres" : s.models.length > 1 ? "Prozessvergleich" : "Prozessmodell") +
       '</h1><div class="g-stack studio-tools">' +
       field("Modell", "studio-model", models, s.interior ? "earth" : k) +
+      (!s.interior
+        ? field(
+            "Zeigen",
+            "studio-preset",
+            {
+              full: "Vollständiger Prozess",
+              ...(hasMelt ? { movement: "Plattenbewegung" } : {}),
+              materials: "Materialgrenzen",
+              ...(hasMeltPreset ? { melt: k === "ridge" ? "Krustenbildung" : "Magmenbildung" } : {}),
+              ...(sharing && k === "ridge" ? { age: "Meeresbodenalter", magnet: "Magnetstreifen" } : {}),
+              ...(preset === "custom" ? { custom: "Eigene Ansicht" } : {}),
+            },
+            preset,
+          )
+        : "") +
       (s.interior
         ? field(
             "Gliederung",
@@ -252,7 +289,11 @@ export class TectonicStudio {
             "Ansicht",
             "studio-view",
             Object.fromEntries(
-              Object.entries(views).filter(([key]) => key !== "wedge" || s.models.some(subducts)),
+              Object.entries(views).filter(
+                ([key]) =>
+                  (key !== "wedge" || active.every(subducts)) &&
+                  (key !== "seabed" || active.every(underwater)),
+              ),
             ),
             s.view,
           ) +
@@ -281,15 +322,17 @@ export class TectonicStudio {
             {
               natural: "Gesteinsansicht",
               materials: "Materialgrenzen",
-              ...(s.models.includes("ridge")
+              ...(active.every((id) => id === "ridge")
                 ? { age: "Ozeanbodenalter", magnet: "Magnetische Polarität" }
                 : {}),
             },
             s.analysis,
           ) +
-          check("studio-paths", "Schmelzbildung und Aufstieg", s.paths) +
+          (active.some((id) => canMelt(id) && id !== "wilson") && !["surface", "seabed"].includes(s.view)
+            ? check("studio-paths", "Schmelzbildung und Aufstieg", s.paths)
+            : "") +
           check("studio-vectors", "Relativbewegung verdeutlichen", s.vectors) +
-          (s.models.includes("ridge")
+          (active.every((id) => id === "ridge")
             ? check("studio-measure", "Am Rücken messen", s.measure) +
               (s.measure
                 ? field(
@@ -303,7 +346,7 @@ export class TectonicStudio {
                   '"></label><output id="studio-reading"></output>'
                 : "")
             : "") +
-          (analogue ? '<button id="studio-region">Referenzraum ' + analogue[1] + " öffnen</button>" : "") +
+          (analogue ? '<button id="studio-region">Referenzraum ' + analogue.name + " öffnen</button>" : "") +
           '</details><details><summary>Was zeigt das Modell?</summary><p data-teach="cause">' +
           explanations[k] +
           '</p><p id="studio-stage" data-teach="phase"></p><small>Idealisiertes Prozessmodell. Höhen und Zeiten sind überhöht. Die Materialbewegung ist qualitativ. Bei der Spreizung entspricht der Ablauf 1,2 Millionen Modelljahren. Die ungleich breiten Polaritätsintervalle sind idealisiert.</small></details>') +
@@ -326,6 +369,10 @@ export class TectonicStudio {
       if (opened && element("studio-details")) element<HTMLDetailsElement>("studio-details")!.open = true;
     };
     bind("studio-model", (v) => {
+      if (v !== "earth" && s.models.length === 1 && this.locate) {
+        this.locate(v as ProcessId);
+        return;
+      }
       s.interior = v === "earth";
       if (!s.interior) s.models[Math.max(0, s.focus)] = v as ProcessId;
       s.playing = false;
@@ -354,6 +401,9 @@ export class TectonicStudio {
     s.models.forEach((_, i) => {
       bind("studio-slot-" + i, (v) => {
         s.models[i] = v as ProcessId;
+        s.view = "block";
+        s.analysis = "natural";
+        s.paths = canMelt(v as ProcessId);
         redraw(true);
       });
       bind("studio-label-" + i, () => {
@@ -363,22 +413,36 @@ export class TectonicStudio {
     bind("studio-view", (v) => {
       s.view = v as View;
       [s.yaw, s.pitch] =
-        v === "top"
-          ? [0, 1.54]
-          : v === "section"
-            ? [0, 0.055]
-            : v === "seabed"
-              ? [0.64, 0.15]
-              : [0.36, 0.42];
+        v === "top" ? [0, 1.54] : v === "section" ? [0, 0.055] : v === "seabed" ? [0.64, 0.15] : [0.36, 0.42];
+      redraw();
+    });
+    bind("studio-preset", (v) => {
+      if (v === "custom") return;
+      s.analysis = v === "age" || v === "magnet" || v === "materials" ? v : "natural";
+      s.paths = active.some(canMelt) && !["movement", "materials", "age", "magnet"].includes(v);
+      s.vectors = v !== "melt";
+      if (v === "melt" && active.every(subducts)) {
+        s.view = "wedge";
+        s.yaw = 0.32;
+        s.pitch = 0.26;
+      } else if (s.view === "wedge") {
+        s.view = "block";
+        s.yaw = 0.36;
+        s.pitch = 0.42;
+      }
+      redraw();
     });
     bind("studio-analysis", (v) => {
       s.analysis = v as Analysis;
+      redraw();
     });
     bind("studio-paths", () => {
       s.paths = !s.paths;
+      redraw();
     });
     bind("studio-vectors", () => {
       s.vectors = !s.vectors;
+      redraw();
     });
     bind("studio-measure", () => {
       s.measure = !s.measure;
@@ -413,7 +477,10 @@ export class TectonicStudio {
         s.playing = false;
       };
     click("studio-atlas", this.atlas);
-    if (analogue) click("studio-region", () => this.region(analogue[0]));
+    if (analogue)
+      click("studio-region", () =>
+        this.region(k === "wilson" ? wilsonPlaces[Math.min(8, Math.floor(s.time * 8 + 0.0001))] : place),
+      );
     this.read();
     this.panelsKey = "";
   }
@@ -432,40 +499,55 @@ export class TectonicStudio {
       m.full +
       " mm/Jahr Gesamtöffnung.";
   }
+  motionSample() {
+    return this.rows.map((r) => (r.body instanceof PlateSection ? r.body.motionSample() : undefined));
+  }
   private panels(ids: number[]) {
     const s = this.state,
       observing = document.body.classList.contains("observing");
-    beginCandidates();
-    const names = ids.map((i) => !s.interior && allowsLabel("studio-" + i) && (observing || s.labels[i]));
-    const choosing = document.body.hasAttribute("data-choose-object");
-    const features = ids.map((i) =>
-      s.interior ? earthFeatures(s.division, s.expanded) : processFeatures(s.models[i], s.time),
-    );
-    const entries = features.map((list, n) =>
-      list.map((feature, j) => {
-        const id = "studio-feature-" + ids[n] + "-" + j;
-        const allowed = allowsLabel(id) && (observing || (s.interior ? s.layer === j : s.labels[ids[n]]));
-        return { id, j, feature, show: allowed || choosing, anonymous: !allowed };
-      }),
-    );
-    const stage = Math.min(8, Math.floor(s.time * 8 + 0.0001)),
-      sig = [
-        ids,
-        names,
-        s.interior,
-        s.models,
-        s.focus,
-        stage,
-        observing,
-        s.analysis,
-        s.division,
-        s.expanded,
-        entries.map((list) =>
-          list.map((e) => (e.show ? (e.anonymous ? "dot" : e.feature.name) : "")).join(","),
-        ),
-      ].join("/");
+    const info = document.body.dataset.infoDepth,
+      choosing = document.body.hasAttribute("data-choose-object");
+    const stage = Math.min(8, Math.floor(s.time * 8 + 0.0001));
+    const sig = [
+      ids,
+      s.models,
+      s.labels,
+      s.layer,
+      s.focus,
+      s.interior,
+      s.division,
+      s.expanded,
+      s.analysis,
+      s.view,
+      s.paths,
+      stage,
+      info,
+      observing,
+      choosing,
+      document.body.dataset.reveal,
+      s.models.includes("wilson") ? wilsonMotion(s.time).reading : "",
+    ].join("/");
     if (this.panelsKey === sig) return;
     this.panelsKey = sig;
+    beginCandidates();
+    const names = ids.map((i) => !s.interior && allowsLabel("studio-" + i) && (observing || s.labels[i]));
+    const entries = ids.map((i) =>
+      (s.interior ? earthFeatures(s.division, s.expanded) : processFeatures(s.models[i], s.time)).map(
+        (feature, j) => {
+          const id = "studio-feature-" + i + "-" + j;
+          const allowed =
+            allowsLabel(id) &&
+            (observing ||
+              (s.interior ? s.layer === j : s.labels[i] || info === "terms" || info === "explain"));
+          const shownStructure =
+            s.interior ||
+            !["Fluidweg", "Magmaaufstieg", "Schmelzregion", "Druckentlastung"].includes(feature.name) ||
+            (s.paths && !["surface", "seabed"].includes(s.view));
+          return { id, j, feature, show: shownStructure && (allowed || choosing), anonymous: !allowed };
+        },
+      ),
+    );
+    this.labelResize.disconnect();
     this.overlay.replaceChildren();
     this.pins = [];
     this.overlay.style.gridTemplateColumns = "repeat(" + Math.min(2, ids.length) + ",1fr)";
@@ -481,15 +563,20 @@ export class TectonicStudio {
           if (claimObject("studio-" + i)) return;
           if (s.models.length > 1) {
             s.focus = s.focus === i ? -1 : i;
+            this.normalizeContext();
             this.prior = "";
             if (this.side) this.mount(this.side);
           }
         };
         slot.append(b);
       }
-      if (!s.interior && names[n] && s.models[i] === "wilson") {
+      if (!s.interior && (names[n] || !observing) && s.models[i] === "wilson") {
         const p = document.createElement("span");
         p.textContent = wilsonStages[stage][0] + " · heutige Analogie: " + wilsonStages[stage][2];
+        const b = document.createElement("button");
+        b.textContent = "Analogie auf der Erde";
+        b.onclick = () => this.region(wilsonPlaces[stage]);
+        slot.append(b);
         slot.append(p);
       }
       if (!observing && !s.interior && s.models[i] === "ridge" && ["age", "magnet"].includes(s.analysis)) {
@@ -501,10 +588,20 @@ export class TectonicStudio {
         slot.append(p);
       }
       for (const e of entries[n]) {
-        if (!e.show) continue;
+        if (!e.show || (!choosing && !observing && e.j >= (ids.length > 1 ? 2 : 4))) continue;
         const tag = document.createElement("button");
         tag.className = "studio-object";
         tag.textContent = e.anonymous ? "•" : e.feature.name;
+        if (
+          !e.anonymous &&
+          info === "explain" &&
+          !observing &&
+          (ids.length === 1 ? e.j < 2 || (s.view === "wedge" && e.j === 2) : e.j === 0)
+        ) {
+          const line = document.createElement("small");
+          line.textContent = e.feature.explanation;
+          tag.append(line);
+        }
         tag.setAttribute("aria-label", e.anonymous ? "Objekt auswählen" : e.feature.name);
         tag.onclick = () => {
           if (claimObject(e.id, e.feature.explanation)) return;
@@ -512,10 +609,20 @@ export class TectonicStudio {
           if (info) {
             info.hidden = false;
             info.textContent = e.feature.name + " · " + e.feature.explanation;
+            let extra = tag.querySelector("small");
+            if (!extra) {
+              extra = document.createElement("small");
+              tag.append(extra);
+            }
+            extra.textContent = e.feature.explanation;
+            this.prior = "";
           }
         };
-        slot.append(tag);
-        this.pins.push({ button: tag, index: e.j, cell: n });
+        const leader = document.createElement("i");
+        leader.className = "studio-leader";
+        slot.append(leader, tag);
+        this.labelResize.observe(tag);
+        this.pins.push({ button: tag, leader, index: e.j, cell: n });
       }
       this.overlay.append(slot);
     }
@@ -648,26 +755,73 @@ export class TectonicStudio {
           ? earthFeatures(s.division, s.expanded)
           : processFeatures(s.models[id], s.time);
         const used: { x: number; y: number; w: number; h: number }[] = [];
+        const cell = (marks[0].button.parentElement as HTMLElement).getBoundingClientRect();
+        const rendered: DOMRect[] = [];
         for (const pin of marks) {
           const pt = features[pin.index].point.project(cam),
             tag = pin.button;
           const tw = tag.offsetWidth,
             th = tag.offsetHeight;
-          let px = clamp(((pt.x + 1) * cw) / 2 - tw / 2, 4, Math.max(4, cw - tw - 4)),
-            py = clamp(((1 - pt.y) * ch) / 2 - th, 44, Math.max(44, ch - th - 30));
-          for (const prior of used)
-            if (
-              px < prior.x + prior.w + 3 &&
-              px + tw + 3 > prior.x &&
-              py < prior.y + prior.h + 3 &&
-              py + th + 3 > prior.y
+          const ax = ((pt.x + 1) * cw) / 2,
+            ay = ((1 - pt.y) * ch) / 2;
+          const covered =
+            !s.interior &&
+            (Math.cos(s.yaw) < -0.12 ||
+              ((s.view === "surface" || s.view === "seabed") && features[pin.index].point.y < -0.5));
+          const offsets = [
+            [-tw - 24, -th - 14],
+            [24, -th - 14],
+            [24, 18],
+            [-tw - 24, 18],
+            [-tw / 2, -th - 36],
+            [-tw / 2, 38],
+            [-tw - 25, -2 * th - 22],
+            [25, th + 28],
+            [25, -2 * th - 22],
+            [-tw - 25, th + 28],
+          ];
+          const xy = offsets
+            .map(([dx, dy]) => ({ x: clamp(ax + dx, 6, Math.max(6, cw - tw - 6)), y: ay + dy }))
+            .find(
+              ({ x, y }) =>
+                y > 40 &&
+                y + th < ch - 12 &&
+                !used.some(
+                  (b) => x < b.x + b.w + 4 && x + tw + 4 > b.x && y < b.y + b.h + 4 && y + th + 4 > b.y,
+                ),
+            );
+          const visible = !!xy && !covered && Math.abs(pt.x) < 1 && Math.abs(pt.y) < 1 && Math.abs(pt.z) < 1;
+          tag.style.visibility = pin.leader.style.visibility = visible ? "visible" : "hidden";
+          if (!visible || !xy) continue;
+          const { x, y } = xy,
+            tx = clamp(ax, x, x + tw),
+            ty = clamp(ay, y, y + th);
+          tag.style.left = Math.round(x) + "px";
+          tag.style.top = Math.round(y) + "px";
+          pin.leader.style.left = Math.round(ax) + "px";
+          pin.leader.style.top = Math.round(ay) + "px";
+          pin.leader.style.width = Math.hypot(tx - ax, ty - ay) + "px";
+          pin.leader.style.transform = "rotate(" + Math.atan2(ty - ay, tx - ax) + "rad)";
+          const bounds = tag.getBoundingClientRect();
+          if (
+            rendered.some(
+              (b) =>
+                bounds.left < b.right + 2 &&
+                bounds.right + 2 > b.left &&
+                bounds.top < b.bottom + 2 &&
+                bounds.bottom + 2 > b.top,
             )
-              py = prior.y + prior.h + 4;
-          tag.style.visibility =
-            py + th > ch - 12 || Math.abs(pt.x) > 1 || Math.abs(pt.y) > 1 ? "hidden" : "visible";
-          tag.style.left = Math.round(px) + "px";
-          tag.style.top = Math.round(py) + "px";
-          used.push({ x: px, y: py, w: tw, h: th });
+          ) {
+            tag.style.visibility = pin.leader.style.visibility = "hidden";
+            continue;
+          }
+          rendered.push(bounds);
+          used.push({
+            x: bounds.left - cell.left,
+            y: bounds.top - cell.top,
+            w: bounds.width,
+            h: bounds.height,
+          });
         }
       }
     }
@@ -676,6 +830,7 @@ export class TectonicStudio {
     return true;
   }
   dispose() {
+    this.labelResize.disconnect();
     this.events.abort();
     this.overlay.remove();
     for (const row of this.rows) row.body.dispose();

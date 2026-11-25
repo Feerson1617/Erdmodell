@@ -143,7 +143,7 @@ export class ObjectLabels{
      used.add(info.name);const id=this.identify(mesh);if(!allowed(id,used.size-1))continue;
      if(this.object===mesh){if(this.picked)this.auditPoint=p.toArray();this.scene!.add(this.halo);this.halo.position.copy(p).lerp(eye,.002);this.halo.quaternion.copy(r.camera.quaternion);this.halo.scale.setScalar(eye.distanceTo(p)*.011);this.halo.visible=true;}
      this.targets.set(id,mesh);out.push({id,name:info.name,text:info.answer,phase,source,model,...xy});
-     if(out.length>=(r.moreNames?8:4))break;
+     if(out.length>=(document.body.dataset.infoDepth==="explain"?2:r.moreNames?8:4))break;
    }
    this.layer.draw(out,this.signals,this.rev);for(const button of this.host.querySelectorAll<HTMLButtonElement>("button"))button.setAttribute("aria-pressed",String(button.dataset.object===this.selected));
    if(this.object&&this.targets.get(this.identify(this.object))===this.object&&this.selected!==this.identify(this.object)){

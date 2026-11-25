@@ -1,5 +1,7 @@
 # Installation und Geräteprüfung
 
+Für G6.4.1 heißen die aktuellen Pakete `GeoRisiko-G6.4.1-macOS-arm64.dmg` und `GeoRisiko-G6.4.1-macOS-arm64-app.zip`. Die separate Datei `GeoRisiko-G6.4.1-Web-Test.html` öffnet sich nach dem Herunterladen direkt im Browser. Die App verwendet eine Ad-hoc-Signatur. Eine Schulgeräteverwaltung kann die lokale Ausführung einschränken.
+
 ## Unterrichtsgerät
 
 Die private Entwicklungsfassung benötigt Apple Silicon und mindestens macOS 13 Ventura. Electron 45 setzt diese Betriebssystemversion voraus. [Systemanforderung von Electron](https://github.com/electron/electron/blob/v45.4.1/docs/breaking-changes.md#removed-macos-12-support)
