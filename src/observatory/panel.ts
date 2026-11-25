@@ -1,3 +1,4 @@
+import {TectonicStudio,type StudioState} from "./tectonic-studio";
 import { ResearchAtlas, type ResearchState } from "./research-atlas";
 import { PlateRates } from "./plate-rates";
 import {meltingExplanation} from "./melting";
@@ -41,19 +42,32 @@ const explain:Record<string,string>={
   hotspot:"Die Platte bewegt sich über einer länger beständigen Schmelzquelle. Nacheinander entstehen Vulkane."
 };
 export class Observatory {
-  mode:""|"map"|"regional"|"time"="";readonly maps=new MapLayers();region?:RegionalScene;
+  mode:""|"map"|"regional"|"time"|"studio"="";readonly maps=new MapLayers();region?:RegionalScene;
   theme:Theme="earthquake";private revision=0;private message="";private lastUI="";private labels:HTMLElement;private objectLabels:ObjectLabels;private timePins:AnnotationLayer;private timeKey="";private timeLayout=0;
   private readonly profile=new WaterProfile($("earth").parentElement!);
   private spare?:RegionalScene;private switching=false;private resumePlayback=false;private profileWanted=false;
   private mapPurpose:"events"|"boundaries"="events";
   private research?:ResearchAtlas;
+  private studio?:TectonicStudio;
+  private returnStudio?:StudioState;
+  openStudio(state?:Partial<StudioState>){
+    this.base();this.mode="studio";this.world.nav.enabled=false;this.mark();
+    this.studio=new TectonicStudio(this.world.gl,state,()=>void this.openResearch({flat:true,layers:["bounds","age"],magnitude:6,depth:750}),async id=>{
+      const saved=structuredClone(this.studio!.state);saved.playing=false;
+      const revision=this.revision;
+      if(Object.hasOwn(sites,id))await this.openRegion(reference(id as Site,"process"));
+      else {await this.maps.init();if(revision!==this.revision)return;await this.openBoundary(this.maps.steps[Number(id)-1],"process");}
+      if(this.region && this.revision===revision+1){this.returnStudio=saved;this.draw();}
+    });
+    this.draw();
+  }
   private readonly rates=new PlateRates();
   async openResearch(state?:ResearchState){
     const opened=this.openMap("boundaries"),revision=this.revision;
     await opened;
     if(this.revision!==revision||this.mode!=="map"||this.mapPurpose!=="boundaries"||!this.maps.steps.length)return;
     this.research?.dispose();
-    const atlas=new ResearchAtlas(this.maps,$("earth").parentElement!,step=>this.rates.allowCurrent(step));
+    const atlas=new ResearchAtlas(this.maps,$("earth").parentElement!,step=>this.rates.allowCurrent(step),p=>this.world.nav.fly({...this.world.nav.pose,...p},true));
     if(state)atlas.state={...state,layers:[...state.layers]};
     this.research=atlas;this.maps.group.visible=false;this.world.scene.add(atlas.globe);
     this.draw();
@@ -76,6 +90,7 @@ export class Observatory {
   private parkfield?:RegionalScene;
   private parkDefaults?:ReturnType<typeof fields<RegionalScene,typeof regionKeys[number]>>;
   close(){
+    this.returnStudio=undefined;this.studio?.dispose();this.studio=undefined;
     this.research?.dispose();this.research=undefined;
     this.profile.hide();this.profileWanted=false;this.switching=false;this.spare?.dispose();this.spare=undefined;this.revision++;
     const r=this.region;
@@ -91,7 +106,7 @@ export class Observatory {
   private mark(){
     document.body.dataset.observatory=this.mode;$("desk").dataset.mode="observatory";this.side.hidden=false;
     document.querySelectorAll("nav button").forEach(b=>b.removeAttribute("aria-current"));
-    $(this.mode==="time"||this.mapPurpose==="boundaries"&&this.mode==="map"?"nav-plates":this.theme==="volcano"?"nav-volcano":this.theme==="risk"?"nav-risk":"nav-earthquake")?.setAttribute("aria-current","page");
+    $(this.mode==="studio"||this.mode==="time"||this.mapPurpose==="boundaries"&&this.mode==="map"?"nav-plates":this.theme==="volcano"?"nav-volcano":this.theme==="risk"?"nav-risk":"nav-earthquake")?.setAttribute("aria-current","page");
     for(const id of ["modelnote","orbitProcess","nyosPin","nyosRelief"])$(id).hidden=true;
     $("pins").replaceChildren();$("platePins").replaceChildren();
   }
@@ -175,6 +190,7 @@ export class Observatory {
   private change(id:string,fn:(value:string)=>void){const b=$<HTMLSelectElement>(id);if(b)b.onchange=()=>fn(b.value);}
   draw(){
     if(!this.mode)return;this.mark();
+    if(this.mode==="studio"){this.studio?.mount(this.side);return;}
     const back=button("g-world","Zum Globus"),selectRegions=(theme:Theme,id:string)=>'<label>Region<select id="g-site">'+opts(Object.fromEntries(Object.entries(sites).filter(([k])=>theme!=="volcano"||["island","japan","hawaii"].includes(k)).map(([k,s])=>[k,s.name])),id)+'</select></label>';
     if(this.mode==="map"&&this.research){
       this.research.mount(this.side);
@@ -205,7 +221,7 @@ export class Observatory {
     }else if(this.mode==="regional"&&this.region){
       const r=this.region,sp=r.spec;
       this.side.innerHTML='<p class="g-kicker">'+(sp.site?topicNames[sp.theme]:sp.theme==='forces'||sp.theme==='lithosphere'?'Schematisch vergrößerter Schnitt':'Vereinfachtes Modell dieser Grenzart')+'</p><h1>'+sp.name+'</h1>'+learningFields+'<div id="g-object" aria-live="polite"></div><div class="g-stack">'+(sp.site?selectRegions(sp.theme,sp.site):'')+
-        (sp.geology?'<small>'+names[sp.geology.left]+' · '+names[sp.geology.right]+' · '+processNames[sp.geology.model]+'</small>':'')+'<small id="g-model-note">'+(r.localActive?'Lokales Anschauungsmodell · Größen in Metern · Einzelobjekte illustrativ':sp.site?(sp.site==='san'&&sp.theme==='earthquake'?'Gelände aus Geodaten · Vergleichsweg und Untergrund schematisch':'Höhen aus Geodaten · Untergrund schematisch'):(sp.coastLesson?'Schematischer Küstenraum · helle Linie: ursprüngliches Ufer':sp.theme==='forces'||sp.theme==='lithosphere'?'Prozessdetail · schematische Größen und Tiefen':'Lage und Grenzrichtung aus PB2002 · Untergrund schematisch'))+(r.localActive?'':' · Höhen überhöht, Modellzeit verkürzt')+'</small>'+
+        (sp.geology?'<small>'+names[sp.geology.left]+' · '+names[sp.geology.right]+' · '+processNames[sp.geology.model]+'</small>':'')+'<small id="g-model-note">'+(r.localActive?'Lokales Anschauungsmodell · Größen in Metern · Einzelobjekte illustrativ':sp.site?(sp.site==='san'&&sp.theme==='earthquake'?'Gelände aus Geodaten · Vergleichsweg und Untergrund schematisch':'Höhen aus Geodaten · Untergrund schematisch'):(sp.geology&&[1510,2308].includes(sp.geology.id)?'Meeresboden aus SRTM15+ · 15 Bogensekunden · Höhen 2,4-fach überhöht · Untergrund schematisch':sp.coastLesson?'Schematischer Küstenraum · helle Linie: ursprüngliches Ufer':sp.theme==='forces'||sp.theme==='lithosphere'?'Prozessdetail · schematische Größen und Tiefen':'Lage und Grenzrichtung aus PB2002 · Untergrund schematisch'))+(r.localActive?'':' · Höhen überhöht, Modellzeit verkürzt')+'</small>'+
         (!r.ready?'<p role="status">'+(r.error||'Gelände wird geladen …')+'</p>':
         button("g-cut",r.cut?"An die Oberfläche":"Untergrund öffnen")+'<label>Ansicht<select id="g-view">'+opts({land:"Regionalübersicht",...(sp.site==="japan"&&!sp.arcTransect?{local:"Küstenausschnitt · Nahansicht",ground:"Am Ufer · ruhendes Wasser"}:sp.site==="island"?{local:"Vulkanische Spalte · Nahansicht",ground:"Lavafeld · bodennah"}:sp.site&&!sp.arcTransect?{local:"Lokaler Landschaftsausschnitt",ground:"Bodennahe Perspektive"}:{}),...(sp.geology?{overhead:"Plattenbewegung von oben"}:{}),cut:"Geologischer Schnitt",...(["earthquake","process"].includes(sp.theme)&&sp.process!=="complex"?{fault:"Störungsdetail"}:{}),...(sp.theme==="earthquake"?{focus:"Erdbebenherd",waves:"Wellenausbreitung"}:{}),...(sp.theme==="volcano"?{vent:"Vulkan und Ausbruch",mouth:"Vulkanöffnung · Nahblick"}:{}),...(r.water?{water:"Entstehung am Meeresboden",ocean:"Ausbreitung im offenen Meer",coast:"Küstenwirkung · Modell"}:{})},r.view)+'</select></label>'+
         (sp.theme==='lithosphere'?'':'<label class="g-range"><span id="g-phase"></span><input id="g-progress" type="range" min="0" max="1" step=".001" value="'+r.progress+'"></label>'+
@@ -214,10 +230,11 @@ export class Observatory {
         (sp.theme==="earthquake"&&(sp.comparison||sp.event||sp.coastLesson)?'<label>Meeresereignisse vergleichen<select id="g-sea">'+opts({vertical:sp.coastLesson?"B · Hebung im Küstenmodell":"B · Überschiebung in Japan",flat:"A · Untermeerischer Seitenversatz",buried:"C · Tiefer Bruch ohne starke Bodenhebung"},sp.event==="buried"?"buried":r.vertical?"vertical":"flat")+'</select></label>':'')+
         (sp.geology?'<label><input type="checkbox" id="g-vectors" '+(r.vectors?"checked":"")+'> Plattenbewegung zeigen</label>'+(r.vectors?'<small>Gold · gesamte Relativbewegung der linken gegenüber der rechten Platte. Türkis · längs der Grenze. Violett · quer zur Grenze. PB2002.</small>':''):'')+
         (r.water?'<label><input type="checkbox" id="g-water-profile" '+(r.analysis?"checked":"")+'> Wasser im Profil untersuchen</label>':"")+this.extraControls(r)+(sp.site==="japan"&&!sp.arcTransect?depthSection():"")+
-        '<details><summary>Modell steuern</summary><label><input type="checkbox" id="g-more-labels" '+(r.moreNames?'checked':'')+'> Weitere Fachbegriffe</label>'+(r.cut?'<label><input id="g-facies" type="checkbox" '+(r.facies?"checked":"")+'> Analysefarben im Schnitt</label><small>Modellfarben zur Unterscheidung der Gesteinskörper.</small>':'')+'<label><input type="checkbox" id="g-phases" '+(r.phasesShown?"checked":"")+'> Phasen benennen</label><label><input type="checkbox" id="g-slow" '+(r.slow?"checked":"")+'> Zeitlupe</label><label><input type="checkbox" id="g-stress" '+(r.stress?"checked":"")+'> Spannung im Modell</label></details>'+
+         '<details><summary>Modell steuern</summary>'+(sp.site&&!r.localActive?'<label><input type="checkbox" id="g-relief-only" '+(r.reliefOnly?'checked':'')+'>Relief aus Höhendaten schummern</label>':'')+'<label><input type="checkbox" id="g-more-labels" '+(r.moreNames?'checked':'')+'> Weitere Fachbegriffe</label>'+(r.cut?'<label><input id="g-facies" type="checkbox" '+(r.facies?"checked":"")+'> Analysefarben im Schnitt</label><small>Modellfarben zur Unterscheidung der Gesteinskörper.</small>':'')+'<label><input type="checkbox" id="g-phases" '+(r.phasesShown?"checked":"")+'> Phasen benennen</label><label><input type="checkbox" id="g-slow" '+(r.slow?"checked":"")+'> Zeitlupe</label><label><input type="checkbox" id="g-stress" '+(r.stress?"checked":"")+'> Spannung im Modell</label></details>'+
         item("Was geschieht hier?",explain[sp.process])+
         (sp.geology?item("Was ist an diesem Ort belegt?",this.regionText(sp.geology)):"")+this.extraInfo(r))+
         button("g-map","Zur Weltkarte")+back+'</div>';
+      if(this.returnStudio){const link=document.createElement("button");link.id="studio-return";link.textContent="Zum Prozessvergleich";link.onclick=()=>this.openStudio(this.returnStudio);this.side.querySelector("h1")?.after(link);}
       if(r.localActive){
         const link=document.createElement("button");link.id="g-local-process";
         link.textContent=sp.site==="japan"?"Zum regionalen Wasser- und Küstenmodell":sp.theme==="volcano"?"Zum regionalen Vulkan":"Zum regionalen Prozess";
@@ -265,6 +282,7 @@ export class Observatory {
   private lastScene?:RegionalScene;
   private drawnState="";private readingState="";
   private frame(dt:number){
+    if(this.studio)return this.studio.frame(dt);
     if(this.research?.state.flat){graphics.idle=true;graphics.scope="world";graphics.activity="cached";return true;}
     graphics.idle=false;
     if(this.lastScene!==this.region||this.world.nav.flight||this.mode!=="regional"){this.lastScene=undefined;this.drawnState="";}
@@ -308,14 +326,15 @@ export class Observatory {
   }
   snapshot(){
     const r=this.region,t=this.timeline,m=this.maps;
-    return {mode:this.mode,pose:{...this.world.nav.pose},map:{research:this.research?.state,rates:this.research?{ids:[...this.rates.ids],years:this.rates.years,unit:this.rates.unit,opened:this.rates.opened}:undefined,purpose:this.mapPurpose,events:m.events.visible,lines:m.boundaries.visible,depth:m.depth,step:m.selectedStep?.[0],event:m.event?.[0]},
+    return {mode:this.mode,studio:this.studio?structuredClone(this.studio.state):undefined,pose:{...this.world.nav.pose},map:{research:this.research?.state,rates:this.research?{ids:[...this.rates.ids],years:this.rates.years,unit:this.rates.unit,opened:this.rates.opened}:undefined,purpose:this.mapPurpose,events:m.events.visible,lines:m.boundaries.visible,depth:m.depth,step:m.selectedStep?.[0],event:m.event?.[0]},
       region:r?.ready?{site:r.spec.site,theme:r.spec.theme,boundary:r.spec.geology?.id,coast:r.spec.coastLesson,event:r.spec.event,
         settings:fields(r,regionKeys),view:r.view,cut:r.cut,position:r.camera.position.toArray(),target:r.orbit.target.toArray()}:undefined,
       time:t?fields(t,timeKeys):undefined};
   }
   async restore(s:ReturnType<Observatory["snapshot"]>){
     const m=this.maps;
-    if(s.mode==="map"){
+    if(s.mode==="studio"&&s.studio)this.openStudio(s.studio);
+    else if(s.mode==="map"){
       if(s.map.research){const rates=s.map.rates;if(rates){this.rates.ids=[...rates.ids];this.rates.years=rates.years;this.rates.unit=rates.unit;this.rates.opened=rates.opened;}await this.openResearch(s.map.research);}
       else await this.openMap(s.map.purpose);m.events.visible=s.map.events;m.boundaries.visible=s.map.lines;m.depth=s.map.depth;m.recolor();
       m.selectStep(m.steps.find(step=>step[0]===s.map.step));m.event=m.rows.find(row=>row[0]===s.map.event);
@@ -341,9 +360,10 @@ export class Observatory {
       r.cameraView(i<5?"overhead":i===5?"waves":i===6?"cut":"water");r.progress=[0,0,0,.30,.49,.53,0,.48][i];r.stress=i===3;}
     this.draw();
   }
-  diagnostics(){const r=this.region;return {selection:this.objectLabels.audit,graphics:{profile:graphics.profile,grade:quality()},mode:this.mode,purpose:this.mapPurpose,mapLayers:{events:this.maps.events.visible,lines:this.maps.boundaries.visible,depth:this.maps.depth},camera:r?.ready?{position:r.camera.position.toArray(),target:r.orbit.target.toArray()}:undefined,settings:r?fields(r,regionKeys):undefined,timings:r?.timings,switching:this.switching,analysis:r?.analysis,view:r?.view,event:r?.spec.event,playing:r?.playing,vectors:r?.vectors,coastLesson:r?.spec.coastLesson,site:r?.spec.site,geology:r?.spec.geology,physics:r?.ready?r.physicalState():undefined,process:r?.spec.process,theme:this.theme,ready:!this.switching&&(r?.ready??(this.maps.steps.length>0)),progress:r?.progress,cut:r?.cut,viewSettled:r?.viewSettled,focus:r?.faultModel?.kind==="unknown"?undefined:r?.focus,epicenter:r?.faultModel?.kind==="unknown"?undefined:r?.epicenter,events:this.maps.rows.length,steps:this.maps.steps.length,selected:this.maps.selectedStep?.[0],...this.timeDiagnostics()};}
+  diagnostics(){const r=this.region;return {studio:this.studio?.state,selection:this.objectLabels.audit,graphics:{profile:graphics.profile,grade:quality()},mode:this.mode,purpose:this.mapPurpose,mapLayers:{events:this.maps.events.visible,lines:this.maps.boundaries.visible,depth:this.maps.depth},camera:r?.ready?{position:r.camera.position.toArray(),target:r.orbit.target.toArray()}:undefined,settings:r?fields(r,regionKeys):undefined,timings:r?.timings,switching:this.switching,analysis:r?.analysis,view:r?.view,event:r?.spec.event,playing:r?.playing,vectors:r?.vectors,coastLesson:r?.spec.coastLesson,site:r?.spec.site,geology:r?.spec.geology,physics:r?.ready?r.physicalState():undefined,process:r?.spec.process,theme:this.theme,ready:!!this.studio||!this.switching&&(r?.ready??(this.maps.steps.length>0)),progress:r?.progress,cut:r?.cut,viewSettled:r?.viewSettled,focus:r?.faultModel?.kind==="unknown"?undefined:r?.focus,epicenter:r?.faultModel?.kind==="unknown"?undefined:r?.epicenter,events:this.maps.rows.length,steps:this.maps.steps.length,selected:this.maps.selectedStep?.[0],...this.timeDiagnostics()};}
   private enrich(r:RegionalScene){addTeachingModels(r);}
   private extraControls(r:RegionalScene){
+    if(r.spec.theme==="forces")return '<details><summary>Antrieb einzeln zeigen</summary>'+["Wärmetransport","Kraft am Rücken","Zug der abtauchenden Platte","Mantelbewegung","Kopplung von Mantel und Platte"].map((label,i)=>'<label><input id="force-'+i+'" type="checkbox" '+(((r.forceLayers??31)&(1<<i))?'checked':'')+'>'+label+'</label>').join("")+'<small>Pfeile geben Richtung und Ort qualitativ an. Ihre Länge misst keine Kraft.</small></details>';
     if(r.spec.theme==="volcano")return '<label>Modellausbruch<select id="g-eruption">'+opts({effusive:"Lava fließt aus",explosive:"Asche und Gase steigen auf"},r.eruption)+'</select></label>';
     if(r.spec.theme==="risk")return (r.spec.coastLesson?"":'<label>Standort bei gleicher Quelle<select id="g-risk-site">'+opts({near:"Standort A",far:"Standort B · versetzt"},r.riskSite)+'</select></label>')+'<label>Ereignis<select id="g-risk-kind">'+opts({land:"Beben an Land",coast:"Tsunamivorsorge an der Küste"},r.spec.coastLesson?"coast":"land")+'</select></label><label>Untergrund<select id="g-soil">'+opts({rock:"Fester Fels",loose:"Lockere Ablagerungen"},r.soil)+'</select></label><label>Raumnutzung<select id="g-exposure">'+opts({empty:"Unbesiedelt",sparse:"Einzelne Häuser",dense:"Dichte Siedlung"},r.exposure)+'</select></label><label><input type="checkbox" id="g-protect" '+(r.protection?"checked":"")+'> Bauweise verstärken</label><details><summary>Weitere Schutzmaßnahmen</summary><label><input type="checkbox" id="g-route" '+(r.safeRoute?"checked":"")+'> Fluchtweg markieren</label><label><input type="checkbox" id="g-warning" '+(r.warning?"checked":"")+'> Warnung und Evakuierung üben</label><label><input type="checkbox" id="g-relocate" '+(r.relocate?"checked":"")+'> Siedlung auf höheres Gelände verlagern</label></details>';
     if(r.spec.theme==="process")return r.spec.process==="complex"?"<p>Die genaue Störung ist hier nicht ausreichend bekannt.</p>":button("g-quake-from-process",r.spec.geology?.marine?"Seebeben erklären":"Erdbeben erklären");
@@ -387,6 +407,8 @@ export class Observatory {
 
   }
   private bindExtra(r:RegionalScene){
+    this.change("g-relief-only",()=>{r.reliefOnly=!r.reliefOnly;});
+    if(r.spec.theme==="forces")for(let i=0;i<5;i++)this.change("force-"+i,()=>{r.forceLayers=(r.forceLayers??31)^(1<<i);});
     this.change("g-eruption",v=>{r.eruption=v;if(r.localActive){if(r.localStill)r.playing=false;this.draw();}});this.change("g-soil",v=>{r.soil=v;});
     this.change("g-risk-kind",v=>{const next:RegionSpec=v==="coast"?{name:"Küstenraum · Modell",lat:38,lon:142,strike:0,process:"subduction",theme:"risk",coastLesson:true}:reference("san","risk");void this.openRegion(next);});
     if($("g-relocate")&&!r.spec.coastLesson)$("g-relocate").closest("label")!.hidden=true;
@@ -442,7 +464,7 @@ export class Observatory {
       '<label>Zeit wählen<input type="range" min="-250" max="'+(t.scenario==="past"?0:scenarios[t.scenario].end)+'" step=".1" id="g-year" value="'+t.year+'"></label>'+
       '<div class="g-buttons">'+button("g-reverse","Rückwärts")+button("g-time-play","Abspielen")+button("g-today","Heute")+button("g-time-focus","Flächen zentrieren")+'</div>'+
       '<label>Station<select id="g-station">'+opts({"-250":"Pangäa","-200":"Beginnende Aufspaltung","-150":"Weitere Trennung","-100":"Atlantik öffnet sich","-50":"Indien nähert sich Eurasien","0":"Gegenwart"},String(t.year))+'</select></label>'+
-      '<label>Zeitmodell<select id="g-scenario">'+opts(labels,t.scenario)+'</select></label>'+
+      '<details><summary>Wie entstand die Theorie?</summary><p>Wegener verband passende Kontinentalränder, Fossilfunde, Gesteine und Klimaspuren. Ein tragfähiger Antrieb fehlte seiner Hypothese. Später belegten Alter und Magnetisierung des Ozeanbodens dessen Neubildung. Erdbeben zeigen abtauchende Platten. GNSS misst heutige Bewegung in einem angegebenen Bezugssystem.</p></details><label>Zeitmodell<select id="g-scenario">'+opts(labels,t.scenario)+'</select></label>'+
       (t.scenario==="past"?'<details id="g-tracking" open><summary>Kontinent verfolgen</summary><label>Kontinentalbereich<select id="g-track">'+opts({"":"Ausblenden",...Object.fromEntries(Object.entries(tracks).map(([k,v])=>[k,v[0]]))},t.tracking)+'</select></label><label><input id="g-trail" type="checkbox" '+(t.trail?"checked":"")+'> Bewegungsspur</label><label><input id="g-follow" type="checkbox" '+(t.follow?"checked":"")+'> Kamera folgt</label></details>':
       '<label><input id="g-compare" type="checkbox" '+(t.compare?"checked":"")+'> Zwei Möglichkeiten vergleichen</label>'+
       (t.compare?'<label>Zweites Modell<select id="g-second">'+opts(Object.fromEntries(Object.entries(labels).filter(([k])=>k!=="past"&&k!==t.scenario)),t.second)+'</select></label><label>Perspektive<select id="g-compare-camera">'+opts({overview:"Kontinentalanordnungen im Überblick",same:"Gleiche Perspektive"},t.overview?"overview":"same")+'</select></label><small>Gemeinsamer Zeitraum bis +'+Math.min(scenarios[t.scenario].end,scenarios[t.second].end)+' Mio. Jahre. '+assumptions[t.second]+'</small>':'')+

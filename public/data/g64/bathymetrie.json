@@ -1,0 +1,59 @@
+{
+  "source": "SRTM15+ v2.7; Tozer et al. (2019), doi:10.1029/2019EA000658. GMT earth_relief_15s_p, 2025-05-01. CC BY 4.0.",
+  "regions": {
+    "1510": {
+      "widthKm": 240,
+      "center": [
+        -20.395,
+        -173.3105
+      ],
+      "strike": 24.0,
+      "grid": [
+        193,
+        145
+      ],
+      "rangeMetres": [
+        -10058,
+        14
+      ],
+      "sha256": "54677f883a700f5fb962cae83319e0b62f22409547b0bd694a20c5d27853f3fa",
+      "sources": [
+        {
+          "url": "https://oceania.generic-mapping-tools.org/server/earth/earth_relief/earth_relief_15s_p/S30W180.earth_relief_15s_p.jp2",
+          "sha256": "068868d554997f52d34194ef65550acb72435da74bf6ac095b1db038ff78b05f"
+        },
+        {
+          "url": "https://oceania.generic-mapping-tools.org/server/earth/earth_relief/earth_relief_15s_p/S20W180.earth_relief_15s_p.jp2",
+          "sha256": "c10e69e888fcef74926c3b0ae6db463b0adad64c7cdd5010f1f243c2d4e22d20"
+        }
+      ]
+    },
+    "2308": {
+      "widthKm": 130,
+      "center": [
+        85.70349999999999,
+        79.753
+      ],
+      "strike": 123.0,
+      "grid": [
+        193,
+        145
+      ],
+      "rangeMetres": [
+        -4314,
+        -2620
+      ],
+      "sha256": "dad9a85d5e37b25d6cae9cec8d975cd5384aa097bd42e160267378a53ffc7e22",
+      "sources": [
+        {
+          "url": "https://oceania.generic-mapping-tools.org/server/earth/earth_relief/earth_relief_15s_p/N80E070.earth_relief_15s_p.jp2",
+          "sha256": "2b5e6a6213f794ecd0b84d90c68537e70bc1c7ef154841e91dfc59c0cd4bbef0"
+        },
+        {
+          "url": "https://oceania.generic-mapping-tools.org/server/earth/earth_relief/earth_relief_15s_p/N80E080.earth_relief_15s_p.jp2",
+          "sha256": "d5b5dadd647097d402601c3a80dea8d4143f918279800d75b8a4fba98a8d227c"
+        }
+      ]
+    }
+  }
+}

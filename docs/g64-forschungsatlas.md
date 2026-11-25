@@ -1,6 +1,6 @@
-# G6.4 · Arbeitsstand des Forschungsatlas
+# G6.4 · Wissenschaftlicher Forschungsatlas
 
-Dieser Entwicklungsbranch baut auf G6.3.1 aus PR 20 auf. Der Forschungsatlas und der Geschwindigkeitsvergleich bilden einen ersten Teil der Phase G6.4. Die Unterrichtsauslieferung einschließlich DMG, App-ZIP, Einzeldatei und Galerie gehört weiterhin zu PR 20.
+Der Forschungsatlas stellt georeferenzierte Daten auf Globus und Weltkarte bereit. Relative Plattenkinematik, GNSS-Beobachtungen und ein Messprofil sind in derselben Offline-Anwendung zugänglich.
 
 ## Bedienung
 
@@ -26,10 +26,6 @@ Die Zeitreise trennt die historischen Hinweise auf Kontinentalverschiebung von d
 
 Stand der zusätzlichen Datendateien ist der 25. November 2026. Die Raster umfassen 360 × 181 Knoten mit Ostlänge −180° bis +179° und Nordbreite +90° bis −90°. Der doppelte Antimeridian der GMT-Eingabedateien wurde nach Prüfung der beidseitigen Werte entfernt. Skala und Offset kodieren die Daten platzsparend. Die Systematik der Modellunsicherheit ist gröber als diese Speicherauflösung. Die vollständigen URLs und SHA-256-Werte der Eingaben, der Seiten und der Ausgaben stehen im Manifest. [Quellenmanifest](../public/data/g64/quellen.json) · [Reproduzierbare Datenaufbereitung](../scripts/g64/atlas-data.py)
 
-## Prüfung und nächste Ausbaustufen
+## Eingebundene Prüfung
 
-Der Datenreferenztest vergleicht die ausgelieferten Raster an acht festen Koordinaten mit unabhängig über GDAL ausgelesenen GMT-Werten, einschließlich Datenlücke und Antimeridian. Sechs Geschwindigkeitsvektoren einschließlich ihrer Komponenten stammen als Kontrollwerte unmittelbar aus Birds verifiziertem Original. Bei 92 mm/Jahr ergeben 100.000 Jahre einen relativen Weg von 9,2 km. [Datentest](../tests/g64-source-data.mjs)
-
-Der Browsertest öffnet eine gebaute Einzeldatei per file-URL und sperrt HTTP(S). Er bedient die Ebenen, prüft Werte im Atlantik, der Sahara und der Eifel sowie an der isländischen Station HOFN, ein analytisches Äquatorprofil, Einheiten, Zeithochrechnung, gespeicherte Profilendpunkte und Favoriten und Rückkehr zur bestehenden Weltkarte und zum Nyos-Modell. [Bedienablauf](../tests/g64-atlas.mjs)
-
-Vor der G6.4-Phasenabnahme stehen insbesondere der direkte Vergleich der stofflichen und mechanischen Erdgliederung mit getrennt sichtbaren Kräften, zwei bis vier synchronisierte Grenzprozesse, der vollständige Seafloor-Spreading-Prozess mit Messwerkzeugen, das dynamische Wilson-Modell und die kartografische Darstellung paläoklimatischer Belege aus. Ebenfalls offen sind die Abnahme dieses Arbeitsstands als installierte ARM64-App, der Dauerlauf aller neuen Modelle und der Leistungsvergleich der neuen Mehrfachansichten. G6.5, G6.6 und G7 folgen danach. [Abdeckungsmatrix](curriculum-coverage.md) · [Phasenübersicht](entwicklungsstand.md)
+Acht unabhängig ausgelesene GMT-Koordinaten und sechs PB2002-Referenzvektoren prüfen Werte, Datenlücken, Vorzeichen und Einheiten. Der Produkttest bedient Globus und Karte, alle Datenebenen, Filter, Profil, Vektorvergleich und gespeicherte Zustände. Die Einzeldatei enthält auch Relief und Bathymetrie. Der Ort unter dem Cursor bleibt beim Darstellungswechsel kenntlich. [G6.4 im Unterricht](g64-plattentektonik.md)

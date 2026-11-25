@@ -189,7 +189,7 @@ function renderSide() {
     if (advancedOpen && $("plateSettings")) $<HTMLDetailsElement>("plateSettings").open = true;
     bindPlateControls(side, world, renderSide);
     const extra=document.createElement("div");extra.className="g-atlas-tools";
-    extra.innerHTML='<button id="g-time">Zeitreise</button><button id="g-forces">Plattenantrieb</button><button id="g-boundaries">Grenze untersuchen</button>'+(world.selectedBoundary?'<button id="g-selected">Prozess ansehen</button>':'');
+    extra.innerHTML='<button id="g-studio">Prozessmodelle</button><button id="g-atlas">Forschungsatlas</button><button id="g-time">Zeitreise</button><button id="g-forces">Plattenantrieb</button><button id="g-boundaries">Grenze untersuchen</button>'+(world.selectedBoundary?'<button id="g-selected">Prozess ansehen</button>':'');
     if(world.mosaic?.pair){extra.hidden=true;side.append(extra);}else side.querySelector("h1")?.after(extra);
     if($("pair-process"))$("pair-process").onclick=()=>{
       const m=world.mosaic!,step=m.pair!.step,pose={...world.nav.pose},time=m.progress,arrows=m.pair!.vectors.visible;
@@ -198,6 +198,8 @@ function renderSide() {
     };
     if($("pair-forces"))$("pair-forces").onclick=()=>observatory.openConcept("forces");
     $("g-forces").onclick=()=>observatory.openConcept("forces");
+    $("g-studio").onclick=()=>observatory.openStudio();
+    $("g-atlas").onclick=()=>void observatory.openResearch();
     $("g-time").onclick=()=>observatory.openTime();
     $("g-boundaries").onclick=()=>void observatory.openMap("boundaries");
     if($("g-selected"))$("g-selected").onclick=()=>observatory.openBoundary(world.selectedBoundary!.step);
@@ -224,6 +226,7 @@ function renderSide() {
   if (mode === "inside") {
     const optionsOpen = !!side.querySelector("#shellOptions[open]");
     side.innerHTML = renderShellControls();
+    const classification=document.createElement("button");classification.id="g-earth-structure";classification.textContent="Stoffe und mechanische Schichten";classification.onclick=()=>observatory.openStudio({interior:true});side.querySelector("h1")?.after(classification);
     const detail=document.createElement("button");detail.id="g-litho";detail.textContent="Außenschichten vergrößern";
     ($("shellOptions")??side).append(detail);detail.onclick=()=>observatory.openConcept("lithosphere");
     if (optionsOpen) $<HTMLDetailsElement>("shellOptions").open = true;

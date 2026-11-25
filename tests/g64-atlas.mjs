@@ -6,7 +6,7 @@ import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 const out = process.env.G64_OUT || "test-results/g64";
 await mkdir(out, { recursive: true });
-const browser = await chromium.launch({ args: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader"] });
+const browser = await chromium.launch(process.env.G6_NATIVE_GPU ? {headless:false} : { args: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader"] });
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, reducedMotion: "reduce" });
 const report = { errors: [], network: [], shots: [], places: {}, engine: browser.version() };
 page.setDefaultTimeout(45000);
@@ -34,6 +34,7 @@ try {
   await page.waitForFunction(() =>
     document.querySelector("#research-reading")?.textContent.includes("Klick"),
   );
+  await page.click("#research-options summary");
   await page.locator("#research-layers input[value=age]").check();
   await shot("01-Globus-Ozeanbodenalter");
   await page.selectOption("#research-projection", "map");
@@ -67,6 +68,8 @@ try {
   await toggle("depth").check();
   await page.getByLabel("Mindestmagnitude").selectOption("8");
   await page.getByLabel("Herdtiefe bis (km)").selectOption("70");
+  await page.getByLabel("Katalogjahr").selectOption("2021");
+  await page.selectOption("#research-base","relief");
   await toggle("volcano").uncheck();
   await toggle("gnss").check();
   report.places.HOFN = await place(64.267, -15.198);
@@ -114,10 +117,12 @@ try {
   await page.selectOption("#saved-list", { label: "Atlas mit Stationsmessungen" });
   await page.click("#view-apply");
   await page.waitForFunction(() =>
-    document.querySelector("#research-reading")?.textContent.includes("Klick"),
+    document.querySelector("#research-reading")?.textContent.includes("HOFN"),
   );
   assert.equal(await page.locator("#research-projection").inputValue(), "map");
   assert.equal(await page.getByLabel("Mindestmagnitude").inputValue(), "8");
+  assert.equal(await page.getByLabel("Katalogjahr").inputValue(),"2021");
+  assert.equal(await page.locator("#research-base").inputValue(),"relief");
   assert.equal(await page.getByLabel("Zweite Grenze").inputValue(), "2877");
   assert.ok(await toggle("gnss").isChecked());
   assert.equal(await page.locator("#profile-measured").innerText(), report.profile);

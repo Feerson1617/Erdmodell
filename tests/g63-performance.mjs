@@ -33,7 +33,7 @@ try{
   assert.equal(row.start.progress,.15);assert.equal(row.start.playing,false);assert.equal(row.start.names,names);
   assert.equal(row.start.profile,"classroom");assert.equal(row.start.view,"coast");
   for(const s of row.log.states)assert.deepEqual([s.resolution.width,s.resolution.height],[1200,720]);
-  const sample={round,version:index?"G6.3.1":"G6.3",names,...row};
+  const sample={round,version:index?"G6.4":"G6.3.1",names,...row};
   const reference=raw.samples.find(x=>x.names===names);if(reference)assert.deepEqual(row.start,reference.start);
   raw.samples.push(sample);console.log(sample.version,names,row.log.renderedFps);
  }
@@ -64,7 +64,7 @@ try{
      for(const state of sample.log.states)assert.deepEqual([state.resolution.width,state.resolution.height],[1200,720]);
      const first=raw.future.find(v=>v.running===running);if(first)assert.deepEqual(sample.start,first.start);
      if(running)assert.ok(sample.log.renderedFrames>0);else assert.ok(sample.log.renderedFrames<=2);
-     raw.future.push({version:idx?"G6.3.1":"G6.3",round,running,...sample});
+     raw.future.push({version:idx?"G6.4":"G6.3.1",round,running,...sample});
    }
  }
  assert.equal(raw.future.length,12);

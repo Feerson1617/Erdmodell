@@ -1,3 +1,4 @@
+import {validStudio} from "./tectonic-studio";
 import { atlasLayers } from "./research-data";
 import sites from "./sites.json";
 
@@ -15,10 +16,11 @@ export function readableView(e:unknown){
   const b=e.base,s=e.scene,p=s.pose,m=s.map;
   if(!record(p)||!number(p.lat,-90,90)||!number(p.lon)||!number(p.d,.001,1e6)||!number(p.bearing)||!number(p.tilt)||!record(m)||!one(m.purpose,"events|boundaries")||!flags(m,"events lines depth"))return false;
   if(!one(b.mode,"globe|inside|nyos|place|plates")||!one(b.style,"A|B"))return false;
+  if(s.mode==="studio")return validStudio(s.studio);
   if(s.mode==="map"){
     const atlas=m.research,rates=m.rates;
     if(atlas===undefined)return true;
-    return m.purpose==="boundaries"&&record(atlas)&&(atlas.profile===undefined||Array.isArray(atlas.profile)&&atlas.profile.length<=2&&atlas.profile.every(p=>record(p)&&number(p.lat,-90,90)&&number(p.lon,-180,180)))&&flag(atlas.flat)&&Array.isArray(atlas.layers)&&atlas.layers.every(v=>typeof v==="string"&&Object.hasOwn(atlasLayers,v))&&number(atlas.magnitude)&&[6,7,8].includes(atlas.magnitude)&&number(atlas.depth)&&[70,300,750].includes(atlas.depth)&&
+    return m.purpose==="boundaries"&&record(atlas)&&(atlas.selected===undefined||record(atlas.selected)&&number(atlas.selected.lat,-90,90)&&number(atlas.selected.lon,-180,180))&&(atlas.year===undefined||[0,2019,2020,2021,2022,2023].includes(Number(atlas.year)))&&(atlas.base===undefined||one(atlas.base,"earth|relief|bathy"))&&(atlas.profile===undefined||Array.isArray(atlas.profile)&&atlas.profile.length<=2&&atlas.profile.every(p=>record(p)&&number(p.lat,-90,90)&&number(p.lon,-180,180)))&&flag(atlas.flat)&&Array.isArray(atlas.layers)&&atlas.layers.every(v=>typeof v==="string"&&Object.hasOwn(atlasLayers,v))&&number(atlas.magnitude)&&[6,7,8].includes(atlas.magnitude)&&number(atlas.depth)&&[70,300,750].includes(atlas.depth)&&
       (rates===undefined||record(rates)&&Array.isArray(rates.ids)&&rates.ids.length===2&&rates.ids.every(v=>Number.isInteger(v)&&number(v,1,5819))&&one(rates.unit,"mm|cm")&&number(rates.years)&&[1000,100000,1000000].includes(rates.years)&&flag(rates.opened));
   }
   if(s.mode==="time"){

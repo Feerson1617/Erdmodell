@@ -1,0 +1,360 @@
+import * as T from "three";
+import { basin, clamp, geologyAt, spreading, subducts, type ProcessId } from "./tectonic-process";
+import { libraryGLSL, materials, quality } from "./graphics";
+
+export type Analysis = "natural" | "materials" | "age" | "magnet";
+const W = 4.8,
+  D = 2.5;
+const color = (hex: number) => new T.Color(hex);
+const palette = [0xc2a389, 0x956c58, 0x746b62, 0x555a58, 0x856445, 0x995b40, 0x795345].map(color);
+const ocean = color(0x45616c),
+  land = color(0x81906e),
+  peak = color(0xccbda4),
+  fissure = color(0x342e2b);
+const ages = [0xec7959, 0xe5b77c, 0xd9c798, 0x8eaea7, 0x608bba].map(color);
+const positive = color(0xdb997b),
+  negative = color(0x536e8d);
+type Writer = (u: number, v: number, pos: T.Vector3, c: T.Color) => void;
+class Grid {
+  geometry = new T.BufferGeometry();
+  mesh: T.Mesh;
+  private positions: T.BufferAttribute;
+  private colors: T.BufferAttribute;
+  constructor(
+    private nx: number,
+    private ny: number,
+    material: T.Material,
+  ) {
+    const count = (nx + 1) * (ny + 1);
+    this.positions = new T.BufferAttribute(new Float32Array(count * 3), 3).setUsage(T.DynamicDrawUsage);
+    this.colors = new T.BufferAttribute(new Float32Array(count * 3), 3).setUsage(T.DynamicDrawUsage);
+    this.geometry.setAttribute("position", this.positions);
+    this.geometry.setAttribute("color", this.colors);
+    const indices: number[] = [];
+    for (let j = 0; j < ny; j++)
+      for (let i = 0; i < nx; i++) {
+        const a = j * (nx + 1) + i,
+          b = a + 1,
+          d = a + nx + 1;
+        indices.push(a, d, b, b, d, d + 1);
+      }
+    this.geometry.setIndex(indices);
+    this.mesh = new T.Mesh(this.geometry, material);
+    this.mesh.frustumCulled = false;
+  }
+  write(fn: Writer) {
+    const p = new T.Vector3(),
+      c = new T.Color();
+    for (let j = 0, k = 0; j <= this.ny; j++)
+      for (let i = 0; i <= this.nx; i++, k++) {
+        fn(i / this.nx, j / this.ny, p, c);
+        this.positions.setXYZ(k, p.x, p.y, p.z);
+        this.colors.setXYZ(k, c.r, c.g, c.b);
+      }
+    this.positions.needsUpdate = this.colors.needsUpdate = true;
+    this.geometry.computeVertexNormals();
+  }
+}
+export class PlateSection {
+  readonly group = new T.Group();
+  private surface: Grid;
+  private front: Grid;
+  private ends: Grid[];
+  private slab: Grid;
+  private water: T.Mesh;
+  private rock: T.MeshStandardMaterial;
+  private pockets = new T.Group();
+  private zone: T.InstancedMesh;
+  private pillows: T.InstancedMesh;
+  private fluids: T.InstancedMesh;
+  private melt: T.InstancedMesh;
+  private arrows = new T.Group();
+  private ruler: T.Mesh;
+  private disposed = false;
+  constructor(
+    readonly kind: ProcessId,
+    repaint: () => void,
+  ) {
+    this.rock = new T.MeshStandardMaterial({ vertexColors: true, side: T.DoubleSide, roughness: 0.91 });
+    const div = quality() === 0 ? 42 : 64;
+    this.surface = new Grid(div, Math.round(div * 0.55), this.rock);
+    this.front = new Grid(div, 30, this.rock);
+    this.ends = [new Grid(28, 24, this.rock), new Grid(28, 24, this.rock), new Grid(div, 24, this.rock)];
+    this.slab = new Grid(57, 7, this.rock);
+    this.group.add(...[this.surface, this.front, ...this.ends, this.slab].map((g) => g.mesh));
+    const waterMat = new T.MeshPhysicalMaterial({
+      color: 0x527f91,
+      transparent: true,
+      opacity: 0.29,
+      roughness: 0.3,
+      metalness: 0.24,
+      side: T.DoubleSide,
+      depthWrite: false,
+    });
+    this.water = new T.Mesh(new T.PlaneGeometry(2 * W, 2 * D), waterMat);
+    this.water.rotation.x = -Math.PI / 2;
+    this.water.position.y = -0.13;
+    this.water.renderOrder = 2;
+    this.group.add(this.water);
+    const drop = new T.SphereGeometry(0.047, 8, 6);
+    const particles = (hex: number, count: number) =>
+      new T.InstancedMesh(
+        drop,
+        new T.MeshStandardMaterial({ color: hex, emissive: hex, emissiveIntensity: 0.19 }),
+        count,
+      );
+    this.zone = new T.InstancedMesh(
+      new T.IcosahedronGeometry(1, 1),
+      new T.MeshStandardMaterial({ color: 0xbc774b, emissive: 0x4c2008, roughness: 0.92 }),
+      40,
+    );
+    this.pillows = new T.InstancedMesh(
+      new T.IcosahedronGeometry(1, 1),
+      new T.MeshStandardMaterial({ color: 0x435a5d, roughness: 0.92 }),
+      76,
+    );
+    this.zone.frustumCulled = this.pillows.frustumCulled = false;
+    this.group.add(this.pillows);
+    this.pockets.add(this.zone);
+    this.fluids = particles(0x68c9d7, 17);
+    this.melt = particles(0xffad5c, 21);
+    this.pockets.add(this.fluids, this.melt);
+    this.group.add(this.pockets);
+    for (const side of [-1, 1]) {
+      const arrow = new T.ArrowHelper(
+        new T.Vector3(side, 0, 0),
+        new T.Vector3(side * 2, 1, 0),
+        1.12,
+        0xf1df92,
+        0.29,
+        0.16,
+      );
+      this.arrows.add(arrow);
+    }
+    this.group.add(this.arrows);
+    this.ruler = new T.Mesh(
+      new T.SphereGeometry(0.095, 12, 8),
+      new T.MeshBasicMaterial({ color: 0xffebae }),
+    );
+    this.group.add(this.ruler);
+    void materials()
+      .then((lib) => {
+        if (this.disposed) return;
+        const m = this.rock;
+        m.onBeforeCompile = (s) => {
+          Object.assign(s.uniforms, {
+            faciesColor: { value: lib.color },
+            faciesRelief: { value: lib.relief },
+            detailGrade: { value: 1 },
+          });
+          s.vertexShader =
+            "varying vec3 specimenPoint;\n" +
+            s.vertexShader.replace(
+              "#include <begin_vertex>",
+              "#include <begin_vertex>\nspecimenPoint=position;",
+            );
+          s.fragmentShader = "varying vec3 specimenPoint;\n" + libraryGLSL + s.fragmentShader;
+          s.fragmentShader = s.fragmentShader.replace(
+            "#include <color_fragment>",
+            `#include <color_fragment>
+          vec3 p=specimenPoint; vec3 n=abs(normalize(cross(dFdx(p),dFdy(p))));
+          vec2 uv=n.y>max(n.x,n.z)?p.xz:(n.z>n.x?p.xy:p.zy);
+          float facies=p.y < -1.2?2.:(p.y<-.25?3.:0.);
+          vec3 tex=fieldSample(faciesColor,uv*1.33,facies).rgb;
+          float fine=fieldSample(faciesRelief,uv*2.5,facies).r;
+          diffuseColor.rgb*=clamp(.78+.36*luma6(tex)+.20*fine,.76,1.21);`,
+          );
+        };
+        m.customProgramCacheKey = () => "g64-core-sample";
+        m.needsUpdate = true;
+        repaint();
+      })
+      .catch(() => {});
+  }
+  update(
+    t: number,
+    analysis: Analysis,
+    cut: boolean,
+    paths: boolean,
+    vectors: boolean,
+    rate: number,
+    km: number,
+    ruler: boolean,
+  ) {
+    const k = this.kind;
+    this.surface.write((a, b, p, c) => {
+      const x = (a * 2 - 1) * W,
+        z = (b * 2 - 1) * D,
+        g = geologyAt(k, x, z, t);
+      p.set(x, g.top, z);
+      if (analysis === "age" || analysis === "magnet") {
+        const s = spreading(Math.abs(g.u) * 40, rate, t);
+        if (analysis === "age") c.copy(ages[Math.min(4, Math.floor(s.age / 1.5))]);
+        else c.copy(s.polarity > 0 ? positive : negative);
+      } else {
+        c.copy(g.ocean ? ocean : land).lerp(peak, clamp((g.top + 0.16) * 0.58));
+        if (analysis === "materials") c.copy(g.ocean ? palette[3] : palette[0]);
+        else c.lerp(fissure, g.fault * 0.78);
+      }
+    });
+    const section = (x: number, z: number, depth: number, p: T.Vector3, c: T.Color) => {
+      const g = geologyAt(k, x, z, t),
+        y = g.top + depth * (-2.52 - g.top);
+      const d = g.top - y,
+        fold =
+          k === "collision" || k === "complex" || k === "wilson"
+            ? 0.105 * t * Math.sin(x * (3 + t) + z * 0.48)
+            : 0;
+      const l = (d + fold) / g.crust;
+      const lid = g.crust + (g.ocean ? 0.3 + 0.33 * Math.sqrt(Math.abs(g.u) / W) : 0.5);
+      const bands = l < 0.13 ? 0 : l < 0.35 ? 1 : l < 0.66 ? 2 : l < 1 ? 3 : d < lid ? 4 : 5;
+      c.copy(palette[bands]);
+      if (analysis === "natural") {
+        const bedding =
+          d < g.crust ? 0.91 + 0.09 * Math.cos(l * 42 + z * 0.2) : 0.96 + 0.04 * Math.sin(x * 2 + y * 4);
+        c.multiplyScalar(bedding);
+      }
+      p.set(x, y, z);
+    };
+    this.front.write((u, v, p, c) => section((u * 2 - 1) * W, D, v, p, c));
+    for (const [index, side] of this.ends.entries())
+      side.write((u, v, p, c) =>
+        section(
+          index === 2 ? (u * 2 - 1) * W : index === 0 ? -W : W,
+          index === 2 ? -D : (u * 2 - 1) * D,
+          v,
+          p,
+          c,
+        ),
+      );
+    const sub = subducts(k) || (k === "wilson" && t > 0.53 && t < 0.88);
+    const x0 = k === "wilson" ? basin(t) - 0.28 : 0;
+    const extension =
+      k === "wilson" ? clamp((t - 0.53) / 0.16) * clamp((0.89 - t) / 0.06) : 0.59 + 0.41 * t;
+    this.slab.mesh.visible = sub && cut;
+    if (sub)
+      this.slab.write((u, v, p, c) => {
+        const x = x0 - 1.75 + u * (1.75 + 2.4 * extension),
+          dx = x - x0;
+        const oceanTop = geologyAt(k, x, D, t).top;
+        const y = dx < 0 ? oceanTop - 0.05 : geologyAt(k, x0, D, t).top - 0.05 - dx * 0.54 - dx * dx * 0.19;
+        p.set(x, Math.max(-2.55, y - v * 0.4), D + 0.013);
+        c.copy(v < 0.4 ? palette[3] : palette[4]);
+      });
+    this.pockets.visible = (sub || k === "ridge") && cut && paths;
+    this.fluids.visible = sub;
+    if (this.pockets.visible) {
+      const dummy = new T.Object3D();
+      // Discrete melt-bearing volumes sit between the plate surface and the base of the overriding crust.
+      for (let i = 0; i < 40; i++) {
+        const px = k === "ridge" ? 0.44 * Math.sin(i * 2.3) : x0 + 0.94 + 0.56 * ((i * 0.618034) % 1),
+          pz = D - 1.18 + 1.18 * ((i * 0.75488) % 1);
+        const a = geologyAt(k, px, pz, t),
+          floor = geologyAt(k, x0, pz, t).top - 0.54 * (px - x0) - 0.19 * (px - x0) ** 2;
+        const roof = a.top - a.crust - 0.055,
+          thickness = Math.max(0, roof - floor - 0.07);
+        const exposed = i % 4 === 0;
+        dummy.position.set(
+          px,
+          floor + 0.04 + thickness * (0.24 + 0.52 * ((i * 0.321) % 1)),
+          exposed ? D + 0.014 : pz,
+        );
+        if (k === "ridge") dummy.position.y = -0.9 - 0.39 * ((i * 0.417) % 1);
+        dummy.scale.set(
+          0.072,
+          k === "ridge" ? 0.06 : Math.min(0.056, thickness * 0.12),
+          exposed ? 0.045 : 0.092,
+        );
+        dummy.rotation.z = (i % 5) * 0.28;
+        dummy.updateMatrix();
+        this.zone.setMatrixAt(i, dummy.matrix);
+      }
+      this.zone.instanceMatrix.needsUpdate = true;
+      dummy.rotation.z = 0;
+      for (const [mesh, n, fluid] of [
+        [this.fluids, 17, true],
+        [this.melt, 21, false],
+      ] as const) {
+        for (let i = 0; i < n; i++) {
+          const lane = i % 3,
+            f = (i / n + t * 0.8) % 1,
+            px = x0 + 1.16 + 0.13 * lane + (fluid ? -0.24 * f : 0.22 * f);
+          const slabY = geologyAt(k, x0, D, t).top - 0.1 - (px - x0) * 0.54 - (px - x0) ** 2 * 0.19;
+          const roof = geologyAt(k, px, D, t).top - geologyAt(k, px, D, t).crust;
+          const zone = roof - 0.12;
+          const y = fluid
+            ? slabY + (zone - slabY) * f
+            : zone + (geologyAt(k, px, D, t).top - 0.11 - zone) * f;
+          dummy.position.set(px, y, D + 0.032 + 0.018 * Math.cos(i));
+          if (k === "ridge")
+            dummy.position.set(
+              0.15 * Math.sin(lane * 2.2) * (1 - f),
+              -0.98 + f * (geologyAt(k, 0, D, t).top + 0.9),
+              D + 0.04,
+            );
+          dummy.scale.set(fluid ? 0.6 : 0.81, fluid ? 1.4 : 1.7, 0.68);
+          dummy.updateMatrix();
+          mesh.setMatrixAt(i, dummy.matrix);
+        }
+        mesh.instanceMatrix.needsUpdate = true;
+      }
+    }
+    this.pillows.visible = k === "ridge" && analysis === "natural";
+    if (this.pillows.visible) {
+      const dummy = new T.Object3D();
+      for (let i = 0; i < 76; i++) {
+        const z = -D + 0.1 + (2 * D - 0.2) * ((i * 0.618034) % 1),
+          x =
+            0.14 * Math.sin(z * 1.4) +
+            0.055 * Math.sin(z * 3.7) +
+            (i % 2 ? 1 : -1) * (0.08 + 0.26 * ((i * 0.75488 + t * 0.35) % 1));
+        const radius = 0.046 + 0.095 * ((i * 0.366) % 1);
+        dummy.position.set(x, geologyAt(k, x, z, t).top + 0.015, z);
+        dummy.scale.set(radius * 1.45, radius * 0.72, radius);
+        dummy.rotation.y = i * 0.47;
+        dummy.updateMatrix();
+        this.pillows.setMatrixAt(i, dummy.matrix);
+      }
+      this.pillows.instanceMatrix.needsUpdate = true;
+    }
+    this.water.visible = analysis === "natural" && !["transform", "collision", "complex"].includes(k);
+    this.front.mesh.visible = cut;
+    this.ends.forEach((e) => (e.mesh.visible = cut));
+    this.arrows.visible = vectors;
+    for (const [i, a] of this.arrows.children.entries()) {
+      const side = i === 0 ? -1 : 1,
+        dir = ["rift", "ridge"].includes(k) ? side : -side,
+        along = ["transform", "oceanTransform"].includes(k);
+      const arrow = a as T.ArrowHelper;
+      arrow.position.set(side * 2.5, geologyAt(k, side * 2.5, 0, t).top + 0.38, 0);
+      arrow.visible = k !== "hotspot" || i === 1;
+      if (k === "oceanTransform") arrow.position.set(0, geologyAt(k, 0, side, t).top + 0.4, side);
+      arrow.setDirection(
+        k === "oceanTransform"
+          ? new T.Vector3(-side, 0, 0)
+          : k === "hotspot"
+            ? new T.Vector3(1, 0, 0)
+            : new T.Vector3(
+                along ? 0 : dir,
+                0,
+                along ? side : k === "oblique" ? side * 0.72 : 0,
+              ).normalize(),
+      );
+    }
+    this.ruler.visible = k === "ridge" && ruler;
+    this.ruler.position.set(km / 40, geologyAt(k, km / 40, 0, t).top + 0.1, 0);
+  }
+  dispose() {
+    this.disposed = true;
+    const mats = new Set<T.Material>(),
+      geos = new Set<T.BufferGeometry>();
+    this.group.traverse((o) => {
+      const m = o as T.Mesh;
+      if (m.geometry) geos.add(m.geometry);
+      if (m.material) for (const a of Array.isArray(m.material) ? m.material : [m.material]) mats.add(a);
+      if (o instanceof T.InstancedMesh) o.dispose();
+    });
+    geos.forEach((g) => g.dispose());
+    mats.forEach((m) => m.dispose());
+  }
+}

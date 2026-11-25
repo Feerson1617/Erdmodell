@@ -33,6 +33,7 @@ export type AtlasPoint = {
   speed?: number;
   depth?: number;
   magnitude?: number;
+  year?: number;
 };
 const color: Partial<Record<Layer, string>> = {
   volcano: "#ff906e",
@@ -95,6 +96,7 @@ export async function loadResearch(m: MapLayers) {
     lat,
     lon,
     layer: "quakes",
+    year: Number(date.slice(0, 4)),
     title: "Erdbeben · " + date,
     detail: "USGS ComCat " + id + " · " + magnitude + " " + scale + " · " + depth + " km Herdtiefe",
     depth,
