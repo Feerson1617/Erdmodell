@@ -30,6 +30,7 @@ export function classroomViews<Base>(observatory:Observatory,observation:Observa
   get("view-close").onclick=()=>dialog.close();
   get("view-save").onclick=()=>{
     const label=name.value.trim();if(!label){name.focus();return;}
+    if(experience&&!experience.settled){status.textContent="Die Ansicht wird noch aufgebaut.";return;}
     const entry={format:1,geography:experience?.capture(),name:label,scene:observatory.snapshot(),observing:observation.active,released:disclosure(),base:base()};
     if(entry.scene.mode==="regional"&&!entry.scene.region){status.textContent="Das Gelände wird noch geladen.";return;}
     if(persist([...entries,entry])){render("s"+(entries.length-1));status.textContent="Ansicht gespeichert.";name.value="";}

@@ -64,7 +64,7 @@ export async function exercise(page, out, { group = "all", film = false, board =
   };
   const topic = (v) => select("geo-topic", v);
   const waitStudio = (id) =>
-    page.waitForFunction((k) => window.geoObservatory().observatory.studio?.models[0] === k, id);
+    page.waitForFunction((k) => window.geoObservatory().observatory.studio?.models[0] === k && document.querySelector("#geo-crumb").dataset.settled !== "false", id);
   const region = () =>
     page.waitForFunction(() => {
       const w = window.geoObservatory();

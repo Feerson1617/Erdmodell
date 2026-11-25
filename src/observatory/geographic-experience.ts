@@ -1,6 +1,9 @@
+import { BufferGeometry, LineSegments, LineBasicMaterial } from "three";
+import germany from "./deutschland-grenze.json";
+import { modelTitle, timeCaption, mapLegend } from "./presentation-context";
 import { disclosure, restoreDisclosure, nextLabel, resetReveals } from "./reveal";
 import { regions as landscapes } from "../regions";
-import { position, R } from "../geo";
+import { angularDistance, position, R } from "../geo";
 import { project } from "../annotations";
 import type { World } from "../world";
 import { classify } from "./boundaries";
@@ -31,7 +34,7 @@ type Location = {
   mode: World["mode"];
   depth: string;
   reveals: ReturnType<typeof disclosure>;
-  restoreBase?: () => Promise<void>;
+  restoreBase?: (current: () => boolean) => Promise<void>;
 };
 const el = <E extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as E;
 const text = (node: HTMLElement, value: string) => {
@@ -49,15 +52,61 @@ const groups = (select: HTMLSelectElement, title: string) => {
 
 export class GeographicExperience {
   private history: Location[] = [];
-  private baseHistory?: () => () => Promise<void>;
-  bindBaseHistory<T>(capture: () => T, restore: (value: T) => Promise<void>) {
+  private nationalBoundary = new LineSegments(
+    new BufferGeometry().setFromPoints(
+      germany.flatMap((ring) =>
+        ring
+          .slice(1)
+          .flatMap(([lon, lat], i) => [position(ring[i][1], ring[i][0], 5), position(lat, lon, 5)]),
+      ),
+    ),
+    new LineBasicMaterial({ color: 0xffe49c }),
+  );
+
+  private baseHistory?: () => (current: () => boolean) => Promise<void>;
+  bindBaseHistory<T>(capture: () => T, restore: (value: T, current: () => boolean) => Promise<void>) {
     this.baseHistory = () => {
       const saved = capture();
-      return () => restore(saved);
+      return (current) => restore(saved, current);
     };
   }
   private focus: MapFocus = {};
   private epoch = 0;
+  private restoring = false;
+  private awaiting = false;
+  private goal?: { lat: number; lon: number; d: number };
+  private matchesGoal() {
+    const p = this.world.nav.pose,
+      g = this.goal;
+    return (
+      !g ||
+      (Math.abs(p.lat - g.lat) < 0.02 &&
+        Math.abs(angularDistance(p.lon, g.lon)) < 0.02 &&
+        Math.abs(p.d - g.d) < 1)
+    );
+  }
+  get settled() {
+    if (this.restoring || this.awaiting || this.flight || this.world.nav.flight || !this.obs.painted)
+      return false;
+    if (this.obs.mode === "map" && this.focus.overview && this.goal && !this.matchesGoal()) return false;
+    if (this.obs.mode || !this.world.ready) return !!this.obs.mode;
+    if (!this.world.worldDrawn) return false;
+    if (this.world.mode === "place") return this.world.local.ready && this.world.local.group.visible;
+    if (this.world.mode === "nyos") return this.world.nyos.ready;
+    return true;
+  }
+  private invalidate() {
+    this.epoch++;
+    this.flight = undefined;
+    this.goal = undefined;
+    this.restoring = false;
+    this.awaiting = false;
+    this.drawer(false);
+    this.signature = "";
+    el("geo-crumb").textContent = "Ortswechsel …";
+    el("geo-crumb").dataset.settled = "false";
+    for (const id of ["geo-title", "geo-legend", "geo-clock", "geo-model-limit"]) el(id).hidden = true;
+  }
   private flight?: () => void;
   private toolbar = document.createElement("footer");
   private pins = document.createElement("div");
@@ -67,6 +116,7 @@ export class GeographicExperience {
   private pinKey = "";
   private lastTick = 0;
   private depth = "terms";
+  private neutral = false;
   private play?: HTMLButtonElement;
   private source?: HTMLInputElement;
   private step?: HTMLButtonElement;
@@ -77,13 +127,16 @@ export class GeographicExperience {
     private observation: Observation,
     private navigate: (mode: World["mode"]) => void,
   ) {
+    this.nationalBoundary.name = "Deutschland · Staatsgrenze";
+    this.nationalBoundary.visible = false;
+    world.scene.add(this.nationalBoundary);
     document.body.classList.add("geo-experience");
     document.body.dataset.infoDepth = this.depth;
     const header = document.querySelector("header")!;
     const nav = document.createElement("div");
     nav.className = "geo-selector";
     nav.innerHTML =
-      '<select id="geo-topic" aria-label="Thema oder Prozess"></select><select id="geo-place" aria-label="Raum oder Ort"></select><span id="geo-crumb" aria-live="polite"></span>';
+      '<select id="geo-topic" aria-label="Thema oder Prozess"></select><select id="geo-place" aria-label="Raum oder Ort"></select><div class="geo-heading"><span id="geo-crumb" aria-live="polite"></span><strong id="geo-title"></strong></div>';
     header.insertBefore(nav, header.querySelector("nav"));
     const topics = el<HTMLSelectElement>("geo-topic");
     option(topics, "", "Thema wählen");
@@ -136,7 +189,7 @@ export class GeographicExperience {
     };
     this.toolbar.id = "geo-dock";
     this.toolbar.innerHTML =
-      '<button id="geo-back" hidden>Zurück</button><button id="geo-skip" hidden>Fahrt beenden</button><button id="geo-land" hidden>Regionales Relief</button><button id="geo-section" hidden>Schnitt öffnen</button><button id="geo-return" hidden>Auf der Erde zeigen</button><button id="geo-play" hidden>Abspielen</button><input id="geo-time" aria-label="Modellzeit" type="range" hidden><button id="geo-step" hidden>Schritt</button><button id="geo-reset" hidden>Zurücksetzen</button><select id="geo-preset" aria-label="Prozessdarstellung" hidden></select><select id="geo-info" aria-label="Informationstiefe"><option value="observe">Beobachten</option><option value="terms" selected>Fachbegriffe</option><option value="explain">Erklären</option></select><button id="geo-release" hidden>Begriff freigeben</button><button id="geo-clear" hidden>Freigabe löschen</button><button id="geo-tools" aria-expanded="false">Ansicht</button>';
+      '<button id="geo-back" hidden>Zurück</button><button id="geo-skip" hidden>Fahrt beenden</button><button id="geo-land" hidden>Regionales Relief</button><button id="geo-section" hidden>Schnitt öffnen</button><button id="geo-return" hidden>Auf der Erde zeigen</button><button id="geo-play" hidden>Abspielen</button><input id="geo-time" aria-label="Modellzeit" type="range" hidden><button id="geo-step" hidden>Schritt</button><button id="geo-reset" hidden>Zurücksetzen</button><select id="geo-preset" aria-label="Prozessdarstellung" hidden></select><select id="geo-info" aria-label="Informationstiefe"><option value="observe">Beobachten</option><option value="neutral">Beobachten ohne Ort</option><option value="terms" selected>Fachbegriffe</option><option value="explain">Erklären</option></select><button id="geo-release" hidden>Begriff freigeben</button><button id="geo-clear" hidden>Freigabe löschen</button><button id="geo-tools" aria-expanded="false">Ansicht</button>';
     el("app").append(this.toolbar);
     this.pins.id = "geo-markers";
     document.querySelector(".view")!.append(this.pins);
@@ -144,6 +197,14 @@ export class GeographicExperience {
     limit.id = "geo-model-limit";
     limit.hidden = true;
     this.pins.after(limit);
+    const legend = document.createElement("aside");
+    legend.id = "geo-legend";
+    legend.hidden = true;
+    legend.setAttribute("aria-label", "Kartenlegende");
+    const clock = document.createElement("span");
+    clock.id = "geo-clock";
+    clock.hidden = true;
+    limit.after(legend, clock);
     for (const [id, place] of Object.entries(places)) {
       const button = document.createElement("button");
       button.dataset.place = id;
@@ -220,6 +281,8 @@ export class GeographicExperience {
     el("geo-tools").setAttribute("aria-expanded", String(open));
   }
   private setDepth(value: string) {
+    this.neutral = value === "neutral";
+    if (this.neutral) value = "observe";
     this.depth = value;
     this.observation.set(value === "observe");
     document.body.dataset.infoDepth = value;
@@ -228,11 +291,10 @@ export class GeographicExperience {
     this.pinKey = "";
   }
   capture() {
-    return { focus: { ...this.focus }, depth: this.depth };
+    return { focus: { ...this.focus }, depth: this.neutral ? "neutral" : this.depth };
   }
   restore(saved?: { focus?: MapFocus; depth?: string }) {
-    this.epoch++;
-    this.flight = undefined;
+    this.invalidate();
     this.history = [];
     this.focus = {};
     if (saved?.focus) {
@@ -246,12 +308,29 @@ export class GeographicExperience {
           Number.isInteger(f.boundary) && f.boundary! > 0 && f.boundary! <= 5819 ? f.boundary : undefined,
       };
     }
+    this.neutral = saved?.depth === "neutral";
+    if (this.focus.overview && this.obs.mode === "map") {
+      const g = this.focus.country ? { lat: 51.1, lon: 10.3, d: 1600 } : this.currentPlace();
+      if (
+        g &&
+        (Math.abs(this.world.nav.pose.lat - g.lat) > 8 ||
+          Math.abs(angularDistance(this.world.nav.pose.lon, g.lon)) > 10)
+      ) {
+        const dest = { lat: g.lat, lon: g.lon, d: this.focus.country ? 1600 : 3400, tilt: 0, bearing: 0 };
+        this.goal = dest;
+        this.world.nav.fly(dest, false);
+      }
+    }
     this.depth = this.observation.active ? "observe" : saved?.depth === "explain" ? "explain" : "terms";
     document.body.dataset.infoDepth = this.depth;
     this.signature = this.pinKey = "";
     this.drawer(false);
   }
   private remember() {
+    if (!this.settled) {
+      this.invalidate();
+      return;
+    }
     const scene = structuredClone(this.obs.snapshot());
     if (scene.studio) scene.studio.playing = false;
     if (scene.time) scene.time.playing = false;
@@ -260,15 +339,12 @@ export class GeographicExperience {
       scene,
       focus: { ...this.focus },
       mode: this.world.mode,
-      depth: this.depth,
+      depth: this.neutral ? "neutral" : this.depth,
       reveals: disclosure(),
       restoreBase: scene.mode ? undefined : this.baseHistory?.(),
     });
     if (this.history.length > 24) this.history.shift();
-    this.epoch++;
-    this.flight = undefined;
-    this.drawer(false);
-    this.signature = "";
+    this.invalidate();
   }
   private currentPlace() {
     return this.focus.place ? places[this.focus.place] : undefined;
@@ -281,17 +357,17 @@ export class GeographicExperience {
       nav.goal = { ...target };
       nav.pose = { ...target };
     }
-    const done = this.flight;
-    this.flight = undefined;
-    done?.();
+    // Apply callbacks after the next rendered frame at the requested camera pose.
   }
   private async journey(id: string, after?: () => void) {
     const space = id.startsWith("space-") ? id.slice(6) : undefined,
       p = places[id];
     this.focus = { space: p?.space ?? space, place: p ? id : undefined, overview: true };
     const epoch = this.epoch;
+    this.awaiting = true;
     await this.obs.openMap("boundaries", true);
     if (epoch !== this.epoch) return;
+    this.awaiting = false;
     const coord = space ? regions[space] : undefined;
     const dest = {
       lat: p?.lat ?? coord?.[0] ?? 12,
@@ -300,6 +376,7 @@ export class GeographicExperience {
       tilt: 0,
       bearing: 0,
     };
+    this.goal = dest;
     this.world.nav.fly(dest, false, 700);
     this.flight = () => {
       if (this.epoch === epoch) after?.();
@@ -311,9 +388,15 @@ export class GeographicExperience {
     if (id === "country-de") {
       this.focus = { country: "Deutschland", overview: true };
       const epoch = this.epoch;
+      this.awaiting = true;
       await this.obs.openMap("boundaries", true);
       if (epoch !== this.epoch) return;
-      this.world.nav.fly({ lat: 51.1, lon: 10.3, d: 2350, tilt: 0, bearing: 0 }, false);
+      this.awaiting = false;
+      const dest = { lat: 51.1, lon: 10.3, d: 1600, tilt: 0, bearing: 0 };
+      this.obs.maps.boundaries.visible = false;
+      this.goal = dest;
+      this.world.nav.fly(dest, false);
+      this.flight = () => {};
       return;
     }
     if (id.startsWith("local-") && landscapes.has(id.slice(6))) {
@@ -327,6 +410,7 @@ export class GeographicExperience {
   private openSection(id: ProcessId, save = true) {
     if (save) this.remember();
     this.focus.overview = false;
+    this.goal = undefined;
     this.obs.openStudio({
       models: [id],
       playing: false,
@@ -397,19 +481,21 @@ export class GeographicExperience {
   private async back() {
     const item = this.history.pop();
     if (!item) return;
-    const epoch = ++this.epoch;
-    this.flight = undefined;
+    this.invalidate();
+    const epoch = this.epoch;
+    this.restoring = true;
     this.drawer(false);
     this.focus = item.focus;
     if (!item.scene.mode) {
-      if (item.restoreBase) await item.restoreBase();
+      if (item.restoreBase) await item.restoreBase(() => this.epoch === epoch);
       else this.navigate(item.mode);
     }
     if (epoch !== this.epoch) return;
     await this.obs.restore(item.scene);
     if (epoch !== this.epoch) return;
+    this.restoring = false;
     this.setDepth(item.depth);
-    if (item.depth === "observe") restoreDisclosure(item.reveals);
+    if (this.depth === "observe") restoreDisclosure(item.reveals);
     if (item.scene.map.research) this.drawer(true);
     this.signature = "";
     this.pinKey = "";
@@ -435,10 +521,13 @@ export class GeographicExperience {
   private orient() {
     const region = this.obs.region,
       s = this.obs.studioState;
-    if (this.focus.boundary)
+    if (this.focus.boundary && !this.currentPlace())
       return (
-        "Regional · PB2002 #" + this.focus.boundary + (s || region ? " › allgemeiner Anschauungsschnitt" : "")
+        "Erde · Grenzabschnitt PB2002 #" +
+        this.focus.boundary +
+        (s || region ? " · idealisierter Schnitt" : "")
       );
+
     const stored = this.currentPlace();
     const p =
       (region &&
@@ -456,7 +545,12 @@ export class GeographicExperience {
       const a = places[wilsonPlaces[Math.min(8, Math.floor(s.time * 8 + 0.0001))]];
       return "Erde › " + a.space + " › " + a.name + " · heutige Analogie";
     }
-    if (s) return s.interior ? "Global · Struktur des Erdinneren" : path + " · idealisierter Schnitt";
+    if (s)
+      return s.interior
+        ? "Global · Struktur des Erdinneren"
+        : path +
+            (this.focus.boundary ? " · PB2002 #" + this.focus.boundary : "") +
+            " · idealisierter Schnitt";
     if (region) {
       if (region.spec.theme === "forces" || region.spec.theme === "lithosphere")
         return "Erde · allgemeines Anschauungsmodell";
@@ -471,7 +565,8 @@ export class GeographicExperience {
             : "idealisierter Schnitt")
       );
     }
-    if (this.focus.country && this.focus.overview) return "Erde › Europa › Deutschland · National";
+    if (this.obs.mode === "map" && this.world.mode === "globe" && this.focus.country && this.focus.overview)
+      return "Erde › Europa › Deutschland · National";
     if (this.focus.overview)
       return (
         path +
@@ -493,7 +588,7 @@ export class GeographicExperience {
     return this.obs.atlasState ? "Erde · Global · Forschungsatlas" : "Erde · Global";
   }
   private drawMarkers() {
-    const show = this.focus.overview && this.obs.mode === "map" && !this.obs.atlasState,
+    const show = this.settled && this.focus.overview && this.obs.mode === "map" && !this.obs.atlasState,
       nav = this.world.nav,
       canvas = el("earth");
     const key = [
@@ -548,14 +643,22 @@ export class GeographicExperience {
     }
   }
   update(now: number) {
-    if (this.flight && !this.world.nav.flight) {
+    if (this.goal && !this.world.nav.flight && !this.matchesGoal() && !this.awaiting) {
+      this.flight = undefined;
+      this.goal = undefined;
+      this.focus = {};
+    }
+    if (this.flight && !this.world.nav.flight && this.world.worldDrawn && this.matchesGoal()) {
       const done = this.flight;
       this.flight = undefined;
       done();
     }
+    this.nationalBoundary.visible =
+      this.settled && this.obs.mode === "map" && !!this.focus.country && !this.obs.atlasState;
     if (now - this.lastTick < 70) return;
     this.lastTick = now;
     if (this.observation.active !== (this.depth === "observe")) {
+      this.neutral = false;
       this.depth = this.observation.active ? "observe" : "terms";
       document.body.dataset.infoDepth = this.depth;
     }
@@ -567,11 +670,13 @@ export class GeographicExperience {
       this.depth,
       this.history.length,
       !!this.flight,
+      !!this.world.nav.flight,
       this.focus.place,
       this.focus.space,
       this.focus.country,
       !!this.obs.atlasState,
       r?.ready,
+      this.settled,
       r?.localStill,
       document.body.dataset.reveal,
     ].join("/");
@@ -593,9 +698,9 @@ export class GeographicExperience {
         time: seek,
         reset: !!this.reset || seek,
         back: this.history.length > 0,
-        skip: !!this.flight,
-        land: !!p && (p.bathy || p.site) && this.focus.overview,
-        section: !!p && !s && !this.flight,
+        skip: !!this.world.nav.flight,
+        land: !!p && (p.bathy || p.site) && this.focus.overview && this.settled,
+        section: !!p && !s && this.settled,
         return:
           (!!s && !s.interior) ||
           (!!r && r.spec.theme !== "forces" && r.spec.theme !== "lithosphere" && !this.currentPlace()),
@@ -615,7 +720,8 @@ export class GeographicExperience {
       bar.min = this.source?.min || "0";
       bar.max = this.source?.max || "1";
       bar.step = this.source?.step || ".001";
-      el<HTMLSelectElement>("geo-info").value = this.depth;
+      el<HTMLSelectElement>("geo-info").value =
+        this.neutral && this.depth === "observe" ? "neutral" : this.depth;
       const src = el<HTMLSelectElement>("studio-preset"),
         preset = el<HTMLSelectElement>("geo-preset");
       if (src) {
@@ -625,15 +731,34 @@ export class GeographicExperience {
       if (this.obs.mode === "map" && this.focus.overview && !this.obs.atlasState)
         el("geo-tools").hidden = true;
     }
-    const orientation = this.orient();
-    text(
-      el("geo-crumb"),
-      this.depth === "observe"
-        ? this.currentPlace()
-          ? "Erde › " + this.currentPlace()!.space
-          : "Erde"
-        : orientation,
-    );
+    const ready = this.settled;
+    const orientation = ready ? this.orient() : "Ortswechsel …";
+    el("geo-crumb").dataset.settled = String(ready);
+    text(el("geo-crumb"), this.depth === "observe" ? orientation.split(" · ")[0] : orientation);
+    const anonymous = this.depth === "observe";
+    el("geo-crumb").hidden = anonymous && this.neutral;
+    const title = el("geo-title");
+    title.hidden = !ready || anonymous;
+    if (!title.hidden)
+      text(
+        title,
+        this.nationalBoundary.visible ? "Deutschland in Mitteleuropa" : modelTitle(this.obs, this.world),
+      );
+    for (const [id, value] of [
+      ["geo-clock", ready && !anonymous ? timeCaption(this.obs, this.world) : ""],
+      [
+        "geo-legend",
+        ready && !anonymous
+          ? this.nationalBoundary.visible
+            ? "Helle Linie · Staatsgrenze Deutschlands, generalisiert"
+            : mapLegend(this.obs, this.world)
+          : "",
+      ],
+    ]) {
+      const field = el(id);
+      field.hidden = !value;
+      if (value) text(field, value);
+    }
     const note = el("geo-model-limit");
     const limit =
       this.focus.overview && !this.focus.country && this.obs.mode === "map" && !this.obs.atlasState
@@ -645,7 +770,7 @@ export class GeographicExperience {
             : this.obs.studioState && this.obs.studioState.models.length > 1
               ? "Gemeinsame Modellphase · natürliche Prozessdauern unterscheiden sich."
               : "";
-    note.hidden = !limit || this.depth === "observe";
+    note.hidden = !ready || !limit || this.depth === "observe";
     if (!note.hidden) text(note, limit);
     if (this.play) {
       const paused = !/Pause|Anhalten/.test(this.play.textContent || "");

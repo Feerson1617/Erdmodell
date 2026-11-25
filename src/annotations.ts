@@ -85,6 +85,10 @@ export class AnnotationLayer {
     }
     const frame = this.frame,
       boxes = [...this.obstacles];
+    if(document.body.classList.contains("geo-experience")){
+      const radius=Math.max(8,Math.min(frame.width,frame.height)*.025);
+      for(const p of labels)boxes.push({left:p.x-radius,right:p.x+radius,top:p.y-radius,bottom:p.y+radius});
+    }
     const active = new Set<string>();
     for (const label of labels) {
       let node = this.nodes.get(label.id);
@@ -138,6 +142,7 @@ export class AnnotationLayer {
         [0, -dy - h],
         [0, dy + h],
         [-dx, -dy - h],
+        [w/2+8-label.x,0], [frame.width-w/2-8-label.x,0],
         [dx, dy + h],
       ];
       for (const [ox, oy] of placements) {

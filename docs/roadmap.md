@@ -2,17 +2,9 @@
 
 Das Nyos-Modul dient als regionales Fallbeispiel für den Unterrichtsbesuch am 15. Dezember 2026. Die gemeinsame Erde, ihre Kamerafahrten und der Ortskatalog tragen auch die folgenden Ausbaustufen. Jeder weitere Standort braucht dokumentierte Datenrechte, Höhen- und Zeitbezüge sowie einen regional begründeten Mechanismus.
 
-| Stufe | Inhalt | Fachliche Grundlage vor der Umsetzung |
-| --- | --- | --- |
-| G5 · Weitere vulkanische Naturgefahren | Unterschiedliche Vulkantypen, Eruptionsmechanismen und regional begründete Auswirkungen betrachten. | Lokalen geologischen Kontext, beobachtete Aktivität und Grenzen der Modellzeit belegen. Bei Maaren die Kraterentstehung von späteren Ereignissen im See unterscheiden. |
-| G6 · Erdbeben und Tsunamis | Wiederverwendbare Prozesse für geeignete Orte mit eigenem Datenbezug entwickeln. | Bruchtyp, räumliche Ausdehnung, Tiefe und möglicher Meeresbodenversatz müssen zum Fall passen. Für Wasserbewegung zusätzlich Bathymetrie und begründete Ausgangsbedingungen prüfen. |
-| G7 · Sturmfluten und Küstenschutz | Auf Hooge, Helgoland und an weiteren Orten in Schleswig-Holstein die Bedeutung von Küstenrelief, Warften, Deichen und Nutzung veranschaulichen. | Vor einem Vergleich Tide, Windstau, Gelände- und Bauwerkshöhen auf einen gemeinsamen vertikalen Bezug bringen. Unterschiedliche Schutzstrategien nach Ort und Nutzung untersuchen. |
+## Folgeplanung ab G6.4.2
 
-Alle Ausbaustufen benötigen dieselbe Browser-, Geräte- und Quellenprüfung wie Nyos. Unterrichtsgespräch, begründete Abwägungen und Ergebnissicherung bleiben bei Lehrkraft und Klasse.
-
-## Folgeplanung ab G6.4.1
-
-1. G6.4.1 führt räumlichen und thematischen Zugang, temporäre Modellwerkzeuge und gemeinsame Wiedergabe zusammen.
+1. G6.4.2 verbindet die sichtbare räumliche Orientierung mit der gerenderten Szene. Ortsverlauf, Fachüberschrift, Modellzeit und Kartenlegenden bilden die gemeinsame Grundlage.
 2. G6.5 vertieft nach ausdrücklicher Abnahme Erd- und Seebeben einschließlich Tsunamis.
 3. G6.6 vertieft Vulkanismus.
 4. G6.7 behandelt Maare, die Vulkaneifel und limnische Eruptionen.
