@@ -78,14 +78,15 @@ Die Fachanforderungen führen auf Seite 26 für das Geosystem Erde das verbindli
 
 Das schulinterne Curriculum ordnet dieses Thema Jahrgang 9 mit einer Wochenstunde Geographie zu. Seite 6 veranschlagt für den Themenblock etwa 15 Unterrichtswochen und nennt als mögliche Inhalte den Erdaufbau, Annahmen, Belege und Erklärungen der Plattentektonik, Vulkanismus, Erd- und Seebeben und den nachhaltigen Umgang mit Naturrisiken. [Fachinternes Curriculum Geographie der ETS, Seite 6](https://ets-toenning.de/wp-content/uploads/2025/07/Fachinternes-Curriculum-Geographie.pdf#page=6)
 
-### G6.3 im Unterricht
+### Fachliche Darstellung ab G6.3.1
 
-| Kompetenzbezug | Beobachtung oder Denkauftrag | Grundlage für das Unterrichtsgespräch |
+| Kompetenzbezug | Dargestellter Sachverhalt | Grundlage für das Unterrichtsgespräch |
 |---|---|---|
 | F1 S1, räumliche Orientierung und Kartenauswertung | Die Lage Japans, Islands und des Nyos-Sees auf dem Globus bestimmen | Lage und Maßstab eines regionalen Ausschnitts erläutern |
+| F2 S4, S7 · Vulkanismus | Wasserabgabe der Unterplatte, Teilschmelze im Mantelkeil und Magmaweg am Inselbogen. Druckentlastung an Rücken und Hotspot | Vergleich der geologischen Entstehungsbedingungen |
 | F2 S3, S4, S5 | An denselben Gesteinsmarkern Annäherung, Trennung und seitliche Bewegung vergleichen | Eine Vermutung zum Grenzprozess im geologischen Schnitt überprüfen |
 | F2 S7, S8, S9, Erkenntnisgewinnung | Einen Vergleichsweg vor und nach dem Bruch untersuchen. Drei Meeresereignisse vergleichen | Belege für Verhakung, bleibenden Versatz und mögliche Wasserverlagerung unterscheiden |
 | Kommunikation und Modellkritik | Zwei Zukunftsszenarien aus gleicher Perspektive und mit zentrierten Kontinenten betrachten | Annahmen vergleichen und Unsicherheit begründen |
 | F4 S19, S20, Bewertung und nachhaltiges Handeln | Den Standort beim gleichen Modellbeben wechseln oder Vorsorgemaßnahmen am Nyos-See vergleichen | Schutzwirkung, Erreichbarkeit, Flächenbedarf und Aufwand gegeneinander abwägen |
 
-Die Kompetenzbezüge und die curricularen Inhalte folgen den oben verlinkten Originalseiten. Bewegungspfeile, Szenariovergleich und Denkauftragsschalter sind projektspezifische Unterrichtshilfen. Die Fachbegriffe des Leitfadens können zur Vertiefung dienen. Eine begründete Antwort entsteht im Unterrichtsgespräch.
+Die Kompetenzbezüge und die curricularen Inhalte folgen den oben verlinkten Originalseiten. Bewegungspfeile, Szenariovergleich und einzeln freigegebene Begriffe sind Darstellungshilfen. Die Auswahl von Leitfragen und Arbeitsformen liegt bei der Lehrkraft. Die Fachbegriffe des Leitfadens können zur Vertiefung dienen. Eine begründete Antwort entsteht im Unterrichtsgespräch.

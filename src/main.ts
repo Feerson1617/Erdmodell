@@ -1,5 +1,4 @@
 import {nyosLabels} from "./nyos/labels";
-import {discussion} from "./observatory/discussion";
 import {beginCandidates,allowsLabel,claimObject} from "./observatory/reveal";
 import {installProfiles} from "./observatory/graphics";
 import {classroomViews} from "./observatory/classroom-views";
@@ -547,9 +546,7 @@ async function boot() {
   });
   let lastHud = 0;
   let lastBearing = NaN;
-  const updateDiscussion=discussion(observatory);
   world.onFrame = () => {
-    updateDiscussion();
     observation.update();
     if(observatory.mode){if(status.textContent)status.textContent="";return;}
     if (world.mode==="inside"||world.mode==="plates") updatePins();

@@ -1,4 +1,4 @@
-import zao from "./zao.json";
+import {meltingExplanation,meltingSetting} from "./melting";
 import {eruption} from "./eruption";
 import * as T from "three";
 import type { RegionalScene, Theme } from "./regional";
@@ -41,7 +41,9 @@ function ribbon(r:RegionalScene,lo:(x:number)=>number,hi:(x:number)=>number,colo
 function flow(r:RegionalScene,c:T.CatmullRomCurve3,color:number,id:string,count:number,start:number,end:number){
   if(id==="melt"||id==="hotspot"){
     const tube=new T.TubeGeometry(c,64,.024,7,false),mat=new T.MeshStandardMaterial({color,emissive:0xa64219,emissiveIntensity:.32,roughness:.72});
-    const vein=object(tube,mat,id);r.section.add(vein);
+    const vein=object(tube,mat,id);
+    vein.userData.explanation={name:text[id].name,answer:meltingExplanation(r.spec.process,r.spec.site)};
+    r.section.add(vein);
     r.onAnimate(t=>{const extent=T.MathUtils.smoothstep(t,start,end);vein.visible=extent>0;tube.setDrawRange(0,Math.floor(64*extent)*42);});return;
   }
   const geo=new T.SphereGeometry(.075,9,7),mat=chips(color);
@@ -79,13 +81,23 @@ function magnetic(r:RegionalScene){
       flow(r,path,0xc2a783,"mantle",4,0,1);
     }
   }
-  flow(r,new T.CatmullRomCurve3([vec(.1,-1.7),vec(-.1,-.7),vec(0,r.height(0,0))]),0xeeb68a,"melt",8,.01,1);
+  flow(r,new T.CatmullRomCurve3([vec(.1,T.MathUtils.lerp(r.height(0,0),-5.8,.74)),vec(-.1,-.7),vec(0,r.height(0,0))]),0xeeb68a,"melt",8,.01,1);
 }
 function volcano(r:RegionalScene){
-  const k=r.spec.process,f=r.faultModel,vent=r.spec.arcTransect?zao.vent:k==="subduction"||k==="arc"?T.MathUtils.clamp(f.trace+f.dipSign*5.4,-4.8,4.8):0,top=r.height(vent,r.spec.arcTransect?0:-.33);
-  if(k==="subduction"||k==="arc")flow(r,new T.CatmullRomCurve3([vec(vent,f.interfaceY(vent)),vec(vent-.11,(f.interfaceY(vent)+top)/2),vec(vent,top-.93)]),0x8bd2d7,"fluid",7,.04,.61);
-  const plume=new T.CatmullRomCurve3([vec(vent+.2,top-2.15),vec(vent-.17,top-1.47),vec(vent,top-.93),vec(vent,top+.03)]);
-  flow(r,plume,0xf2ad6c,k==="hotspot"?"hotspot":"melt",15,.12,.93);
+  const setting=meltingSetting(r.spec.process,r.spec.site);
+  if(setting==="uncertain")return;
+  const k=r.spec.process,f=r.faultModel,vent=r.volcanicVentX,top=r.height(vent,r.spec.arcTransect?0:-.33);
+  // In a subduction section the crust ends 0.65 model units below the surface.
+  // Fluids leave the slab. The melt path starts above it, inside the mantle wedge.
+  const slab=f.interfaceY(vent),sectionTop=r.height(vent,0);
+  const sourceY=setting==="arc"?T.MathUtils.lerp(slab,sectionTop-.65,.48):T.MathUtils.lerp(sectionTop,-5.8,.74);
+  const source=vec(vent,sourceY);
+  if(setting==="arc"){
+    const fluids=new T.CatmullRomCurve3([vec(vent,slab),vec(vent-.07,(slab+sourceY)/2),source]);
+    flow(r,fluids,0x8bd2d7,"fluid",7,.04,.61);
+  }
+  const plume=new T.CatmullRomCurve3([source,vec(vent-.12,T.MathUtils.lerp(sourceY,top-.65,.5)),vec(vent,top-.65),vec(vent,top+.03)]);
+  flow(r,plume,0xf2ad6c,k==="hotspot"?"hotspot":"melt",15,.12,.53);
   const lenses=new T.Group();lenses.position.set(vent,top-.91,.075);r.section.add(lenses);
   const mush=chips(0x786157),melt=chips(0xb98269);
   for(const m of [mush,melt]){

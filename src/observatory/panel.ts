@@ -1,3 +1,4 @@
+import {meltingExplanation} from "./melting";
 import {boundaryLesson} from "../tectonics/learning";
 import {assumptions,learningFields,regionalReading,timeReading,setReading} from "./lesson";
 import {project,AnnotationLayer} from "../annotations";
@@ -163,9 +164,9 @@ export class Observatory {
         (m.events.visible?'<label><input id="g-depth" type="checkbox" '+(m.depth?"checked":"")+'> Tiefe unterscheiden</label><small>USGS · 2019–2023 · Magnitude ab 6</small>'+(m.depth?'<div class="g-legend"><span>Flach</span><span>Mitteltief</span><span>Tief</span></div>':''):'')+
         (ev?'<h2>Beobachtetes Erdbeben</h2><p>'+ev[1]+' · Magnitude '+ev[5]+' ('+ev[6]+') · '+Math.round(ev[4])+' km tief</p>':'')+
         (s?'<h2>'+m.pair+'</h2><p>'+explain[classify(s)]+'</p><small>Dieses Modell erklärt einen möglichen Vorgang an dieser Plattengrenze.</small>'+button("g-segment","Prozess ansehen")+(geology(s).localQuake?button("g-quake-explain",geology(s).marine?"Seebeben erklären":"Erdbeben erklären"):'<small>Die genaue Störung ist hier nicht ausreichend bekannt.</small>')+(["ridge","subduction","arc"].includes(classify(s))?button("g-segment-volcano","Vulkanismus ansehen"):''):'')+
-        (this.mapPurpose==="boundaries"?'<label>Grenzbeispiele<select id="g-example"><option value="">Ort auf dem Globus finden …</option>'+opts(this.examples(),"")+'<optgroup label="Weitere Regionen">'+opts(Object.fromEntries(Object.entries(geographicExamples).filter(([id])=>!this.examplesCache[id])),"")+'</optgroup></select></label>':'')+
+        (this.mapPurpose==="boundaries"?'<label>Grenzbeispiele<select id="g-example" '+(m.steps.length?"":"disabled")+'><option value="">Ort auf dem Globus finden …</option>'+opts(this.examples(),"")+'<optgroup label="Weitere Regionen">'+opts(Object.fromEntries(Object.entries(geographicExamples).filter(([id])=>!this.examplesCache[id])),"")+'</optgroup></select></label>':'')+
         '<label>Referenzregion<select id="g-launch"><option value="">Region wählen …</option>'+opts(Object.fromEntries(Object.entries(sites).filter(([k])=>k!=="hawaii").map(([k,v])=>[k,v.name])),"")+'</select></label>'+
-        button("g-map-overview","Weltübersicht")+item("Woher wissen wir das?","Seismometer zeichnen Erschütterungen auf. Aus vielen Aufzeichnungen bestimmen Forschende Ort und Tiefe. Ein Kartenpunkt allein verrät die Bruchrichtung nicht.")+back+'</div>';
+        button("g-map-overview","Weltübersicht")+item("Woher wissen wir das?","Seismometer zeichnen Erschütterungen auf. Aus vielen Aufzeichnungen bestimmen Forschende Ort und Tiefe. Ein Kartenpunkt allein verrät die Bruchrichtung nicht. Ort, Zeit und Stärke eines künftigen Bebens lassen sich nicht exakt vorhersagen.")+back+'</div>';
       this.change("g-quakes",()=>{m.events.visible=!m.events.visible;m.event=undefined;this.draw();});this.change("g-lines",()=>{m.boundaries.visible=!m.boundaries.visible;m.selectStep(undefined);this.draw();});
       this.change("g-depth",()=>{m.depth=!m.depth;m.recolor();this.draw();});this.change("g-launch",v=>{if(v)void this.openRegion(reference(v as Site,"earthquake"));});
       this.change("g-example",id=>{const st=m.steps[Number(id)-1];if(!st)return;this.maps.selectStep(undefined);
@@ -210,6 +211,18 @@ export class Observatory {
       });this.change("g-facies",()=>{r.facies=!r.facies;});this.change("g-names",()=>{r.names=!r.names;});this.change("g-more-labels",()=>{r.moreNames=!r.moreNames;});
       this.change("g-phases",()=>{r.phasesShown=!r.phasesShown;this.draw();});this.change("g-slow",()=>{r.slow=!r.slow;});this.change("g-stress",()=>{r.stress=!r.stress;});this.action("g-map",()=>void this.openMap());this.bindExtra(r);
     }else this.drawTime();
+    if(this.mode==="regional" || this.mode==="time"){
+      const focus=document.createElement("button");
+      focus.id="focus-reading";
+      const showMode=()=>{
+        const wide=document.body.classList.contains("reading-focus");
+        focus.textContent=wide?"Kompakte Modellsteuerung":"Erklärung im Fokus";
+        focus.setAttribute("aria-pressed",String(wide));
+      };
+      focus.onclick=()=>{document.body.classList.toggle("reading-focus");showMode();};
+      showMode();
+      this.side.querySelector("h1")?.after(focus);
+    }
     this.action("g-world",()=>this.navigateBase("globe"));if(this.message){const p=document.createElement("p");p.textContent=this.message;this.side.append(p);}
   }
   returnPairId?:number;
@@ -316,10 +329,10 @@ export class Observatory {
     return "";
   }
   private extraInfo(r:RegionalScene){
-    if(r.spec.theme==="lithosphere")return item("Was gehört zusammen?","Die Kruste und der starre oberste Mantel bilden die Lithosphäre. Der Mantel darunter ist überwiegend fest und über lange Zeit verformbar.");
-    if(r.spec.theme==="forces")return item("Warum bewegen sich Platten?","Heißes Gestein kann sich über lange Zeit bewegen. Kalte Plattenteile können absinken und ziehen. Vom erhöhten Rücken wirkt auch die Schwerkraft. Die Kräfte sind örtlich unterschiedlich stark.");
+    if(r.spec.theme==="lithosphere")return item("Was gehört zusammen?","Die Kruste und der starre oberste Mantel bilden die Lithosphäre. Eine Platte kann sowohl Kontinente als auch Ozeanboden tragen. Der Mantel darunter ist überwiegend fest und über lange Zeit verformbar.");
+    if(r.spec.theme==="forces")return item("Warum bewegen sich Platten?","Heißes Gestein kann sich über lange Zeit bewegen. Kalte Plattenteile können absinken und ziehen. Vom erhöhten Rücken wirkt auch die Schwerkraft. Der bewegte Mantel und die Platten üben wechselseitig Kräfte aufeinander aus. Ihre Anteile unterscheiden sich regional.");
     if(r.spec.theme==="magnet")return item("Woher wissen wir das?",explanations.stripe.answer);
-    if(r.spec.theme==="volcano")return (r.spec.arcTransect?item("Wo liegt dieser Vulkan?","Zaozan liegt auf der japanischen Hauptinsel. Der Schnitt verläuft von dort zum Japangraben. Der Magmaweg und der Ausbruch sind schematisch."):"")+item("Wie entsteht Schmelze?",r.spec.process==="subduction"?explanations.fluid.answer:"Heißes Mantelgestein steigt auf. Der Druck sinkt und ein Teil des Gesteins schmilzt.")+item("Was ist Magma?",explanations.melt.answer)+item("Was tritt aus?",explanations.lava.answer)+item("Warum verlaufen Ausbrüche verschieden?","Dünnflüssige Schmelze lässt Gas oft leichter entweichen. In zäher Schmelze kann sich Gas stauen. Auch die Gasmenge spielt eine Rolle.")+(r.spec.site==="island"?item("Was ist auf Island besonders?","Island liegt auf einem Rücken. Zusätzlich steigt hier besonders heißes Mantelmaterial unter der Platte auf."):"");
+    if(r.spec.theme==="volcano")return (r.spec.arcTransect?item("Wo liegt dieser Vulkan?","Zaozan liegt auf der japanischen Hauptinsel. Der Schnitt verläuft von dort zum Japangraben. Der Magmaweg und der Ausbruch sind schematisch."):"")+item("Wie entsteht Schmelze?",meltingExplanation(r.spec.process,r.spec.site))+item("Was ist Magma?",explanations.melt.answer)+item("Was tritt aus?",explanations.lava.answer)+item("Warum verlaufen Ausbrüche verschieden?","Dünnflüssige Schmelze lässt Gas oft leichter entweichen. In zäher Schmelze kann sich Gas stauen. Auch die Gasmenge spielt eine Rolle. Gasemissionen oder Unruhe allein erlauben keine sichere Vorhersage eines Ausbruchs.")+(r.spec.site==="island"?item("Was ist auf Island besonders?","Island liegt auf einem Rücken. Zusätzlich steigt hier besonders heißes Mantelmaterial unter der Platte auf."):"");
     if(r.spec.theme==="risk")return item("Verwundbarkeit und Resilienz","Anfällige Gebäude können stärker beschädigt werden. Wer Wege und Hilfe vorbereitet, kann die Versorgung schneller wieder aufnehmen. Die grüne Versorgungsstelle zeigt die Wiederherstellung im Modell.")+item("Magnitude und Intensität","Die Magnitude beschreibt die Größe des Bebens an der Quelle. Die Intensität beschreibt, wie stark die Erschütterung an einem Ort erlebt wird. Bei gleichem Beben kann lockerer Boden die Schwingung am selben Standort verstärken.")+item("Was bedeutet Momenten-Magnitude?","Forschende schätzen die Größe des Bebens aus der gebrochenen Fläche, dem Versatz und der Steifigkeit des Gesteins. Das Modell berechnet keinen Zahlenwert.")+item("Wie können wir vorsorgen?","Bauweise, erreichbare Fluchtwege und geübte Abläufe können die Folgen mindern. Warnungen müssen die Menschen auch erreichen.")+item("Was ist abzuwägen?","Umbau kostet Geld. Freie Fluchtwege benötigen Platz. Betroffene Menschen können mitentscheiden, wo gebaut und wie der Wiederaufbau vorbereitet wird.");
     return r.spec.theme==="earthquake"?item("Was sind P- und S-Wellen?","Goldene Punkte schwingen vor und zurück. Das zeigt die schnellere P-Welle. Türkise Punkte schwingen quer zur Laufrichtung. Diese S-Welle läuft nur durch festes Material.")+item("Was zeigen die zwei Orte?","Der Bruch beginnt im Erdbebenherd. Direkt darüber liegt an der Oberfläche das Epizentrum.")+item("Wann entsteht ein Tsunami?","Nicht jedes Seebeben löst einen Tsunami aus. Hebt oder senkt sich ein großer Teil des Meeresbodens, bewegt er die Wassersäule. Lange Wasserwellen laufen zur Küste und können dort höher werden."):"";}
   private async switchEvent(old:RegionalScene,spec:RegionSpec,view:string){
@@ -473,12 +486,17 @@ export class Observatory {
       }
       this.timePins.draw(labels,[$("obswitch"),$("observation-controls")],this.timeLayout);
     }
-    const station=$<HTMLSelectElement>("g-station");if(station)station.value=String(t.year);const year=Math.round(t.year);$("g-age").textContent=year<0?"Vor "+(-year)+" Mio. Jahren":year>0?"In "+year+" Mio. Jahren":"Heute";
-    $("g-certainty").textContent=t.error||(!rendered?"Rekonstruktion wird geladen …":year>0?"Mögliche Zukunft – keine sichere Vorhersage":year<0?"Wissenschaftliche Rekonstruktion":"Heutige Kontinentalflächen im Rekonstruktionsmodell");
-    $("g-time-play").textContent=t.playing?"Pause":"Abspielen";$<HTMLInputElement>("g-year").value=String(t.year);
+    const station=$<HTMLSelectElement>("g-station"),year=Math.round(t.year);
+    const stationValue=Number.isInteger(t.year)?String(t.year):"";
+    if(station&&station.value!==stationValue)station.value=stationValue;
+    setReading("g-age",year<0?"Vor "+(-year)+" Mio. Jahren":year>0?"In "+year+" Mio. Jahren":"Heute");
+    setReading("g-certainty",t.error||(!rendered?"Rekonstruktion wird geladen …":year>0?"Mögliche Zukunft – keine sichere Vorhersage":year<0?"Wissenschaftliche Rekonstruktion":"Heutige Kontinentalflächen im Rekonstruktionsmodell"));
+    setReading("g-time-play",t.playing?"Pause":"Abspielen");
+    const slider=$<HTMLInputElement>("g-year");const tenth=Math.round(t.year*10)/10;
+    if(slider.valueAsNumber!==tenth)slider.value=String(tenth);
     const caption=$("g-split-caption");if(caption){caption.hidden=!t.compare;if(t.compare){const key=[t.scenario,t.second,t.overview].join("/");
       if(caption.dataset.pair!==key){caption.dataset.pair=key;caption.replaceChildren(...[t.scenario,t.second].map(id=>{const block=document.createElement("div"),name=document.createElement("strong"),info=document.createElement("span");
-      name.textContent=scenarios[id].label;info.textContent=assumptions[id];block.append(name,info);return block;}));}caption.dataset.camera=t.overview?"Je Globus auf seine Kontinente ausgerichtet":"Gleiche geografische Perspektive";}}
+      name.textContent=scenarios[id].label;info.textContent=assumptions[id];block.append(name,info);return block;}));caption.dataset.camera=t.overview?"Je Globus auf seine Kontinente ausgerichtet":"Gleiche geografische Perspektive";}}}
     return rendered;
   }
   private timeDiagnostics(){const t=this.timeline;return t?{year:t.year,scenario:t.scenario,overview:t.overview,cameras:t.compare?t.splitCameras.map(c=>c.position.toArray()):undefined,compare:t.compare,futureLines:t.showBoundaries,timeReady:t.ready,timeError:t.error,rigid:t.reconstruction.ready,tracking:t.tracking,tracked:t.reconstruction.at(Math.abs(t.year),t.tracking)?.v.toArray(),second:t.second}:{};}

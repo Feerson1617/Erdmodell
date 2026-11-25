@@ -21,10 +21,12 @@ function ashMaterial(){
 }
 
 function outline(a:number){return 1+.112*Math.sin(a*3+.8)+.073*Math.cos(a*5-.7)+.035*Math.sin(a*11);}
-function mountain(shield:boolean,dx:number,dz:number){
-  const sx=shield?1.75:1.40,sz=shield?1.27:.50,a=Math.atan2(dz/sz,dx/sx),u=Math.hypot(dx/sx,dz/sz)/outline(a);
+type Form="shield"|"fissure"|"cone";
+function mountain(form:Form,dx:number,dz:number){
+  const shield=form==="shield";
+  const sx=shield?1.75:1.40,sz=shield?1.27:form==="cone"?1.25:.50,a=Math.atan2(dz/sz,dx/sx),u=Math.hypot(dx/sx,dz/sz)/outline(a);
   if(u>=1)return 0;
-  if(!shield){
+  if(form==="fissure"){
     const strike=dx+.16*Math.sin(dz*3.),across=dz-.05*Math.sin(dx*4.);
     const ridge=Math.exp(-across*across*28)*Math.exp(-strike*strike*.9);
     const seam=Math.exp(-across*across*950)*Math.exp(-strike*strike*1.8);
@@ -32,13 +34,14 @@ function mountain(shield:boolean,dx:number,dz:number){
   }
   const rim=.18+.036*Math.sin(3*a),flank=u<rim?.41+.59*T.MathUtils.smoothstep(u,.012,rim):Math.pow((1-u)/(1-rim),shield?1.68:1.35);
   const gully=1+.13*Math.sin(8*a+u*4)+.042*Math.sin(19*a-u*6);
-  return (shield?.32:.24)*flank*gully;
+  return (shield?.32:.78)*flank*gully;
 }
-function edifice(shield:boolean){
+function edifice(form:Form){
+  const shield=form==="shield";
   const p:number[]=[],colors:number[]=[],apron:number[]=[],indices:number[]=[],rings=36,sectors=84;
   for(let j=0;j<=rings;j++)for(let i=0;i<=sectors;i++){
-    const a=2*Math.PI*i/sectors,u=j/rings,r=u*outline(a),x=r*(shield?1.75:1.40)*Math.cos(a),z=r*(shield?1.27:.50)*Math.sin(a);
-    p.push(x,mountain(shield,x,z),z);apron.push(u);
+    const a=2*Math.PI*i/sectors,u=j/rings,r=u*outline(a),x=r*(shield?1.75:1.40)*Math.cos(a),z=r*(shield?1.27:form==="cone"?1.25:.50)*Math.sin(a);
+    p.push(x,mountain(form,x,z),z);apron.push(u);
     const scoria=.48+.21*Math.cos(a*13+u*9)*Math.sin(a*9-u*21)+.075*Math.sin(23*u+2.8*Math.cos(a*3))+ .058*Math.sin(71*x+24*z)*Math.cos(37*z),edge=T.MathUtils.smoothstep(u,.08,.23);
     colors.push(scoria*(.75+.35*edge),scoria*(.59+.45*edge),scoria*(.54+.46*edge));
     if(j<rings&&i<sectors){const k=j*(sectors+1)+i,l=k+sectors+1;indices.push(k,k+1,l,k+1,l+1,l);}
@@ -60,8 +63,9 @@ function conformFlanks(mat:T.Material,r:RegionalScene){
 }
 export function eruption(r:RegionalScene,x:number,top:number){
   const hotspot=r.spec.process==="hotspot",z=r.spec.arcTransect?0:-.33;const centres:T.Mesh[]=[];
+  const form:Form=hotspot?"shield":r.spec.process==="arc"||r.spec.process==="subduction"?"cone":"fissure";
   if(!r.spec.arcTransect){
-  const shape=edifice(hotspot),rock=material(0x817c77);rock.vertexColors=true;
+  const shape=edifice(form),rock=material(0x817c77);rock.vertexColors=true;
   if(r.lib){const lib=r.lib;rock.onBeforeCompile=s=>{
     Object.assign(s.uniforms,{faciesColor:{value:lib.color},faciesRelief:{value:lib.relief},detailGrade:r.grade});
     s.vertexShader="varying vec3 flank;\n"+s.vertexShader.replace("#include <begin_vertex>","#include <begin_vertex>\nflank=position;");
@@ -86,12 +90,12 @@ export function eruption(r:RegionalScene,x:number,top:number){
   const depth=new T.MeshDepthMaterial({depthPacking:T.RGBADepthPacking});conformFlanks(depth,r);
   rock.addEventListener("dispose",()=>depth.dispose());
   for(let i=0;i<(hotspot?5:1);i++){
-    const m=new T.Mesh(shape,rock);m.userData.explanation={name:"Vulkanbau",answer:"Viele Ausbrüche können einen Vulkan aufbauen. Über der Quelle entsteht ein neuer Vulkan."};
+    const m=new T.Mesh(shape,rock);m.userData.explanation={name:"Vulkanbau",answer:"Wiederholte Ausbrüche können einen Vulkan aufbauen. Seine Form hängt unter anderem von Lava, Lockermaterial und Abtragung ab."};
     // Match the vertex shader for picking. The proxy is evaluated only on an actual pick.
     let picking:T.Mesh|undefined,pose="";
     const bed=(xx:number,zz:number)=>{const u=T.MathUtils.clamp((xx+6)*16,0,191.999),v=T.MathUtils.clamp((zz+4.5)*16,0,143.999),a=Math.floor(u),b=Math.floor(v),h=r.rockCeiling.image.data as Float32Array;
       return T.MathUtils.lerp(T.MathUtils.lerp(h[b*193+a],h[b*193+a+1],u-a),T.MathUtils.lerp(h[(b+1)*193+a],h[(b+1)*193+a+1],u-a),v-b);};
-    m.userData.lessonAnchor=()=>new T.Vector3(.03,mountain(hotspot,.03,0)+(bed(m.position.x+.03*m.scale.x,m.position.z)-m.position.y-.002)/m.scale.y,0);
+    m.userData.lessonAnchor=()=>new T.Vector3(.03,mountain(form,.03,0)+(bed(m.position.x+.03*m.scale.x,m.position.z)-m.position.y-.002)/m.scale.y,0);
     m.userData.lessonVertex=(i:number)=>{const p=new T.Vector3().fromBufferAttribute(shape.attributes.position,i);
       p.y+=(bed(m.position.x+p.x*m.scale.x,m.position.z+p.z*m.scale.z)-m.position.y-.002)/m.scale.y;return p;};
     m.raycast=(ray,hits)=>{
@@ -105,7 +109,7 @@ export function eruption(r:RegionalScene,x:number,top:number){
     m.customDepthMaterial=depth;m.castShadow=m.receiveShadow=true;centres.push(m);r.scene.add(m);
   }
   }
-  const surface=(xx:number,zz:number)=>Math.max(r.height(xx,zz),...centres.filter(m=>m.visible).map(m=>r.height(xx,zz)-.002+mountain(hotspot,(xx-m.position.x)/m.scale.x,(zz-m.position.z)/m.scale.z)*m.scale.y));
+  const surface=(xx:number,zz:number)=>Math.max(r.height(xx,zz),...centres.filter(m=>m.visible).map(m=>r.height(xx,zz)-.002+mountain(form,(xx-m.position.x)/m.scale.x,(zz-m.position.z)/m.scale.z)*m.scale.y));
   const channels=[0,1].map(branch=>{
     const tongue=lavaTongue((branch?.117:.21)*(r.spec.site==="island"?1.32:1));r.scene.add(tongue.mesh);tongue.mesh.userData.explanation={name:"Lavafluss",answer:"Das Gefälle bestimmt den Weg. An einer Senke endet diese modellierte Lavazunge."};
     let last=-1;

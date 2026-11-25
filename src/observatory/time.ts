@@ -148,13 +148,13 @@ export class TimeGlobe {
     if(this.compare&&this.year>0){if(this.year>scenarios[this.second].end){this.setYear(scenarios[this.second].end);this.playing=false;}
       this.rotate(this.second,1);this.prepare(this.second,1);
       if(!this.other.sphere.visible){gl.render(this.primary.scene,camera);return true;}
-      const w=gl.domElement.clientWidth,h=gl.domElement.clientHeight,aspect=camera.aspect,fov=camera.fov;
+      const w=gl.domElement.clientWidth,h=gl.domElement.clientHeight,fov=camera.fov;
       const split=Math.floor(w/2);gl.setScissorTest(true);
       if(this.alignment!==this.focusKey())this.align();
       for(const [i,view] of [this.primary,this.other].entries()){const width=i?w-split:split;gl.setViewport(i*split,0,width,h);gl.setScissor(i*split,0,width,h);const eye=this.splitCameras[i];eye.copy(camera);eye.aspect=width/h;eye.fov=fov/Math.min(1,eye.aspect*.91);
         if(i&&this.overview){eye.position.applyQuaternion(this.pairRotation);eye.quaternion.premultiply(this.pairRotation);}
         eye.updateProjectionMatrix();eye.updateMatrixWorld();gl.render(view.scene,eye);}
-      gl.setScissorTest(false);gl.setViewport(0,0,w,h);camera.aspect=aspect;camera.fov=fov;camera.updateProjectionMatrix();
+      gl.setScissorTest(false);gl.setViewport(0,0,w,h);
     }else gl.render(this.primary.scene,camera);
     return true;
   }
