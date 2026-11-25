@@ -13,7 +13,7 @@ export const sizes = [
   [2560, 1440],
 ];
 // Screenshot the composited WebGL canvas, with HTML siblings masked only for this exposure.
-export async function geometry(page, { enforce = true } = {}) {
+export async function geometry(page, { enforce = true, textured = false } = {}) {
   const projected = await page.evaluate(
     () => window.geoObservatory().observatory.projected ?? [],
   );
@@ -28,6 +28,7 @@ export async function geometry(page, { enforce = true } = {}) {
     const k = (y * w + x) * 4;
     return Math.max(data[k], data[k + 1], data[k + 2]) > 98;
   };
+  const cols=new Uint32Array(w), rows=new Uint32Array(h);
   let count = 0,
     n = 0,
     amber = 0,
@@ -35,7 +36,7 @@ export async function geometry(page, { enforce = true } = {}) {
   for (let y = 0; y < h; y += 3)
     for (let x = 0; x < w; x += 3) {
       n++;
-      if (signal(x, y)) count++;
+      if (signal(x, y)) {count++; cols[x]++; rows[y]++;}
       const k = (y * w + x) * 4,
         r = data[k],
         g = data[k + 1],
@@ -62,11 +63,15 @@ export async function geometry(page, { enforce = true } = {}) {
       for (let y = Math.max(0, cy - r); y < Math.min(h, cy + r); y += 2)
         for (let x = Math.max(0, cx - r); x < Math.min(w, cx + r); x += 2) {
           total++;
-          if (signal(x, y)) lit++;
+          const k=(y*w+x)*4;
+          const chroma=Math.abs(data[k]-data[0])+Math.abs(data[k+1]-data[1])+Math.abs(data[k+2]-data[2]);
+          if (signal(x, y) || (textured && chroma>24)) lit++;
         }
       return { name: p.name, x: p.x, y: p.y, covered: lit / total };
     });
+  const spread=(hist)=>{let mass=0,lo,hi;for(let j=0;j<hist.length;j++){mass+=hist[j];if(lo===undefined&&mass>=count*.01)lo=j;if(mass>=count*.99){hi=j;break;}}return [lo,hi];};
   const row = {
+    central98:{x:spread(cols),y:spread(rows)},
     width: w,
     height: h,
     foreground: count / n,

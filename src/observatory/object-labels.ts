@@ -9,7 +9,7 @@ const vocabulary:Record<string,[string,string]>={
  Störungsfläche:["Störungsfläche","An dieser Fläche können Gesteinsbereiche gegeneinander gleiten."],Bruchfront:["Bruchfront","Der Bruch breitet sich vom Herd über die Störungsfläche aus."],
  "Verdrängte Wassersäule":["Verdrängte Wassersäule","Bewegt sich der Meeresboden nach oben oder unten, kann er das Wasser darüber verdrängen."],
  "Wassersäule im Schnitt":["Wassersäule","Zwischen Meeresboden und Oberfläche liegt Wasser. Die beiden Grenzen bestimmen seine Tiefe."],
- Wasseroberfläche:["Wasseroberfläche","Die Wasserhöhe im regionalen Ereignismodell stammt aus der Flachwasserberechnung."],
+ Wasseroberfläche:["Wasseroberfläche","Hier grenzt das Meer an die Landschaft. Die Küstenlinie dient der räumlichen Orientierung."],
  "Ursprüngliche Uferlinie":["Ursprüngliche Uferlinie","Hier traf das ruhende Wasser vor dem Modellbeben auf das Land."],
  "Druckwelle im Wasser":["P-Welle im Wasser","Druck kann sich in Wasser ausbreiten. Direkte S-Wellen brauchen einen festen Stoff."],
  "P-Gesteinspunkte":["Gesteinspunkte · P-Welle","Sie schwingen längs zur Ausbreitungsrichtung."],"S-Gesteinspunkte":["Gesteinspunkte · S-Welle","Sie schwingen quer zur Ausbreitungsrichtung."],

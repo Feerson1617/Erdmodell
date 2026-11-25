@@ -35,6 +35,7 @@ export class Stage {
   scene = new T.Scene();
   camera = new T.OrthographicCamera(-8, 8, 4, -4, 0.1, 200);
   controls: OrbitControls;
+  pendingTextures = 0;
   painted = false;
   time = 0;
   playing = false;
@@ -456,7 +457,7 @@ export class Stage {
     });
     geos.forEach((g) => g.dispose());
     mats.forEach((m) => {
-      if (m instanceof T.MeshStandardMaterial) m.map?.dispose();
+      if (m instanceof T.MeshStandardMaterial || m instanceof T.MeshBasicMaterial) m.map?.dispose();
       m.dispose();
     });
   }

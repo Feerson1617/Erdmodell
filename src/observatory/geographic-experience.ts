@@ -54,6 +54,18 @@ const groups = (select: HTMLSelectElement, title: string) => {
   return group;
 };
 
+const studySources:Record<string,string>={
+      eifel:"Luftbild und Oberflächenhöhen · Relief vierfach überhöht",
+      ulmen:"Amtliches Luftbild und Oberflächenmodell · Höhe 1,6-fach überhöht",
+      aerial:"Amtliches Luftbild · Norden oben",landCompare:"Georeferenzierte Bildfelder · unterschiedliche Ausschnittbreiten",
+      lakeCut:"Idealisierter Seeschnitt · Referenztiefe 38 m",lakeCompare:"Idealisierte Becken · gleicher Maßstab in Breite und Tiefe",
+      profiles:"Kusakabe et al. 2008 · Tabelle 3",conductivity:"Kusakabe et al. 2008 · Tabelle 3",
+      maar:"Idealisiertes Entwicklungsmodell · vier beispielhafte Impulse",dryMaar:"Qualitatives Entwicklungsmodell",lakeMaar:"Qualitatives Entwicklungsmodell",
+      waterColumn:"Qualitatives Prozessmodell · historischer Auslöser offen",pipeCut:"Qualitativer technischer Schnitt",dissolved:"Analysefarbe · qualitativer Gasgehalt",
+      unsaturated:"Hypothetischer Verlauf bei geringerem Gasgehalt",mixCompare:"Qualitative Wasserbewegung · identische Beckengeometrie",
+      mixing:"Qualitatives Zirkulationsmodell",turnover:"Qualitatives Zirkulationsmodell",forms:"Idealisierte Vulkanformen",contactDetail:"Schematischer Porenraum · stark vergrößert"
+    };
+
 export class GeographicExperience {
   private history: Location[] = [];
   private nationalBoundary = new LineSegments(
@@ -179,14 +191,14 @@ export class GeographicExperience {
       option(earth, id, name);
     const models = groups(topics, "Plattentektonik");
     for (const [id, name] of Object.entries(processes)) option(models, "process-" + id, name);
-    const seismic = groups(topics, "Erdbeben und Vulkanismus");
+    const seismic = groups(topics, "Erdbeben");
     for(const [id,name] of Object.entries({distribution:"Globale Erdbebenverteilung",park:"Erdbebenentstehung",strike:"Bruchmechanismen",particles:"Seismische Wellen",rays:"Wellen im Erdinneren",moment:"Magnitude und Intensität",observed:"Japan · Erdbebenherde",vt:"Vulkanische Seismizität"}))
       option(seismic,"seismic-"+id,name);
     const volcanism=groups(topics,"Vulkanismus");
-    for(const id of ["zao","shield","cone","storage","degassing","contact"])option(volcanism,"seismic-"+id,titleFor(id));
+    for(const id of ["zao","forms","shield","cone","storage","degassing","contact"])option(volcanism,"seismic-"+id,titleFor(id));
     const lakeTopics=groups(topics,"Maare und Seen");
-    for(const id of ["maar","eifel","ulmen","mixing","dissolved","lakeCompare"])option(lakeTopics,"seismic-"+id,titleFor(id));
-    option(lakeTopics,"nyos-event","Nyos · limnische Eruption");option(lakeTopics,"nyos-pipe","Nyos · kontrollierte Entgasung");
+    for(const id of ["maar","eifel","ulmen","mixCompare","mixing","dissolved","waterColumn","pipeCut","profiles","landCompare","lakeCompare"])option(lakeTopics,"seismic-"+id,titleFor(id));
+    option(lakeTopics,"nyos-section","Nyos · Seeprofil");option(lakeTopics,"nyos-event","Nyos · limnische Eruption");option(lakeTopics,"nyos-pipe","Nyos · kontrollierte Entgasung");
     const hazard = groups(topics, "Naturgefahren und Orte");
     for (const [id, name] of Object.entries({
       events: "Erdbeben der Erde",
@@ -302,6 +314,7 @@ export class GeographicExperience {
     };
     el("geo-clear").onclick = () => resetReveals();
     el<HTMLSelectElement>("geo-preset").onchange = (e) => {
+      if(!this.obs.lessonView && this.world.mode==="nyos" && !this.obs.mode){const id=(e.target as HTMLSelectElement).value;if(id)void this.topic(id);return;}
       if(this.obs.lessonView){void this.topic("seismic-"+(e.target as HTMLSelectElement).value);return;}
       const original = el<HTMLSelectElement>("studio-preset");
       if (original) {
@@ -313,11 +326,16 @@ export class GeographicExperience {
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape") this.drawer(false);
     });
-    el("geo-related").onclick=()=>{if(!this.obs.lessonView&&this.world.mode==="nyos"){void this.topic("seismic-lakeCompare");return;}const id=this.obs.lessonView&&connections[this.obs.lessonView]?.[0];if(id)void this.topic(isView(id)?"seismic-"+id:id);};
+    el("geo-related").onclick=()=>{if(!this.obs.lessonView&&this.world.mode==="nyos"){void this.topic("seismic-lakeCompare");return;}const id=this.relatedStudy()?.[0];if(id)void this.topic(isView(id)?"seismic-"+id:id);};
     obs.visitStudy=id=>void this.topic("seismic-"+id);
     obs.visitModel = (id) => void this.topic("process-" + id);
     obs.visitPlace = (id) => void this.map(id);
     obs.visitBoundary = (step) => void this.boundary(step);
+  }
+  private relatedStudy(){
+    const study=this.obs.study,id=this.obs.lessonView;
+    if(study&&id==="maar"&&study.time>=.19&&study.time<.55)return ["contactDetail","Kontakt vergrößern"];
+    return id?connections[id]:undefined;
   }
   private drawer(open: boolean) {
     document.body.classList.toggle("geo-tools-open", open);
@@ -325,6 +343,8 @@ export class GeographicExperience {
   }
   private setDepth(value: string) {
     this.neutral = value === "neutral";
+    el("geo-crumb").hidden=this.neutral;
+    if(this.neutral||value==="observe")el("geo-title").hidden=true;
     if (this.neutral) value = "observe";
     this.depth = value;
     this.observation.set(value === "observe");
@@ -503,11 +523,12 @@ export class GeographicExperience {
     this.remember();
     const epoch = this.epoch;
     this.focus = {};
-    if(value==="nyos-event"||value==="nyos-pipe"){
+    if(value==="nyos-event"||value==="nyos-pipe"||value==="nyos-section"){
       this.navigate("nyos");
       const event=value==="nyos-event";
-      const tab=document.querySelector<HTMLButtonElement>(event?"#nyos-event":"#nyos-protection");
-      if(tab)tab.click();else this.world.showNyos(event?"event":"protection");
+      const section=value==="nyos-section";
+      const tab=document.querySelector<HTMLButtonElement>(section?"#nyos-section":event?"#nyos-event":"#nyos-protection");
+      if(tab)tab.click();else this.world.showNyos(section?"section":event?"event":"protection");
       this.world.nyosLesson.dissolved=true;
       this.world.nyosLesson.air=event;
       return;
@@ -591,7 +612,8 @@ export class GeographicExperience {
     const id=this.obs.lessonView;
     if(id&&this.obs.study){
       if(["ulmen","aerial","lakeCut","eifel"].includes(id))return id==="eifel"?"Europa › Deutschland › Vulkaneifel · regionales Relief":"Europa › Deutschland › Vulkaneifel › Ulmener Maar";
-      if(id==="lakeCompare")return "Deutschland · Ulmen ↔ Kamerun · Nyos";
+      if(["waterColumn","pipeCut","profiles","conductivity"].includes(id))return "Erde › Afrika › Kamerun › Nyos · Prozessdetail";
+      if(id==="landCompare"||id==="lakeCompare")return "Deutschland · Ulmen ↔ Kamerun · Nyos";
       if(familyOf(id)==="section")return "Erde › Asien › Japan · regionales Tiefenprofil";
       if(id==="record")return "Erde › Japan → New Mexico · Stationsaufzeichnung";
       if(familyOf(id)==="core")return "Erde · globaler Schnitt";
@@ -773,7 +795,7 @@ export class GeographicExperience {
       r?.localStill,
       document.body.dataset.reveal,
     ].join("/");
-    const staticModel = ["eifel", "ulmen", "aerial", "lakeCut", "lakeCompare"].includes(this.obs.lessonView ?? "");
+    const staticModel = ["eifel", "ulmen", "aerial", "lakeCut", "lakeCompare","landCompare","profiles","conductivity"].includes(this.obs.lessonView ?? "");
     if (this.signature !== state || this.root !== side.firstChild) {
       this.signature = state;
       this.root = side.firstChild;
@@ -807,7 +829,7 @@ export class GeographicExperience {
             this.obs.mode === "time"),
         clear: this.depth === "observe" && document.body.classList.contains("show-some-labels"),
         tools: !side.hidden && this.depth !== "observe",
-        preset: (!!el("studio-preset") || !!this.obs.lessonView) && this.depth !== "observe",
+        preset: (this.world.mode==="nyos" && !this.obs.mode || !!el("studio-preset") || !!this.obs.lessonView) && this.depth !== "observe",
         related: (!!this.obs.lessonView || this.world.mode==="nyos"&&!this.obs.mode) && this.depth !== "observe",
       }))
         el("geo-" + id).hidden = !show;
@@ -830,6 +852,7 @@ export class GeographicExperience {
       if (this.obs.mode === "map" && this.focus.overview && !this.obs.atlasState)
         el("geo-tools").hidden = true;
     }
+    if(this.obs.lessonView==="maar")text(el("geo-related"),this.relatedStudy()?.[1]??"");
     const ready = this.settled;
     const orientation = ready ? this.orient() : "Ortswechsel …";
     el("geo-crumb").dataset.settled = String(ready);
@@ -838,7 +861,11 @@ export class GeographicExperience {
     el("geo-crumb").hidden = anonymous && this.neutral;
     const title = el("geo-title");
     title.hidden = !ready || anonymous;
-    if(this.world.mode==="nyos"&&!this.obs.mode)text(el("geo-related"),"Seen vergleichen");
+    if(this.world.mode==="nyos"&&!this.obs.mode){
+      text(el("geo-related"),"Seen vergleichen");
+      const menu=el<HTMLSelectElement>("geo-preset");
+      if(menu.dataset.seismic!=="nyosDetail"){menu.replaceChildren(...[["","Ansicht am Nyos"],["nyos-section","Seeprofil"],["seismic-waterColumn","Wassersäule vergrößern"],["nyos-event","Ereignis im Tal"],["nyos-pipe","Entgasung"],["seismic-pipeCut","Rohrschnitt"],["seismic-landCompare","Landschaften vergleichen"]].map(([id,name])=>new Option(name,id)));menu.dataset.seismic="nyosDetail";}
+    }
     const globeOutsideSite = !this.obs.mode && (this.world.mode === "place" || this.world.mode === "nyos") && !this.onLocalTerrain();
     if (!title.hidden)
       text(
@@ -864,7 +891,7 @@ export class GeographicExperience {
     }
     const note = el("geo-model-limit");
     const id=this.obs.lessonView;
-    const seismicLimit=id && this.obs.study ? (id==="record"?"Originalmessung · EarthScope / IU · keine Modellkurve":familyOf(id)==="section"?"ComCat · M ≥ 4,5 · 2019–2023 · Profilprojektion · Tiefe 1,33-fach überhöht":familyOf(id)==="core"?"IASP91 · berechnete Laufwege · Quelle in 15 km Tiefe":familyOf(id)==="magma"?"Möglicher Modellverlauf · Ursache und Eruptionszeitpunkt bleiben offen":"Anschauungsmodell · Bewegung didaktisch überhöht"):"";
+    const seismicLimit=id && this.obs.study ? (studySources[id] ?? (id==="record"?"Originalmessung · EarthScope / IU · keine Modellkurve":familyOf(id)==="section"?"ComCat · M ≥ 4,5 · 2019–2023 · Profilprojektion · Tiefe 1,33-fach überhöht":familyOf(id)==="core"?"IASP91 · berechnete Laufwege · Quelle in 15 km Tiefe":familyOf(id)==="magma"?"Möglicher Modellverlauf · Ursache und Eruptionszeitpunkt bleiben offen":"Anschauungsmodell · Bewegung didaktisch überhöht")):"";
     const limit = (id&&r?.ruptureAnalysis&&r.spec.theme==="earthquake" ? (this.depth==="explain"?regionalPhase(r.progress)+" · ":"")+"Schematisches Ereignis · Versatz überhöht" : "") || seismicLimit ||
       (this.focus.overview && !this.focus.country && this.obs.mode === "map" && !this.obs.atlasState
         ? "Heute gleichzeitig · Pfeile: relative Bewegungsrichtung nach PB2002 · unterschiedliche natürliche Geschwindigkeiten"

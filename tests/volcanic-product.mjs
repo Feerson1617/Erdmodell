@@ -200,14 +200,14 @@ export async function volcanicProduct(
     await check("Nyos-Entgasung");
     await page.click("#geo-related");
     await arrived("lakeCompare");
-    await page.selectOption(".lake-evidence select", "3");
+    await page.selectOption(".lake-evidence select", "0");
     await check("Seenvergleich");
-    await page.selectOption(".lake-evidence select", "7");
+    await page.selectOption(".lake-evidence select", "1");
     assert.match(
       await page.locator(".lake-evidence").innerText(),
-      /Keine belastbaren Daten verfügbar/,
+      /Für diese Darstellung liegen keine belastbaren Messdaten vor/,
     );
-    await page.selectOption(".lake-evidence select", "8");
+    await page.selectOption(".lake-evidence select", "1");
     assert.match(await page.locator(".lake-evidence").innerText(), /15,6 bar/);
     report.routes.push("G");
     if (film) {
@@ -253,7 +253,7 @@ export async function volcanicProduct(
         await playback(13);
         await page.click("#geo-related");
         await arrived("lakeCompare");
-        await page.selectOption(".lake-evidence select", "8");
+        await page.selectOption(".lake-evidence select", "1");
         await page.waitForTimeout(2000);
       });
     }

@@ -504,16 +504,17 @@ export function intrusion(s: Stage) {
   );
   const reservoir = s.dot(
     vec(-0.7, -1.95, 0.09),
-    colors.hot,
+    0x83685a,
     1,
-    "Schmelzreiche Zone",
+    "Kristallreiches Speichergestein",
   );
   reservoir.scale.set(1.25, 0.48, 0.26);
   // Melt lenses and crystals occupy only part of the crustal volume.
   for(let i=0;i<22;i++){
-    const x=-1.65+(i%8)*.28, y=-2.25+Math.sin(i*2.37)*.28;
+    const x=-1.76+(i%8)*.29, y=-1.96+Math.sin(i*2.37)*.34;
     const lens=s.dot(vec(x,y,0.28),i%3===0?0xbdb19b:0xe68c59,.12,"Kristall und Schmelzlinse");
-    lens.scale.set(1.8,.45,.8);
+    lens.scale.set(i%3===0?.7:1.68,.43,.72);
+    lens.rotation.z=.24*Math.sin(i*2.2);
   }
   const path = [
     vec(-0.55, -1.95, 0.11),
@@ -544,7 +545,7 @@ export function intrusion(s: Stage) {
   s.animate((t) => {
     dyke.visible = active;
     dyke.geometry.setDrawRange(0, Math.floor((0.35 + 0.65 * t) * 36) * 9 * 6);
-    reservoir.scale.y = 0.45 + (active ? 0.1 * t : 0);
+
     crack.visible = s.view !== "quiet" && t > 0.26;
     fluid.forEach((m, i) => {
       const f = (t + i / 9) % 1;

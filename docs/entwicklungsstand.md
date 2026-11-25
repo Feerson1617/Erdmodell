@@ -39,3 +39,7 @@ Die eigenständige Tsunamivertiefung folgt nach G6.8. [Reihenfolge](roadmap.md)
 ## G6.6 und G6.7
 
 Ausgangspunkt ist G6.5.1 (`1e760ba0`). G6.6 (`e2075569`) wurde im Offline-Browser anhand von sieben Vulkanszenen auf sichtbare Geometrie geprüft. G6.7 ergänzt das georeferenzierte Relief der Vulkaneifel, Ulmen, Maarbildung und vergleichende Seenkunde. Die Sichtprüfung des jeweiligen Produktlaufs enthält getrennte Protokolle für HTML und installierte App. [Fachstand Ulmen und Nyos](ulmener-maar-nyos.md) · [G6.6-Zwischenabnahme](g66-zwischenabnahme.json)
+
+## G6.8 · Unterrichtsbesuch am 15. Dezember 2026
+
+Gesicherte Grundlage ist G6.7, Commit `63648c1ece2a28ee4e236436ef2e00df23cdc4c0`. Für die Unterrichtsmodelle dokumentiert der produktspezifische Prüfbericht die tatsächlich durchlaufenen Räume, Bildgrößen, Originalbilder, historischen Vergleichsmessungen und die Messwerte des virtuellen ARM64-Mac. Der reale M1 und das Smartboard stehen für die abschließende örtliche Geräteprüfung aus. [Fachprüfung](g68-fachpruefung.md)

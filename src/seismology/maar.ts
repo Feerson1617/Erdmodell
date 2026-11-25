@@ -4,7 +4,7 @@ import { surface } from "./geology";
 import { ramp } from "./volcanism";
 import { specimen, randomSequence } from "../observatory/local-plants";
 
-import { bursts, excavation, surfaceHeight } from "./maar-profile";
+import { bursts, excavation, shoreRadius, surfaceHeight } from "./maar-profile";
 function relief(x: number, z: number, t: number) {
   return surfaceHeight(x, z, excavation(t));
 }
@@ -68,8 +68,9 @@ export function maar(s: Stage) {
     });
   };
   deform(top, (x, _y, z, t) => relief(x, z, t));
+  const random = randomSequence(1403);
   const strata = [-3.15, -2.27, -1.72, -1.3, -0.91, -0.48, 0];
-  const tones = [0x625446, 0x897460, 0x756e60, 0x528b93, 0xa88a68, 0x896d50];
+  const tones = [0x625446, 0x897460, 0x756e60, 0x887d69, 0xa88a68, 0x896d50];
   for (let k = 0; k < tones.length; k++) {
     const wall = surface(
       s,
@@ -88,6 +89,16 @@ export function maar(s: Stage) {
           relief(x, 0, t),
         ) + (y === 0 ? Math.max(0, relief(x, 0, t)) : 0),
     );
+  }
+  // Discontinuous pores and joint fillings leave the host rock visible.
+  for (let i=0;i<92;i++){
+    const x=random()*9.9-4.95,y=-1.32+random()*.31;
+    const pore=s.dot(vec(x,y+.06*Math.sin(x),.027),0x5595a1,.022+random()*.022,"Wasser im Porenraum");
+    pore.scale.set(1.7,.8,.45);
+    s.animate(t=>{pore.visible=pore.position.y<relief(x,0,t)-.02;});
+  }
+  for(const x of [-3.5,-2.1,2.25,3.65]){
+    s.line([vec(x,-1.28,.04),vec(x+.13,-1.15,.04),vec(x+.1,-1.04,.04),vec(x+.23,-.97,.04)],0x78aeb2,"Wasser in einer Kluft");
   }
   // The breccia body and feeder remain below the advancing crater floor.
   const fill = surface(
@@ -135,14 +146,13 @@ export function maar(s: Stage) {
     feeder.geometry.setDrawRange(0, Math.floor(30 * ramp(t, 0.03, 0.3)) * 48);
     feeder.visible = t < 0.77;
   });
-  const random = randomSequence(1403);
   const debris = Array.from({ length: 65 }, (_, i) => ({
     o: s.mesh(
       new T.DodecahedronGeometry(0.026 + random() * 0.055),
       i % 4 ? 0xac9276 : 0x4e4942,
       "Auswurf",
     ),
-    speed: 0.7 + random() * 2.15,
+    speed: 1.7 + random() * 1.4,
     angle: random() * Math.PI,
     delay: random() * 0.027,
     h: 1.1 + random() * 2.3,
@@ -151,15 +161,35 @@ export function maar(s: Stage) {
     debris.forEach(({ o, speed, angle, delay, h }) => {
       const start = bursts.filter((b) => b <= t - delay).at(-1) ?? 1;
       const u = (t - start - delay) / 0.105;
-      o.visible = u >= 0 && u <= 1;
-      if (o.visible)
-        o.position.set(
-          Math.cos(angle) * speed * u,
-          relief(0, 0, start) + h * 4 * u * (1 - u),
-          -Math.sin(angle) * speed * u,
-        );
+      o.visible = u>=0&&u<=1;
+      if(o.visible){
+        const x=Math.cos(angle)*speed,z=-Math.sin(angle)*speed;
+        const y=T.MathUtils.lerp(relief(0,0,start),relief(x,z,start+.105),u)+h*4*u*(1-u);
+        o.position.set(x*u,y,z*u);
+      }
     }),
   );
+  const clasts=new T.InstancedMesh(new T.DodecahedronGeometry(1),new T.MeshStandardMaterial({color:0xb19478,roughness:1}),160);
+  const transform=new T.Object3D();clasts.count=0;s.scene.add(clasts);clasts.frustumCulled=false;
+  const fragments=Array.from({length:160},(_,i)=>{
+    const angle=random()*Math.PI, radius=1.65+.2*Math.floor(i/40)+random()*.60;
+    return {x:radius*Math.cos(angle),z:-radius*Math.sin(angle),size:.035+random()*.065};
+  });
+  s.animate(t=>{
+    clasts.count=bursts.reduce((n,b)=>n+Math.floor(40*ramp(t,b+.045,b+.105)),0);
+    for(let i=0;i<clasts.count;i++){
+      const {x,z,size}=fragments[i];transform.position.set(x,relief(x,z,t)+size*.32,z);
+      transform.scale.set(size,size*.58,size*.84);transform.rotation.set(i*.61,i*.2,i*.31);transform.updateMatrix();clasts.setMatrixAt(i,transform.matrix);
+    }
+    clasts.instanceMatrix.needsUpdate=true;
+  });
+  const breccia=s.mesh(new T.DodecahedronGeometry(.10),0xa49a86,"Brekzienfragment");
+  for(let i=0;i<30;i++){
+    const v=.1+.78*random(),fraction=(random()-.5)*1.5,o=i?breccia.clone():breccia;
+    if(i)s.scene.add(o);
+    o.rotation.z=random()*3;o.scale.set(.6+random(),.6+random()*.65,.44);
+    s.animate(t=>{const p=excavation(t),x=fraction*(.15+1.55*v)*(.2+.8*p);o.visible=t>.4+i*.008;o.position.set(x,T.MathUtils.lerp(-3.1,surfaceHeight(x,0,p)-.1,v),.06);});
+  }
   const trees = specimen("oak", 55, true);
   for (let i = 0; i < 36; i++) {
     const x = random() * 10 - 5,
@@ -182,9 +212,18 @@ export function maar(s: Stage) {
   s.animate((t) => {
     const p = ramp(t, 0.78, 0.98);
     lake.visible = !dry && p > 0;
-    lake.position.y = -2.02 + 1.28 * p;
-    lake.scale.set(2.04 * Math.sqrt(p), 1, 1.75 * Math.sqrt(p));
+    if(!lake.visible)return;
+    const level=T.MathUtils.lerp(surfaceHeight(0,0,1)+.001,-.74,p);
+    const attr=lake.geometry.attributes.position;
+    for(let i=0;i<=78;i++){
+      const angle=i*Math.PI/78,r=shoreRadius(angle,level);
+      for(let j=0;j<=12;j++){
+        const d=r*j/12;attr.setXYZ(j*79+i,Math.cos(angle)*d,level,-Math.sin(angle)*d);
+      }
+    }
+    attr.needsUpdate=true;lake.frustumCulled=false;
   });
+  const lakeMat=lake.material as T.MeshStandardMaterial;lakeMat.roughness=.25;lakeMat.metalness=.10;
   s.label(vec(-2.8, -1.1, 0.04), "Grundwasserleiter");
   s.label(
     vec(0, -1.0, 0.1),
@@ -208,9 +247,9 @@ export function maar(s: Stage) {
     t < 0.28
       ? "Magma steigt unter der ursprünglichen Geländeoberfläche in wasserführende Schichten."
       : t < 0.76
-        ? "Wiederholte phreatomagmatische Explosionen werfen Magma und Nebengestein aus. Einbruch vertieft den Trichter; Auswurf baut den Wall auf."
+        ? "Vier beispielhafte Impulse · Magma und Nebengestein werden ausgeworfen. Rückfall baut den Wall auf, Einbruch vertieft den Krater."
         : dry
           ? "Ein Maar kann trocken bleiben oder später verlanden."
-          : "Später kann sich Wasser im eingetieften Maar sammeln. Der See entsteht nach der Eruption.",
+          : "Spätere Zeitskala · Wasser kann sich im eingetieften Maar sammeln. Der See entsteht nach der Eruption.",
   );
 }
