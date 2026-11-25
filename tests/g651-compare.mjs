@@ -61,14 +61,18 @@ try {
     await page.goto(pathToFileURL(resolve(file)).href);
     await page.waitForFunction(() => window.geoObservatory?.().ready);
     result.startMs = performance.now() - start;
+    const settled = (id) =>
+      page.waitForFunction(
+        (id) =>
+          window.geoObservatory().observatory.lessonView === id &&
+          document.querySelector("#geo-crumb").dataset.settled === "true",
+        id,
+      );
     const select = (id, value) => page.selectOption("#" + id, value),
       topic = async (id) => {
         const t = performance.now();
         await select("geo-topic", "seismic-" + id);
-        await page.waitForFunction(
-          (id) => window.geoObservatory().observatory.lessonView === id,
-          id,
-        );
+        await settled(id);
         result.loads.push({ id, ms: performance.now() - t });
       };
     const shot = async (name) => {
@@ -80,7 +84,20 @@ try {
       });
       result.screens.push(name);
     };
-    const phase = (t) => page.locator("#geo-time").fill(String(t));
+    const phase = async (t) => {
+      await page.locator("#geo-time").fill(String(t));
+      await page.waitForFunction(
+        (t) =>
+          Math.abs(window.geoObservatory().observatory.study.time - t) < 0.001,
+        t,
+      );
+      await page.evaluate(
+        () =>
+          new Promise((resolve) =>
+            requestAnimationFrame(() => requestAnimationFrame(resolve)),
+          ),
+      );
+    };
     if (i) {
       await page.click("#saved-views");
       await page.selectOption("#saved-list", { label: "G6.5 Bruchmodell" });
@@ -107,6 +124,7 @@ try {
     await select("geo-info", "explain");
     await topic("particles");
     await select("geo-preset", "stations");
+    await settled("stations");
     await phase(0.41);
     await shot("Stationen");
     for (const [w, h] of sizes) {
@@ -125,6 +143,7 @@ try {
     ]) {
       await topic(id);
       await select("geo-preset", preset);
+      await settled(preset);
       await phase(0.46);
       await shot(name);
       await phase(0.2);
