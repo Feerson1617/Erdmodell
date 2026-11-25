@@ -40,6 +40,7 @@ lines=["# GeoRisiko G6.8 · Produktabnahme","",f"Geprüfter Commit `{commit}`. A
 for folder in [web,native]:
     meta,p=read(folder/"Produkt.json"),read(folder/"G68.json")
     assert meta["commit"]==commit and not meta["network"] and not p["errors"] and set(p["routes"])==set("ABCDEFGH")
+    assert len(p["globeOrigins"])==2 and next(r for r in p["frames"] if r["name"]=="E-Ausbreitung")["terrainFraction"]>.08
     assert len(p["windows"])==36 and {(r["w"],r["h"]) for r in p["windows"]}==sizes
     assert {r["view"] for r in p["windows"]}==models
     assert all(r["foreground"]>.008 and not r["clipped"] and r["scroll"]<=1 for r in p["windows"])

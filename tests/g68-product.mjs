@@ -1,3 +1,5 @@
+import utils from "playwright-core/lib/utilsBundle";
+const { jpegjs } = utils;
 import assert from "node:assert/strict";
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -42,11 +44,23 @@ export async function ubProduct(page, out, { app, film = false } = {}) {
   const time = (t) => page.locator("#geo-time").fill(String(t));
   const shot = async (name) => {
     const mask = await geometry(page, { textured: name === "G-Landschaften" });
-    await page.screenshot({
+    const screenshot = await page.screenshot({
       path: join(out, "G68-" + name + ".jpg"),
       type: "jpeg",
       quality: 84,
     });
+    if(name==="E-Ausbreitung"){
+      // Inspect the delivered, unmasked frame as well as the separate WebGL exposure.
+      const {data,width,height}=jpegjs.decode(screenshot,{useTArray:true});
+      let lit=0, sampled=0;
+      for(let y=Math.floor(height*.24);y<height*.75;y+=4)for(let x=Math.floor(width*.13);x<width*.87;x+=4){
+        const k=4*(y*width+x);
+        if(data[k]>85&&data[k+1]>58&&data[k]>data[k+2]*1.12)lit++;
+        sampled++;
+      }
+      mask.terrainFraction=lit/sampled;
+      assert.ok(mask.terrainFraction>.08,"Im Originalbild fehlt das Nyos-Tal: "+mask.terrainFraction);
+    }
     report.frames.push({ name, ...mask });
   };
   const geo = async () =>
@@ -208,6 +222,7 @@ export async function ubProduct(page, out, { app, film = false } = {}) {
   await page.click("#geo-related");
   await settled();
   await time(0.89);
+  await page.waitForFunction(()=>{const w=window.geoObservatory();return !w.flying&&w.rendered.nyos&&w.nyos.eventVisual.reliefAnalysis&&Math.abs(w.d-4.25)<.1;});
   await shot("E-Ausbreitung");
   report.routes.E = [cm, n, await geo()];
   await world("nyos-pipe");
@@ -229,6 +244,13 @@ export async function ubProduct(page, out, { app, film = false } = {}) {
   ];
   await study("landCompare");
   await shot("G-Landschaften");
+  report.globeOrigins=[];
+  for(const [name,lat,lon] of [["Ulmen verorten",50.2106,6.9828],["Nyos verorten",6.43834,10.298663]]){
+    await page.getByRole("button",{name,exact:true}).click();await settled();
+    await page.waitForFunction(()=>window.geoObservatory().rendered.globe&&document.querySelector("#geo-crumb").textContent.includes("Verortung"));
+    const center=await geo();assert.ok(Math.abs(center.lat-lat)<.05&&Math.abs(center.lon-lon)<.05&&center.globe);
+    report.globeOrigins.push(center);await page.click("#geo-back");await arrived("landCompare");
+  }
   await related("lakeCompare");
   await shot("G-Massstab");
   for (const i of ["0", "1", "2"]) {

@@ -19,6 +19,8 @@
 - Die Flachwassererklärung wanderte in G6.7 in einen Vulkankontext. Solver-Aktivierung und Beschriftung prüfen nun den tatsächlichen Prozess. Für Luftbild, historische Messprofile, qualitative Modelle und maßstäbliche Geometrie gibt es eigene Quellen- oder Modellhinweise.
 - Die durchgehende Wasserlage im Grundwasserleiter, der sehr einheitliche Magmaspeicher und die nur vorüberfliegenden Auswurfstücke wurden ersetzt. Kontakt im Gestein, abgelagerte Fragmente und die gefüllte Explosionsstruktur lassen sich getrennt ansehen.
 - Das Ufer folgt der modellierten Kraterwand. Die Draufsicht erfasst jetzt auch den Jungferweiher. Im Vergleich sind die lokalen Bildbreiten ausgewiesen.
+- Beim direkten Sprung von der Wassersäule zur atmosphärischen Phase konnte die Kamera am Schnitt stehen bleiben. Der Zeitregler bringt jetzt das Tal ins Bild. Die Bildprüfung kontrolliert die Geländefarben auch in der gespeicherten Originalaufnahme. Nach freier Kamerabewegung behält die Lehrkraft die Kontrolle.
+- Beide Landschaftsbilder haben einen direkten Zugang zum jeweiligen Ort auf dem Globus. Die geographischen Prüfungen vergleichen Kamerakoordinaten mit den beiden Seeorten.
 - Die früheren Einzelmerkmale des Seenvergleichs sind zu drei Ansichten zusammengefasst. Beide Seen stehen nebeneinander. Die Gasdaten unterscheiden die berichtete Gesamtdruckgröße, die gelöste Konzentration und fehlende lokale Beobachtungen.
 - Im Vergleich der Originalbilder sind die getrennten Wasserbahnen und Poren erkennbar. Kleine Merkmale im Untergrund sind auf Gesamtansichten schwerer zu sehen. Dafür gibt es die Kontaktvergrößerung. Kleinere Bildschirmfenster begrenzen die Schriftgröße. Ablesbarkeit aus einem konkreten Sitzabstand bleibt eine Gerätefrage.
 

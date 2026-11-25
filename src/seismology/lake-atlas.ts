@@ -92,17 +92,13 @@ export function lakeAtlas(s: Stage) {
     );
     const links = document.createElement("div");
     links.className = "lake-origins";
-    for (const [name, menu, id] of [
-      ["Ulmen verorten", "geo-place", "ulmen"],
-      ["Nyos verorten", "geo-topic", "nyos"],
+    for (const [name, id] of [
+      ["Ulmen verorten", "globe-ulmen"],
+      ["Nyos verorten", "globe-nyos"],
     ]) {
       const button = document.createElement("button");
       button.textContent = name;
-      button.onclick = () => {
-        const select = document.getElementById(menu) as HTMLSelectElement;
-        select.value = id;
-        select.dispatchEvent(new Event("change"));
-      };
+      button.onclick = () => s.visitPlace?.(id);
       links.append(button);
     }
     s.root.append(links);

@@ -25,7 +25,12 @@ import type { Observatory } from "./panel";
 import type { Observation } from "./observation";
 import type { Step } from "../tectonics/atlas";
 
+const lakeSites = {
+  ulmen: { lat:50.2106, lon:6.9828, name:"Ulmener Maar", region:"Europa › Deutschland › Vulkaneifel" },
+  nyos: { lat:6.43834, lon:10.298663, name:"Nyos-See", region:"Afrika › Kamerun" }
+} as const;
 type MapFocus = {
+  lake?: keyof typeof lakeSites;
   place?: string;
   space?: string;
   overview?: boolean;
@@ -112,6 +117,7 @@ export class GeographicExperience {
   }
   private withinOverview() {
     const { lat, lon, d } = this.world.nav.pose;
+    if(this.focus.lake){const site=lakeSites[this.focus.lake];return Math.abs(lat-site.lat)<5&&Math.abs(angularDistance(lon,site.lon))<6&&d<4200;}
     if (this.focus.country === "Kamerun") return lat >= 1 && lat <= 14 && lon >= 8 && lon <= 17 && d >= 400 && d <= 3800;
     if (this.focus.country)
       return lat >= 47 && lat <= 55.1 && lon >= 5.8 && lon <= 15.2 && d >= 400 && d <= 3800;
@@ -145,6 +151,7 @@ export class GeographicExperience {
   }
   private flight?: () => void;
   private toolbar = document.createElement("footer");
+  private lakePin=document.createElement("button");
   private pins = document.createElement("div");
   private markers: { id: string; button: HTMLButtonElement; place: ProcessPlace }[] = [];
   private root?: ChildNode | null;
@@ -238,6 +245,9 @@ export class GeographicExperience {
       '<button id="geo-back" hidden>Zurück</button><button id="geo-skip" hidden>Fahrt beenden</button><button id="geo-land" hidden>Regionales Relief</button><button id="geo-section" hidden>Schnitt öffnen</button><button id="geo-return" hidden>Auf der Erde zeigen</button><button id="geo-play" hidden>Abspielen</button><input id="geo-time" aria-label="Modellzeit" type="range" hidden><button id="geo-step" hidden>Schritt</button><button id="geo-reset" hidden>Zurücksetzen</button><select id="geo-preset" aria-label="Prozessdarstellung" hidden></select><select id="geo-info" aria-label="Informationstiefe"><option value="observe">Beobachten</option><option value="neutral">Beobachten ohne Ort</option><option value="terms" selected>Fachbegriffe</option><option value="explain">Erklären</option></select><button id="geo-related" hidden></button><button id="geo-release" hidden>Begriff freigeben</button><button id="geo-clear" hidden>Freigabe löschen</button><button id="geo-tools" aria-expanded="false">Ansicht</button>';
     el("app").append(this.toolbar);
     this.pins.id = "geo-markers";
+    this.lakePin.hidden=true;
+    this.lakePin.onclick=()=>{if(this.focus.lake==="ulmen")void this.map("ulmen");else if(this.focus.lake==="nyos")void this.topic("nyos");};
+    this.pins.append(this.lakePin);
     document.querySelector(".view")!.append(this.pins);
     const limit = document.createElement("div");
     limit.id = "geo-model-limit";
@@ -452,6 +462,14 @@ export class GeographicExperience {
   }
   private async map(id: string) {
     this.remember();
+    if(id==="globe-ulmen"||id==="globe-nyos"){
+      const lake=id==="globe-ulmen"?"ulmen":"nyos",epoch=this.epoch;
+      this.focus={lake,overview:true};this.awaiting=true;
+      await this.obs.openMap("boundaries",true);if(this.epoch!==epoch)return;
+      this.awaiting=false;this.obs.maps.boundaries.visible=false;
+      const site=lakeSites[lake],dest={lat:site.lat,lon:site.lon,d:1850,tilt:0,bearing:0};
+      this.goal=dest;this.world.nav.fly(dest,false);this.flight=()=>{};return;
+    }
     if(id==="eifel"||id==="ulmen"){
       const epoch=this.epoch;this.focus={country:"Deutschland",overview:true};this.awaiting=true;
       await this.obs.openMap("boundaries",true);if(epoch!==this.epoch)return;
@@ -595,8 +613,7 @@ export class GeographicExperience {
       this.source.value = String(value);
       this.source.dispatchEvent(new Event("input"));
     } else if (this.world.mode === "nyos") {
-      this.world.nyosLesson.progress = value;
-      this.world.nyosLesson.playing = false;
+      this.world.seekNyos(value);
     } else if (this.world.mosaic?.pair) {
       this.world.mosaic.playing = false;
       this.world.mosaic.progress = value;
@@ -670,6 +687,7 @@ export class GeographicExperience {
             : "idealisierter Schnitt")
       );
     }
+    if(this.obs.mode==="map"&&this.focus.lake){const site=lakeSites[this.focus.lake];return "Erde › "+site.region+" › "+site.name+" · Verortung";}
     if (this.obs.mode === "map" && this.world.mode === "globe" && this.focus.country && this.focus.overview)
       return this.focus.country === "Kamerun" ? "Erde › Afrika › Kamerun · National" : "Erde › Europa › Deutschland · National";
     if (this.focus.overview)
@@ -701,6 +719,7 @@ export class GeographicExperience {
     const key = [
       show,
       this.focus.space,
+      this.focus.lake,
       this.focus.country,
       this.depth,
       canvas.clientWidth,
@@ -709,12 +728,19 @@ export class GeographicExperience {
     ].join("|");
     if (key === this.pinKey) return;
     this.pinKey = key;
+    const site=this.focus.lake&&lakeSites[this.focus.lake];
+    const lakePoint=site&&show?project(position(site.lat,site.lon,2),nav.camera,canvas.clientWidth,canvas.clientHeight):null;
+    this.lakePin.hidden=!lakePoint;
+    if(lakePoint&&site){
+      text(this.lakePin,this.depth==="observe"?"Ort":site.name);
+      this.lakePin.style.left=lakePoint.x+"px";this.lakePin.style.top=lakePoint.y+"px";
+    }
     const used: { x: number; y: number }[] = [];
     for (const { place: p, id, button: b } of this.markers) {
       const point = position(p.lat, p.lon, 40),
         screen = show ? project(point, nav.camera, canvas.clientWidth, canvas.clientHeight) : null;
       const visible =
-        !this.focus.country &&
+        !this.focus.country && !this.focus.lake &&
         screen &&
         point.dot(nav.camera.position) > R * R &&
         (!this.focus.space || this.focus.space === p.space) &&
@@ -788,6 +814,7 @@ export class GeographicExperience {
       !!this.world.nav.flight,
       this.focus.place,
       this.focus.space,
+      this.focus.lake,
       this.focus.country,
       !!this.obs.atlasState,
       r?.ready,
@@ -870,7 +897,7 @@ export class GeographicExperience {
     if (!title.hidden)
       text(
         title,
-        this.obs.lessonView ? titleFor(this.obs.lessonView) : this.focus.country === "Kamerun" ? "Kamerun in Zentralafrika" : this.nationalBoundary.visible ? "Deutschland in Mitteleuropa" : globeOutsideSite ? "Die Erde im Überblick" : modelTitle(this.obs, this.world),
+        this.obs.lessonView ? titleFor(this.obs.lessonView) : this.focus.lake ? lakeSites[this.focus.lake].name+" auf der Erde" : this.focus.country === "Kamerun" ? "Kamerun in Zentralafrika" : this.nationalBoundary.visible ? "Deutschland in Mitteleuropa" : globeOutsideSite ? "Die Erde im Überblick" : modelTitle(this.obs, this.world),
       );
     for (const [id, value] of [
       ["geo-clock", !staticModel && (ready || !!this.obs.timeState?.displayedTime) && !anonymous && !globeOutsideSite ? timeCaption(this.obs, this.world) : ""],
@@ -893,7 +920,7 @@ export class GeographicExperience {
     const id=this.obs.lessonView;
     const seismicLimit=id && this.obs.study ? (studySources[id] ?? (id==="record"?"Originalmessung · EarthScope / IU · keine Modellkurve":familyOf(id)==="section"?"ComCat · M ≥ 4,5 · 2019–2023 · Profilprojektion · Tiefe 1,33-fach überhöht":familyOf(id)==="core"?"IASP91 · berechnete Laufwege · Quelle in 15 km Tiefe":familyOf(id)==="magma"?"Möglicher Modellverlauf · Ursache und Eruptionszeitpunkt bleiben offen":"Anschauungsmodell · Bewegung didaktisch überhöht")):"";
     const limit = (id&&r?.ruptureAnalysis&&r.spec.theme==="earthquake" ? (this.depth==="explain"?regionalPhase(r.progress)+" · ":"")+"Schematisches Ereignis · Versatz überhöht" : "") || seismicLimit ||
-      (this.focus.overview && !this.focus.country && this.obs.mode === "map" && !this.obs.atlasState
+      (this.focus.overview && !this.focus.country && !this.focus.lake && this.obs.mode === "map" && !this.obs.atlasState
         ? "Heute gleichzeitig · Pfeile: relative Bewegungsrichtung nach PB2002 · unterschiedliche natürliche Geschwindigkeiten"
         : this.obs.atlasState?.layers.some((k) => k === "age" || k === "magnetic")
           ? "Ozeanbodenalter und Magnetik · globales 1°-Raster · räumliche Auflösung bleibt beim Zoomen gleich"

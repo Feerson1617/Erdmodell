@@ -35,6 +35,7 @@ export class Stage {
   scene = new T.Scene();
   camera = new T.OrthographicCamera(-8, 8, 4, -4, 0.1, 200);
   controls: OrbitControls;
+  visitPlace?: (id:string)=>void;
   pendingTextures = 0;
   painted = false;
   time = 0;

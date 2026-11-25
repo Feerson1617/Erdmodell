@@ -33,6 +33,8 @@ interface PlateOptions {
   plate: string;
 }
 
+const nyosValleyView: Pose = {lat: 6.447, lon: 10.297, d: 4.25, tilt: 41, bearing: 16};
+
 export class World {
   customRender?: (dt:number)=>boolean;
   customPick?: (x:number,y:number)=>boolean;
@@ -614,6 +616,24 @@ export class World {
     return this.mode === "nyos" && this.nyos.error && !this.nyos.ready
       ? "Nyos-Geländedaten fehlen · regionale Ersatzansicht" : "";
   }
+  private nyosCutView(): Pose {
+    return { ...nyosSite.target, ...this.nyos.meta?.anchor,
+      d: this.nav.camera.aspect < 1.3 ? 2.75 : 2.2, bearing: 80, tilt: 66 };
+  }
+  seekNyos(value: number) {
+    const lesson = this.nyosLesson;
+    const wasInAir = lesson.progress >= .68;
+    lesson.progress = value;
+    lesson.playing = false;
+    if (lesson.view !== "event" || !this.nyos.ready || this.nav.inputRevision !== this.nyosInputRevision) return;
+    const showAir = value >= .68;
+    if (showAir === wasInAir && !this.nyosAutoFlight) return;
+    // A deliberate seek to a new phase frames its subject even when playback is paused.
+    // Repeated input within that phase leaves the chosen framing in place.
+    this.nyosAutoFlight = undefined;
+    this.nyosAutoStarted = showAir;
+    this.nav.fly(showAir ? nyosValleyView : this.nyosCutView(), true, 650);
+  }
   showNyos(view: NyosView) {
     this.visitNyos(false, view);
   }
@@ -647,7 +667,7 @@ export class World {
             d: this.nav.camera.aspect < 1.3 ? 2.75 : 2.4, tilt: 55, bearing: 3,
           }, true);
         } else if (this.nyosSectionActive())
-          this.nav.fly({ ...target, d: this.nav.camera.aspect < 1.3 ? 2.75 : 2.2, bearing: 80, tilt: 66 }, true);
+          this.nav.fly(this.nyosCutView(), true);
         else this.nav.fly(overview ? { ...target, ...nyosSite.overview } : target, true);
       } else {
         this.nyosDetail = false;
@@ -705,7 +725,7 @@ export class World {
     if (lesson.view !== "event" || lesson.progress < 0.64 || this.nyosAutoStarted) return;
     this.nyosAutoStarted = true;
     if (this.nav.inputRevision !== this.nyosInputRevision) return;
-    this.nav.fly({lat: 6.447, lon: 10.297, d: 4.25, tilt: 41, bearing: 16}, true, 2900);
+    this.nav.fly(nyosValleyView, true, 2900);
     this.nyosAutoFlight = this.nav.flight;
   }
   private nyosSectionActive() {

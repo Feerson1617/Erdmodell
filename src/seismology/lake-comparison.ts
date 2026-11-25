@@ -29,6 +29,7 @@ const aspects = [
   },
 ];
 export function compareBasins(s: Stage) {
+  s.controls.enableRotate=false;
   s.look(0, 0.2, 15, 0.2);
   s.halfWidth = 5.72;
   s.halfHeight = 2.6;
@@ -128,6 +129,7 @@ export function compareBasins(s: Stage) {
   s.animate((t) => show(t < 4 / 12 ? 0 : t < 9 / 12 ? 1 : 2));
 }
 export function historicalProfiles(s: Stage) {
+  s.controls.enableRotate=false;
   const conductivity = s.view === "conductivity",
     max = conductivity ? 1800 : 400;
   s.look(0, 0, 14, 0);
@@ -208,6 +210,9 @@ export function historicalProfiles(s: Stage) {
     true,
   );
   (graph.material as T.MeshBasicMaterial).map = tex;
+  const sample=profiles[0].samples[2];
+  s.label(vec((x(sample[conductivity?1:2])/1400-.5)*9.8,(.5-y(sample[0])/720)*5.04,.025),
+    "Tabellenwert", "November 1993 · 50 m Tiefe",()=>document.body.dataset.infoDepth==="observe");
 
   s.explain(() =>
     conductivity
