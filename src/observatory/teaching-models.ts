@@ -8,6 +8,8 @@ const text:Record<string,Explanation>={
   crust:{name:"Erdkruste",answer:"Die Kruste ist die äußerste Schicht. Sie ist unter dem Meer meist dünner als unter einem Kontinent."},
   rigid:{name:"Starrer oberster Mantel",answer:"Auch ein Teil des Erdmantels gehört zur starren Außenhülle. Zusammen mit der Kruste bildet er die Lithosphäre."},
   mantle:{name:"Langsam verformbarer Mantel",answer:"Das heiße Gestein ist überwiegend fest. Über sehr lange Zeit kann es sich verformen."},
+  coupling:{name:"Wechselwirkung",answer:"Platte und Mantel übertragen Kräfte durch Scherung. Richtung und Bedeutung sind örtlich verschieden."},
+  motion:{name:"Mantelbewegung",answer:"Festes Mantelgestein kann sich über Millionen Jahre verformen. Die Pfeile stehen für eine mögliche örtliche Bewegung."},
   heat:{name:"Wärme aus dem Erdinneren",answer:"Wärme steigt mit heißem Gestein langsam auf. Die Stärke und Richtung dieser Bewegung ist nicht überall gleich."},
   pull:{name:"Zug der absinkenden Platte",answer:"Kalte, dichte Lithosphäre sinkt ab. Ihr Gewicht kann einen weiteren Teil der Platte mitziehen."},
   ridge:{name:"Kraft am Rücken",answer:"Die junge, warme Lithosphäre liegt am Rücken höher. Die Schwerkraft begünstigt eine Bewegung vom Rücken weg."},
@@ -58,7 +60,13 @@ function mantle(r:RegionalScene){
     [[vec(-2.5,-2.7),vec(-3,-1.6),vec(-2.65,-.82)],0xe9b477,"heat"],
     [[vec(-2.5,-.48),vec(-1.8,-.54),vec(-.85,-.65)],0xa9ceb5,"ridge"],
     [[vec(.6,r.faultModel.interfaceY(.6)-.16),vec(1.5,r.faultModel.interfaceY(1.5)-.16),vec(2.7,r.faultModel.interfaceY(2.7)-.16)],0x9ac7cc,"pull"]];
-  for(const [pts,color,id] of curves){const c=arrow(pts,color,id,r.section);flow(r,c,color,id,6,0,1);}
+  curves.push([[vec(-1.8,-2.25),vec(-1.25,-1.75),vec(-.6,-1.52)],0x98b2ca,"motion"],[[vec(-1.85,-1.1),vec(-1.24,-1.06),vec(-.65,-1.1)],0xe0d1a6,"coupling"]);
+  for(const [index,[pts,color,id]] of curves.entries()){
+    const group=new T.Group();r.section.add(group);const c=arrow(pts,color,id,group);
+    const first=r.section.children.length;flow(r,c,color,id,6,0,1);
+    group.add(...r.section.children.slice(first));
+    r.onAnimate(()=>{group.visible=Boolean((r.forceLayers??31)&(1<<index));});
+  }
 }
 function magnetic(r:RegionalScene){
   const materials=[chips(0xc1b698),chips(0x495c66)];

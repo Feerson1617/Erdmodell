@@ -1,3 +1,4 @@
+import {visitStudio} from "./g64-classroom.mjs";
 import {shellNames,plainAtlas} from "./lesson-controls.mjs";
 import {classroom} from "./g52-classroom.mjs";
 // Exercises the executable copied off the ejected DMG and the single-file export on the same Mac.
@@ -14,7 +15,7 @@ import { PNG } from "pngjs";
 const out=resolve("test-results/mac"), film=join(out,"film");
 await mkdir(film,{recursive:true});
 const executablePath=(await readFile(join(out,"executable-path.txt"),"utf8")).trim();
-const html=pathToFileURL(resolve("artifacts/GeoRisiko-G6.3.1-Web-Test.html")).href;
+const html=pathToFileURL(resolve("artifacts/GeoRisiko-G6.4-Web-Test.html")).href;
 const cases=JSON.parse(await readFile("src/tectonics/examples.json","utf8"));
 const report={commit:process.env.TEST_COMMIT, run:process.env.GITHUB_RUN_ID, platform:process.platform, arch:process.arch, runs:[]};
 const runCmd=(name,args)=>{const r=spawnSync(name,args,{encoding:"utf8"});assert.equal(r.status,0,r.stderr);return r.stdout.trim();};
@@ -186,6 +187,7 @@ async function exercise(p,context,name,pid) {
   assert.equal(await p.locator("#think,#think-next,#think-text").count(),0);
   await p.click("#obswitch");await p.click("#home");await rest(p);
   row.scientificCorrection={region:"Japan",mechanism:cause,readingFocus:true,observation:true};
+  row.tectonics=await visitStudio(p,resolve("test-results/mac/G64-Nativ",name));
   await scenarios(p,name,pid,row);
   if(name==="Electron"){
     row.pairs=await allPairs(p);

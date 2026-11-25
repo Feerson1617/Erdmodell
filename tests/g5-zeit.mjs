@@ -5,7 +5,7 @@ const b=await chromium.launch({args:['--use-angle=swiftshader','--enable-unsafe-
 try{
 const p=await b.newPage({viewport:{width:1320,height:820},reducedMotion:'reduce'});const errors=[];
 p.on('pageerror',e=>errors.push(String(e)));p.on('console',m=>{if(m.type()==='error')errors.push(m.text().slice(0,340));});
-await p.goto(pathToFileURL(resolve(process.env.G5_HTML||'artifacts/GeoRisiko-G6.3.1-Web-Test.html')).href);
+await p.goto(pathToFileURL(resolve(process.env.G5_HTML||'artifacts/GeoRisiko-G6.4-Web-Test.html')).href);
 await p.waitForFunction(()=>window.geoObservatory?.().ready);await p.click('#nav-plates');
 // Observe the cold transition even when the installed textures normally decode in one frame.
 await p.evaluate(()=>{

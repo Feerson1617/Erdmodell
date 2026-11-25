@@ -71,6 +71,12 @@ export async function longClassroom(p,measure,readMemory){
       const [width,height]=sizes[Math.min(2,Math.floor((performance.now()-start)/300000))];
       await display.send("Emulation.setDeviceMetricsOverride",{width,height,deviceScaleFactor:1,mobile:false});
       await p.waitForFunction(([w,h])=>innerWidth===w&&innerHeight===h,[width,height]);
+      if(n%4===1){
+        await click("nav-plates");await click("g-studio");await p.locator("#studio-details summary").click();
+        await p.selectOption("#studio-count","4");await click("g-play");
+        samples.push({width,height,...await measure("Vier synchronisierte Modelle",4500)});
+        await click("g-play");await click("home");await p.waitForFunction(()=>!window.geoObservatory().flying);
+      }
       const label=["Parkfield","Tohoku und Tsunami","Zeitreise","Vulkanismus"][n%4];
       const loadStart=performance.now();
       if(n%4===2){await time();if(n%8===6){await p.selectOption("#g-scenario","aurica");await p.locator("#g-year").fill("160");await p.check("#g-compare");await p.waitForFunction(()=>window.geoObservatory().observatory.timeReady);}await click("g-time-play");}

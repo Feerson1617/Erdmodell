@@ -90,3 +90,17 @@ Das schulinterne Curriculum ordnet dieses Thema Jahrgang 9 mit einer Wochenstund
 | F4 S19, S20, Bewertung und nachhaltiges Handeln | Den Standort beim gleichen Modellbeben wechseln oder Vorsorgemaßnahmen am Nyos-See vergleichen | Schutzwirkung, Erreichbarkeit, Flächenbedarf und Aufwand gegeneinander abwägen |
 
 Die Kompetenzbezüge und die curricularen Inhalte folgen den oben verlinkten Originalseiten. Bewegungspfeile, Szenariovergleich und einzeln freigegebene Begriffe sind Darstellungshilfen. Die Auswahl von Leitfragen und Arbeitsformen liegt bei der Lehrkraft. Die Fachbegriffe des Leitfadens können zur Vertiefung dienen. Eine begründete Antwort entsteht im Unterrichtsgespräch.
+
+## G6.4 · Forschungsatlas im Entwicklungsbranch
+
+Der fachliche Schwerpunkt „Naturrisiken – Aufbau der Erde und Modell der Plattentektonik“ wird um die heutige Verteilung von Vulkanstandorten und die Altersstruktur der ozeanischen Kruste erweitert. Der Vergleich von Scherrate und Divergenz sowie von relativer Plattenbewegung und Stationsgeschwindigkeiten unterstützt die Unterscheidung von Struktur, Funktion und Prozess. Der Stand der Themenabdeckung wird außerhalb des Unterrichtsmodells geführt. [Forschungsatlas, Belegstichproben und offene Inhalte](g64-forschungsatlas.md)
+
+## G6.4 · Anschauung und Modelleinsatz
+
+| Lerngegenstand im Jahrgang 9 | Sichtbare Beobachtung und Handlung | Fachliche Grenze und Beleg |
+|---|---|---|
+| Erdaufbau und Bewegung, F1 S1 | Dieselbe Erde nach Stoff und Verformbarkeit gliedern. Die Lithosphäre umfasst Kruste und Mantel. | Variable Grenztiefen, lokaler Referenzwert und Maßstab im Schalenpanel. Originalbilder 01 und 02. |
+| Reliefgenese und geologische Zeit | Rift und Kollision bei gleichem Entwicklungsstand nebeneinander betrachten, Krustenverdünnung und Krustenwurzel erklären. | Gleichzeitige Modellphase bei unterschiedlichen natürlichen Dauern. Vierfachbild 05. |
+| Methoden und Modellkritik | Alter auf einer Rückenflanke und Entfernung messen, Halb- und Gesamtspreizung unterscheiden. Datenprodukt und Polaritätsmodell wechseln. | 100 km in 4 Ma entsprechen 25 mm/Jahr je Flanke. Bilder 03 und 04 sowie das Atlantikprofil. |
+| Räume vergleichen | Neun Wilson-Stadien durchlaufen und heutige Analogien lokalisieren. | Möglicher Entwicklungspfad. Originalbilder und Film 07. |
+| Erkenntnisgewinn | Historische Fundregionen, Ozeanbodenalter und GNSS mit verschiedenen Bezugsrahmen begründen. | Quellen und Zeiten jedes Datensatzes in der Legende. HOFN, zwei Grenzpaare und Erdbebenfilter im Prüfprotokoll. |

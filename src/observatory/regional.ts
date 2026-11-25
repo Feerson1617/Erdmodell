@@ -103,6 +103,8 @@ export class RegionalScene {
       rupture:this.rupture.visible?Array.from(this.rupture.geometry.attributes.position.array):[],waveFronts:this.waves.map(w=>w.visible),
       vertex:sample?{rest:Array.from(sample.base.slice(i,i+3)),drawn:Array.from(sample.g.attributes.position.array.slice(i,i+3)),side:sample.side}:null};
   }
+  reliefOnly=false;readonly hillshade={value:0};
+  forceLayers=31;
   facies=false;readonly sectionColor={value:0};
   analysis=false;readonly timings:Record<string,number>={};
   view="land";vectors=false;riskSite="near";markerEnds:number[][]=[];
@@ -189,7 +191,14 @@ export class RegionalScene {
       const [heightBytes,contextBytes]=await Promise.all([response.arrayBuffer(),farHeight.arrayBuffer()]);const heights=new Int16Array(heightBytes);if(heights.length!==193*145)throw Error("Höhenraster unvollständig");
       if(this.disposed){tex.dispose();normal.dispose();rough.dispose();farImage.dispose();relief?.dispose();return;}this.lib=lib;this.relief=relief;this.sunlight.castShadow=!!lib;this.groundData=heights;this.colorMap=tex;this.normalMap=normal;this.roughMap=rough;normal.anisotropy=4;tex.colorSpace=T.SRGBColorSpace;tex.anisotropy=4;this.contextMap=farImage;farImage.colorSpace=T.SRGBColorSpace;this.surround(new Int16Array(contextBytes),farImage);
     }
-    if(!this.spec.site && this.spec.geology){
+    const sector=this.spec.geology?.id;
+    if(!this.spec.site && (sector===1510||sector===2308)){
+      const base=localAsset("data/g64/bathy-"+sector+".i16");
+      const [height,img]=await Promise.all([fetch(base).then(async r=>{if(!r.ok)throw Error("Bathymetrie fehlt");return new Int16Array(await r.arrayBuffer());}),new T.TextureLoader().loadAsync(localAsset("data/g64/bathy-"+sector+".webp"))]);
+      if(this.disposed){img.dispose();return;}
+      if(height.length!==193*145)throw Error("Bathymetrie unvollständig");
+      this.spec.width=sector===1510?240:130;this.groundData=height;img.colorSpace=T.SRGBColorSpace;this.colorMap=img;
+    }else if(!this.spec.site && this.spec.geology){
       globalWindows??=fetch(localAsset("data/g51/regional-relief.i16")).then(r=>{if(!r.ok)throw Error("Regionalraster fehlt");return r.arrayBuffer();}).then(b=>new Int16Array(b)).catch(e=>{globalWindows=undefined;throw e;});
       const heights=await globalWindows;if(this.disposed)return;
       const index=(this.spec.geology.id-1)*49;this.windows=heights.subarray(index,index+49);
@@ -202,7 +211,7 @@ export class RegionalScene {
   }
   get surfaceImage(){return this.colorMap;}
   private get metresPerUnit(){
-    return this.spec.site?(this.spec.width??sites[this.spec.site].width)*1000/(12*(this.spec.site==="japan"?4.7:2.4)):36;
+    return this.spec.width||this.spec.site?(this.spec.width??sites[this.spec.site!].width)*1000/(12*(this.spec.site==="japan"?4.7:2.4)):36;
   }
   private surround(h:Int16Array,image:T.Texture){
     this.contextHeights=h;
@@ -268,8 +277,8 @@ export class RegionalScene {
           shader.vertexShader="varying vec2 landscapeXY;\n"+shader.vertexShader.replace("restZ=position.z;","restZ=position.z;landscapeXY=position.xz;");
           shader.fragmentShader="uniform sampler2D contextImage;varying vec2 landscapeXY;\n"+shader.fragmentShader.replace("#include <map_fragment>", "#include <map_fragment>\nfloat border=smoothstep(.78,1.,max(abs(landscapeXY.x)/6.,abs(landscapeXY.y)/4.5));diffuseColor.rgb=mix(diffuseColor.rgb,texture2D(contextImage,vec2(.5+landscapeXY.x/48.,.5-landscapeXY.y/36.)).rgb,border);");};
       }
-      if(this.lib)decorateTerrain(terrain,this.lib,this.relief,this.spec.site==="island"||this.spec.site==="hawaii"?2:this.spec.site==="japan"?1:this.spec.site==="himalaya"?3:this.spec.site==="rift"?4:0,this.grade,this.spec.theme);
-      if(this.spec.site&&["japan","island","hawaii"].includes(this.spec.site))seabed(terrain,this.metresPerUnit);
+      if(this.lib)decorateTerrain(terrain,this.lib,this.relief,this.spec.site==="island"||this.spec.site==="hawaii"?2:this.spec.site==="japan"?1:this.spec.site==="himalaya"?3:this.spec.site==="rift"?4:0,this.grade,this.spec.theme,this.hillshade);
+      if(this.spec.site&&["japan","island","hawaii"].includes(this.spec.site)||this.groundData&&!this.spec.site)seabed(terrain,this.metresPerUnit);
       for(const front of [false,true]){
         const bounds=new Map<number,[number,number]>();
         const columns=this.water?120:64;const g=indexed(36,columns,(i,j)=>{const z=(front?0:-4.5)+j/8;
@@ -468,6 +477,7 @@ export class RegionalScene {
   onAnimate(fn:(progress:number)=>void){this.motion.push(fn);}
   step(direction=1){this.playing=false;this.progress=direction>0?(phases.find(v=>v>this.progress+.002)??1):([...phases].reverse().find(v=>v<this.progress-.002)??0);}
   update(dt:number){
+    this.hillshade.value=this.reliefOnly?1:0;
     this.age+=dt;if(this.localStill)this.playing=false;if(this.playing){this.progress=Math.min(1,this.progress+dt/(this.slow?32:14));if(this.progress===1)this.playing=false;}
     if(!this.ready)return;
     const t=this.progress;this.sectionColor.value=+!!this.facies;this.stressSignals.phase.value=t;this.stressSignals.show.value=+(this.stress&&this.spec.theme==="earthquake");this.ui.t.value=t;this.ui.clock.value=this.age;this.ui.stress.value=+this.stress;

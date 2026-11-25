@@ -388,3 +388,27 @@ body.reading-focus #sidebar .process-reading{font-size:clamp(17px,1.4vw,25px);li
 
 #sidebar #focus-reading{min-height:38px;margin:0 0 .5rem}
 .observing #focus-reading{display:none}
+
+.research-map-plane:not([hidden]){display:grid;place-items:center;position:absolute;inset:0;background:#0e1c20;container-type:size;z-index:4}
+.research-map-plane canvas{position:static;inset:auto;display:block;width:min(100cqw,200cqh);height:auto;cursor:crosshair}
+.research-flat :is(.tools,.orientation,.hint){visibility:hidden}
+#research-layers{display:grid;gap:.15rem}
+#research-layers label{min-height:32px;display:flex;align-items:center}
+#research-reading p,#research-rates p,#research-legend p{margin:.45em 0}
+.research-rate-chart{width:100%;height:auto;background:#1b322f;border-radius:8px}
+#research-rates .g-stack{margin-top:.6em}
+
+#research-rates label{flex-direction:column;align-items:stretch;gap:3px}
+#research-rates summary,#research-profile summary{cursor:pointer}
+.research-figure .research-rate-chart{display:block;max-height:52vh;object-fit:contain;margin:1rem auto}
+.research-figure>div{font-size:clamp(16px,1.6vw,23px);line-height:1.4;margin:1em 0}
+.research-figure>div p{margin:.25em 0 .7em}
+
+.studio-overlay{position:absolute;inset:0;pointer-events:none;display:grid;color:#f4eee1;font:600 clamp(14px,1.25vw,23px)/1.35 system-ui}
+.studio-cell{position:relative;display:flex;align-items:flex-start;justify-content:center;gap:.5em;padding:1em;min-width:0}
+.studio-cell button,.studio-cell span{pointer-events:auto;color:#fff4de;background:#19323ce6;border:1px solid #63838b;border-radius:.45em;padding:.42em .76em;font:inherit}
+.studio-cell span{position:absolute;bottom:1em;max-width:85%;text-align:center;pointer-events:none;font-size:.85em}
+.studio-tools article{line-height:1.5}.studio-tools article h2{font-size:1.2em}.studio-tools .studio-row{border-bottom:1px solid #87988e55;padding:.3em 0}
+#research-layers fieldset{border:0;border-top:1px solid #9aa9a288;margin:.6em 0;padding:.55em .2em}#research-layers legend{font-weight:650;padding-right:.6em}
+
+.studio-cell .studio-object{position:absolute;z-index:1;display:block;max-width:80%;padding:.22em .52em;font-size:clamp(12px,1.03vw,19px);border-radius:.32em;background:#162b2de8;border-color:#8fada6;text-align:center;color:#f8f9eb}

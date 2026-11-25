@@ -42,13 +42,13 @@ vec4 fieldSample(sampler2D atlas,vec2 p,float id){
 }
 float luma6(vec3 c){return dot(c,vec3(.2126,.7152,.0722));}
 `;
-export function decorateTerrain(m:T.MeshStandardMaterial,lib:Library,relief:T.Texture|undefined,style:number,grade:{value:number},theme:string){
+export function decorateTerrain(m:T.MeshStandardMaterial,lib:Library,relief:T.Texture|undefined,style:number,grade:{value:number},theme:string,reliefOnly:{value:number}){
   const previous=m.onBeforeCompile.bind(m);m.customProgramCacheKey=()=>"g6-terrain-"+style+"-"+theme+"-"+Boolean(relief);
   m.onBeforeCompile=(s,gl)=>{previous(s,gl);
-    Object.assign(s.uniforms,{faciesColor:{value:lib.color},faciesRelief:{value:lib.relief},detailGrade:grade,landRelief:{value:relief??lib.relief}});
+    Object.assign(s.uniforms,{faciesColor:{value:lib.color},faciesRelief:{value:lib.relief},detailGrade:grade,landRelief:{value:relief??lib.relief},reliefOnly});
     s.vertexShader="varying vec3 ground6;\n"+s.vertexShader.replace("#include <begin_vertex>","#include <begin_vertex>\nground6=position;");
     const profile=style===2?[3,2]:style===1?[7,4]:style===3?[4,1]:style===4?[6,1]:[0,1];
-    s.fragmentShader="varying vec3 ground6;uniform sampler2D landRelief;\n"+libraryGLSL+s.fragmentShader;
+    s.fragmentShader="varying vec3 ground6;uniform sampler2D landRelief;uniform float reliefOnly;\n"+libraryGLSL+s.fragmentShader;
     s.fragmentShader=s.fragmentShader.replace("#include <color_fragment>", `#include <color_fragment>
       vec2 landUV=vec2(.5+ground6.x/12.,.5-ground6.z/9.);
       vec3 dem=${relief?"texture2D(landRelief,landUV).rgb":"vec3(.5,.5,.94)"};
@@ -66,6 +66,9 @@ export function decorateTerrain(m:T.MeshStandardMaterial,lib:Library,relief:T.Te
       float light=clamp(.97+.42*dot(sl,vec2(-.82,.43)),.64,1.30)*mix(.72,1.,dem.b);
       diffuseColor.rgb*=mix(1.,light*mix(1.,contrast,.50),local);
       diffuseColor.rgb=mix(diffuseColor.rgb,nearColor*(.15+luma6(diffuseColor.rgb))/.42,.10*local);
+      float illumination=clamp(.82+.64*dot(sl,vec2(-.83,.56)),.31,1.28);
+      vec3 shaded=mix(vec3(.18,.29,.29),vec3(.58,.56,.47),clamp(dem.b,0.,1.))*illumination;
+      diffuseColor.rgb=mix(diffuseColor.rgb,shaded,reliefOnly);
       `);
     s.fragmentShader=s.fragmentShader.replace("#include <normal_fragment_maps>","#include <normal_fragment_maps>\n normal=normalize(normal+mat3(viewMatrix)*vec3(sl.x+.29*(roughTex.r-.5),0.,-sl.y+.29*(roughTex.g-.5))*local*.48);");
     s.fragmentShader=s.fragmentShader.replace("#include <roughnessmap_fragment>","#include <roughnessmap_fragment>\n roughnessFactor=clamp(mix(roughnessFactor,roughTex.b,.38),.46,.99);");

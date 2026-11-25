@@ -1,0 +1,84 @@
+{
+  "retrieved": "2026-11-25",
+  "datasets": {
+    "age": {
+      "url": "https://oceania.generic-mapping-tools.org/server/earth/earth_age/earth_age_01d_g.grd",
+      "sourceSHA256": "51cc5e500dd0313c88bee35cde3c2e8733178570ce3d9af7894c9d6b088bbc82",
+      "sha256": "216ff08320ed8dbac561a4add11758008e2ed8e5d246dc7a0c0e765aad560d58",
+      "shape": [
+        181,
+        360
+      ],
+      "scale": 0.01,
+      "offset": 100.0,
+      "nodata": -32768.0,
+      "lon0": -180,
+      "lat0": 90,
+      "spacing": 1,
+      "registration": "node",
+      "units": "Ma",
+      "creator": "Seton et al. (2020), EarthByte; GMT grid derivative",
+      "citation": "https://doi.org/10.1029/2020GC009214",
+      "archive": "https://doi.org/10.5281/zenodo.6782543",
+      "rights": "CC BY 4.0",
+      "timeReference": "GTS2012; model of present-day oceanic crustal age"
+    },
+    "magnetik": {
+      "url": "https://oceania.generic-mapping-tools.org/server/earth/earth_mag/earth_mag_01d_g.grd",
+      "sourceSHA256": "3c94eee4215fdd0145afcac38dddab263fa69df18a498b09d36154be2a4f8c1f",
+      "sha256": "a8548286a7e646e5f277dc64c0c7f8ee387b527528f3099f8a1d4e5ceafd10c0",
+      "shape": [
+        181,
+        360
+      ],
+      "scale": 0.2,
+      "offset": 800.0,
+      "nodata": -32768.0,
+      "lon0": -180,
+      "lat0": 90,
+      "spacing": 1,
+      "registration": "node",
+      "units": "nT",
+      "creator": "Meyer, Saltus & Chulliat (2017), NOAA NCEI; GMT grid derivative",
+      "citation": "https://doi.org/10.7289/V5H70CVX",
+      "rights": "Public NOAA data; attribution requested",
+      "reference": "Sea level over oceans, EMAG2v3"
+    },
+    "volcanoes": {
+      "url": "https://www.ngdc.noaa.gov/hazel/hazard-service/api/v1/volcanolocs?itemsPerPage=100&page=1",
+      "rows": 1609,
+      "total": 1609,
+      "pages": [
+        "db4c99b8c2ed54bb433155c496cc2509bce37a1a25a0c66aa2ac6c0bbd1af940",
+        "0ee6465cab13157a9a21951362a52189bbc70caa6d45a2c97b73759bc7a48c3b",
+        "dc2b7b656f8c9398843d3c868670dc944ed6d6ff96fc7dc5d3d95b781bfc8a10",
+        "e3d09f2f41ad97707aa8afcccea1cd5a1a4bda5c45563b83c7fcf145ef490d05",
+        "46a835eef5128f061e320161f0a2fe8a60e123cf0583ea1a5e2cab8c04f00e38",
+        "c0e04b591aa44b2a39ae94ad98c18529dc5f205b4ccba7df6eb76e9a077ad114",
+        "2aca16228b986ce8865cb30b031947377f58f4a7da7f5e1cf2d5c0a5b26045d2",
+        "7cd0db583d1095ba27dbd000b62f1a74bc7a0c62e906b82f75a3a81b2352dfef",
+        "1e3f01791a7bd747904ecc00f3f4f4ec60c34c35413ac2f36a8c016e043edc24",
+        "5292e8cf0281f04752c2c2c63667cb6a9991fdd954997d5c15b21eae8cfd57a8",
+        "7725b8aa2d03a58f98f40fa4b5116a44a5079b6df5b97b9b8d7298c1bc8e88d6",
+        "f35f71176d58f1455f11b741e586ff0fba1e3349de5c364492a7c75b45288c91",
+        "6121f3b9680ad9a5c92548c1e28ea0fa09b6e1a3e976c17f5ec3d1bc72c25f80",
+        "96067b4c5137dc72c3caa870d55d752748cb1f2354251a625a2752df08e331ac",
+        "1822e13176225dae3bbf80eca4fb9360677c422ffc1132b463fd58470450b381",
+        "11bb38f56b31bf4ec4427d1759029ed9ce41638bd4c8c4444b803849edabbe5a",
+        "a538e4634da20f0e4348d0df7bd58875630beac39ad3095d9d6c2fa8c6a8e0a9"
+      ],
+      "fields": [
+        "NOAA ID",
+        "name",
+        "latitude",
+        "longitude",
+        "morphology"
+      ],
+      "scope": "NOAA NCEI volcano locations",
+      "sha256": "11e52e40a5c550f936dfb72d3528f29d0da5d839b8a831148bfa96d2ab5d7d21",
+      "creator": "NOAA NCEI/WDS, Volcano Locations Database",
+      "citation": "https://doi.org/10.7289/V5JW8BSH",
+      "rights": "Publicly available factual catalogue entries; attribute NOAA NCEI/WDS"
+    }
+  }
+}
