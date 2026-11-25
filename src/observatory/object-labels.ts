@@ -61,6 +61,8 @@ function terrainBlocks(r:RegionalScene,point:T.Vector3){
 }
 export class ObjectLabels{
  private layer:AnnotationLayer;private selected="";private key="";private last=0;private rev=0;
+ private auditHit?:{indices:number[];weights:number[];instance?:number;mesh:string};private auditPoint?:number[];
+ get audit(){return this.selected?{id:this.selected,point:this.auditPoint,hit:this.auditHit}:undefined;}
  private scene?:T.Scene;private objects:T.Mesh[]=[];private signals:HTMLElement[];
  private ro:ResizeObserver;private targets=new Map<string,T.Mesh>();private object?:T.Mesh;private picked?:()=>T.Vector3|undefined;
  private halo=new T.Mesh(new T.RingGeometry(.66,1,32),new T.MeshBasicMaterial({color:0xffdc76,side:T.DoubleSide,depthTest:true,depthWrite:false}));
@@ -79,10 +81,10 @@ export class ObjectLabels{
    this.signals=[".tools","#obswitch","#observation-controls",".orientation","#water-profile"].flatMap(s=>Array.from(document.querySelectorAll<HTMLElement>(s)));
    this.ro=new ResizeObserver(()=>{this.rev++;this.key="";});this.ro.observe(host);for(const el of this.signals)this.ro.observe(el);
  }
- clear(){this.halo.removeFromParent();this.scene=undefined;this.object=undefined;this.selected="";this.picked=undefined;this.key="";this.targets.clear();this.layer.clear();this.rev++;}
+ clear(){this.auditHit=undefined;this.auditPoint=undefined;this.halo.removeFromParent();this.scene=undefined;this.object=undefined;this.selected="";this.picked=undefined;this.key="";this.targets.clear();this.layer.clear();this.rev++;}
  private select(id:string,object=this.targets.get(id),point?:()=>T.Vector3|undefined){
    if(!object)return;
-   const info=description(object);claimObject(id,info?info.name+" · "+info.answer:"");this.selected=id;this.object=object;this.picked=point;this.key="";
+   const info=description(object);claimObject(id,info?info.name+" · "+info.answer:"");this.selected=id;this.object=object;this.picked=point;this.auditHit=undefined;this.auditPoint=undefined;this.key="";
    const field=document.getElementById("g-object");
    if(info&&field){field.dataset.selection=id;field.textContent=info.name+" · "+info.answer;field.hidden=false;}
  }
@@ -103,6 +105,7 @@ export class ObjectLabels{
        return mesh.localToWorld(p);
      };
      this.select(this.identify(mesh),mesh,materialPoint);
+     if(face&&weights)this.auditHit={indices:[face.a,face.b,face.c],weights:weights.toArray(),instance,mesh:mesh.uuid};
    }
  }
  draw(r:RegionalScene,key:string,allowed:(id:string,index:number)=>boolean){
@@ -138,11 +141,15 @@ export class ObjectLabels{
        if(covered)continue;
      }
      used.add(info.name);const id=this.identify(mesh);if(!allowed(id,used.size-1))continue;
-     if(this.object===mesh){this.scene!.add(this.halo);this.halo.position.copy(p).lerp(eye,.002);this.halo.quaternion.copy(r.camera.quaternion);this.halo.scale.setScalar(eye.distanceTo(p)*.011);this.halo.visible=true;}
+     if(this.object===mesh){if(this.picked)this.auditPoint=p.toArray();this.scene!.add(this.halo);this.halo.position.copy(p).lerp(eye,.002);this.halo.quaternion.copy(r.camera.quaternion);this.halo.scale.setScalar(eye.distanceTo(p)*.011);this.halo.visible=true;}
      this.targets.set(id,mesh);out.push({id,name:info.name,text:info.answer,phase,source,model,...xy});
      if(out.length>=(r.moreNames?8:4))break;
    }
    this.layer.draw(out,this.signals,this.rev);for(const button of this.host.querySelectorAll<HTMLButtonElement>("button"))button.setAttribute("aria-pressed",String(button.dataset.object===this.selected));
+   if(this.object&&this.targets.get(this.identify(this.object))===this.object&&this.selected!==this.identify(this.object)){
+     this.selected=this.identify(this.object);const field=document.getElementById("g-object"),info=description(this.object);
+     if(field&&info){field.dataset.selection=this.selected;field.textContent=info.name+" · "+info.answer;}
+   }
    if(this.selected&&!this.targets.has(this.selected)){this.object=undefined;this.selected="";this.picked=undefined;const field=document.getElementById("g-object");if(field)field.textContent="";}
  }
  private rank(m:T.Mesh,priority:string[]){if(this.object===m)return -1;const name=description(m)!.name,i=priority.indexOf(name),j=preferred.indexOf(name);return i>=0?i:j>=0?20+j:100;}

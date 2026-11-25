@@ -14,7 +14,7 @@ import underwater from "./transform-sea.json";
 import * as T from "three";
 import { addTeachingModels,topicNames,explanations } from "./teaching-models";
 import type { World } from "../world";
-import { R } from "../geo";
+import { R,position } from "../geo";
 import {center, names, type Step} from "../tectonics/atlas";
 import {geology,classify,localStrike,processNames,sites,type Site} from "./boundaries";
 import viewCentres from "./time-focus.json";
@@ -297,7 +297,7 @@ export class Observatory {
       r.cameraView(i<5?"overhead":i===5?"waves":i===6?"cut":"water");r.progress=[0,0,0,.30,.49,.53,0,.48][i];r.stress=i===3;}
     this.draw();
   }
-  diagnostics(){const r=this.region;return {graphics:{profile:graphics.profile,grade:quality()},mode:this.mode,purpose:this.mapPurpose,mapLayers:{events:this.maps.events.visible,lines:this.maps.boundaries.visible,depth:this.maps.depth},camera:r?.ready?{position:r.camera.position.toArray(),target:r.orbit.target.toArray()}:undefined,settings:r?fields(r,regionKeys):undefined,timings:r?.timings,switching:this.switching,analysis:r?.analysis,view:r?.view,event:r?.spec.event,playing:r?.playing,vectors:r?.vectors,coastLesson:r?.spec.coastLesson,site:r?.spec.site,geology:r?.spec.geology,physics:r?.ready?r.physicalState():undefined,process:r?.spec.process,theme:this.theme,ready:!this.switching&&(r?.ready??(this.maps.steps.length>0)),progress:r?.progress,cut:r?.cut,viewSettled:r?.viewSettled,focus:r?.faultModel?.kind==="unknown"?undefined:r?.focus,epicenter:r?.faultModel?.kind==="unknown"?undefined:r?.epicenter,events:this.maps.rows.length,steps:this.maps.steps.length,selected:this.maps.selectedStep?.[0],...this.timeDiagnostics()};}
+  diagnostics(){const r=this.region;return {selection:this.objectLabels.audit,graphics:{profile:graphics.profile,grade:quality()},mode:this.mode,purpose:this.mapPurpose,mapLayers:{events:this.maps.events.visible,lines:this.maps.boundaries.visible,depth:this.maps.depth},camera:r?.ready?{position:r.camera.position.toArray(),target:r.orbit.target.toArray()}:undefined,settings:r?fields(r,regionKeys):undefined,timings:r?.timings,switching:this.switching,analysis:r?.analysis,view:r?.view,event:r?.spec.event,playing:r?.playing,vectors:r?.vectors,coastLesson:r?.spec.coastLesson,site:r?.spec.site,geology:r?.spec.geology,physics:r?.ready?r.physicalState():undefined,process:r?.spec.process,theme:this.theme,ready:!this.switching&&(r?.ready??(this.maps.steps.length>0)),progress:r?.progress,cut:r?.cut,viewSettled:r?.viewSettled,focus:r?.faultModel?.kind==="unknown"?undefined:r?.focus,epicenter:r?.faultModel?.kind==="unknown"?undefined:r?.epicenter,events:this.maps.rows.length,steps:this.maps.steps.length,selected:this.maps.selectedStep?.[0],...this.timeDiagnostics()};}
   private enrich(r:RegionalScene){addTeachingModels(r);}
   private extraControls(r:RegionalScene){
     if(r.spec.theme==="volcano")return '<label>Modellausbruch<select id="g-eruption">'+opts({effusive:"Lava fließt aus",explosive:"Asche und Gase steigen auf"},r.eruption)+'</select></label>';
@@ -390,7 +390,7 @@ export class Observatory {
     // Look across the assembly so both the continental margins and the ocean are visible.
     this.world.nav.fly({lat:lat*.6+12,lon:lon+32,d:17900,tilt:0,bearing:0},true);
   }
-  private closeTime(){this.timeline?.dispose();this.timeline=undefined;$("g-split-caption")?.remove();}
+  private closeTime(){this.timePins.clear();this.timeline?.dispose();this.timeline=undefined;$("g-split-caption")?.remove();}
   private drawTime(){
     const t=this.timeline;if(!t)return;
     const labels={past:"Vergangenheit bis heute",ultima:"Pangaea Ultima",novo:"Novopangaea",aurica:"Aurica",amasia:"Amasia"};
@@ -440,20 +440,24 @@ export class Observatory {
   }
   private frameTime(dt:number){
     graphics.scope="time";graphics.activity=this.timeline?.playing?"animation":"still";
-    const t=this.timeline;if(!t)return false;const rendered=t.render(dt,this.world.gl,this.world.nav.camera);
+    const t=this.timeline;if(!t)return false;const rendered=t.render(dt,this.world.gl,this.world.nav.camera);if(t.cached){graphics.idle=true;graphics.activity="cached";}
     if(t.follow&&t.tracking&&t.year<=0&&!this.world.nav.flight){
       const v=t.reconstruction.at(Math.abs(t.year),t.tracking);if(v){this.world.nav.goal.lat=v.lat;this.world.nav.goal.lon=v.lon;}
     }
     const [name,meaning]=timeReading(t);setReading("learn-station",name);setReading("learn-history",meaning);
     const camera=this.world.nav.camera,canvas=this.world.gl.domElement;
-    const key=[t.ready,t.overview,t.scenario,t.second,Math.round(t.year*10),t.layer,t.gnss,t.tracking,t.compare,t.markers.children.length,canvas.clientWidth,canvas.clientHeight,document.body.dataset.reveal,...camera.matrixWorld.elements].join("/");
+    const key=[t.ready,t.reconstruction.ready,t.overview,t.scenario,t.second,Math.round(t.year*10),t.layer,t.gnss,t.tracking,t.compare,t.markers.children.length,canvas.clientWidth,canvas.clientHeight,document.body.dataset.reveal,...camera.matrixWorld.elements].join("/");
     if(key!==this.timeKey){this.timeKey=key;beginCandidates();
       const points=t.markers.children.filter(o=>o.name).map(o=>({name:o.name,p:o.position}));
       if(t.year<=0&&!t.gnss&&!t.layer){
         const order=[...new Set([t.tracking,"701","201","501","101","801"].filter(Boolean))];
+        if(t.year===0)points.push({name:"Atlantischer Ozean",p:position(4,-29,28)});
+        if(t.year<=-230){const [lat,lon]=viewCentres.past[Math.round(-t.year/5)];points.push({name:"Panthalassa",p:position(-lat,lon+180,28)});}
         for(const code of order){
           const at=t.reconstruction.at(Math.abs(t.year),code);
-          if(at)points.push({name:tracks[code][0],p:at.v.clone().normalize().multiplyScalar(R+29)});
+          const age=-t.year;
+          const place=code==="701"&&age>=175?(age>=220?"Afrika · Pangäa":"Afrika · Gondwana"):code==="101"&&age>=175&&age<220?"Nordamerika · Laurasia":tracks[code][0];
+          if(at)points.push({name:place,p:at.v.clone().normalize().multiplyScalar(R+29)});
         }
       }
       const labels=points.flatMap(({name,p},i)=>{const xy=project(p,camera,canvas.clientWidth,canvas.clientHeight);

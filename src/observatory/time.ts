@@ -30,7 +30,7 @@ export class TimeGlobe {
   private cache=new Map<string,{used:number;promise:Promise<T.Texture>;texture?:T.Texture}>();private stamp=0;private disposed=false;
   private channels=["",""];private displayed=["",""];private previousMarks="";
   year=-250;scenario:Scenario="past";compare=false;direction=1;speed=7;playing=false;layer="";error="";
-  get ready(){return Boolean(this.displayed[0] && this.displayed[0]===this.channels[0] && (this.model==="past" || this.models) && (!this.compare || (this.displayed[1] && this.displayed[1]===this.channels[1])));}
+  get ready(){return Boolean(this.displayed[0] && this.displayed[0]===this.channels[0] && (this.model==="past"?this.reconstruction.ready:this.models) && (!this.compare || (this.displayed[1] && this.displayed[1]===this.channels[1])));}
   reconstruction=new Reconstructions(this.primary.material.uniforms);
   gnss="";tracking="";trail=false;follow=false;showBoundaries=false;comparison:Scenario="novo";
   constructor(){this.primary.scene.add(this.markers,this.reconstruction.land,this.reconstruction.track,this.reconstruction.lines[0]);this.other.scene.add(this.reconstruction.lines[1]);
@@ -133,8 +133,12 @@ export class TimeGlobe {
       const [lat,lon]=e.coords[slice];const m=new T.Mesh(this.pinGeo,this.pinMat);m.position.copy(position(lat,lon,72));m.name=e.name;this.markers.add(m);}
   }
   private pinGeo=new T.SphereGeometry(93,12,8);private pinMat=new T.MeshBasicMaterial({color:0xffae62});
+  private lastImage="";cached=false;
   render(dt:number,gl:T.WebGLRenderer,camera:T.PerspectiveCamera){
-    if(this.playing){const max=this.scenario==="past"?0:scenarios[this.scenario].end;this.setYear(this.year+dt*this.speed*this.direction);if(this.year===max||this.year===-250)this.playing=false;}
+    if(this.playing){const max=this.scenario==="past"?0:Math.min(scenarios[this.scenario].end,this.compare?scenarios[this.second].end:Infinity);this.setYear(this.year+dt*this.speed*this.direction);if(this.year===max||this.year===-250)this.playing=false;}
+    const image=[this.model,this.second,this.compare,this.overview,this.year,this.layer,this.tracking,this.trail,this.gnss,this.showBoundaries,this.evidence.length,this.reconstruction.ready,this.displayed.join(),gl.domElement.width,gl.domElement.height,camera.aspect,camera.fov,...camera.matrixWorld.elements].join("|");
+    this.cached=this.ready&&!this.playing&&this.lastImage===image;if(this.cached)return true;
+    this.lastImage=image;
     this.reconstruction.draw(Math.abs(this.year),this.model==="past",this.tracking,this.trail);
     this.primary.material.uniforms.rigid.value=+(this.model==="past"&&this.reconstruction.ready);
     this.reconstruction.boundaries(this.model,this.year,0,this.showBoundaries);

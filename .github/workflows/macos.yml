@@ -105,6 +105,8 @@ jobs:
         run: |
           node tests/g63-classroom.mjs .scratch/g62-reference/artifacts/GeoRisiko-G6.2-Web-Test.html --before
           node tests/g63-classroom.mjs artifacts/GeoRisiko-G6.3-Web-Test.html
+      - name: Materialanker, verdeckte Flächen und Szenenwechsel
+        run: node tests/g63-anchors.mjs artifacts/GeoRisiko-G6.3-Web-Test.html
       - name: Kontrollierter Küstenvergleich bei gleicher Framebufferauflösung
         run: node tests/g63-performance.mjs .scratch/g62-reference/artifacts/GeoRisiko-G6.2-Web-Test.html artifacts/GeoRisiko-G6.3-Web-Test.html
       - if: always()

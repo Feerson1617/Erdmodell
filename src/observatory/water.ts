@@ -3,6 +3,10 @@ import {onset} from "./fault";
 
 // One-dimensional depth-averaged shallow water. Hydrostatic reconstruction preserves
 // still water over a sloping bed. Time, horizontal distance and relief are model units.
+export function coastHeight(x:number){
+  const slope=-.48-.95*Math.tanh((x+2.45)*.85);
+  return (slope>0?.26*slope:slope)+.42*Math.exp(-((x+4.95)**2)*1.3);
+}
 export class WaterSection{
   readonly frames=241;readonly dx:number;
   readonly budget:{initial:number;final:number;outflow:number;residual:number};
@@ -56,16 +60,19 @@ export class WaterSection{
     });
   }
   // Read the interpolated solver state of originally wet cells. A dry hill cannot signal a wave.
+  private originalShore?:number;
   signals(t:number){
     let surface=0,bed=0,away=0,shore=0;
-    const coast=this.extent(0).shore;
+    const coast=this.originalShore??=this.extent(0).shore;
+    const frame=Math.max(0,Math.min(1,t))*(this.frames-1),j=Math.min(this.frames-2,Math.floor(frame)),u=frame-j;
+    const a=j*this.cells,b=a+this.cells;
     for(let i=0;i<this.cells;i++){
       if(this.depths[i]<=.001)continue;
-      const x=-6+i*this.dx,eta=this.sample(x,t),depth=this.sample(x,t,true);
+      const x=-6+i*this.dx,eta=this.surfaces[a+i]*(1-u)+this.surfaces[b+i]*u,depth=this.depths[a+i]*(1-u)+this.depths[b+i]*u;
       const change=Math.abs(eta-this.surfaces[i]),floor=Math.abs(eta-depth-(this.surfaces[i]-this.depths[i]));
       surface=Math.max(surface,change);bed=Math.max(bed,floor);
       if(floor<.002)away=Math.max(away,change);
-      if(Math.abs(x-coast)<=2*this.dx)shore=Math.max(shore,change);
+      if(coast>-6&&floor<.002&&Math.abs(x-coast)<=2*this.dx)shore=Math.max(shore,change);
     }
     return {surface,bed,away,shore};
   }

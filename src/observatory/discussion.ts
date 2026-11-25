@@ -28,6 +28,13 @@ export function discussion(obs:Observatory){
    const available=Object.hasOwn(tasks,key);
    if(bar.hidden===available)bar.hidden=!available;
    if(last!==key||bar.dataset.subject!==s){last=key;bar.dataset.subject=s;open=false;index=0;if(available)display();}
+   const desk=document.getElementById("desk")!,overlay=document.getElementById("observation-controls")!;
+   const host=open?desk.parentElement!:document.body.classList.contains("observing")?overlay:document.getElementById("sidebar")!;
+   if(available&&bar.parentElement!==host){
+     if(open)desk.after(bar);
+     else if(host===overlay)host.insertBefore(bar,host.querySelector("#observe-release"));
+     else{const title=host.querySelector("h1");if(title)title.after(bar);else host.append(bar);}
+   }
    focus.hidden=!["regional","time"].includes(obs.mode)||document.body.classList.contains("observing");
  };
 }

@@ -18,6 +18,8 @@ app,web=native['runs']
 old,new=[data(evidence/group/'Unterricht.json') for group in ('Vorher','Nachher')]
 science=data(evidence/'Fachtests.json')
 perf=data(evidence/'Leistungsvergleich.json')
+anchors=data(evidence/'Ankerpruefung.json')
+assert anchors['flightFrames']>0 and anchors['staleLabels']==0 and max(r['error'] for r in anchors['rows'])<1e-7
 assert native['arch']=='arm64' and native['restart']['verified'] and app['classroom']['elapsedMs']>=900000
 assert all(not r['errors'] and not r['network'] for r in (app,web,old,new))
 assert old['complete'] and new['complete'] and old['engine']==new['engine']==perf['engine']
@@ -43,7 +45,7 @@ report=['# GeoRisiko G6.3 · Abnahmebericht','',f"Geprüfter Commit `{native['co
         'Die beiden starren Gesteinskörper verwenden entgegengesetzte halbe Rotationen. Die Pfeile zeigen die Tangenten dieser Bewegung. Der Rückweg vom geologischen Schnitt stellt den ausgewählten Grenzabschnitt wieder her. Untersucht wurden alle 5.819 Grenzabschnitte, alle 1.127 Subduktionspolungen, 435 schräge Subduktionsbewegungen sowie 43 komplexe Abschnitte mit unbekannter lokaler Bruchgeometrie.',
         'Die Phasentests prüfen den Ausgangszustand, Spannungsaufbau, Bruch, P- und S-Wellen, den Endzustand und den Reset. Die Farbe zur Spannungsanalyse kann getrennt geschaltet werden. Standort, berechnete Wasserstände und tatsächliche Weggeometrie bestimmen die sichtbaren Hinweise. Angaben über Schäden und Erholung sind qualitativ.',
         f"Geprüft wurden die Abläufe A bis G einschließlich Denkauftrag, schrittweiser Freigabe, Kameravergleich und Nyos-Vorsorge. {len(old['shots'])} Originalbilder aus G6.2 und {len(new['shots'])} aus G6.3 stammen aus dem Bedienlauf. Die Protokolle enthalten Aktionen, Wartezeiten, Zustände und die sichtbaren Beschriftungen. Die Curriculummatrix ordnet die fachlichen und methodischen Lerngelegenheiten ein.",
-        '','## Zusammenhängende Bedienfilme','']
+        f"Ein physisch angeklickter Punkt auf dem Vergleichsweg wurde für {len(anchors['rows'])} Modellphasen aus dem getroffenen Dreieck und seinen aktuellen Vertices unabhängig nachgerechnet. In {anchors['flightFrames']} gerenderten Globusbildern beim Szenenwechsel waren keine regionalen Schilder sichtbar.",'','## Zusammenhängende Bedienfilme','']
 for film in new['films']:report.append(f"- {film['name']} · {film['seconds']:.1f} s · {film['frames']} aufgezeichnete Bilder")
 report+=['','## Kontrollierter Küstenvergleich','',f"Gleicher Browser {perf['engine']}, 1.920 × 1.080 Fensterpixel, 1.200 × 720 Renderpixel, dieselbe Kamera, dasselbe Unterrichtsprofil und derselbe Startzustand. Drei Wiederholungen zu je sechs Sekunden pro Bedingung. Gemessen wurden neu gerenderte Bilder.",'','| Version | Beschriftungen | Median Bilder/s | Einzelmessungen |','|---|---|---:|---|']
 for version in ['G6.2','G6.3']:

@@ -16,7 +16,7 @@ const report={engine:browser.version(),product:createHash("sha256").update(await
 p.on("pageerror",e=>report.errors.push(e.message));p.on("request",r=>{if(/^https?:/.test(r.url()))report.network.push(r.url());});await p.route(/^https?:/,r=>r.abort());
 const rest=async()=>{await p.waitForFunction(()=>{const w=window.geoObservatory?.(),o=w?.observatory;return w?.ready&&!w.flying&&(o.mode!=="regional"||o.ready&&o.viewSettled)&&(o.mode!=="time"||o.timeReady);});await p.evaluate(()=>new Promise(ok=>requestAnimationFrame(()=>requestAnimationFrame(ok))));};
 const state=()=>p.evaluate(()=>window.geoObservatory());
-const act=async(id,value)=>{const start=Date.now(),e=p.locator('#'+id);if(value===undefined)await e.click();else if(await e.evaluate(x=>x.tagName==="SELECT"))await e.selectOption(String(value));else await e.fill(String(value));await rest();report.actions.push({id,value:value??"Klick",elapsedMs:Date.now()-start});};
+const act=async(id,value)=>{console.log("Bedienung",id,value??"Klick");const start=Date.now(),e=p.locator('#'+id);if(value===undefined)await e.click();else if(await e.evaluate(x=>x.tagName==="SELECT"))await e.selectOption(String(value));else await e.fill(String(value));await rest();report.actions.push({id,value:value??"Klick",elapsedMs:Date.now()-start});};
 const note=async()=>p.evaluate(()=>{const w=window.geoObservatory(),s=w.observatory,canvas=document.querySelector("#earth").getBoundingClientRect();
  const pins=[...document.querySelectorAll(".annotations button")].filter(b=>b.offsetWidth).map(b=>{const v=b.getBoundingClientRect(),a=b.parentElement.getBoundingClientRect();return {name:b.textContent,id:b.dataset.object,x:v.x,y:v.y,w:v.width,h:v.height,anchor:[a.x,a.y]};});
  return {mode:s.mode,site:s.site,view:s.view,model:s.scenario,year:s.year,progress:s.progress,camera:s.camera,playing:s.playing,phase:document.querySelector("#learn-phase")?.textContent,cause:document.querySelector("#learn-cause")?.textContent,release:document.querySelector("#observe-insight")?.textContent,pins,canvas:canvas.toJSON(),pair:w.tectonics?.mosaic?.pair?.step};});
@@ -44,6 +44,14 @@ try{
  await film("02-Grenzvergleich-und-Schnitt",async()=>{await hold(2200);await act("pair-process");await act("g-view","cut");await shot("05-Prozess");await hold(2500);await shot("10-Subduktionsschnitt");await hold(2200);
    if(!before){await act("g-return-pair");assert.equal((await state()).tectonics.mosaic.pair.step,2629);await hold(1900);}
  });
+ if(!before){
+   await act("nav-plates");await act("pair-examples",4155);await act("obswitch");
+   assert.equal((await note()).pins.length,0);await act("observe-pair-arrows");assert.equal((await state()).tectonics.mosaic.pair.arrows,false);
+   await act("observe-pair-step");const step=(await state()).tectonics.mosaic.progress;assert.ok(step>0);
+   await act("observe-pair-examples",2629);await act("observe-atlasPlay");await hold(450);await act("observe-atlasPlay");await act("observe-atlasReset");
+   await act("observe-pair-process");assert.equal((await state()).observatory.geology.id,2629);await act("observe-return-pair");
+   await act("observe-atlasWorld");await act("obswitch");report.checks.push("Grenzwahl, Pfeile, Schritt, Pause, Rückweg und Weltkarte im Beobachtungsmodus");
+ }
  await reg("san");await act("g-view","overhead");
  await film("03-Erdbeben",async()=>{await act("g-progress",0);await shot("06-Ausgangszustand");if(!before)assert.ok(!(await note()).pins.some(x=>x.name==="Versetzte Geländelinie"));
    await act("g-progress",.05);const a=(await note()).phase;await p.locator("#g-stress").evaluate(e=>e.click());await hold(300);if(!before)await contrast("Die Analysefarbe verändert die Ereignisphase nicht",a,(await note()).phase);
@@ -73,6 +81,16 @@ try{
    const mirror=(await state()).observatory.cameras;assert.deepEqual(mirror[0],mirror[1]);}
    await shot("16a-Gleiche-Perspektive");await hold(2900);
    for(const [first,second,age] of [["novo","ultima",80],["ultima","aurica",200],["amasia","novo",110]]){await act("g-scenario",first);await act("g-second",second);await act("g-year",age);await hold(1300);}
+   if(!before){const models=["aurica","amasia","ultima","novo"];
+     for(const [i,a] of models.entries())for(const b of models.slice(i+1)){await act("g-scenario",a);await act("g-second",b);
+       for(const [age,mode] of [[60,"same"],[160,"overview"]]){
+         await act("g-year",age);await act("g-compare-camera",mode);const v=(await state()).observatory;
+         assert.equal(v.timeReady,true);assert.equal(v.scenario,a);assert.equal(v.second,b);assert.equal(v.compare,true);
+         if(mode==="same")assert.deepEqual(v.cameras[0],v.cameras[1]);else assert.notDeepEqual(v.cameras[0],v.cameras[1]);
+         report.checks.push({scenarios:[a,b],age,mode});
+       }
+     }
+   }
    await act("g-today");assert.equal((await state()).observatory.year,0);
  });
  await act("nav-nyos");await p.waitForFunction(()=>window.geoObservatory().nyos.terrainVisible);
