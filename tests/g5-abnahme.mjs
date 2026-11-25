@@ -156,6 +156,9 @@ export async function screencast(page, dir, name, perform, options = {}) {
       fixedFrame ? fixedFilter : "pad=ceil(iw/2)*2:ceil(ih/2)*2",
       "-c:v",
       "libx264",
+      // Preserve measured frame times, including long holds after a scene change.
+      // B-frame reordering can truncate the reported MP4 duration on sparse input.
+      ...(fixedFrame ? ["-fps_mode", "vfr", "-bf", "0"] : []),
       "-preset",
       "veryfast",
       "-crf",

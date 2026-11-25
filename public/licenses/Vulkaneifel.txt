@@ -1,0 +1,6 @@
+Orthofotos Ulmen und Vulkaneifel: ©GeoBasis-DE / LVermGeoRP (2026), dl-de/by-2-0, https://www.lvermgeo.rlp.de [Daten bearbeitet: Ausschnitt, Resampling, WebP].
+https://www.govdata.de/dl-de/by-2-0
+WMS https://geo4.service24.rlp.de/wms/rp_dop20.fcgi · Layer rp_dop20 · Bezugsdatum 25.11.2026.
+Relief: Copernicus Digital Elevation Model GLO-30, öffentlich zugängliche COG-Kacheln N50 E006 und E007, https://registry.opendata.aws/copernicus-dem/
+Produced using Copernicus WorldDEM-30, © DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018 provided under COPERNICUS by the European Union and ESA; all rights reserved.
+Bearbeitung: geographisch abgefragtes Raster, auf Meter gerundet, örtliche Maßstabsüberhöhung. Reproduktion: scripts/g67/landschaft.py.

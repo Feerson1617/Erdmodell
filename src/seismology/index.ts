@@ -1,6 +1,9 @@
 import { Stage, type SeismicState } from "./stage";
 import { familyOf, titleFor, viewOptions } from "./catalog";
 import { faultStudy, intrusion, japan, sources } from "./geology";
+import {maar} from "./maar";
+import {eifelTerrain,lakeSection} from "./lakes";
+import { plumbing } from "./volcanism";
 import { earthPaths, magmaChart, realRecord, waveField } from "./waves";
 import type { WebGLRenderer } from "three";
 import "./figure.css";
@@ -11,7 +14,11 @@ export function createSeismic(
 ) {
   const stage = new Stage(gl, id),
     f = familyOf(id);
-  if (f === "faults") faultStudy(stage);
+  if(f==="maars")maar(stage);
+  else if(f==="eifel"&&id!=="lakeCut")eifelTerrain(stage);
+  else if(f==="lakes"||id==="lakeCut")lakeSection(stage);
+  else if(f==="plumbing")plumbing(stage);
+  else if (f === "faults") faultStudy(stage);
   else if (f === "core") earthPaths(stage);
   else if (f === "section") japan(stage);
   else if (f === "magma") {
@@ -21,7 +28,7 @@ export function createSeismic(
   else if (id === "record") realRecord(stage);
   else waveField(stage);
   stage.time =
-    f === "faults" ? 0.23 : f === "section" ? 0 : id === "record" ? 1 : 0.36;
+    ["maars","eifel","lakes","plumbing"].includes(f??"") ? 0 : f === "faults" ? 0.23 : f === "section" ? 0 : id === "record" ? 1 : 0.36;
   if (state) stage.restore(state);
   return stage;
 }

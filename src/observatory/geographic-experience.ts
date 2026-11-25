@@ -29,7 +29,7 @@ type MapFocus = {
   place?: string;
   space?: string;
   overview?: boolean;
-  country?: "Deutschland";
+  country?: "Deutschland" | "Kamerun";
   boundary?: number;
 };
 type Location = {
@@ -100,6 +100,7 @@ export class GeographicExperience {
   }
   private withinOverview() {
     const { lat, lon, d } = this.world.nav.pose;
+    if (this.focus.country === "Kamerun") return lat >= 1 && lat <= 14 && lon >= 8 && lon <= 17 && d >= 400 && d <= 3800;
     if (this.focus.country)
       return lat >= 47 && lat <= 55.1 && lon >= 5.8 && lon <= 15.2 && d >= 400 && d <= 3800;
     const place = this.currentPlace(), region = this.focus.space ? regions[this.focus.space] : undefined;
@@ -162,7 +163,7 @@ export class GeographicExperience {
       '<select id="geo-topic" aria-label="Thema oder Prozess"></select><select id="geo-place" aria-label="Raum oder Ort"></select><div class="geo-heading"><span id="geo-crumb" aria-live="polite"></span><strong id="geo-title"></strong></div>';
     header.insertBefore(nav, header.querySelector("nav"));
     const topics = el<HTMLSelectElement>("geo-topic");
-    option(topics, "", "Thema wählen");
+    option(topics, "", "Thema");
     const earth = groups(topics, "Erde und Platten");
     for (const [id, name] of Object.entries({
       globe: "Erde",
@@ -181,6 +182,11 @@ export class GeographicExperience {
     const seismic = groups(topics, "Erdbeben und Vulkanismus");
     for(const [id,name] of Object.entries({distribution:"Globale Erdbebenverteilung",park:"Erdbebenentstehung",strike:"Bruchmechanismen",particles:"Seismische Wellen",rays:"Wellen im Erdinneren",moment:"Magnitude und Intensität",observed:"Japan · Erdbebenherde",vt:"Vulkanische Seismizität"}))
       option(seismic,"seismic-"+id,name);
+    const volcanism=groups(topics,"Vulkanismus");
+    for(const id of ["zao","shield","cone","storage","degassing","contact"])option(volcanism,"seismic-"+id,titleFor(id));
+    const lakeTopics=groups(topics,"Maare und Seen");
+    for(const id of ["maar","eifel","ulmen","mixing","dissolved","lakeCompare"])option(lakeTopics,"seismic-"+id,titleFor(id));
+    option(lakeTopics,"nyos-event","Nyos · limnische Eruption");option(lakeTopics,"nyos-pipe","Nyos · kontrollierte Entgasung");
     const hazard = groups(topics, "Naturgefahren und Orte");
     for (const [id, name] of Object.entries({
       events: "Erdbeben der Erde",
@@ -198,15 +204,17 @@ export class GeographicExperience {
       if (value) void this.topic(value);
     };
     const list = el<HTMLSelectElement>("geo-place");
-    option(list, "", "Ort wählen");
+    option(list, "", "Ort");
     option(list, "*", "Alle Plattenprozesse");
     for (const space of Object.keys(regions)) {
       const group = groups(list, space);
       option(group, "space-" + space, space + " im Überblick");
+      if (space === "Afrika") option(group, "country-cm", "Kamerun im Überblick");
       for (const [id, p] of Object.entries(places)) if (p.space === space) option(group, id, p.name);
     }
     const germany = groups(list, "Europa › Deutschland");
     option(germany, "country-de", "Deutschland im Überblick");
+    option(germany,"eifel","Vulkaneifel");option(germany,"ulmen","Ulmen · Ulmener Maar");
     for (const [id, p] of landscapes) option(germany, "local-" + id, p.name);
     list.onchange = () => {
       const value = list.value;
@@ -305,7 +313,7 @@ export class GeographicExperience {
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape") this.drawer(false);
     });
-    el("geo-related").onclick=()=>{const id=this.obs.lessonView&&connections[this.obs.lessonView]?.[0];if(id)void this.topic(isView(id)?"seismic-"+id:id);};
+    el("geo-related").onclick=()=>{if(!this.obs.lessonView&&this.world.mode==="nyos"){void this.topic("seismic-lakeCompare");return;}const id=this.obs.lessonView&&connections[this.obs.lessonView]?.[0];if(id)void this.topic(isView(id)?"seismic-"+id:id);};
     obs.visitStudy=id=>void this.topic("seismic-"+id);
     obs.visitModel = (id) => void this.topic("process-" + id);
     obs.visitPlace = (id) => void this.map(id);
@@ -344,14 +352,14 @@ export class GeographicExperience {
         place: f.place && Object.hasOwn(places, f.place) ? f.place : undefined,
         space: f.space && Object.hasOwn(regions, f.space) ? f.space : undefined,
         overview: f.overview === true,
-        country: f.country === "Deutschland" ? f.country : undefined,
+        country: f.country === "Deutschland" || f.country === "Kamerun" ? f.country : undefined,
         boundary:
           Number.isInteger(f.boundary) && f.boundary! > 0 && f.boundary! <= 5819 ? f.boundary : undefined,
       };
     }
     this.neutral = saved?.depth === "neutral";
     if (this.focus.overview && this.obs.mode === "map") {
-      const g = this.focus.country ? { lat: 51.1, lon: 10.3, d: 1600 } : this.currentPlace();
+      const g = this.focus.country === "Kamerun" ? { lat: 6, lon: 12.5, d: 1600 } : this.focus.country ? { lat: 51.1, lon: 10.3, d: 1600 } : this.currentPlace();
       if (this.focus.country) this.obs.maps.boundaries.visible = false;
       if (g && !this.withinOverview()) {
         const dest = { lat: g.lat, lon: g.lon, d: this.focus.country ? 1600 : 3400, tilt: 0, bearing: 0 };
@@ -424,14 +432,22 @@ export class GeographicExperience {
   }
   private async map(id: string) {
     this.remember();
-    if (id === "country-de") {
-      this.focus = { country: "Deutschland", overview: true };
+    if(id==="eifel"||id==="ulmen"){
+      const epoch=this.epoch;this.focus={country:"Deutschland",overview:true};this.awaiting=true;
+      await this.obs.openMap("boundaries",true);if(epoch!==this.epoch)return;
+      this.awaiting=false;const dest=id==="ulmen"?{lat:50.2106,lon:6.9828,d:420,tilt:0,bearing:0}:{lat:50.26,lon:7.02,d:560,tilt:0,bearing:0};
+      this.goal=dest;this.world.nav.fly(dest,false,750);
+      this.flight=()=>{if(this.epoch===epoch)void this.topic("seismic-"+id);};return;
+    }
+    if (id === "country-de" || id === "country-cm") {
+      const cameroon = id === "country-cm";
+      this.focus = { country: cameroon ? "Kamerun" : "Deutschland", overview: true };
       const epoch = this.epoch;
       this.awaiting = true;
       await this.obs.openMap("boundaries", true);
       if (epoch !== this.epoch) return;
       this.awaiting = false;
-      const dest = { lat: 51.1, lon: 10.3, d: 1600, tilt: 0, bearing: 0 };
+      const dest = { lat: cameroon ? 6 : 51.1, lon: cameroon ? 12.5 : 10.3, d: 1600, tilt: 0, bearing: 0 };
       this.obs.maps.boundaries.visible = false;
       this.goal = dest;
       this.world.nav.fly(dest, false);
@@ -487,6 +503,15 @@ export class GeographicExperience {
     this.remember();
     const epoch = this.epoch;
     this.focus = {};
+    if(value==="nyos-event"||value==="nyos-pipe"){
+      this.navigate("nyos");
+      const event=value==="nyos-event";
+      const tab=document.querySelector<HTMLButtonElement>(event?"#nyos-event":"#nyos-protection");
+      if(tab)tab.click();else this.world.showNyos(event?"event":"protection");
+      this.world.nyosLesson.dissolved=true;
+      this.world.nyosLesson.air=event;
+      return;
+    }
     if(value.startsWith("seismic-")){
       this.awaiting=true;
       try{await this.obs.openStudy(value.slice(8));}finally{if(this.epoch===epoch)this.awaiting=false;}
@@ -565,6 +590,8 @@ export class GeographicExperience {
   private orient() {
     const id=this.obs.lessonView;
     if(id&&this.obs.study){
+      if(["ulmen","aerial","lakeCut","eifel"].includes(id))return id==="eifel"?"Europa › Deutschland › Vulkaneifel · regionales Relief":"Europa › Deutschland › Vulkaneifel › Ulmener Maar";
+      if(id==="lakeCompare")return "Deutschland · Ulmen ↔ Kamerun · Nyos";
       if(familyOf(id)==="section")return "Erde › Asien › Japan · regionales Tiefenprofil";
       if(id==="record")return "Erde › Japan → New Mexico · Stationsaufzeichnung";
       if(familyOf(id)==="core")return "Erde · globaler Schnitt";
@@ -622,7 +649,7 @@ export class GeographicExperience {
       );
     }
     if (this.obs.mode === "map" && this.world.mode === "globe" && this.focus.country && this.focus.overview)
-      return "Erde › Europa › Deutschland · National";
+      return this.focus.country === "Kamerun" ? "Erde › Afrika › Kamerun · National" : "Erde › Europa › Deutschland · National";
     if (this.focus.overview)
       return (
         path +
@@ -720,7 +747,7 @@ export class GeographicExperience {
       done();
     }
     this.nationalBoundary.visible =
-      this.settled && this.obs.mode === "map" && !!this.focus.country && !this.obs.atlasState;
+      this.settled && this.obs.mode === "map" && this.focus.country === "Deutschland" && !this.obs.atlasState;
     if (now - this.lastTick < 70) return;
     this.lastTick = now;
     if (this.observation.active !== (this.depth === "observe")) {
@@ -746,6 +773,7 @@ export class GeographicExperience {
       r?.localStill,
       document.body.dataset.reveal,
     ].join("/");
+    const staticModel = ["eifel", "ulmen", "aerial", "lakeCut", "lakeCompare"].includes(this.obs.lessonView ?? "");
     if (this.signature !== state || this.root !== side.firstChild) {
       this.signature = state;
       this.root = side.firstChild;
@@ -754,15 +782,15 @@ export class GeographicExperience {
       this.source = first(["g-progress", "g-year"]) as unknown as HTMLInputElement | undefined;
       this.step = first(["g-step", "pair-step"]);
       this.reset = first(["g-reset", "nyos-reset"]);
-      const seek = familyOf(this.obs.lessonView??"")!=="section" && (
+      const seek = !staticModel && familyOf(this.obs.lessonView??"")!=="section" && (
         !!this.source || (!!this.play && (this.world.mode === "nyos" || !!this.world.mosaic?.pair)));
       const p = this.currentPlace(),
         s = this.obs.studioState;
       for (const [id, show] of Object.entries({
-        play: !!this.play && familyOf(this.obs.lessonView??"")!=="section",
-        step: !!this.step || seek,
+        play: !staticModel && !!this.play && familyOf(this.obs.lessonView??"")!=="section",
+        step: !staticModel && (!!this.step || seek),
         time: seek,
-        reset: (!!this.reset || seek) && familyOf(this.obs.lessonView??"")!=="section",
+        reset: !staticModel && (!!this.reset || seek) && familyOf(this.obs.lessonView??"")!=="section",
         back: this.history.length > 0,
         skip: !!this.world.nav.flight,
         land: !!p && (p.bathy || p.site) && this.focus.overview && this.settled,
@@ -780,7 +808,7 @@ export class GeographicExperience {
         clear: this.depth === "observe" && document.body.classList.contains("show-some-labels"),
         tools: !side.hidden && this.depth !== "observe",
         preset: (!!el("studio-preset") || !!this.obs.lessonView) && this.depth !== "observe",
-        related: !!this.obs.lessonView && this.depth !== "observe",
+        related: (!!this.obs.lessonView || this.world.mode==="nyos"&&!this.obs.mode) && this.depth !== "observe",
       }))
         el("geo-" + id).hidden = !show;
       const bar = el<HTMLInputElement>("geo-time");
@@ -810,14 +838,15 @@ export class GeographicExperience {
     el("geo-crumb").hidden = anonymous && this.neutral;
     const title = el("geo-title");
     title.hidden = !ready || anonymous;
+    if(this.world.mode==="nyos"&&!this.obs.mode)text(el("geo-related"),"Seen vergleichen");
     const globeOutsideSite = !this.obs.mode && (this.world.mode === "place" || this.world.mode === "nyos") && !this.onLocalTerrain();
     if (!title.hidden)
       text(
         title,
-        this.obs.lessonView ? titleFor(this.obs.lessonView) : this.nationalBoundary.visible ? "Deutschland in Mitteleuropa" : globeOutsideSite ? "Die Erde im Überblick" : modelTitle(this.obs, this.world),
+        this.obs.lessonView ? titleFor(this.obs.lessonView) : this.focus.country === "Kamerun" ? "Kamerun in Zentralafrika" : this.nationalBoundary.visible ? "Deutschland in Mitteleuropa" : globeOutsideSite ? "Die Erde im Überblick" : modelTitle(this.obs, this.world),
       );
     for (const [id, value] of [
-      ["geo-clock", (ready || !!this.obs.timeState?.displayedTime) && !anonymous && !globeOutsideSite ? timeCaption(this.obs, this.world) : ""],
+      ["geo-clock", !staticModel && (ready || !!this.obs.timeState?.displayedTime) && !anonymous && !globeOutsideSite ? timeCaption(this.obs, this.world) : ""],
       [
         "geo-legend",
         ready && !anonymous

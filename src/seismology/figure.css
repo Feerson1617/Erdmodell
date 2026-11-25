@@ -106,3 +106,6 @@
 .seismic-pick:focus-visible {
   background: #d9c784a8;
 }
+.lake-evidence{position:absolute;inset:auto 1% .45rem;display:grid;grid-template-columns:1fr 1fr;gap:.28rem 1.2rem;padding:.55rem .8rem;background:#102422f2;border:1px solid #536e65;border-radius:.35rem;font-size:clamp(.84rem,1.45vw,1.13rem);line-height:1.27;pointer-events:auto}
+.lake-evidence select{grid-column:1/-1;justify-self:start;max-width:100%;font:inherit}.lake-evidence strong,.lake-evidence span{display:block}
+body[data-info-depth="observe"] .lake-evidence{display:none}

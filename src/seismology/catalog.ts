@@ -23,10 +23,15 @@ export const regionViews: Record<
   {
     name: string;
     site: Site;
-    camera: "cut" | "overhead" | "fault" | "focus" | "waves";
+    eruption?: "effusive" | "explosive";
+    camera: "vent" | "land" | "cut" | "overhead" | "fault" | "focus" | "waves";
     progress: number;
   }
 > = {
+  shield: { name:"Hawaii · Schildvulkan",site:"hawaii",camera:"land",progress:0,eruption:"effusive" },
+  lava: { name:"Hawaii · effusive Eruption",site:"hawaii",camera:"vent",progress:0.42,eruption:"effusive" },
+  cone: { name:"Japan · Schichtvulkan",site:"japan",camera:"land",progress:0,eruption:"explosive" },
+  plume: { name:"Japan · explosive Eruption",site:"japan",camera:"vent",progress:0.42,eruption:"explosive" },
   park: {
     name: "Parkfield · Erdbebenentstehung",
     site: "san",
@@ -77,6 +82,10 @@ export const regionViews: Record<
   },
 };
 export const families = {
+  maars:{title:"Maarentstehung",variants:{maar:"Maarentstehung · mit See",dryMaar:"Trockenmaar"}},
+  eifel:{title:"Vulkaneifel",variants:{eifel:"Vulkaneifel · Übersicht",ulmen:"Ulmener Maar · Landschaft",aerial:"Ulmen · Draufsicht",lakeCut:"Idealisierter Seeschnitt"}},
+  lakes:{title:"Seen und Gase",variants:{mixing:"Chemisch stabile Tiefenschicht",turnover:"Jahreszeitliche Vollzirkulation",dissolved:"Gelöstes Kohlendioxid",lakeCompare:"Ulmener Maar und Nyos"}},
+  plumbing: {title:"Magmatische Prozesse",variants:{storage:"Schmelze im festen Gestein",degassing:"Vulkanische Gase",contact:"Magma trifft Grundwasser"}},
   faults: {
     title: "Bruchmechanismen",
     variants: {
@@ -160,12 +169,17 @@ export function titleFor(id: string) {
 export function viewOptions(id: string): [string, string][] {
   if (atlasViews[id])
     return Object.entries(atlasViews).map(([k, v]) => [k, v.name]);
+  if (regionViews[id]?.eruption) return Object.entries(regionViews).filter(([,v])=>v.eruption).map(([k,v])=>[k,v.name]);
   if (regionViews[id])
     return Object.entries(regionViews).map(([k, v]) => [k, v.name]);
   return Object.entries(families[familyOf(id)!].variants);
 }
 // The link is a reversible change of scale or model, accessible alongside free navigation.
 export const connections: Record<string, [string, string]> = {
+  shield:["lava","Lavafluss zeigen"], lava:["cone","Mit Japan vergleichen"],cone:["plume","Eruption zeigen"],plume:["storage","Magmatischer Untergrund"],
+  storage:["degassing","Gastransport"],degassing:["monitor","Zur Überwachung"],contact:["maar","Zur Maarentstehung"],
+  eifel:["ulmen","Nach Ulmen"],ulmen:["lakeCut","See im Schnitt"],aerial:["lakeCut","See im Schnitt"],lakeCut:["maar","Entstehung zeigen"],maar:["ulmen","Zum heutigen Maar"],dryMaar:["eifel","Zur Vulkaneifel"],
+  turnover:["mixing","Mit stabilem Tiefenwasser vergleichen"],mixing:["dissolved","Gelöstes Gas"],dissolved:["nyos-event","Nyos 1986"],lakeCompare:["ulmen","Nach Ulmen"],
   distribution: ["boundaries", "Grenzen zeigen"],
   boundaries: ["park", "Parkfield öffnen"],
   depthMap: ["observed", "Japan im Schnitt"],

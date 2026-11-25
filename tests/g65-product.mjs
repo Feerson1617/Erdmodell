@@ -1,6 +1,7 @@
 import { corrections, geometry } from "./g651-visual.mjs";
 import { seismicClassroom } from "./g65-classroom.mjs";
 import { integrity } from "./g642-integrity.mjs";
+import {volcanicProduct} from "./volcanic-product.mjs";
 import assert from "node:assert/strict";
 import { chromium, _electron } from "playwright";
 import { readFile, writeFile, mkdir } from "node:fs/promises";
@@ -51,7 +52,7 @@ try {
   const page = native ? await app.firstWindow() : await ctx.newPage();
   if (!native)
     await page.goto(
-      pathToFileURL(resolve("artifacts/GeoRisiko-G6.5.1-Web-Test.html")).href,
+      pathToFileURL(resolve("artifacts/GeoRisiko-G6.7-Web-Test.html")).href,
     );
   if (native) {
     assert.match(page.url(), /^georisiko:/);
@@ -73,7 +74,7 @@ try {
     startMs: performance.now() - time,
     network,
   };
-  if (!["integritaet", "seismologie", "korrektur"].includes(group))
+  if (!["integritaet", "seismologie", "korrektur","vulkaneifel"].includes(group))
     await exercise(page, out, {
       group,
       film: false,
@@ -91,7 +92,8 @@ try {
       film: false,
     });
   if (group === "all" || group === "korrektur")
-    await corrections(page, out, { app, film: process.env.G65_FILM === "1" });
+    await corrections(page, out, { app, film: false });
+  if(group==="all"||group==="vulkaneifel")await volcanicProduct(page,out,{app,phase:"G67",film:process.env.G65_FILM==="1"});
   if (process.argv.includes("--long")) {
     await app.evaluate(({ BrowserWindow }) =>
       BrowserWindow.getAllWindows()[0].setContentSize(1366, 768),
@@ -122,11 +124,11 @@ try {
     const cycle = [
       "strike",
       "park",
-      "stations",
-      "sites",
+      "maar",
+      "mixing",
       "rays",
-      "monitor",
-      "particles",
+      "degassing",
+      "dissolved",
     ];
     for (let i = 0; performance.now() - start < 900000; i++) {
       const change = performance.now();

@@ -70,9 +70,9 @@ export class Observatory {
       if(id==="trenches")this.world.nav.fly({lat:35,lon:143,d:8500,tilt:0,bearing:0},true);
     }else if(regionViews[id]){
       const preset=regionViews[id],next=this.revision+1;
-      await this.openRegion(reference(preset.site,id==="zao"?"volcano":"earthquake"));
+      await this.openRegion(reference(preset.site,id==="zao"||preset.eruption?"volcano":"earthquake"));
       if(this.revision!==next||!this.region?.ready)return;
-      const r=this.region;r.ruptureAnalysis=true;r.progress=preset.progress;r.playing=false;r.stress=id==="strain"||id==="park";
+      const r=this.region;if(preset.eruption)r.eruption=preset.eruption;r.ruptureAnalysis=!preset.eruption;r.progress=preset.progress;r.playing=false;r.stress=id==="strain"||id==="park";
       r.showP=r.showS=id==="parkWaves"||id==="park";r.detail=id==="parkWaves";
       r.cameraView(preset.camera);r.update(0);
     }else{
