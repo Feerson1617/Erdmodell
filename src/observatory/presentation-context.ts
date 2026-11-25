@@ -30,7 +30,7 @@ export function modelTitle(o: Observatory, w: World) {
         ? "Plattenprozesse im direkten Vergleich"
         : titles[s.models[Math.max(0, s.focus)]];
   if (t)
-    return t.scenario === "past"
+    return (t.displayedTime?.scenario ?? t.model) === "past"
       ? "Kontinentaldrift – Veränderung der Kontinentalanordnung"
       : "Zukünftige Kontinentalanordnungen";
   if (o.mode === "map")
@@ -68,18 +68,20 @@ export function timeCaption(o: Observatory, w: World) {
   const t = o.timeState,
     s = o.studioState;
   if (t) {
-    const n = Math.round(Math.abs(t.year)),
+    const frame = t.displayedTime;
+    if (!frame) return "";
+    const n = Math.round(Math.abs(frame.year)),
       age =
-        t.year < 0
+        frame.year < 0
           ? "Vor " + n + " Millionen Jahren"
-          : t.year > 0
+          : frame.year > 0
             ? "In " + n + " Millionen Jahren"
             : "Heute";
-    return t.scenario === "past"
+    return frame.scenario === "past"
       ? age
       : "Hypothetisch · " +
-          scenarios[t.scenario].label +
-          (t.compare ? " / " + scenarios[t.second].label : "") +
+          scenarios[frame.scenario].label +
+          (frame.second ? " / " + scenarios[frame.second].label : "") +
           " · " +
           age;
   }
@@ -118,7 +120,8 @@ export function mapLegend(o: Observatory, w: World) {
         k === "quakes" && a.layers.includes("depth") ? "Punkte · USGS-Erdbeben" : keys[k],
       );
       if (a.layers.some((k) => ["depth", "quakes", "magnitude"].includes(k)))
-        rows.push("Katalog · M ≥" + a.magnitude + " · bis " + a.depth + " km");
+        rows.push("Katalog · M ≥" + a.magnitude + " · bis " + a.depth + " km" + (a.year ? " · " + a.year : ""));
+      if (a.layers.includes("gnss") || a.layers.includes("vectors")) rows.push("Pfeillänge · 400 km auf der Karte entsprechen 50 mm/Jahr");
       if (a.base === "bathy")
         rows.unshift("Tiefe · Petrol bis 1 km · Blau bis 3,5 km · Dunkelblau ab 6 km · 0,5°");
       if (a.base === "relief") rows.unshift("Relief · Grün Tiefland · Ocker Hochland · Hell Gebirge · 0,5°");
@@ -132,7 +135,9 @@ export function mapLegend(o: Observatory, w: World) {
       .join("　|　");
   }
   if (!o.mode && w.mode === "plates" && !w.processSite && !w.mosaic?.pair)
-    return w.plateOptions.boundaries
+    return w.plateOptions.boundaries && w.plateOptions.category !== "all"
+      ? { divergent: "Türkis · divergente Grenzen", convergent: "Orange · konvergente Grenzen", transform: "Violett · Transformgrenzen" }[w.plateOptions.category]
+      : w.plateOptions.boundaries
       ? w.plateOptions.types
         ? keys.bounds
         : "Linien · modellierte Plattengrenzen (PB2002)"

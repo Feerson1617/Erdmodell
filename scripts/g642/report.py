@@ -125,13 +125,13 @@ report += [
     "",
     "Die neun Wilson-Stichproben protokollieren die Orientierung der gerenderten Rand- und Rückenpfeile und den tatsächlich eingeblendeten Erklärungstext. Die Prozessbilder und Filme zeigen Modellzeit, Materialansicht, Anker und geografischen Rückweg. Datenherkunft, fachliche Grenzen und verbleibende Vereinfachungen sind im Entwicklungsbericht erläutert.",
     "",
-    "Die JSON-Dateien enthalten jede ausgeführte Aktion und die sichtbaren Steuerelemente pro Vergleichsszene. Modell und Sichtprüfung werden getrennt ausgeliefert.",
+    "Die JSON-Dateien dokumentieren die ausgeführten Prüfschritte und die sichtbaren Steuerelemente pro Vergleichsszene. Modell und Sichtprüfung werden getrennt ausgeliefert.",
 ]
 report += ["", "## Geographische Integrität", "",
            "Bei jeder bestätigten Ankunft wurden Szene, Kamera und Originalbild kontrolliert. Für Deutschland wurde zusätzlich ein rasterbasierter Bildvergleich mit dem Zielbild und der zuvor gerenderten Nyos-Landschaft ausgewertet.", "",
-           "| Weg | Tatsächliche Darstellung | Fokus in Grad |", "|---|---|---|"]
+           "| Ausgangsraum | Angefordertes Ziel | Gerenderter Raum | Kamerafokus in Grad |", "|---|---|---|---|"]
 for row in navigation[0]["matrix"]:
-    report.append(f"| {row['route']} | {row['path']} | {row['pose'][0]:.2f}, {row['pose'][1]:.2f} |")
+    report.append(f"| {row['from']} | {row['requested']} | {row['path']} | {row['pose'][0]:.2f}, {row['pose'][1]:.2f} |")
 report += ["", "## Modellgröße und kleine Fenster", "",
            "Die Stichprobe misst den vom Hintergrund abweichenden Anteil im sichtbaren Prozessbild einschließlich seiner Beschriftungen. Sie ergänzt die Messung der verfügbaren Canvasfläche.", "",
            "| Fenster | Modellfläche | Vordergrundanteil im Bild | sichtbare Fachbegriffe |", "|---|---:|---:|---:|"]

@@ -313,12 +313,14 @@ export async function exercise(page, out, { group = "all", film = false, board =
       await page.locator("#studio-details summary").click();
       await select("studio-count", "4");
       await tools(false);
+      await page.waitForFunction(() => document.querySelector("#geo-crumb")?.innerText.includes("mehrere Raumbeispiele"));
       await shot("Vier-Modelle");
       const ridgeIndex = await page.evaluate(() =>
         window.geoObservatory().observatory.studio.models.indexOf("ridge"),
       );
       assert.ok(ridgeIndex >= 0);
       await page.locator(".studio-cell").nth(ridgeIndex).locator(":scope > button").first().click();
+      await page.waitForFunction(() => document.querySelector("#geo-crumb")?.innerText.includes("Gakkelrücken"));
       await select("geo-preset", "magnet");
       await page.waitForFunction(() => window.geoObservatory().observatory.studio.analysis === "magnet");
       await page.getByRole("button", { name: /Alle zeigen/ }).click();

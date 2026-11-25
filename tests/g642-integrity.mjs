@@ -54,12 +54,36 @@ export async function integrity(page, out, { native, app, film }) {
   };
   const sample = async () =>
     thumbnail(await page.locator("#earth").screenshot({ type: "png", timeout: 180000 }));
+  const routes = {
+    "Nyos": ["Erde", "Nyos-See · Ereignismodell"],
+    "Nyos-nach-Deutschland": ["Nyos-See", "Deutschland"],
+    "Deutschland-nach-Helgoland": ["Deutschland", "Helgoland"],
+    "Zurueck-Deutschland": ["Helgoland", "Deutschland"],
+    "Deutschland-nach-Tonga": ["Deutschland", "Tongagraben"],
+    "Tonga-Relief": ["Tongagraben · Globus", "Tongagraben · Relief"],
+    "Tonga-nach-Hawaii": ["Tongagraben · Relief", "Hawaii · Relief"],
+    "Hawaii-nach-Himalaya": ["Hawaii · Relief", "Himalaya · Relief"],
+    "Himalaya-nach-Globus": ["Himalaya · Relief", "Erde"],
+    "Schnellwechsel-Hawaii": ["Erde, laufende Fahrten über Tonga und Himalaya", "Hawaii"],
+    "Laden-unterbrochen": ["Tongagraben · Geländeaufbau", "Hawaii"],
+    "Gespeichertes-Deutschland": ["Hawaii", "Gespeicherte Deutschlandansicht"],
+    "Freie-Kamera-nach-Deutschland": ["Gespeicherte Deutschlandansicht", "Freie Globusansicht"],
+    "Mehrfach-zurueck-Hawaii": ["Himalaya", "Hawaii"],
+    "Mehrfach-zurueck-Tonga": ["Hawaii", "Tongagraben"],
+    "Atlas-1510-Schnitt": ["Forschungsatlas · Grenzabschnitt 1510", "Prozessschnitt · Inselbogen"],
+    "Schnitt-zum-Atlas": ["Prozessschnitt · Inselbogen", "Ausgangskarte · Grenzabschnitt 1510"],
+    "Wilson-zur-Analogie": ["Wilson-Zyklus · Phase 0,375", "Heutige Analogie · Mittelatlantischer Rücken"],
+    "Analogie-zum-Wilsonstadium": ["Mittelatlantischer Rücken", "Gespeicherte Wilson-Modellphase"],
+  };
   const row = async (name, match, lat, lon, kind, check = () => {}) => {
     await settle();
     const w = await page.evaluate(() => {
       const w = window.geoObservatory(),
         o = w.observatory;
       return {
+        information: document.querySelector("#geo-info").value,
+        legend: document.querySelector("#geo-legend").innerText,
+        modelClock: document.querySelector("#geo-clock").innerText,
         mode: w.mode,
         obs: o.mode,
         pose: [w.lat, w.lon, w.d],
@@ -106,7 +130,8 @@ export async function integrity(page, out, { native, app, film }) {
     const image = await sample();
     assert.ok(new Set(image).size > 28, name + " leeres Bild");
     await shot(name);
-    matrix.push({ route: name, kind, ...w, imageColors: new Set(image).size, image: "Ort-" + name + ".jpg" });
+    const [from, requested] = routes[name];
+    matrix.push({ route: name, from, requested, kind, ...w, imageColors: new Set(image).size, image: "Ort-" + name + ".jpg" });
     return image;
   };
   const navigate = async () => {
@@ -172,6 +197,20 @@ export async function integrity(page, out, { native, app, film }) {
     await page.locator("#saved-list").selectOption({ label: "Deutschland · G6.4.2" });
     await click("view-apply");
     await row("Gespeichertes-Deutschland", /Deutschland.*National/, 51.1, 10.3, "map");
+    // A restored marker must also lose its national label when the actual camera leaves Germany.
+    const globe = await page.locator("#earth").boundingBox();
+    await page.mouse.move(globe.x + globe.width * 0.8, globe.y + globe.height * 0.5);
+    await page.mouse.down();
+    await page.mouse.move(globe.x + globe.width * 0.2, globe.y + globe.height * 0.5, { steps: 8 });
+    await page.mouse.up();
+    await page.waitForFunction(() => !document.querySelector("#geo-crumb")?.innerText.includes("National"));
+    await row("Freie-Kamera-nach-Deutschland", /Global/, null, null, "map", (w) =>
+      assert.ok(w.pose[1] < 5.8 || w.pose[1] > 15.2));
+    for (const id of ["tonga", "hawaii", "himalaya"]) await place(id);
+    await click("geo-back");
+    await row("Mehrfach-zurueck-Hawaii", /Hawaii/, 20.6, -156.3, "map");
+    await click("geo-back");
+    await row("Mehrfach-zurueck-Tonga", /Tongagraben/, -20.395, -173.3105, "map");
     await topic("research");
     await drawer(true);
     await select("research-projection", "map");
@@ -212,6 +251,19 @@ export async function integrity(page, out, { native, app, film }) {
     await page.locator("#geo-time").fill("-65");
     await page.waitForFunction(() => document.querySelector("#geo-clock")?.innerText.includes("65"));
     await shot("Zeit-vor-65-Millionen-Jahren");
+    await click("geo-play");
+    await page.waitForFunction(() => {
+      const clock = document.querySelector("#geo-clock");
+      return !clock.hidden && /^Vor (?!65 )\d+ Millionen Jahren$/.test(clock.textContent);
+    });
+    await click("geo-play");
+    await settle();
+    await page.waitForTimeout(160);
+    const paused = await page.locator("#geo-clock").innerText();
+    await page.waitForTimeout(240);
+    assert.equal(await page.locator("#geo-clock").innerText(), paused);
+    await page.locator("#geo-time").fill("0");
+    await page.waitForFunction(() => document.querySelector("#geo-clock")?.innerText === "Heute");
     await topic("future");
     await page.locator("#geo-time").fill("100");
     await drawer(true);

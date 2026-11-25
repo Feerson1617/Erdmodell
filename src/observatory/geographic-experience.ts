@@ -2,7 +2,7 @@ import { BufferGeometry, LineSegments, LineBasicMaterial } from "three";
 import germany from "./deutschland-grenze.json";
 import { modelTitle, timeCaption, mapLegend } from "./presentation-context";
 import { disclosure, restoreDisclosure, nextLabel, resetReveals } from "./reveal";
-import { regions as landscapes } from "../regions";
+import { type Bounds, nyosSite, regions as landscapes } from "../regions";
 import { angularDistance, position, R } from "../geo";
 import { project } from "../annotations";
 import type { World } from "../world";
@@ -85,13 +85,32 @@ export class GeographicExperience {
         Math.abs(p.d - g.d) < 1)
     );
   }
+  private onLocalTerrain() {
+    const { lat, lon, d } = this.world.nav.pose;
+    const nyos = this.world.mode === "nyos";
+    const bounds: Bounds | undefined = nyos ? this.world.nyos.meta?.bounds : this.world.region.bounds;
+    if (!bounds) return Math.abs(lat - nyosSite.target.lat) < 0.1 && Math.abs(lon - nyosSite.target.lon) < 0.1;
+    const [west, south, east, north] = bounds;
+    return lat >= south && lat <= north && lon >= west && lon <= east &&
+      (nyos ? this.world.nyos.localWeight > 0 : d < this.world.region.lod.fadeKm[1]);
+  }
+  private withinOverview() {
+    const { lat, lon, d } = this.world.nav.pose;
+    if (this.focus.country)
+      return lat >= 47 && lat <= 55.1 && lon >= 5.8 && lon <= 15.2 && d >= 400 && d <= 3800;
+    const place = this.currentPlace(), region = this.focus.space ? regions[this.focus.space] : undefined;
+    if (!place && !region) return true;
+    const [centerLat, centerLon] = place ? [place.lat, place.lon] : region!;
+    const arc = position(lat, lon).angleTo(position(centerLat, centerLon)) * 180 / Math.PI;
+    return place ? arc < 7 && d < 7000 : arc < 32 && d < 15000;
+  }
   get settled() {
     if (this.restoring || this.awaiting || this.flight || this.world.nav.flight || !this.obs.painted)
       return false;
     if (this.obs.mode === "map" && this.focus.overview && this.goal && !this.matchesGoal()) return false;
     if (this.obs.mode || !this.world.ready) return !!this.obs.mode;
     if (!this.world.worldDrawn) return false;
-    if (this.world.mode === "place") return this.world.local.ready && this.world.local.group.visible;
+    if (this.world.mode === "place") return !this.onLocalTerrain() || (this.world.local.ready && this.world.local.group.visible);
     if (this.world.mode === "nyos") return this.world.nyos.ready;
     return true;
   }
@@ -228,13 +247,13 @@ export class GeographicExperience {
         return;
       }
       const s = obs.studioState;
-      if (s)
-        void this.map(
-          s.models[0] === "wilson"
-            ? wilsonPlaces[Math.min(8, Math.floor(s.time * 8 + 0.0001))]
-            : this.focus.place || referenceFor[s.models[0]],
-        );
-      else if (obs.region?.spec) {
+      if (s) {
+        const model = s.models[Math.max(0, s.focus)];
+        const origin = this.currentPlace();
+        void this.map(s.models.length > 1 && s.focus < 0 ? "*" : model === "wilson"
+          ? wilsonPlaces[Math.min(8, Math.floor(s.time * 8 + 0.0001))]
+          : origin && origin.model === model ? this.focus.place! : referenceFor[model]);
+      } else if (obs.region?.spec) {
         const sp = obs.region.spec;
         const p = Object.entries(places).find(([, p]) =>
           sp.geology ? p.step === sp.geology.id : p.site && p.site === sp.site,
@@ -243,8 +262,14 @@ export class GeographicExperience {
         else {
           this.remember();
           this.focus = { boundary: sp.geology?.id };
+          const epoch = this.epoch;
+          this.awaiting = true;
           void obs.openMap("boundaries", true).then(() => {
-            this.world.nav.fly({ lat: sp.lat, lon: sp.lon, d: 4500, tilt: 0, bearing: 0 });
+            if (epoch !== this.epoch) return;
+            this.awaiting = false;
+            const dest = { lat: sp.lat, lon: sp.lon, d: 4500, tilt: 0, bearing: 0 };
+            this.goal = dest;
+            this.world.nav.fly(dest);
             if (sp.geology) obs.maps.selectStep(obs.maps.steps[sp.geology.id - 1]);
             obs.draw();
           });
@@ -290,6 +315,12 @@ export class GeographicExperience {
     this.signature = "";
     this.pinKey = "";
   }
+  beginRecall() {
+    this.invalidate();
+    this.restoring = true;
+    const epoch = this.epoch;
+    return () => this.epoch === epoch;
+  }
   capture() {
     return { focus: { ...this.focus }, depth: this.neutral ? "neutral" : this.depth };
   }
@@ -311,11 +342,8 @@ export class GeographicExperience {
     this.neutral = saved?.depth === "neutral";
     if (this.focus.overview && this.obs.mode === "map") {
       const g = this.focus.country ? { lat: 51.1, lon: 10.3, d: 1600 } : this.currentPlace();
-      if (
-        g &&
-        (Math.abs(this.world.nav.pose.lat - g.lat) > 8 ||
-          Math.abs(angularDistance(this.world.nav.pose.lon, g.lon)) > 10)
-      ) {
+      if (this.focus.country) this.obs.maps.boundaries.visible = false;
+      if (g && !this.withinOverview()) {
         const dest = { lat: g.lat, lon: g.lon, d: this.focus.country ? 1600 : 3400, tilt: 0, bearing: 0 };
         this.goal = dest;
         this.world.nav.fly(dest, false);
@@ -521,14 +549,18 @@ export class GeographicExperience {
   private orient() {
     const region = this.obs.region,
       s = this.obs.studioState;
-    if (this.focus.boundary && !this.currentPlace())
+    if (s && !s.interior && s.models.length > 1 && s.focus < 0)
+      return "Erde · mehrere Raumbeispiele · idealisierte Schnitte";
+    const selectedModel = s?.models[Math.max(0, s.focus)];
+    if (this.focus.boundary && !this.currentPlace() && (!s || s.models.length === 1))
       return (
         "Erde · Grenzabschnitt PB2002 #" +
         this.focus.boundary +
         (s || region ? " · idealisierter Schnitt" : "")
       );
 
-    const stored = this.currentPlace();
+    const origin = this.currentPlace();
+    const stored = s && s.models.length > 1 && origin?.model !== selectedModel ? undefined : origin;
     const p =
       (region &&
       stored &&
@@ -537,11 +569,11 @@ export class GeographicExperience {
         (stored.site && stored.site === region.spec.site)
       )
         ? undefined
-        : stored) ?? (s && !s.interior ? places[referenceFor[s.models[0]]] : undefined);
+        : stored) ?? (s && !s.interior ? places[referenceFor[selectedModel!]] : undefined);
     const path = p
       ? "Erde › " + p.space + " › " + p.name
       : "Erde" + (this.focus.space ? " › " + this.focus.space : "");
-    if (s && s.models[0] === "wilson" && !s.interior) {
+    if (s && selectedModel === "wilson" && !s.interior) {
       const a = places[wilsonPlaces[Math.min(8, Math.floor(s.time * 8 + 0.0001))]];
       return "Erde › " + a.space + " › " + a.name + " · heutige Analogie";
     }
@@ -583,6 +615,8 @@ export class GeographicExperience {
       return (
         "Erde · Global · " + (this.obs.timeState?.model === "past" ? "Rekonstruktion" : "Zukunftsszenario")
       );
+    if ((this.world.mode === "nyos" || this.world.mode === "place") && !this.onLocalTerrain())
+      return "Erde · Globusansicht";
     if (this.world.mode === "nyos") return "Afrika › Kamerun › Nyos-See · Lokal";
     if (this.world.mode === "place") return "Erde › Deutschland › " + this.world.region.name + " · Lokal";
     return this.obs.atlasState ? "Erde · Global · Forschungsatlas" : "Erde · Global";
@@ -646,11 +680,19 @@ export class GeographicExperience {
     if (this.goal && !this.world.nav.flight && !this.matchesGoal() && !this.awaiting) {
       this.flight = undefined;
       this.goal = undefined;
+      if (this.focus.country) this.obs.maps.boundaries.visible = true;
       this.focus = {};
+    }
+    if (!this.awaiting && !this.restoring && !this.flight && !this.world.nav.flight &&
+        this.obs.mode === "map" && this.focus.overview && !this.withinOverview()) {
+      if (this.focus.country) this.obs.maps.boundaries.visible = true;
+      this.focus = {};
+      this.goal = undefined;
     }
     if (this.flight && !this.world.nav.flight && this.world.worldDrawn && this.matchesGoal()) {
       const done = this.flight;
       this.flight = undefined;
+      this.goal = undefined;
       done();
     }
     this.nationalBoundary.visible =
@@ -739,13 +781,14 @@ export class GeographicExperience {
     el("geo-crumb").hidden = anonymous && this.neutral;
     const title = el("geo-title");
     title.hidden = !ready || anonymous;
+    const globeOutsideSite = !this.obs.mode && (this.world.mode === "place" || this.world.mode === "nyos") && !this.onLocalTerrain();
     if (!title.hidden)
       text(
         title,
-        this.nationalBoundary.visible ? "Deutschland in Mitteleuropa" : modelTitle(this.obs, this.world),
+        this.nationalBoundary.visible ? "Deutschland in Mitteleuropa" : globeOutsideSite ? "Die Erde im Überblick" : modelTitle(this.obs, this.world),
       );
     for (const [id, value] of [
-      ["geo-clock", ready && !anonymous ? timeCaption(this.obs, this.world) : ""],
+      ["geo-clock", (ready || !!this.obs.timeState?.displayedTime) && !anonymous && !globeOutsideSite ? timeCaption(this.obs, this.world) : ""],
       [
         "geo-legend",
         ready && !anonymous

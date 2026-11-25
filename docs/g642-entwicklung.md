@@ -8,6 +8,8 @@ Während einer Kamerafahrt oder beim Laden erscheint „Ortswechsel …“. Die 
 
 Die nationale Ansicht zeigt die generalisierte Staatsgrenze als helle Linie auf der Erde. Die sechs Ringe mit 562 Stützpunkten stammen aus Natural Earth 1:50m, Version 5.1.2, ADM0_A3 DEU. Längen- und Breitengrade wurden auf vier Nachkommastellen gerundet. Die SHA-256 der Quelldatei lautet `3e458fc036ad0a66411f2c1e6cac49c5d7bfb81cb1123bc513b22511a2b7fdeb`. Natural Earth stellt die Daten gemeinfrei bereit. [Originaldaten](https://github.com/nvkelso/natural-earth-vector/blob/v5.1.2/geojson/ne_50m_admin_0_countries.geojson) · [Nutzungsbedingungen](https://www.naturalearthdata.com/about/terms-of-use/)
 
+Auch bei einer wiederhergestellten Deutschlandansicht folgt die Ortsangabe der freien Kamera. Verlässt der Bildmittelpunkt den nationalen Ausschnitt, wechselt die Anzeige zur Globusansicht. Der Mehrfachvergleich weist mehrere Raumbeispiele aus. Beim Fokussieren eines Schnitts erscheint dessen eigener geographischer Bezug. Die geologische Uhr verwendet das zuletzt vollständig gezeichnete Zeitbild.
+
 ## Unterrichtsansicht
 
 Die obere Zeile ordnet den Ort ein. Darunter steht der fachliche Gegenstand. Beim Beobachten bleibt der Raum sichtbar. „Beobachten ohne Ort“ blendet ihn ebenfalls aus. Die Zeitreise nennt das Jahr im Hauptbild. In zukünftigen Darstellungen stehen Szenarioname und hypothetischer Charakter direkt am Bild. Qualitative Prozesse verwenden normierte Modellphasen. Am Rücken ist der Zeitraum auf die im Modell festgelegten 1,2 Millionen Jahre bezogen.
