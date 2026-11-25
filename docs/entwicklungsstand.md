@@ -2,7 +2,7 @@
 
 ## G6.3.1 · Scientific Correction
 
-Grundlage ist G6.3 aus PR 19, Commit `55cbefc87e07b501fb8745212f534f0967988d9f`. Der Branch und seine vier geprüften Produkte sind als Rückfallstand gesichert. Die Korrektur betrifft die Entstehung von Schmelze, ihre räumliche Darstellung und die reine Präsentationsoberfläche. Fachbegriffe, Beobachtungsmodus, Erklärfokus und Favoriten bleiben bedienbar. Die Zeitreise aktualisiert wiederkehrende Beschriftungen nur bei einer Änderung.
+Grundlage ist G6.3 aus PR 19, Commit `55cbefc87e07b501fb8745212f534f0967988d9f`. Der Branch und seine vier geprüften Produkte sind als Rückfallstand gesichert. Die Korrektur betrifft die Entstehung von Schmelze, ihre räumliche Darstellung und die reine Präsentationsoberfläche. Fachbegriffe, Beobachtungsmodus, Erklärfokus und Favoriten bleiben bedienbar. Die Zeitreise aktualisiert wiederkehrende Beschriftungen nur bei einer Änderung. In den vier Zukunftsszenarien erzeugen die publizierten Rotationen die Kontinentalblöcke und die gesonderten Vektordaten die Grenzen. Die Zukunftsansicht spart das Dekodieren und Übertragen redundanter Raster ein. Bei schnellem Szenenwechsel gibt die App regionales Grafikmaterial nach Abschluss der Shader-Vorbereitung frei. Ein gezielter Wechseltest prüft auch die anschließende Speicherfreigabe. Vier fotografische Vergleiche in gleichen Modellzuständen prüfen das Ergebnis.
 
 Die tatsächlichen Aufnahmen und Messwerte der jeweiligen Version stehen im Sichtprüfungspaket. Die Galerie lässt sich nach dem Entpacken über `Sichtpruefung.html` öffnen. [Fachprüfung und Modellgrenzen](g631-fachpruefung.md)
 

@@ -10,14 +10,15 @@ type Evidence={name:string;kind:string;coords:[number,number][]};
 const fragment=`
 uniform sampler2D first,second;uniform float blend,future,rigid;varying vec2 coord;varying vec3 norm;
 void main(){
- vec3 a=texture2D(first,coord).rgb,b=texture2D(second,coord).rgb;
- float land=mix(a.x,b.x,blend),boundary=mix(a.y,b.y,blend);
  float lat=abs(coord.y-.5)*2.;float light=clamp(dot(normalize(norm),normalize(vec3(-.4,.6,1.))),0.,1.);
  vec3 sea=mix(vec3(.048,.17,.22),vec3(.11,.27,.32),light);
+ float rim=pow(1.-abs(normalize(norm).z),4.);
+ if(future>.5){gl_FragColor=vec4(sea*(.72+.32*light)+vec3(.11,.21,.24)*rim,1.);return;}
+ vec3 a=texture2D(first,coord).rgb,b=texture2D(second,coord).rgb;
+ float land=mix(a.x,b.x,blend),boundary=mix(a.y,b.y,blend);
  vec3 earth=mix(vec3(.57,.53,.355),vec3(.68,.72,.52),lat*.57+light*.36);
  earth=mix(earth,earth*vec3(1.10,.91,.78),future);
  vec3 col=mix(sea,earth,land*(1.-future)*(1.-rigid));col=mix(col,vec3(.66,.48,.33),mix(a.b,b.b,blend)*.23*(1.-future));col=mix(col,vec3(.89,.74,.51),boundary*.88);
- float rim=pow(1.-abs(normalize(norm).z),4.);
  gl_FragColor=vec4(col*(.72+.32*light)+vec3(.11,.21,.24)*rim,1.);
 }`;
 function globe(){
@@ -64,13 +65,27 @@ export class TimeGlobe {
     if(this.disposed)return;this.models=def.models;
     // Cartographic identifiers follow the ten rigid bodies in the rotation file.
     const tones:Record<number,number[]>={101:[.78,.61,.43],102:[.88,.75,.52],201:[.61,.68,.47],301:[.71,.66,.51],302:[.71,.52,.42],701:[.85,.68,.42],702:[.58,.67,.57],801:[.78,.64,.54],802:[.62,.58,.47],803:[.86,.78,.62]};
-    for(const entry of def.index){const a=[],ns=[];for(let i=entry.start;i<entry.start+entry.count;i++){
-      const v=position(coords[2*i+1]/100,coords[i*2]/100,27);a.push(v.x,v.y,v.z);v.normalize();ns.push(v.x,v.y,v.z);}
-      const g=new T.BufferGeometry();g.setAttribute("position",new T.Float32BufferAttribute(a,3));g.setAttribute("normal",new T.Float32BufferAttribute(ns,3));
+    for(const entry of def.index){
+      const positions:number[]=[], normals:number[]=[], indices:number[]=[];
+      const vertices=new Map<number,number>();
+      for(let j=entry.start;j<entry.start+entry.count;j++){
+        const lon=coords[2*j],lat=coords[2*j+1];
+        // One source coordinate has one radial normal; cartographic seams retain distinct source IDs.
+        const key=(lon+18000)*18001+lat+9000;
+        let index=vertices.get(key);
+        if(index===undefined){
+          index=vertices.size;vertices.set(key,index);
+          const point=position(lat/100,lon/100,27);
+          positions.push(point.x,point.y,point.z);point.normalize();normals.push(point.x,point.y,point.z);
+        }
+        indices.push(index);
+      }
+      const g=new T.BufferGeometry();g.setIndex(indices);
+      g.setAttribute("position",new T.Float32BufferAttribute(positions,3));g.setAttribute("normal",new T.Float32BufferAttribute(normals,3));
       // Integrate the published triangulation by surface area; vertex density alone biases the centre.
       const sum=new T.Vector3(),u=new T.Vector3(),v=new T.Vector3(),w=new T.Vector3();let area=0;
       const pos=g.attributes.position;
-      for(let i=0;i+2<pos.count;i+=3){u.fromBufferAttribute(pos,i);v.fromBufferAttribute(pos,i+1);w.fromBufferAttribute(pos,i+2);
+      for(let i=0;i+2<indices.length;i+=3){u.fromBufferAttribute(pos,indices[i]);v.fromBufferAttribute(pos,indices[i+1]);w.fromBufferAttribute(pos,indices[i+2]);
         const weight=v.clone().sub(u).cross(w.clone().sub(u)).length();sum.addScaledVector(u.clone().add(v).add(w).normalize(),weight);area+=weight;}
       this.centres.push(sum.normalize());this.weights.push(area);this.codes.push(entry.pid);
       const mat=new T.ShaderMaterial({side:T.DoubleSide,depthWrite:false,uniforms:{tone:{value:new T.Vector3().fromArray(tones[entry.pid])}},
@@ -97,8 +112,16 @@ export class TimeGlobe {
     this.cache.set(key,entry);entry.promise.then(texture=>{entry.texture=texture;if(this.disposed)texture.dispose();else{texture.colorSpace=T.NoColorSpace;texture.wrapS=T.RepeatWrapping;texture.generateMipmaps=false;texture.minFilter=T.LinearFilter;}}).catch(()=>{this.cache.delete(key);});return entry.promise;
   }
   private prepare(model:Scenario,idx:number){
-    const year=Math.min(Math.abs(this.year),scenarios[model].end),lo=Math.floor(year/5)*5,hi=Math.min(scenarios[model].end,lo+5),key=model+"-"+lo+":"+model+"-"+hi;
     const view=idx?this.other:this.primary;
+    if(model!=="past"){
+      // Published rotations draw the land; optional boundaries are separate vector objects.
+      // The 184 future rasters have zero boundary and deformation channels.
+      this.channels[idx]=this.displayed[idx]=model;
+      view.material.uniforms.future.value=1;
+      view.sphere.visible=true;
+      return;
+    }
+    const year=Math.min(Math.abs(this.year),scenarios[model].end),lo=Math.floor(year/5)*5,hi=Math.min(scenarios[model].end,lo+5),key=model+"-"+lo+":"+model+"-"+hi;
     if(this.displayed[idx]===key){this.channels[idx]=key;view.material.uniforms.blend.value=(year-lo)/5;return;}
     if(this.channels[idx]===key)return;this.channels[idx]=key;
     void Promise.all([this.load(model+"-"+lo),this.load(model+"-"+hi)]).then(([a,b])=>{

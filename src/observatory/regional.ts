@@ -521,7 +521,22 @@ export class RegionalScene {
   }
   get focus(){return [this.faultModel?.hx??0,this.ui.focus.value,0];}
   get epicenter(){return [this.faultModel?.hx??0,this.nearSurface,0];}
+  private preparingShaders=false;
+  private releaseAfterShaders=false;
+  async warmShaders(renderer:T.WebGLRenderer){
+    this.preparingShaders=true;
+    try{await renderer.compileAsync(this.scene,this.camera);}
+    finally{
+      this.preparingShaders=false;
+      if(this.releaseAfterShaders)this.dispose();
+    }
+  }
   dispose(){
+    if(this.disposed)return;
+    if(this.preparingShaders){
+      // Three.js still polls each material's program until compileAsync settles.
+      this.releaseAfterShaders=true;this.orbit.enabled=false;return;
+    }
     this.disposed=true;this.local?.dispose();this.orbit.dispose();const gs=new Set<T.BufferGeometry>(),ms=new Set<T.Material>();
     this.scene.traverse(o=>{const m=o as T.Mesh;if(m instanceof T.InstancedMesh)m.dispose();if(m.geometry)gs.add(m.geometry);if(m.material)for(const a of Array.isArray(m.material)?m.material:[m.material])ms.add(a);});
     for(const g of gs)g.dispose();for(const m of ms)m.dispose();this.colorMap?.dispose();this.normalMap?.dispose();this.roughMap?.dispose();this.sky.dispose();this.contextMap?.dispose();this.envelope?.dispose();this.relief?.dispose();this.sunlight.shadow.dispose();

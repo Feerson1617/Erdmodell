@@ -100,7 +100,7 @@ export class Observatory {
     this.enrich(reg);const rev=this.revision;this.draw();
     try{
       await reg.init();if(rev!==this.revision)return;
-      reg.ready=false;const start=performance.now();reg.prepareRender(this.world.gl);await this.world.gl.compileAsync(reg.scene,reg.camera);
+      reg.ready=false;const start=performance.now();reg.prepareRender(this.world.gl);await reg.warmShaders(this.world.gl);
       if(rev!==this.revision)return;reg.timings.warmShaderMs=performance.now()-start;reg.ready=true;this.draw();
     }
     catch{if(rev===this.revision){reg.error="Das lokale Gelände konnte nicht geladen werden.";this.draw();}}
@@ -348,7 +348,7 @@ export class Observatory {
       if(this.revision!==token){next.dispose();return;}
       Object.assign(next,settings);next.playing=playing;next.analysis=Boolean(this.profileWanted&&next.water);
       next.cameraView(!next.water&&["water","ocean","coast"].includes(view)?"cut":view);next.update(0);
-      if(!cached){const compiling=performance.now();await this.world.gl.compileAsync(next.scene,next.camera);next.timings.warmShaderMs=performance.now()-compiling;}
+      if(!cached){const compiling=performance.now();await next.warmShaders(this.world.gl);next.timings.warmShaderMs=performance.now()-compiling;}
       if(this.revision!==token){next.dispose();return;}
       this.spare?.dispose();this.spare=old;old.orbit.enabled=false;this.region=next;this.switching=false;
       next.timings.localSwitchMs=performance.now()-start;next.timings.reused=Number(Boolean(cached));this.draw();

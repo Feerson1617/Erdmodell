@@ -68,6 +68,12 @@ for version in ['G6.3','G6.3.1']:
     for running in [True,False]:
         samples=[r for r in perf['future'] if r['version']==version and r['running']==running]
         report.append(f"| {version} | {('animiert' if running else 'pausiert')} | {median(r['log']['renderedFps'] for r in samples):.1f} | {median(r['log']['fps'] for r in samples):.1f} | {median(r['changes'] for r in samples)} |")
+lifetime=json.loads((evidence/'Szenenfreigabe.json').read_text())
+assert lifetime['complete'] and lifetime['released']>0 and not lifetime['errors']
+report+=['',f"Beim Wechsel während der Grafikvorbereitung blieb das Material bis zum Abschluss verfügbar. Anschließend wurden {lifetime['released']} Materialfreigaben registriert. Der anschließende Wechsel nach Japan gelang."]
+pixel=json.loads((evidence/'Zukunft-Bildvergleich.json').read_text())
+assert pixel['complete'] and len(pixel['cases'])==4
+report+=['','Die vier Zukunftsmodelle wurden mit identischer Perspektive und Modellzeit gegen G6.3 fotografisch verglichen. Je nach Fall waren publizierte Grenzlinien ein- oder ausgeblendet. Die Renderergebnisse stehen im Rohprotokoll Zukunft-Bildvergleich.json. Die Kontinentalpolygone und die gesonderten Grenzlinien bleiben vollständig erhalten. Die Zukunftsansicht lädt die ungenutzten Rasterzeitschnitte nicht mehr.']
 report+=['','## Dauerlauf und Auslieferung','',f"Die vom DMG installierte App lief {app['classroom']['elapsedMs']/60000:.1f} Minuten auf {native['hardware']['cpu']} unter macOS {native['hardware']['macOS']}. Nach dem Neustart wurde die gespeicherte Unterrichtsansicht geprüft. {assets['resources']} Ressourcen stimmen zwischen App und Einzeldatei byteweise überein.",'','| Full-HD-Szene | Median neu gerenderte Bilder/s |','|---|---:|']
 for scene in sorted({v['scene'] for v in app['classroom']['samples']}):
     values=[v['renderedFps'] for v in app['classroom']['samples'] if v['scene']==scene and v['width']==1920]
