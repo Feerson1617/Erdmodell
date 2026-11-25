@@ -256,7 +256,8 @@ export class Stage {
     }
     this.gl.setRenderTarget(null);
     this.gl.setScissorTest(false);
-    this.gl.setViewport(0, 0, w, h);
+    const ratio = this.gl.getPixelRatio();
+    this.gl.setViewport(0, 0, cv.width / ratio, cv.height / ratio);
     if (
       this.scene.children.some(
         (o) => o instanceof T.DirectionalLight && o.castShadow,

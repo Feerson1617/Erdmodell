@@ -42,6 +42,7 @@ for path in [web,mac]:
     assert all(r["foreground"]>.008 for r in proof["frames"])
     assert {(r["w"],r["h"]) for r in proof["sizes"]}==sizes
     assert all(not r["clipped"] and not r["covered"] and r["scroll"]<=1 for r in proof["sizes"])
+    assert proof["resizeDraws"]["draws"]>=6 and proof["resizeDraws"]["mismatches"]==[]
     proofs.append(proof)
 assert p["platform"]=="darwin" and p["arch"]=="arm64"
 films=proofs[0]["movies"]
@@ -61,6 +62,7 @@ rows=[]
 for i,row in enumerate(b["sizes"]):
     rows.append([f"{row['w']} × {row['h']}",f"{a['sizes'][i]['foreground']:.1%}",f"{row['foreground']:.1%}",f"{proofs[1]['sizes'][i]['foreground']:.1%}"])
 lines+=md_table(["Fenster","G6.5 HTML","G6.5.1 HTML","G6.5.1 App"],rows)
+lines+=["",f"Bei {proofs[0]['resizeDraws']['draws']} instanzierten Zeichenaufrufen in der HTML und {proofs[1]['resizeDraws']['draws']} in der App stimmten der tatsächliche Viewport, der Zeichenpuffer und das aktuelle Seitenverhältnis während der Fensterfolge überein."]
 lines+=["","Die sechs Größen, laufende und pausierte Größenwechsel, Vollbild und Rückkehr, freie Kamera, schnelle Modellwechsel, Rücknavigation, Diagramme und gespeicherte Ansichten wurden bedient. Die nativen Fenstergrößen wurden am BrowserWindow eingestellt und im Renderer kontrolliert.","","## Fachliche Prüfungen","","Die vier Frontankünfte wurden an den Koordinaten der tatsächlich bewegten Fronten und Sensoren geprüft. Bei allen sechs Bruchtypen wurden die Bewegungsrichtungen der beiden Materialmarker gemessen. Für den Standortvergleich protokollieren die Produkttests die unterschiedliche Auslenkung der modellierten Oberflächen. Die Fachprüfung enthält unabhängige Rechenwerte, Toleranzen und Quellenbezüge.",""]
 lines+=md_table(["Station","Wellentyp","Referenzzeit","Differenz Front–Sensor in Modelleinheiten"],[[f"{r['km']} km",r["wave"],f"{r['expectedSeconds']:.2f} s",f"{r['dx']:.4f}"] for r in proofs[1]["stations"]])
 lines+=["","## Bewegte Szenen unter identischen Bedingungen","",f"Chromium {a['engine']}, Unterrichtsprofil, 1.366 × 768. Die Aufnahme der aktiven WebGL-Fläche bestätigt vor jeder Leistungsmessung die sichtbare Geometrie. Die Protokolle enthalten Ladezeiten, JS-Heap, GPU-Ressourcenzähler, DOM-Aktualisierungen und Aufwand der instrumentierten Diagrammbefehle.",""]

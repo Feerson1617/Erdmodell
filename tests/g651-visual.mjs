@@ -197,6 +197,39 @@ export async function corrections(page, out, { app, film = false } = {}) {
     await preset("stations");
     await phase(0.28);
     await check("Stationen-regulaer", true);
+    // Inspect the very first instanced draws during a resize, including frames between compositor captures.
+    await page.evaluate(() => {
+      const proto = WebGL2RenderingContext.prototype,
+        original = proto.drawElementsInstanced;
+      const mismatches = [];
+      let draws = 0;
+      window.finishResizeAudit = () => {
+        proto.drawElementsInstanced = original;
+        return { draws, mismatches };
+      };
+      proto.drawElementsInstanced = function (...args) {
+        const c = this.canvas;
+        if (c.id === "earth") {
+          draws++;
+          const v = this.getParameter(this.VIEWPORT),
+            w = this.drawingBufferWidth,
+            h = this.drawingBufferHeight;
+          if (
+            v[0] !== 0 ||
+            v[1] !== 0 ||
+            v[2] !== w ||
+            v[3] !== h ||
+            Math.abs(w / h - c.clientWidth / c.clientHeight) > 0.005
+          )
+            mismatches.push({
+              buffer: [w, h],
+              viewport: Array.from(v),
+              layout: [c.clientWidth, c.clientHeight],
+            });
+        }
+        return original.apply(this, args);
+      };
+    });
     for (const [w, h] of sizes) {
       await resize(w, h);
       const row = await check("Fenster-" + w, true);
@@ -271,6 +304,9 @@ export async function corrections(page, out, { app, film = false } = {}) {
     );
     await resize(1366, 768);
     await check("Fensterrueckkehr");
+    results.resizeDraws = await page.evaluate(() => window.finishResizeAudit());
+    assert.ok(results.resizeDraws.draws >= sizes.length);
+    assert.deepEqual(results.resizeDraws.mismatches, []);
     await drag();
     await check("Kamerabewegung");
     await topic("park");
@@ -472,9 +508,10 @@ export async function corrections(page, out, { app, film = false } = {}) {
     await arrived("particles");
     await check("Schnellwechsel");
     if (film) {
-      const movie = async (name, perform) => {
+      const movie = async (name, perform, resizeFilm = false) => {
         const v = await screencast(page, out, "G651-" + name, perform, {
           fixedFrame: true,
+          everyNthFrame: resizeFilm ? 1 : 2,
         });
         assert.ok(v.seconds >= 18 && v.frames >= 35, JSON.stringify(v));
         results.movies.push(v);
@@ -495,33 +532,37 @@ export async function corrections(page, out, { app, film = false } = {}) {
         await preset("sites");
         await playThrough("sites");
       });
-      await movie("Fenster-und-Einzelfreigabe", async () => {
-        await topic("particles");
-        await preset("stations");
-        await phase(0.22);
-        await page.waitForTimeout(2200);
-        await resize(900, 600);
-        await page.waitForTimeout(2200);
-        await resize(1366, 768);
-        await drag();
-        await page.waitForTimeout(1600);
-        await topic("strike");
-        await select("geo-info", "observe");
-        await page.waitForTimeout(1500);
-        await release("Hypozentrum");
-        await page.waitForTimeout(2200);
-        await release("Epizentrum");
-        await drag();
-        await page.waitForTimeout(2000);
-        await release("Störungsfläche");
-        await phase(0.39);
-        await click("geo-play");
-        await page.waitForTimeout(4500);
-        await phase(0.6);
-        await page.waitForTimeout(2400);
-        await click("geo-clear");
-        await page.waitForTimeout(2300);
-      });
+      await movie(
+        "Fenster-und-Einzelfreigabe",
+        async () => {
+          await topic("particles");
+          await preset("stations");
+          await phase(0.22);
+          await page.waitForTimeout(2200);
+          await resize(900, 600);
+          await page.waitForTimeout(2200);
+          await resize(1366, 768);
+          await drag();
+          await page.waitForTimeout(1600);
+          await topic("strike");
+          await select("geo-info", "observe");
+          await page.waitForTimeout(1500);
+          await release("Hypozentrum");
+          await page.waitForTimeout(2200);
+          await release("Epizentrum");
+          await drag();
+          await page.waitForTimeout(2000);
+          await release("Störungsfläche");
+          await phase(0.39);
+          await click("geo-play");
+          await page.waitForTimeout(4500);
+          await phase(0.6);
+          await page.waitForTimeout(2400);
+          await click("geo-clear");
+          await page.waitForTimeout(2300);
+        },
+        true,
+      );
       await select("geo-info", "explain");
       await movie("Japan-zur-Ueberwachung", async () => {
         await topic("distribution");

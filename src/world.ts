@@ -268,12 +268,14 @@ export class World {
     this.sizeDirty = true;
   }
   private applySize() {
-    this.sizeDirty = false;
     const w = this.canvas.clientWidth,
       h = this.canvas.clientHeight;
     if (!w || !h) return;
     const ratio = this.gl.getPixelRatio();
-    if (this.canvas.width !== Math.floor(w * ratio) || this.canvas.height !== Math.floor(h * ratio)) {
+    const changed = this.canvas.width !== Math.floor(w * ratio) || this.canvas.height !== Math.floor(h * ratio);
+    if (!changed && !this.sizeDirty) return;
+    this.sizeDirty = false;
+    if (changed) {
       this.gl.setSize(w, h, false);
       graphics.surfaceRevision++;
     }
@@ -931,7 +933,8 @@ export class World {
     this.frameMs = this.last ? now - this.last : 0;
     const dt = clamp((now - this.last) / 1000, 0.001, 0.12);
     this.last = now;
-    if (this.sizeDirty) this.applySize();
+    // Layout can change before ResizeObserver runs. Size the drawing buffer before any scene projects or draws.
+    this.applySize();
     this.frames++;
     this.frameCount++;
     if (now - this.fpsStart >= 900) {

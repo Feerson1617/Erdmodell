@@ -1,6 +1,6 @@
 # Installation und Geräteprüfung
 
-Für G6.5 heißen die aktuellen Pakete `GeoRisiko-G6.5.1-macOS-arm64.dmg` und `GeoRisiko-G6.5.1-macOS-arm64-app.zip`. Die separate Datei `GeoRisiko-G6.5.1-Web-Test.html` öffnet sich nach dem Herunterladen direkt im Browser. Die App verwendet eine Ad-hoc-Signatur. Eine Schulgeräteverwaltung kann die lokale Ausführung einschränken.
+Für G6.5.1 heißen die aktuellen Pakete `GeoRisiko-G6.5.1-macOS-arm64.dmg` und `GeoRisiko-G6.5.1-macOS-arm64-app.zip`. Die separate Datei `GeoRisiko-G6.5.1-Web-Test.html` öffnet sich nach dem Herunterladen direkt im Browser. Die App verwendet eine Ad-hoc-Signatur. Eine Schulgeräteverwaltung kann die lokale Ausführung einschränken.
 
 ## Unterrichtsgerät
 
