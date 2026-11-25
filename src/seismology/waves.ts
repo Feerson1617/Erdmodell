@@ -184,7 +184,7 @@ export function earthPaths(s: Stage) {
       );
   for (const [r, c, z, name] of [
     [R, 0x799d9a, -0.09, "Kruste"],
-    [R * 0.986, 0x937158, -0.08, "Mantel"],
+    [(6371 - 35) * scale, 0x937158, -0.08, "Mantel"],
     [(6371 - 2891) * scale, 0xe2a459, -0.06, "Flüssiger äußerer Kern"],
     [1217 * scale, 0xf6d08a, -0.04, "Innerer Kern"],
   ] as const) {
@@ -213,6 +213,12 @@ export function earthPaths(s: Stage) {
         0.1,
       ),
     );
+    if (p.phase === "P" && p.angle === 93)
+      s.label(pts[Math.floor(pts.length / 3)], "P · Druckwelle");
+    if (p.phase === "S")
+      s.label(pts[Math.floor(pts.length / 3)], "S · Scherwelle");
+    if (p.phase === "SKS")
+      s.label(pts[Math.floor(pts.length / 2)], "K · Druckwelle im Kern");
     const c = p.phase.startsWith("S") ? colors.s : colors.p;
     if (p.phase === "SKS") {
       let start = 0;

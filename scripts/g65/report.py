@@ -64,6 +64,10 @@ for filename in [
     "mac-installation.md",
 ]:
     (docs / filename).write_bytes((Path("docs") / filename).read_bytes())
+for source in [Path("scripts/g65/reference.py"), *Path("public/licenses").glob("*")]:
+    target = root / source
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_bytes(source.read_bytes())
 seismic = [read(d / "Seismologie.json") for d in (web,mac)]
 expected={(740,530),(900,600),(1280,720),(1366,768),(1920,1080),(2560,1440)}
 for directory,result in zip((web,mac),seismic):
@@ -197,7 +201,7 @@ parts.append("<h2>Einzelbilder und Smartboardansichten</h2><section>")
 parts.extend(picture(p, p.stem) for p in sorted(web.glob("*.jpg")))
 parts.append("</section><h2>Protokolle</h2><ul>")
 for p in sorted(root.rglob("*")):
-    if p.suffix in {".json", ".log", ".md"}:
+    if p.suffix in {".json", ".log", ".md", ".pdf", ".txt", ".py"}:
         parts.append(
             f'<li><a href="{p.relative_to(root).as_posix()}">{p.relative_to(root).as_posix()}</a></li>'
         )

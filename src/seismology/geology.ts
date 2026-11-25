@@ -241,7 +241,7 @@ export function faultStudy(s: Stage) {
     a.needsUpdate = true;
     ring.frustumCulled = false;
   });
-  s.label(epi, "Epizentrum");
+  s.label(epi, "Epizentrum", "senkrecht über dem Herd");
   s.label(origin, "Hypozentrum", "Beginn des Bruchs");
   s.label(vec(-2.3, 0, -0.44), "Geländemarker");
   s.explain((t) =>
@@ -495,7 +495,7 @@ export function intrusion(s: Stage) {
       );
     });
   });
-  s.label(reservoir.position, "Schmelzreiche Zone");
+  s.label(reservoir.position, "Schmelzreiche Zone", "Magma im Gestein");
   s.label(vec(0.27, -0.55, 0.2), "Gang", "", () => active);
   if (s.view !== "quiet")
     s.label(vec(0.8, -0.32, 0.15), "Bruchzone", "", (t) => t > 0.26);

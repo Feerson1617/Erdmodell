@@ -219,11 +219,19 @@ export class Stage {
       now = performance.now();
     if (!this.playing || now - this.lastLayout > 75 || !this.lastKey) {
       this.lastLayout = now;
+      if (this.plot) this.plot.hidden = hidden;
       const text = this.statement(this.time);
       this.caption.hidden = depth !== "explain" || !text;
       if (this.caption.textContent !== text) this.caption.textContent = text;
       const used: { x: number; y: number; right: number; bottom: number }[] =
         [];
+      if (!this.caption.hidden)
+        used.push({
+          x: this.caption.offsetLeft,
+          y: this.caption.offsetTop,
+          right: this.caption.offsetLeft + this.caption.offsetWidth,
+          bottom: this.caption.offsetTop + this.caption.offsetHeight,
+        });
       const pts = this.labels.map((l) => {
         const p = l.point.clone().project(this.camera);
         return { x: ((p.x + 1) * w) / 2, y: ((1 - p.y) * h) / 2 };
@@ -240,7 +248,9 @@ export class Stage {
         l.node.hidden = !visible;
         l.leader.style.display = visible ? "" : "none";
         if (!visible) return;
-        l.node.title = depth === "explain" ? l.detail : "";
+        const wording =
+          depth === "explain" && l.detail ? l.name + " · " + l.detail : l.name;
+        if (l.node.textContent !== wording) l.node.textContent = wording;
         const a = l.node.offsetWidth,
           b = l.node.offsetHeight;
         const choices = [

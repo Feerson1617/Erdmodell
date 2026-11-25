@@ -70,6 +70,7 @@ try {
           path: join(out, name + ".jpg"),
           type: "jpeg",
           quality: 90,
+          timeout: 150000,
         });
       };
       const open = async (id) => {

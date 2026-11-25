@@ -835,7 +835,7 @@ export class GeographicExperience {
     }
     const note = el("geo-model-limit");
     const id=this.obs.lessonView;
-    const seismicLimit=id && this.obs.study ? (id==="record"?"Originalmessung · EarthScope / IU · keine Modellkurve":familyOf(id)==="section"?"ComCat · M ≥ 4,5 · 2019–2023 · projizierte Herdorte":familyOf(id)==="core"?"IASP91 · berechnete Laufwege · Quelle in 15 km Tiefe":familyOf(id)==="magma"?"Möglicher Modellverlauf · Ursache und Eruptionszeitpunkt bleiben offen":"Anschauungsmodell · Bewegung didaktisch überhöht"):"";
+    const seismicLimit=id && this.obs.study ? (id==="record"?"Originalmessung · EarthScope / IU · keine Modellkurve":familyOf(id)==="section"?"ComCat · M ≥ 4,5 · 2019–2023 · Profilprojektion · Tiefe 1,33-fach überhöht":familyOf(id)==="core"?"IASP91 · berechnete Laufwege · Quelle in 15 km Tiefe":familyOf(id)==="magma"?"Möglicher Modellverlauf · Ursache und Eruptionszeitpunkt bleiben offen":"Anschauungsmodell · Bewegung didaktisch überhöht"):"";
     const limit = (id&&r?.ruptureAnalysis&&r.spec.theme==="earthquake" ? (this.depth==="explain"?regionalPhase(r.progress)+" · ":"")+"Schematisches Ereignis · Versatz überhöht" : "") || seismicLimit ||
       (this.focus.overview && !this.focus.country && this.obs.mode === "map" && !this.obs.atlasState
         ? "Heute gleichzeitig · Pfeile: relative Bewegungsrichtung nach PB2002 · unterschiedliche natürliche Geschwindigkeiten"
