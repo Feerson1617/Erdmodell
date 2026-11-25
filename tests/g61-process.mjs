@@ -14,7 +14,7 @@ try{
   await p.addInitScript(()=>{window.__THREE_DEVTOOLS__=new EventTarget();window.__THREE_DEVTOOLS__.addEventListener('observe',({detail:r})=>{
     if(r.isWebGLRenderer){const draw=r.render.bind(r);r.render=(s,c)=>{window.regionDraw=s;return draw(s,c);};}
   });});
-  await p.goto(pathToFileURL(resolve('artifacts/GeoRisiko-G6.2-Web-Test.html')).href);
+  await p.goto(pathToFileURL(resolve('artifacts/GeoRisiko-G6.3-Web-Test.html')).href);
   await p.waitForFunction(()=>window.geoObservatory?.().ready);
   const ready=()=>p.waitForFunction(()=>{const w=window.geoObservatory(),r=w.observatory;return !w.flying&&r.mode==='regional'&&r.ready&&r.viewSettled;});
   const paint=()=>p.evaluate(()=>new Promise(done=>requestAnimationFrame(()=>requestAnimationFrame(done))));

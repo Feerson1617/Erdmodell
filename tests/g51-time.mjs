@@ -10,7 +10,7 @@ const b=await chromium.launch(process.env.G6_NATIVE_GPU?{channel:"chrome",headle
 try{
  const page=await b.newPage({viewport:{width:1440,height:900},reducedMotion:"reduce"});
  const errors=[];page.on("pageerror",e=>errors.push(String(e)));page.on("console",m=>{if(m.type()==="error")errors.push(m.text());});
- await page.goto(pathToFileURL(resolve(process.env.G51_HTML||"artifacts/GeoRisiko-G6.2-Web-Test.html")).href);
+ await page.goto(pathToFileURL(resolve(process.env.G51_HTML||"artifacts/GeoRisiko-G6.3-Web-Test.html")).href);
  await page.click("#nav-plates");await page.click("#g-time");
  const get=()=>page.evaluate(()=>window.geoObservatory().observatory);
  await page.waitForFunction(()=>window.geoObservatory().observatory.rigid);
