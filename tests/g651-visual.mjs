@@ -511,7 +511,7 @@ export async function corrections(page, out, { app, film = false } = {}) {
       const movie = async (name, perform, resizeFilm = false) => {
         const v = await screencast(page, out, "G651-" + name, perform, {
           fixedFrame: true,
-          everyNthFrame: resizeFilm ? 1 : 2,
+          resizeFilm,
         });
         assert.ok(v.seconds >= 18 && v.frames >= 35, JSON.stringify(v));
         results.movies.push(v);

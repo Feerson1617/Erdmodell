@@ -6,43 +6,184 @@ import {tmpdir} from "node:os";
 import {spawnSync} from "node:child_process";
 
 
-export async function screencast(page,dir,name,perform,options={}) {
-  const scratch=await mkdtemp(join(tmpdir(),"georisiko-film-")),cdp=await page.context().newCDPSession(page);
-  const {fixedFrame=false,...capture}=options;
-  const frames=[],writes=[];
-  cdp.on("Page.screencastFrame",ev=>{const file=String(frames.length).padStart(6,"0")+".jpg";
-    frames.push({file,time:ev.metadata.timestamp,size:[ev.metadata.deviceWidth,ev.metadata.deviceHeight].join("x")});writes.push(writeFile(join(scratch,file),Buffer.from(ev.data,"base64")));
-    void cdp.send("Page.screencastFrameAck",{sessionId:ev.sessionId}).catch(()=>{});
-  });
-  await cdp.send("Page.startScreencast",{format:"jpeg",quality:76,maxWidth:960,maxHeight:600,everyNthFrame:2,...capture});
-  try{await page.waitForTimeout(320);await perform();await page.waitForTimeout(480);}
-  finally{await cdp.send("Page.stopScreencast");await cdp.detach();await Promise.all(writes);}
-  assert.ok(frames.length>=5,name+" sichtbare Filmframes");
-  const fixedFilter="scale=960:540:force_original_aspect_ratio=decrease,pad=960:540:(ow-iw)/2:(oh-ih)/2,setsar=1";
-  if(fixedFrame && frames.some(frame=>frame.size!==frames[0].size)){
-    // Encode each source size to a common raster before joining its original timestamps.
-    // Reinitializing FFmpeg's output filter on the live timeline can discard a whole still interval.
-    for(let first=0;first<frames.length;){
-      let end=first+1;
-      while(end<frames.length && frames[end].size===frames[first].size)end++;
-      const converted=spawnSync("ffmpeg",["-loglevel","error","-y","-start_number",String(first),"-i",join(scratch,"%06d.jpg"),"-frames:v",String(end-first),"-vf",fixedFilter,"-fps_mode","passthrough","-start_number",String(first),join(scratch,"fixed-%06d.png")]);
-      assert.equal(converted.status,0,String(converted.stderr));
-      for(let i=first;i<end;i++)frames[i].file="fixed-"+String(i).padStart(6,"0")+".png";
-      first=end;
+export async function screencast(page, dir, name, perform, options = {}) {
+  const scratch = await mkdtemp(join(tmpdir(), "georisiko-film-"));
+  const { fixedFrame = false, resizeFilm = false, ...capture } = options;
+  const frames = [];
+  const run = async () => {
+    await page.waitForTimeout(320);
+    await perform();
+    await page.waitForTimeout(480);
+  };
+  if (resizeFilm) {
+    // Chrome's live screencast can crop its first frame on a new surface. Capture complete viewport rasters during the interaction.
+    const captureSession = await page.context().newCDPSession(page);
+    let recording = true;
+    const sample = async () => {
+      do {
+        const time = performance.now() / 1000;
+        const shot = await captureSession.send("Page.captureScreenshot", {
+          format: "png", fromSurface: true, captureBeyondViewport: false,
+        });
+        const png = Buffer.from(shot.data, "base64");
+        const file = String(frames.length).padStart(6, "0") + ".png";
+        frames.push({
+          file,
+          time,
+          size: png.readUInt32BE(16) + "x" + png.readUInt32BE(20),
+        });
+        await writeFile(join(scratch, file), png);
+        await page.waitForTimeout(75);
+      } while (recording);
+    };
+    const sampling = sample();
+    void sampling.catch(() => {});
+    try {
+      await run();
+    } finally {
+      recording = false;
+      try { await sampling; } finally { await captureSession.detach(); }
+    }
+  } else {
+    const cdp = await page.context().newCDPSession(page),
+      writes = [];
+    cdp.on("Page.screencastFrame", (ev) => {
+      const file = String(frames.length).padStart(6, "0") + ".jpg";
+      frames.push({
+        file,
+        time: ev.metadata.timestamp,
+        size: [ev.metadata.deviceWidth, ev.metadata.deviceHeight].join("x"),
+      });
+      writes.push(
+        writeFile(join(scratch, file), Buffer.from(ev.data, "base64")),
+      );
+      void cdp
+        .send("Page.screencastFrameAck", { sessionId: ev.sessionId })
+        .catch(() => {});
+    });
+    await cdp.send("Page.startScreencast", {
+      format: "jpeg",
+      quality: 76,
+      maxWidth: 960,
+      maxHeight: 600,
+      everyNthFrame: 2,
+      ...capture,
+    });
+    try {
+      await run();
+    } finally {
+      await cdp.send("Page.stopScreencast");
+      await cdp.detach();
+      await Promise.all(writes);
     }
   }
-  const lines=frames.flatMap((f,i)=>["file '"+f.file+"'","duration "+Math.max(.017,(frames[i+1]?.time??f.time+.22)-f.time)]);
-  await writeFile(join(scratch,"frames.txt"),lines.join("\n")+"\nfile '"+frames.at(-1).file+"'\n");
-  const file=join(dir,name+".mp4"),ff=spawnSync("ffmpeg",["-loglevel","error","-y","-f","concat","-safe","1","-i",join(scratch,"frames.txt"),"-vf",fixedFrame?fixedFilter:"pad=ceil(iw/2)*2:ceil(ih/2)*2","-c:v","libx264","-preset","veryfast","-crf","25","-pix_fmt","yuv420p","-movflags","+faststart",file]);
-  assert.equal(ff.status,0,String(ff.stderr));
-  const captureSeconds=frames.at(-1).time-frames[0].time;
-  if(!fixedFrame)return {name,frames:frames.length,seconds:captureSeconds};
-  const probe=spawnSync("ffprobe",["-v","error","-show_entries","format=duration","-of","csv=p=0",file],{encoding:"utf8"});
-  assert.equal(probe.status,0,probe.stderr);
-  const seconds=Number(probe.stdout.trim());
-  assert.ok(Math.abs(seconds-captureSeconds)<0.8,name+" Aufnahmedauer "+captureSeconds+" / Filmdauer "+seconds);
-  return {name,frames:frames.length,seconds,captureSeconds};
+  assert.ok(frames.length >= 5, name + " sichtbare Filmframes");
+  const fixedFilter =
+    "scale=960:540:force_original_aspect_ratio=decrease,pad=960:540:(ow-iw)/2:(oh-ih)/2,setsar=1";
+  if (fixedFrame && frames.some((frame) => frame.size !== frames[0].size)) {
+    // Encode each source size to a common raster before joining its original timestamps.
+    // Reinitializing FFmpeg's output filter on the live timeline can discard a whole still interval.
+    for (let first = 0; first < frames.length; ) {
+      let end = first + 1;
+      while (end < frames.length && frames[end].size === frames[first].size)
+        end++;
+      const groupFile = join(scratch, "size-" + first + ".txt");
+      await writeFile(
+        groupFile,
+        frames
+          .slice(first, end)
+          .map((f) => "file '" + f.file + "'")
+          .join("\n") + "\n",
+      );
+      const converted = spawnSync("ffmpeg", [
+        "-loglevel",
+        "error",
+        "-y",
+        "-f",
+        "concat",
+        "-safe",
+        "1",
+        "-i",
+        groupFile,
+        "-frames:v",
+        String(end - first),
+        "-vf",
+        fixedFilter,
+        "-fps_mode",
+        "passthrough",
+        "-start_number",
+        String(first),
+        join(scratch, "fixed-%06d.png"),
+      ]);
+      assert.equal(converted.status, 0, String(converted.stderr));
+      for (let i = first; i < end; i++)
+        frames[i].file = "fixed-" + String(i).padStart(6, "0") + ".png";
+      first = end;
+    }
+  }
+  let timeline = frames;
+  if (fixedFrame) {
+    // Quantize absolute capture times to the encoder's 25 Hz time base. Rounding individual intervals accumulates drift.
+    const ticks = new Map();
+    for (const f of frames)
+      ticks.set(Math.round(25 * (f.time - frames[0].time)), f);
+    timeline = Array.from(ticks, ([tick, f]) => ({
+      file: f.file,
+      time: tick / 25,
+    }));
+  }
+  const lines = timeline.flatMap((f, i) => [
+    "file '" + f.file + "'",
+    "duration " +
+      (i + 1 < timeline.length ? timeline[i + 1].time - f.time : 0.2),
+  ]);
+  await writeFile(
+    join(scratch, "frames.txt"),
+    lines.join("\n") + "\nfile '" + timeline.at(-1).file + "'\n",
+  );
+  const file = join(dir, name + ".mp4"),
+    ff = spawnSync("ffmpeg", [
+      "-loglevel",
+      "error",
+      "-y",
+      "-f",
+      "concat",
+      "-safe",
+      "1",
+      "-i",
+      join(scratch, "frames.txt"),
+      "-vf",
+      fixedFrame ? fixedFilter : "pad=ceil(iw/2)*2:ceil(ih/2)*2",
+      "-c:v",
+      "libx264",
+      "-preset",
+      "veryfast",
+      "-crf",
+      "25",
+      "-pix_fmt",
+      "yuv420p",
+      "-movflags",
+      "+faststart",
+      file,
+    ]);
+  assert.equal(ff.status, 0, String(ff.stderr));
+  const captureSeconds = frames.at(-1).time - frames[0].time;
+  if (!fixedFrame)
+    return { name, frames: frames.length, seconds: captureSeconds };
+  const probe = spawnSync(
+    "ffprobe",
+    ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", file],
+    { encoding: "utf8" },
+  );
+  assert.equal(probe.status, 0, probe.stderr);
+  const seconds = Number(probe.stdout.trim());
+  assert.ok(
+    Math.abs(seconds - captureSeconds) < 0.8,
+    name + " Aufnahmedauer " + captureSeconds + " / Filmdauer " + seconds,
+  );
+  return { name, frames: frames.length, seconds, captureSeconds };
 }
+
 export async function acceptG5(p,{dir,product,measure,films=true}){
   await mkdir(dir,{recursive:true});
   const display=product==="Electron"?await p.context().newCDPSession(p):null;
