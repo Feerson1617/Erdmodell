@@ -177,8 +177,7 @@ export class TectonicStudio {
     );
     this.build();
   }
-  private build() {
-    for (const row of this.rows) row.body.dispose();
+  private normalizeContext() {
     const s = this.state;
     const active = s.focus < 0 ? s.models : [s.models[s.focus]];
     if ((s.view === "wedge" && !active.every(subducts)) || (s.view === "seabed" && !active.every(underwater)))
@@ -188,6 +187,11 @@ export class TectonicStudio {
       s.measure = false;
     }
     if (!active.some(canMelt)) s.paths = false;
+  }
+  private build() {
+    for (const row of this.rows) row.body.dispose();
+    this.normalizeContext();
+    const s = this.state;
     s.playing = false;
     const repaint = () => {
       this.textureRevision++;
@@ -212,6 +216,13 @@ export class TectonicStudio {
     const models = { ...processes, earth: "Erdinneres" };
     const active = s.focus < 0 ? s.models : [k];
     const sharing = active.every((id) => id === k);
+    const hasMelt = active.some(canMelt);
+    const hasMeltPreset = sharing && canMelt(k) && k !== "wilson";
+    const preset = (() => {
+      if (s.analysis !== "natural") return s.vectors && !s.paths ? s.analysis : "custom";
+      if (!s.vectors) return s.paths && hasMeltPreset ? "melt" : "custom";
+      return hasMelt && !s.paths ? "movement" : "full";
+    })();
     const place =
       k === "wilson" ? wilsonPlaces[Math.min(8, Math.floor(s.time * 8 + 0.0001))] : referenceFor[k];
     const analogue = places[place];
@@ -226,20 +237,13 @@ export class TectonicStudio {
             "studio-preset",
             {
               full: "Vollständiger Prozess",
-              ...(active.some(canMelt) ? { movement: "Plattenbewegung" } : {}),
+              ...(hasMelt ? { movement: "Plattenbewegung" } : {}),
               materials: "Materialgrenzen",
-              ...(sharing && canMelt(k) && k !== "wilson"
-                ? { melt: k === "ridge" ? "Krustenbildung" : "Magmenbildung" }
-                : {}),
+              ...(hasMeltPreset ? { melt: k === "ridge" ? "Krustenbildung" : "Magmenbildung" } : {}),
               ...(sharing && k === "ridge" ? { age: "Meeresbodenalter", magnet: "Magnetstreifen" } : {}),
+              ...(preset === "custom" ? { custom: "Eigene Ansicht" } : {}),
             },
-            s.analysis !== "natural"
-              ? s.analysis
-              : s.paths && !s.vectors
-                ? "melt"
-                : !s.paths && s.vectors && active.some(canMelt)
-                  ? "movement"
-                  : "full",
+            preset,
           )
         : "") +
       (s.interior
@@ -413,6 +417,7 @@ export class TectonicStudio {
       redraw();
     });
     bind("studio-preset", (v) => {
+      if (v === "custom") return;
       s.analysis = v === "age" || v === "magnet" || v === "materials" ? v : "natural";
       s.paths = active.some(canMelt) && !["movement", "materials", "age", "magnet"].includes(v);
       s.vectors = v !== "melt";
@@ -429,12 +434,15 @@ export class TectonicStudio {
     });
     bind("studio-analysis", (v) => {
       s.analysis = v as Analysis;
+      redraw();
     });
     bind("studio-paths", () => {
       s.paths = !s.paths;
+      redraw();
     });
     bind("studio-vectors", () => {
       s.vectors = !s.vectors;
+      redraw();
     });
     bind("studio-measure", () => {
       s.measure = !s.measure;
@@ -555,6 +563,7 @@ export class TectonicStudio {
           if (claimObject("studio-" + i)) return;
           if (s.models.length > 1) {
             s.focus = s.focus === i ? -1 : i;
+            this.normalizeContext();
             this.prior = "";
             if (this.side) this.mount(this.side);
           }

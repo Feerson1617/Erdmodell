@@ -306,6 +306,28 @@ export async function exercise(page, out, { group = "all", film = false, board =
       await select("studio-count", "4");
       await tools(false);
       await shot("Vier-Modelle");
+      const ridgeIndex = await page.evaluate(() =>
+        window.geoObservatory().observatory.studio.models.indexOf("ridge"),
+      );
+      assert.ok(ridgeIndex >= 0);
+      await page.locator(".studio-cell").nth(ridgeIndex).locator(":scope > button").first().click();
+      await select("geo-preset", "magnet");
+      await page.waitForFunction(() => window.geoObservatory().observatory.studio.analysis === "magnet");
+      await page.getByRole("button", { name: /Alle zeigen/ }).click();
+      await page.waitForFunction(() => {
+        const state = window.geoObservatory().observatory.studio;
+        const preset = document.querySelector("#geo-preset");
+        return (
+          state.focus === -1 &&
+          state.analysis === "natural" &&
+          preset.value === "movement" &&
+          !preset.querySelector('[value="magnet"]') &&
+          !document.querySelector(".studio-cell > span")?.textContent.includes("Magnetisierung")
+        );
+      });
+      log.actions.push(
+        "Magnetstreifen am einzelnen Rücken geöffnet und zum gemeinsamen Plattenvergleich zurückgekehrt",
+      );
     }
     if (part("bestand")) {
       await action("F-Unterrichtsmodelle", async () => {
