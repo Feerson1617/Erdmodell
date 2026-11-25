@@ -115,6 +115,9 @@ export class TectonicStudio {
   private prior = "";
   private lastGeometry = "";
   private panelsKey = "";
+  private labelResize = new ResizeObserver(() => {
+    this.prior = "";
+  });
   private pins: { button: HTMLButtonElement; leader: HTMLElement; index: number; cell: number }[] = [];
   private side?: HTMLElement;
   constructor(
@@ -536,6 +539,7 @@ export class TectonicStudio {
         },
       ),
     );
+    this.labelResize.disconnect();
     this.overlay.replaceChildren();
     this.pins = [];
     this.overlay.style.gridTemplateColumns = "repeat(" + Math.min(2, ids.length) + ",1fr)";
@@ -608,6 +612,7 @@ export class TectonicStudio {
         const leader = document.createElement("i");
         leader.className = "studio-leader";
         slot.append(leader, tag);
+        this.labelResize.observe(tag);
         this.pins.push({ button: tag, leader, index: e.j, cell: n });
       }
       this.overlay.append(slot);
@@ -741,6 +746,8 @@ export class TectonicStudio {
           ? earthFeatures(s.division, s.expanded)
           : processFeatures(s.models[id], s.time);
         const used: { x: number; y: number; w: number; h: number }[] = [];
+        const cell = (marks[0].button.parentElement as HTMLElement).getBoundingClientRect();
+        const rendered: DOMRect[] = [];
         for (const pin of marks) {
           const pt = features[pin.index].point.project(cam),
             tag = pin.button;
@@ -786,7 +793,26 @@ export class TectonicStudio {
           pin.leader.style.top = Math.round(ay) + "px";
           pin.leader.style.width = Math.hypot(tx - ax, ty - ay) + "px";
           pin.leader.style.transform = "rotate(" + Math.atan2(ty - ay, tx - ax) + "rad)";
-          used.push({ x, y, w: tw, h: th });
+          const bounds = tag.getBoundingClientRect();
+          if (
+            rendered.some(
+              (b) =>
+                bounds.left < b.right + 2 &&
+                bounds.right + 2 > b.left &&
+                bounds.top < b.bottom + 2 &&
+                bounds.bottom + 2 > b.top,
+            )
+          ) {
+            tag.style.visibility = pin.leader.style.visibility = "hidden";
+            continue;
+          }
+          rendered.push(bounds);
+          used.push({
+            x: bounds.left - cell.left,
+            y: bounds.top - cell.top,
+            w: bounds.width,
+            h: bounds.height,
+          });
         }
       }
     }
@@ -795,6 +821,7 @@ export class TectonicStudio {
     return true;
   }
   dispose() {
+    this.labelResize.disconnect();
     this.events.abort();
     this.overlay.remove();
     for (const row of this.rows) row.body.dispose();

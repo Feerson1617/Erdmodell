@@ -144,6 +144,16 @@ export async function exercise(page, out, { group = "all", film = false, board =
         await click("geo-back");
         await shot("Erde-Rueckkehr");
       });
+      // Start restoring a real region, then choose a new subject while its resources load.
+      await topic("sea");
+      await region();
+      await topic("process-ridge");
+      await waitStudio("ridge");
+      await click("geo-back");
+      await topic("process-hotspot");
+      await waitStudio("hotspot");
+      await ticks();
+      assert.match(await page.locator("#geo-crumb").innerText(), /Hawaii/);
       await action("B-Kollision", async () => {
         await topic("process-collision");
         await waitStudio("collision");
@@ -375,10 +385,14 @@ export async function exercise(page, out, { group = "all", film = false, board =
                 .filter((e) => getComputedStyle(e).visibility !== "hidden")
                 .map((e) => e.getBoundingClientRect().toJSON()),
             );
+          assert.ok(boxes.length >= 2, "Mindestens zwei verankerte Fachbegriffe");
           for (let i = 0; i < boxes.length; i++)
             for (const b of boxes.slice(i + 1)) {
               const a = boxes[i];
-              assert.ok(a.right <= b.left || b.right <= a.left || a.bottom <= b.top || b.bottom <= a.top);
+              assert.ok(
+                a.right <= b.left || b.right <= a.left || a.bottom <= b.top || b.bottom <= a.top,
+                JSON.stringify({ width, height, a, b }),
+              );
             }
           log.boards.push(m);
           await shot("Smartboard-" + width);

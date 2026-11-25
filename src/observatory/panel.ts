@@ -335,11 +335,13 @@ export class Observatory {
       time:t?fields(t,timeKeys):undefined};
   }
   async restore(s:ReturnType<Observatory["snapshot"]>){
-    const m=this.maps;
+    const m=this.maps,initial=this.revision;
     if(s.mode==="studio"&&s.studio)this.openStudio(s.studio);
     else if(s.mode==="map"){
       if(s.map.research){const rates=s.map.rates;if(rates){this.rates.ids=[...rates.ids];this.rates.years=rates.years;this.rates.unit=rates.unit;this.rates.opened=rates.opened;}await this.openResearch(s.map.research);}
-      else await this.openMap(s.map.purpose);m.events.visible=s.map.events;m.boundaries.visible=s.map.lines;m.depth=s.map.depth;m.recolor();
+      else await this.openMap(s.map.purpose);
+      if(this.revision!==initial+1)return;
+      m.events.visible=s.map.events;m.boundaries.visible=s.map.lines;m.depth=s.map.depth;m.recolor();
       m.selectStep(m.steps.find(step=>step[0]===s.map.step));m.event=m.rows.find(row=>row[0]===s.map.event);
     }else if(s.mode==="time"&&s.time){
       this.openTime();const t=this.timeline!;Object.assign(t,fields(s.time,timeKeys));t.overview=s.time.overview!==false;t.setYear(s.time.year);
@@ -349,10 +351,11 @@ export class Observatory {
       if(v.coast)spec={name:"Küstenwirkung · schematisches Profil",lat:38,lon:142,strike:0,process:"subduction",theme:v.theme,coastLesson:true,event:v.event};
       else if(v.event==="strike")spec=this.horizontalSeabed();
       else if(v.site&&Object.hasOwn(sites,v.site))spec=reference(v.site,v.theme);
-      else if(v.boundary){await m.init();const step=m.steps.find(step=>step[0]===v.boundary);if(!step)throw Error();spec=this.boundarySpec(step,v.theme);}
+      else if(v.boundary){await m.init();if(this.revision!==initial)return;const step=m.steps.find(step=>step[0]===v.boundary);if(!step)throw Error();spec=this.boundarySpec(step,v.theme);}
       else if(v.theme==="forces"||v.theme==="lithosphere")spec={name:topicNames[v.theme],lat:0,lon:-24,strike:0,process:v.theme==="forces"?"subduction":"convergence",theme:v.theme};
       else throw Error("Region fehlt");
-      spec.event=v.event;await this.openRegion(spec);const r=this.region;if(!r?.ready)throw Error("Gelände fehlt");
+      spec.event=v.event;await this.openRegion(spec);if(this.revision!==initial+1)return;
+      const r=this.region;if(!r?.ready)throw Error("Gelände fehlt");
       Object.assign(r,fields(v.settings,regionKeys));r.moreNames=Boolean(v.settings.moreNames);r.analysis=Boolean(r.analysis&&r.water);r.progress=T.MathUtils.clamp(r.progress,0,1);r.restoreCamera(v.view,v.cut,v.position,v.target);
     }
     this.world.nav.stop();this.world.nav.pose={...s.pose};this.world.nav.goal={...s.pose};this.draw();

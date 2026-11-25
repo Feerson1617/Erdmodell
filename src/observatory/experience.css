@@ -152,6 +152,7 @@ body.geo-experience.geo-tools-open:not(.observing) #desk #sidebar:not([hidden]) 
   max-width: 60%;
 }
 .geo-experience .studio-cell > .studio-object {
+  width: max-content;
   border: 1px solid #96b0a6;
   background: #172b2bee;
   white-space: normal;

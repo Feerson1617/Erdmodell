@@ -362,6 +362,7 @@ export class GeographicExperience {
   }
   private async topic(value: string) {
     this.remember();
+    const epoch = this.epoch;
     this.focus = {};
     if (value.startsWith("process-")) {
       const model = value.slice(8) as ProcessId;
@@ -373,7 +374,7 @@ export class GeographicExperience {
     else if (value === "forces") this.obs.openConcept("forces");
     else if (value === "research") {
       await this.obs.openResearch();
-      this.drawer(true);
+      if (epoch === this.epoch) this.drawer(true);
     } else if (value === "events") await this.obs.openMap();
     else if (value === "past" || value === "future") {
       this.obs.openTime();
@@ -387,7 +388,7 @@ export class GeographicExperience {
       await this.obs.openRegion(
         reference(id, value === "volcano" ? "volcano" : value === "risk" ? "risk" : "earthquake"),
       );
-      if (value === "sea" && this.obs.region) {
+      if (epoch === this.epoch && value === "sea" && this.obs.region) {
         this.obs.region.cameraView("water");
         this.obs.draw();
       }
@@ -396,7 +397,7 @@ export class GeographicExperience {
   private async back() {
     const item = this.history.pop();
     if (!item) return;
-    this.epoch++;
+    const epoch = ++this.epoch;
     this.flight = undefined;
     this.drawer(false);
     this.focus = item.focus;
@@ -404,7 +405,9 @@ export class GeographicExperience {
       if (item.restoreBase) await item.restoreBase();
       else this.navigate(item.mode);
     }
+    if (epoch !== this.epoch) return;
     await this.obs.restore(item.scene);
+    if (epoch !== this.epoch) return;
     this.setDepth(item.depth);
     if (item.depth === "observe") restoreDisclosure(item.reveals);
     if (item.scene.map.research) this.drawer(true);
@@ -433,7 +436,9 @@ export class GeographicExperience {
     const region = this.obs.region,
       s = this.obs.studioState;
     if (this.focus.boundary)
-      return "Regional · PB2002 #" + this.focus.boundary + (s ? " › Anschauungsmodell" : "");
+      return (
+        "Regional · PB2002 #" + this.focus.boundary + (s || region ? " › allgemeiner Anschauungsschnitt" : "")
+      );
     const stored = this.currentPlace();
     const p =
       (region &&
