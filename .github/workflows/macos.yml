@@ -33,7 +33,7 @@ jobs:
         env:
           G6_NATIVE_GPU: '1'
         run: |
-          python3 scripts/g52/product-check.py artifacts/macos/GeoRisiko-G6.3-macOS-arm64-app.zip artifacts/GeoRisiko-G6.3-Web-Test.html test-results/mac/G52/Ressourcen.json
+          python3 scripts/g52/product-check.py artifacts/macos/GeoRisiko-G6.3.1-macOS-arm64-app.zip artifacts/GeoRisiko-G6.3.1-Web-Test.html test-results/mac/G52/Ressourcen.json
           npx playwright install chromium
           G51_PHYSICS_LOG=test-results/mac/G51/Mechanik.json node tests/g51-physics.mjs
           node tests/g51-time.mjs > test-results/mac/G51/Zeitreise.log
@@ -44,17 +44,17 @@ jobs:
           G61_OUT=test-results/mac/G61 node tests/g61-process.mjs
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
-          path: artifacts/macos/GeoRisiko-G6.3-macOS-arm64.dmg
+          path: artifacts/macos/GeoRisiko-G6.3.1-macOS-arm64.dmg
           archive: false
           if-no-files-found: error
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
-          path: artifacts/macos/GeoRisiko-G6.3-macOS-arm64-app.zip
+          path: artifacts/macos/GeoRisiko-G6.3.1-macOS-arm64-app.zip
           archive: false
           if-no-files-found: error
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
-          path: artifacts/GeoRisiko-G6.3-Web-Test.html
+          path: artifacts/GeoRisiko-G6.3.1-Web-Test.html
           archive: false
           if-no-files-found: error
       - if: always()
@@ -71,7 +71,7 @@ jobs:
             test-results/mac/G521/*.json
             test-results/mac/G61/*.json
   classroom:
-    name: Unterricht und Originalaufnahmen · G6.2 und G6.3
+    name: Unterricht und Originalaufnahmen · G6.3 und G6.3.1
     runs-on: macos-26
     timeout-minutes: 75
     env:
@@ -90,27 +90,35 @@ jobs:
       - run: npm ci
       - uses: actions/checkout@v4
         with:
-          ref: 2595f33587231e442ac02dca3afb73f92f1c9e68
-          path: .scratch/g62-reference
+          ref: 55cbefc87e07b501fb8745212f534f0967988d9f
+          path: .scratch/g63-reference
           persist-credentials: false
       - run: command -v ffmpeg || brew install ffmpeg
       - name: Für alle G6.3-Vergleiche dieselbe Chromium-Version installieren
         run: npx playwright install chromium
       - name: Beide versandfertigen Einzeldateien bilden
         run: |
-          npm --prefix .scratch/g62-reference run build
-          npm --prefix .scratch/g62-reference run standalone
+          npm --prefix .scratch/g63-reference run build
+          npm --prefix .scratch/g63-reference run standalone
           npm run build
           npm run standalone
       - run: node tests/g63-science.mjs
-      - name: Sieben Unterrichtsabläufe und acht zusammenhängende Filme
+      - name: Präsentationsabläufe und Vulkanvergleich aufzeichnen
         run: |
-          node tests/g63-classroom.mjs .scratch/g62-reference/artifacts/GeoRisiko-G6.2-Web-Test.html --before
-          node tests/g63-classroom.mjs artifacts/GeoRisiko-G6.3-Web-Test.html
+          node tests/g63-classroom.mjs .scratch/g63-reference/artifacts/GeoRisiko-G6.3-Web-Test.html --before
+          node tests/g63-classroom.mjs artifacts/GeoRisiko-G6.3.1-Web-Test.html
+      - name: Vulkanische Referenzregionen und Schmelzquellen im gerenderten Schnitt
+        run: |
+          node tests/g631-volcano.mjs .scratch/g63-reference/artifacts/GeoRisiko-G6.3-Web-Test.html --before
+          node tests/g631-volcano.mjs artifacts/GeoRisiko-G6.3.1-Web-Test.html
       - name: Materialanker, verdeckte Flächen und Szenenwechsel
-        run: node tests/g63-anchors.mjs artifacts/GeoRisiko-G6.3-Web-Test.html
+        run: node tests/g63-anchors.mjs artifacts/GeoRisiko-G6.3.1-Web-Test.html
+      - name: Szenenwechsel während der laufenden Grafikvorbereitung
+        run: node tests/g631-scene-lifetime.mjs artifacts/GeoRisiko-G6.3.1-Web-Test.html
+      - name: Gleiche Zukunftsgeometrie in vier Szenarien fotografisch prüfen
+        run: node tests/g631-future-pixels.mjs .scratch/g63-reference/artifacts/GeoRisiko-G6.3-Web-Test.html artifacts/GeoRisiko-G6.3.1-Web-Test.html
       - name: Kontrollierter Küstenvergleich bei gleicher Framebufferauflösung
-        run: node tests/g63-performance.mjs .scratch/g62-reference/artifacts/GeoRisiko-G6.2-Web-Test.html artifacts/GeoRisiko-G6.3-Web-Test.html
+        run: node tests/g63-performance.mjs .scratch/g63-reference/artifacts/GeoRisiko-G6.3-Web-Test.html artifacts/GeoRisiko-G6.3.1-Web-Test.html
       - if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -140,6 +148,6 @@ jobs:
       - run: python3 scripts/g63/report.py
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
-          path: artifacts/GeoRisiko-G6.3-Sichtpruefung.zip
+          path: artifacts/GeoRisiko-G6.3.1-Sichtpruefung.zip
           archive: false
           if-no-files-found: error

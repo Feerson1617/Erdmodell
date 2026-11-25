@@ -7,9 +7,9 @@ const built=await build({stdin:{resolveDir:process.cwd(),contents:`
  export * from "./src/observatory/boundaries";export * from "./src/tectonics/learning";
  export {poleVector,relativeVelocity} from "./src/tectonics/comparison";
  export {position} from "./src/geo";export {Quaternion} from "three";
- export {regionalReading} from "./src/observatory/lesson";export {Fault} from "./src/observatory/fault";export {WaterSection,coastHeight} from "./src/observatory/water";
+ export {meltingSetting,meltingExplanation} from "./src/observatory/melting";export {regionalReading} from "./src/observatory/lesson";export {Fault} from "./src/observatory/fault";export {WaterSection,coastHeight} from "./src/observatory/water";
 `},bundle:true,platform:"node",format:"esm",write:false,loader:{".png":"empty"}});
-const {geology,boundaryLesson,poleVector,relativeVelocity,position,Quaternion,regionalReading,Fault,WaterSection,coastHeight}=await import("data:text/javascript;base64,"+Buffer.from(built.outputFiles[0].contents).toString("base64"));
+const {geology,boundaryLesson,poleVector,relativeVelocity,position,Quaternion,meltingSetting,regionalReading,Fault,WaterSection,coastHeight}=await import("data:text/javascript;base64,"+Buffer.from(built.outputFiles[0].contents).toString("base64"));
 const load=async n=>JSON.parse(await readFile("src/tectonics/"+n+".json","utf8"));
 const [steps,mosaic]=await Promise.all([load("steps"),load("mosaic")]);let oblique=0,subduction=0,uncertain=0;
 for(const step of steps){
@@ -44,5 +44,16 @@ for(const t of [0,.25,.361,.48,.7,1,0]){
  assert.equal(still[1],"Ruhige Nahbucht");
 }
 const quiet=regionalReading({...row,spec:{site:"island",process:"ridge",theme:"volcano"},localActive:true,eruption:"explosive",progress:.8});assert.equal(quiet[1],"Ruhendes Lavafeld");
-const log={steps:steps.length,subduction,oblique,uncertain,phases,waterPhases};
+// Geological settings from published independent locality descriptions, not from the classifier.
+const referenceCases=[
+ [1510,"arc","arc","Tonga · intraoceanic arc"],[2629,"subduction","arc","Japan Trench"],
+ [2308,"ridge","ridge","Gakkel Ridge"],[4209,"ridge","island","Reykjanes"],
+ [2877,"transform","uncertain","San Andreas Fault"],[2093,"collision","uncertain","Himalaya"]
+];
+for(const [id,model,source,where] of referenceCases){
+ const g=geology(steps[id-1]);assert.equal(g.model,model,where);
+ assert.equal(meltingSetting(g.model,id===4209?"island":undefined),source,where);
+}
+assert.equal(meltingSetting("hotspot","hawaii"),"hotspot");
+const log={referenceCases,steps:steps.length,subduction,oblique,uncertain,phases,waterPhases};
 const out=process.env.G63_OUT||"test-results/g63";await mkdir(out,{recursive:true});await writeFile(join(out,"Fachtests.json"),JSON.stringify(log,null,2));console.log(log);

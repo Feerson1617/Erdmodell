@@ -14,7 +14,7 @@ import { PNG } from "pngjs";
 const out=resolve("test-results/mac"), film=join(out,"film");
 await mkdir(film,{recursive:true});
 const executablePath=(await readFile(join(out,"executable-path.txt"),"utf8")).trim();
-const html=pathToFileURL(resolve("artifacts/GeoRisiko-G6.3-Web-Test.html")).href;
+const html=pathToFileURL(resolve("artifacts/GeoRisiko-G6.3.1-Web-Test.html")).href;
 const cases=JSON.parse(await readFile("src/tectonics/examples.json","utf8"));
 const report={commit:process.env.TEST_COMMIT, run:process.env.GITHUB_RUN_ID, platform:process.platform, arch:process.arch, runs:[]};
 const runCmd=(name,args)=>{const r=spawnSync(name,args,{encoding:"utf8"});assert.equal(r.status,0,r.stderr);return r.stdout.trim();};
@@ -174,6 +174,18 @@ async function exercise(p,context,name,pid) {
     scenes:[],errors,network};
   report.runs.push(row);
   console.log("Szenenprüfung",name,row.viewport,row.gpu);
+  await p.click("#nav-volcano");
+  await p.waitForSelector("#g-site");
+  await p.selectOption("#g-site","japan");
+  await p.waitForFunction(()=>{const w=window.geoObservatory();return !w.flying&&w.observatory.site==="japan"&&w.observatory.ready&&w.observatory.viewSettled;});
+  const melting=p.getByText("Wie entsteht Schmelze?",{exact:true}).locator("..");
+  await melting.locator("summary").click();
+  const cause=await melting.locator("p").textContent();assert.match(cause,/Mantelkeil/);
+  await p.click("#focus-reading");assert.equal(await p.locator("#focus-reading").getAttribute("aria-pressed"),"true");
+  await p.click("#focus-reading");await p.click("#obswitch");
+  assert.equal(await p.locator("#think,#think-next,#think-text").count(),0);
+  await p.click("#obswitch");await p.click("#home");await rest(p);
+  row.scientificCorrection={region:"Japan",mechanism:cause,readingFocus:true,observation:true};
   await scenarios(p,name,pid,row);
   if(name==="Electron"){
     row.pairs=await allPairs(p);

@@ -33,9 +33,40 @@ try{
   assert.equal(row.start.progress,.15);assert.equal(row.start.playing,false);assert.equal(row.start.names,names);
   assert.equal(row.start.profile,"classroom");assert.equal(row.start.view,"coast");
   for(const s of row.log.states)assert.deepEqual([s.resolution.width,s.resolution.height],[1200,720]);
-  const sample={round,version:index?"G6.3":"G6.2",names,...row};
+  const sample={round,version:index?"G6.3.1":"G6.3",names,...row};
   const reference=raw.samples.find(x=>x.names===names);if(reference)assert.deepEqual(row.start,reference.start);
   raw.samples.push(sample);console.log(sample.version,names,row.log.renderedFps);
  }
+ // Repeat the same two-globe playback and then measure it explicitly at rest.
+ raw.future=[];
+ for(const p of contexts){
+   await p.bringToFront();await p.click("#nav-plates");await p.click("#g-time");
+   await p.selectOption("#g-scenario","aurica");await p.locator("#g-year").fill("100");
+   await p.check("#g-compare");await p.selectOption("#g-second","amasia");await p.selectOption("#g-compare-camera","same");
+   await p.waitForFunction(()=>window.geoObservatory().observatory.timeReady);
+ }
+ for(let round=0;round<3;round++)for(const idx of round%2?[1,0]:[0,1]){
+   const p=contexts[idx];await p.bringToFront();
+   for(const running of [true,false]){
+     await p.locator("#g-year").fill("100");await p.waitForFunction(()=>window.geoObservatory().observatory.timeReady&&!window.geoObservatory().flying);
+     await p.waitForTimeout(500);
+     const sample=await p.evaluate(async running=>{
+       let changes=0;const observer=new MutationObserver(records=>changes+=records.length);
+       observer.observe(document.querySelector("#sidebar"),{childList:true,subtree:true,characterData:true});
+       const o=window.geoObservatory().observatory;
+       const start={year:o.year,models:[o.scenario,o.second],eyes:o.cameras,overview:o.overview,profile:o.graphics.profile};
+       if(running)document.querySelector("#g-time-play").click();
+       const log=await window.geoDeviceProbe(4000);
+       observer.disconnect();if(running)document.querySelector("#g-time-play").click();
+       return {start,log,changes};
+     },running);
+     assert.equal(sample.start.year,100);assert.equal(sample.start.overview,false);assert.deepEqual(sample.start.models,["aurica","amasia"]);
+     for(const state of sample.log.states)assert.deepEqual([state.resolution.width,state.resolution.height],[1200,720]);
+     const first=raw.future.find(v=>v.running===running);if(first)assert.deepEqual(sample.start,first.start);
+     if(running)assert.ok(sample.log.renderedFrames>0);else assert.ok(sample.log.renderedFrames<=2);
+     raw.future.push({version:idx?"G6.3.1":"G6.3",round,running,...sample});
+   }
+ }
+ assert.equal(raw.future.length,12);
  assert.equal(raw.samples.length,12);raw.complete=true;
 }finally{await writeFile(join(out,"Leistungsvergleich.json"),JSON.stringify(raw));await browser.close();}

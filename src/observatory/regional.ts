@@ -142,8 +142,18 @@ export class RegionalScene {
   }
   get opening(){return this.reveal;}
   get viewSettled(){return !(this.localActive&&this.local!.pending)&&!this.transition && Math.abs(this.reveal-Number(this.cut))<.012;}
+  get volcanicVentX(){
+    if(this.spec.arcTransect)return zao.vent;
+    if(this.spec.process==="arc"||this.spec.process==="subduction"){
+      const f=this.faultModel;
+      return T.MathUtils.clamp(f.trace+f.dipSign*5.4,-4.8,4.8);
+    }
+    return 0;
+  }
   reframe(cut:boolean){const changeScale=this.localActive;this.orbit.minDistance=4;this.orbit.maxDistance=22;this.camera.far=120;this.view=cut?"cut":"land";this.cut=cut;this.camera.position.set(cut?1.3:3.4,cut?2.1:4.5,cut?8.4:7.4);
-    const goal=new T.Vector3(0,cut?-.68:0,cut?-.6:-.5),to=this.camera.position.clone();
+    const focus=cut&&this.spec.theme==="volcano"?this.volcanicVentX*.52:0;
+    this.camera.position.x+=focus;
+    const goal=new T.Vector3(focus,cut?-.68:0,cut?-.6:-.5),to=this.camera.position.clone();
     if(this.ready&&!changeScale&&!matchMedia("(prefers-reduced-motion: reduce)").matches){this.camera.position.copy(this.lastCamera);this.transition={from:this.lastCamera.clone(),to,look:this.orbit.target.clone(),goal,fraction:0};}
     else{this.transition=undefined;this.orbit.target.copy(goal);}this.orbit.update();}
   private lastCamera=new T.Vector3(3.4,4.5,7.4);
@@ -363,7 +373,7 @@ export class RegionalScene {
     this.orbit.minDistance=view==="coast"?2.1:4;
     if(view==="mouth"&&this.spec.theme==="volcano"){
       this.reframe(false);this.view=view;this.transition=undefined;this.orbit.minDistance=.62;
-      const x=this.spec.arcTransect?zao.vent:0,z=this.spec.arcTransect?0:-.33,y=this.height(x,z);
+      const x=this.volcanicVentX,z=this.spec.arcTransect?0:-.33,y=this.height(x,z);
       const goal=new T.Vector3(x,y+(this.spec.arcTransect?.015:this.spec.process==="hotspot"?.21:.11),z);
       this.orbit.target.copy(goal);this.camera.position.copy(goal).add(new T.Vector3(.68,.65,-1.18));this.orbit.update();return;
     }
@@ -377,7 +387,7 @@ export class RegionalScene {
     }
     this.reframe(true);this.view=view;if(view==="cut")return;
     if(view==="vent"){
-      const x=this.spec.arcTransect?zao.vent:0,y=this.height(x,-.08),goal=new T.Vector3(x,y+.48,-.12);
+      const x=this.volcanicVentX,y=this.height(x,-.08),goal=new T.Vector3(x,y+.48,-.12);
       this.transition=undefined;this.camera.position.copy(goal).add((this.spec.site==="island"?new T.Vector3(1.55,2.35,2.95):new T.Vector3(1,1.05,5.5)));this.orbit.target.copy(goal);this.orbit.update();return;
     }
     const f=this.faultModel,x=view==="coast"?(this.spec.coastLesson?-2.98:-4.65):view==="ocean"?0:view==="water"?f.hx:Math.max(-3.9,Math.min(3.9,f.hx));
@@ -511,7 +521,22 @@ export class RegionalScene {
   }
   get focus(){return [this.faultModel?.hx??0,this.ui.focus.value,0];}
   get epicenter(){return [this.faultModel?.hx??0,this.nearSurface,0];}
+  private preparingShaders=false;
+  private releaseAfterShaders=false;
+  async warmShaders(renderer:T.WebGLRenderer){
+    this.preparingShaders=true;
+    try{await renderer.compileAsync(this.scene,this.camera);}
+    finally{
+      this.preparingShaders=false;
+      if(this.releaseAfterShaders)this.dispose();
+    }
+  }
   dispose(){
+    if(this.disposed)return;
+    if(this.preparingShaders){
+      // Three.js still polls each material's program until compileAsync settles.
+      this.releaseAfterShaders=true;this.orbit.enabled=false;return;
+    }
     this.disposed=true;this.local?.dispose();this.orbit.dispose();const gs=new Set<T.BufferGeometry>(),ms=new Set<T.Material>();
     this.scene.traverse(o=>{const m=o as T.Mesh;if(m instanceof T.InstancedMesh)m.dispose();if(m.geometry)gs.add(m.geometry);if(m.material)for(const a of Array.isArray(m.material)?m.material:[m.material])ms.add(a);});
     for(const g of gs)g.dispose();for(const m of ms)m.dispose();this.colorMap?.dispose();this.normalMap?.dispose();this.roughMap?.dispose();this.sky.dispose();this.contextMap?.dispose();this.envelope?.dispose();this.relief?.dispose();this.sunlight.shadow.dispose();

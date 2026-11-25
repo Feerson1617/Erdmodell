@@ -32,8 +32,7 @@ try{
  await act("nav-plates");
  await film("01-Plattenbewegungen",async()=>{
    for(const [id,name] of [[4209,"01-Divergenz"],[2629,"02-Konvergenz"],[2877,"03-Transformbewegung"],[4155,"04-Schraege-Bewegung"]]){
-     if(before&&id===4155){await act("atlasWorld");if(!await p.locator("#plateSelect").isVisible())await p.locator("#plateSettings summary").click();await act("plateSelect","BU");await act("atlasCompare");}
-     else await act("pair-examples",id);
+     await act("pair-examples",id);
      if(!before&&id===4155)assert.match(await p.locator(".lesson-lead").textContent(),/schräg/);
      await shot(name);
      await act("atlasPlay");if(fast||before)await hold(250);else await p.waitForFunction(()=>window.geoObservatory().tectonics.mosaic.progress>=.997);
@@ -63,8 +62,8 @@ try{
    await p.click("#observe-release summary");await p.click('[data-release="one"]');await hold(650);const one=(await note()).pins;
    if(!before){assert.equal(one.length,1);await p.locator("#earth").hover();await p.mouse.wheel(0,-80);await hold(500);assert.ok((await note()).pins.every(v=>v.id===one[0].id));}
    await p.click('[data-channel="phase"]');await hold(2000);await shot("17a-Freigabe");await p.click('[data-release="none"]');await p.click("#observe-release summary");
-   if(!before){await act("think");assert.ok(await p.locator("#think-text").isVisible());await hold(2400);}
-   await shot("18-Denkauftrag");if(!before){await act("think");}
+   if(!before)assert.equal(await p.locator("#think, #think-next, #think-text").count(),0);
+   await shot("18-Beobachtung-ohne-Freigabe");
    await hold(1700);await act("obswitch");if(!before)assert.equal((await state()).observatory.progress,.3);
  });
  if(!before){await act("focus-reading");await hold(350);await contrast("Lesefokus erhält Modellzeit",.3,(await state()).observatory.progress);await act("focus-reading");}

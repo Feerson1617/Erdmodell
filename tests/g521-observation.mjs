@@ -8,7 +8,7 @@ const out=process.env.G521_OUT??"test-results/mac/G521";await mkdir(out,{recursi
 const browser=await chromium.launch(process.env.G6_NATIVE_GPU?{channel:"chrome",headless:false}:{args:["--use-angle=swiftshader","--enable-unsafe-swiftshader"]});
 try{
  const p=await browser.newPage({viewport:{width:1366,height:768},reducedMotion:"reduce"});p.setDefaultTimeout(90000);
- await p.goto(pathToFileURL(resolve("artifacts/GeoRisiko-G6.3-Web-Test.html")).href);
+ await p.goto(pathToFileURL(resolve("artifacts/GeoRisiko-G6.3.1-Web-Test.html")).href);
  const state=()=>p.evaluate(()=>window.geoObservatory().observatory);
  const settle=()=>p.waitForFunction(()=>{const w=window.geoObservatory?.(),s=w?.observatory;return w?.ready&&!w.flying&&(s.mode!=="regional"||s.ready&&s.viewSettled)&&(s.mode!=="time"||s.timeReady);});
  const choose=async(id,v)=>{await p.selectOption("#"+id,v);await settle();};

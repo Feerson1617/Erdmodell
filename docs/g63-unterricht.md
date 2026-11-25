@@ -1,4 +1,4 @@
-# GeoRisiko G6.3 im Unterricht
+# GeoRisiko G6.3.1 im Unterricht
 
 **Grenzen vergleichen.** Im Plattenatlas einen Grenzvergleich wählen. Die Pfeile zeigen beide Relativbewegungen in einem symmetrischen lokalen Bezugssystem. Der helle Streifen dient als Vergleichsmarke. Die gestrichelte Linie kennzeichnet die ursprüngliche Grenzrichtung. Mit „Einzelschritt“ lassen sich zwei Modellzustände direkt vergleichen. „Geologischen Vorgang ansehen“ öffnet den zugehörigen Schnitt. Über „Zurück zum Grenzvergleich“ kehrt man zur vorherigen Modellzeit und Perspektive zurück.
 
@@ -6,7 +6,7 @@
 
 **Zukünfte betrachten.** Die Kontinentalübersicht richtet jeden Globus auf seine eigenen Kontinentalbereiche aus. „Gleiche Perspektive“ ermöglicht einen geografisch gleich orientierten Vergleich. Die vier Möglichkeiten verwenden unterschiedliche veröffentlichte Rotationen und Grenzannahmen. Die Perspektive kann frei gedreht werden.
 
-**Beobachtung und Diskussion.** Mit „Denkauftrag anzeigen“ erscheint eine Frage außerhalb der Modellfläche. „Weiterer Auftrag“ wechselt die Frage. Die Lehrkraft kann anschließend einzelne Namen, die Phase oder die Ursache freigeben. Eine Freigabe gilt für den gewählten Begriff. Beim Themenwechsel werden Freigaben standardmäßig zurückgenommen. Diese Einstellung lässt sich unter „Informationen freigeben“ ändern. In Regionalmodellen und Zeitreise verbreitert „Erklärung im Fokus“ die Informationsfläche.
+**Beobachten und Erklären.** Die Lehrkraft kann einzelne Namen, die Phase oder die Ursache freigeben. Eine Freigabe gilt für den gewählten Begriff. Beim Themenwechsel werden Freigaben standardmäßig zurückgenommen. Diese Einstellung lässt sich unter „Informationen freigeben“ ändern. In Regionalmodellen und Zeitreise verbreitert „Erklärung im Fokus“ die Informationsfläche.
 
 **Nyos am 15. Dezember.** Im Beobachtungsmodus den See und den Seeschnitt öffnen, die Farbe im Wasser zuschalten und das Ereignis abspielen. Ab dem Austritt an der Oberfläche lässt sich die Analysefarbe der Luft hinzuschalten. CO₂ ist unsichtbar. Der historische Auslöser der Freisetzung ist ungeklärt. Unter „Vorsorge“ kontrollierte Entgasung, Messprofil und räumliche Vorsorge vergleichen. Die Modelle verdeutlichen Handlungsmöglichkeiten und deren Grenzen.
 

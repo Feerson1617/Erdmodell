@@ -1,3 +1,4 @@
+import {meltingExplanation,meltingSetting} from "./melting";
 import {accounts} from "../tectonics/learning";
 import {onset,pSpeed,sSpeed} from "./fault";
 import type {RegionalScene} from "./regional";
@@ -16,8 +17,8 @@ export function setReading(id:string,text:string){const el=document.getElementBy
 export function regionalReading(r:RegionalScene):string[]{
  const {theme,process,site}=r.spec,t=r.progress,a=accounts[process],f=r.faultModel;
  if(r.localActive){
-   if(site==="japan")return ["Küstenausschnitt","Ruhige Nahbucht","Dieses Nahmodell zeigt einen typischen Küstenausschnitt. Die Tsunami-Bewegung untersuchst du im regionalen Wasser- und Küstenmodell.",""];
-   if(site==="island"&&theme==="volcano"&&r.eruption==="explosive")return ["Basaltische Spalte","Ruhendes Lavafeld","Das Nahmodell zeigt Gestein früherer Ausbrüche. Die ausgewählte explosive Eruption siehst du am regionalen Vulkan.",""];
+   if(site==="japan")return ["Küstenausschnitt","Ruhige Nahbucht","Dieses Nahmodell zeigt einen typischen Küstenausschnitt. Die Wasserbewegung ist im regionalen Küstenmodell sichtbar.",""];
+   if(site==="island"&&theme==="volcano"&&r.eruption==="explosive")return ["Basaltische Spalte","Ruhendes Lavafeld","Das Nahmodell zeigt Gestein früherer Ausbrüche. Der ausgewählte explosive Modellausbruch ist am regionalen Vulkan sichtbar.",""];
    if(site==="island"&&theme==="volcano"&&t<=.53)return ["Basaltische Spalte","Blick auf die Spalte","Die Spalte ist im Gelände erkennbar. Hier ist noch kein neuer Lavafluss sichtbar.",""];
    if(site==="island"&&theme==="volcano")return ["Basaltische Spalte",t>.53&&r.eruption==="effusive"?"Lava fließt aus":"Blick auf die Spalte","Hier tritt dünnflüssige Lava aus einer Spalte aus. Sie folgt dem Gelände und kann in einer Senke zum Stillstand kommen.","Lokales Beispiel eines effusiven Ausbruchs."];
    if(site!=="san"||theme!=="earthquake")return ["Landschaft im Nahmodell","Gelände in Metern","Gestein und Bewuchs zeigen typische Formen. Die Einzelobjekte sind beispielhaft gesetzt.","Geologische Bewegungen lassen sich im regionalen Prozessmodell untersuchen."];
@@ -28,7 +29,8 @@ export function regionalReading(r:RegionalScene):string[]{
  if(theme==="process"&&process==="complex")return ["Komplexe Grenzzone","Örtlicher Mechanismus offen","Die regionale Relativbewegung ist bekannt. Die Verteilung auf einzelne Störungen ist hier ungeklärt.","Dieser Schnitt rekonstruiert kein örtliches Erdbeben."];
  if(theme==="process")return [a.term,t===0?"Ausgangszustand":t===1?"Endzustand im Modell":({ridge:"Neue Kruste entsteht am Rücken",rift:"Die Kruste wird gedehnt",collision:"Kruste wird zusammengeschoben",subduction:"Die Platten nähern sich",arc:"Annäherung am Inselbogen",transform:"Seitlicher Versatz",oceanTransform:"Versatz am Meeresboden",convergence:"Annäherung",complex:"Verteilte Bewegung",hotspot:"Die Platte bewegt sich"})[process],a.cause,"Mögliche Folgen: "+a.effects];
  if(theme==="volcano"){
-   const source=site==="hawaii"?"Über einer länger beständigen Schmelzquelle entstehen nacheinander Schildvulkane. Die Platte trägt ältere Vulkane fort.":process==="arc"||process==="subduction"?"Wasserhaltige Stoffe aus der abtauchenden Platte begünstigen das teilweise Schmelzen im Mantelkeil.":"Am Rücken steigt heißes Mantelgestein auf. Sinkender Druck lässt einen Teil schmelzen."+(site==="island"?" Auf Island verstärkt ein Hotspot die Schmelzbildung.":"");
+   const source=meltingExplanation(process,site);
+   if(meltingSetting(process,site)==="uncertain")return ["Vulkanismus","Örtlicher Mechanismus offen",source,"Für diesen Ort wird kein Ausbruch modelliert."];
    const explosive=r.eruption==="explosive";
    if(site==="hawaii"&&t<=.53)return ["Hotspot-Vulkankette","Eine Vulkankette entsteht",source,"Die lange Phase des Inselwachstums endet vor dem kurzen Modellausbruch."];
    return ["Vulkanismus",t> (explosive?.54:.53)?explosive?"Asche und Gas steigen auf":"Lava fließt aus":t>.12?"Magma steigt im Modell auf":"Schmelzbereich im Untergrund",source,explosive?"Bei diesem Vergleichsausbruch zerreißt Gas die Schmelze.":"An der Oberfläche heißt die austretende Schmelze Lava."];
