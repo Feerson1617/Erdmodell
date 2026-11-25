@@ -1,0 +1,15 @@
+GeoRisiko · Forschungsatlas G6.4 · Bearbeitungen für die Offline-Darstellung
+
+Ozeanbodenalter: Maria Seton et al. (2020), EarthByte, doi:10.1029/2020GC009214.
+Datensatz doi:10.5281/zenodo.6782543, CC BY 4.0, https://creativecommons.org/licenses/by/4.0/.
+GMT-Übersicht @earth_age_01d_g, gefiltert auf ein Grad; Übernahme der Originalknoten in ein kompaktes Binärraster, plus didaktische Altersklassen im Renderer.
+
+Magnetik: Meyer, Saltus und Chulliat (2017), NOAA/NCEI, EMAG2v3, doi:10.7289/V5H70CVX.
+GMT-Übersicht @earth_mag_01d_g auf Meeresniveau; Zusammenstellung aus Messungen, gefiltert auf ein Grad.
+Die App zeigt ausgewählte Symbole und einzelne Rasterwerte in nT.
+
+Vulkanstandorte: NOAA NCEI/WDS Volcano Locations Database, doi:10.7289/V5JW8BSH.
+1.609 Katalogstandorte, Stand 25.11.2026. Übernommene Tatsachendaten: ID, Name, Koordinaten und Katalogform.
+
+Für PB2002, USGS ComCat, die NGL-Stationswerte und die historische Rekonstruktion gelten die vorhandenen Attributionen.
+Primärquellen, Datenstand und Prüfsummen: data/g64/quellen.json.

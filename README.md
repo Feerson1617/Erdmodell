@@ -1,5 +1,7 @@
 # GeoRisiko für Mac
 
+Dieser Entwicklungsbranch enthält den Forschungsatlas als Arbeitsstand für G6.4. Die Anleitung erläutert die neuen Daten, Messwerkzeuge und die ausstehenden Teile der Phase. Die vier Unterrichtsprodukte gehören zum separat geprüften Stand G6.3.1. [Forschungsatlas](docs/g64-forschungsatlas.md) · [Unterrichtsprodukte in PR 20](https://github.com/Feerson1617/Erdmodell/pull/20)
+
 GeoRisiko ist ein offline nutzbares 3D-Erdobservatorium für den Geographieunterricht. Die Lehrkraft zeigt am Globus Erdschalen, Plattengrenzen, regionale Prozesse und den Nyos-See. Die Mac-App und die einzelne Test-HTML verwenden denselben Three.js-Kern.
 
 Im Grenzvergleich stehen die bewegten Plattenstücke neben der Erklärung. **Geologisches Prozessmodell öffnen** führt zum selben Grenzabschnitt. In **Beobachten → Informationen freigeben** kann die Lehrkraft zuerst nur eine Phase oder einen Objektnamen zeigen. [Beobachtung und Modellgrenzen](docs/g63-unterricht.md)

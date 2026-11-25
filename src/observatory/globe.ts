@@ -34,9 +34,20 @@ export class MapLayers {
     this.selectStep(undefined);
     if(preferEvents && this.events.visible){let best=tol*tol;this.centers.forEach((p,i)=>{const d=p.distanceToSquared(dir);if(d<best){best=d;this.event=this.rows[i];}});if(this.event)return;}
     if(!this.boundaries.visible)return;
-    let best=tol*tol;const p=new T.Vector3(),v=new T.Vector3();
-    this.arcs.forEach(({a,b},i)=>{v.subVectors(b,a);p.subVectors(dir,a);const t=T.MathUtils.clamp(p.dot(v)/v.lengthSq(),0,1);p.copy(a).addScaledVector(v,t).normalize();const d=p.distanceToSquared(dir);if(d<best){best=d;this.selectedStep=this.steps[i];}});
-    this.selectStep(this.selectedStep);
+    this.selectStep(this.nearestStep(dir,tol));
+  }
+  nearestStep(dir:T.Vector3,tol:number,include?:(s:Step)=>boolean){
+    let best=tol*tol,step:Step|undefined;
+    const p=new T.Vector3(),v=new T.Vector3();
+    this.arcs.forEach(({a,b},i)=>{
+      if(include&&!include(this.steps[i]))return;
+      v.subVectors(b,a);p.subVectors(dir,a);
+      const t=T.MathUtils.clamp(p.dot(v)/v.lengthSq(),0,1);
+      p.copy(a).addScaledVector(v,t).normalize();
+      const d=p.distanceToSquared(dir);
+      if(d<best){best=d;step=this.steps[i];}
+    });
+    return step;
   }
   selectStep(step?:Step){
     if(this.active){this.boundaries.remove(this.active);this.active.geometry.dispose();(this.active.material as T.Material).dispose();this.active=undefined;}

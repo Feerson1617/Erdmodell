@@ -1,3 +1,5 @@
+import { ResearchAtlas, type ResearchState } from "./research-atlas";
+import { PlateRates } from "./plate-rates";
 import {meltingExplanation} from "./melting";
 import {boundaryLesson} from "../tectonics/learning";
 import {assumptions,learningFields,regionalReading,timeReading,setReading} from "./lesson";
@@ -44,6 +46,21 @@ export class Observatory {
   private readonly profile=new WaterProfile($("earth").parentElement!);
   private spare?:RegionalScene;private switching=false;private resumePlayback=false;private profileWanted=false;
   private mapPurpose:"events"|"boundaries"="events";
+  private research?:ResearchAtlas;
+  private readonly rates=new PlateRates();
+  async openResearch(state?:ResearchState){
+    const opened=this.openMap("boundaries"),revision=this.revision;
+    await opened;
+    if(this.revision!==revision||this.mode!=="map"||this.mapPurpose!=="boundaries"||!this.maps.steps.length)return;
+    this.research?.dispose();
+    const atlas=new ResearchAtlas(this.maps,$("earth").parentElement!,step=>this.rates.allowCurrent(step));
+    if(state)atlas.state={...state,layers:[...state.layers]};
+    this.research=atlas;this.maps.group.visible=false;this.world.scene.add(atlas.globe);
+    this.draw();
+    try{await atlas.init();}catch{
+      if(this.research===atlas){const hint=$("research-reading");if(hint)hint.textContent="Die lokalen Forschungsdaten konnten nicht geöffnet werden.";}
+    }
+  }
   constructor(private world:World,private side:HTMLElement,private navigateBase:(mode:"globe"|"plates")=>void){
     world.scene.add(this.maps.group);this.maps.group.visible=false;
     this.labels=document.createElement("div");this.labels.id="observatory-labels";$("earth").parentElement!.append(this.labels);
@@ -59,6 +76,7 @@ export class Observatory {
   private parkfield?:RegionalScene;
   private parkDefaults?:ReturnType<typeof fields<RegionalScene,typeof regionKeys[number]>>;
   close(){
+    this.research?.dispose();this.research=undefined;
     this.profile.hide();this.profileWanted=false;this.switching=false;this.spare?.dispose();this.spare=undefined;this.revision++;
     const r=this.region;
     if(r?.ready&&r.spec.site==="san"&&r.spec.theme==="earthquake"&&!r.spec.comparison&&!r.spec.event){
@@ -126,6 +144,7 @@ export class Observatory {
     if(this.mode==="time"){this.pickTime(x,y);return true;}
     const b=$("earth").getBoundingClientRect(),ray=new T.Raycaster();ray.setFromCamera(new T.Vector2((x-b.x)/b.width*2-1,1-(y-b.y)/b.height*2),this.world.nav.camera);
     const hit=ray.ray.intersectSphere(new T.Sphere(new T.Vector3(),R+35),new T.Vector3());if(hit){
+      if(this.research){hit.normalize();this.research.pickAt(Math.asin(hit.y)*180/Math.PI,Math.atan2(hit.x,hit.z)*180/Math.PI,Math.max(.35,this.world.nav.pose.d/R*1.2));return true;}
       this.maps.pick(hit.normalize(),(this.world.nav.pose.d/R)*.018,this.mapPurpose==="events");this.draw();}
     return true;
   }
@@ -157,6 +176,12 @@ export class Observatory {
   draw(){
     if(!this.mode)return;this.mark();
     const back=button("g-world","Zum Globus"),selectRegions=(theme:Theme,id:string)=>'<label>Region<select id="g-site">'+opts(Object.fromEntries(Object.entries(sites).filter(([k])=>theme!=="volcano"||["island","japan","hawaii"].includes(k)).map(([k,s])=>[k,s.name])),id)+'</select></label>';
+    if(this.mode==="map"&&this.research){
+      this.research.mount(this.side);
+      this.rates.mount(this.side.querySelector(".g-stack")!,this.maps.steps,this.maps.selectedStep);
+      this.action("research-back",()=>void this.openMap("boundaries"));
+      return;
+    }
     if(this.mode==="map"){
       const m=this.maps,s=m.selectedStep,ev=m.event;
       this.side.innerHTML='<p class="g-kicker">Beobachtungen · heute</p><h1>'+(this.mapPurpose==="events"?"Erdbeben der Erde":"Plattengrenzen")+'</h1>'+
@@ -167,6 +192,10 @@ export class Observatory {
         (this.mapPurpose==="boundaries"?'<label>Grenzbeispiele<select id="g-example" '+(m.steps.length?"":"disabled")+'><option value="">Ort auf dem Globus finden …</option>'+opts(this.examples(),"")+'<optgroup label="Weitere Regionen">'+opts(Object.fromEntries(Object.entries(geographicExamples).filter(([id])=>!this.examplesCache[id])),"")+'</optgroup></select></label>':'')+
         '<label>Referenzregion<select id="g-launch"><option value="">Region wählen …</option>'+opts(Object.fromEntries(Object.entries(sites).filter(([k])=>k!=="hawaii").map(([k,v])=>[k,v.name])),"")+'</select></label>'+
         button("g-map-overview","Weltübersicht")+item("Woher wissen wir das?","Seismometer zeichnen Erschütterungen auf. Aus vielen Aufzeichnungen bestimmen Forschende Ort und Tiefe. Ein Kartenpunkt allein verrät die Bruchrichtung nicht. Ort, Zeit und Stärke eines künftigen Bebens lassen sich nicht exakt vorhersagen.")+back+'</div>';
+      if(this.mapPurpose==="boundaries"){
+        const open=document.createElement("button");open.id="research-open";open.textContent="Forschungsatlas öffnen";open.onclick=()=>void this.openResearch();
+        this.side.querySelector("h1")?.after(open);
+      }
       this.change("g-quakes",()=>{m.events.visible=!m.events.visible;m.event=undefined;this.draw();});this.change("g-lines",()=>{m.boundaries.visible=!m.boundaries.visible;m.selectStep(undefined);this.draw();});
       this.change("g-depth",()=>{m.depth=!m.depth;m.recolor();this.draw();});this.change("g-launch",v=>{if(v)void this.openRegion(reference(v as Site,"earthquake"));});
       this.change("g-example",id=>{const st=m.steps[Number(id)-1];if(!st)return;this.maps.selectStep(undefined);
@@ -236,6 +265,7 @@ export class Observatory {
   private lastScene?:RegionalScene;
   private drawnState="";private readingState="";
   private frame(dt:number){
+    if(this.research?.state.flat){graphics.idle=true;graphics.scope="world";graphics.activity="cached";return true;}
     graphics.idle=false;
     if(this.lastScene!==this.region||this.world.nav.flight||this.mode!=="regional"){this.lastScene=undefined;this.drawnState="";}
 
@@ -278,7 +308,7 @@ export class Observatory {
   }
   snapshot(){
     const r=this.region,t=this.timeline,m=this.maps;
-    return {mode:this.mode,pose:{...this.world.nav.pose},map:{purpose:this.mapPurpose,events:m.events.visible,lines:m.boundaries.visible,depth:m.depth,step:m.selectedStep?.[0],event:m.event?.[0]},
+    return {mode:this.mode,pose:{...this.world.nav.pose},map:{research:this.research?.state,rates:this.research?{ids:[...this.rates.ids],years:this.rates.years,unit:this.rates.unit,opened:this.rates.opened}:undefined,purpose:this.mapPurpose,events:m.events.visible,lines:m.boundaries.visible,depth:m.depth,step:m.selectedStep?.[0],event:m.event?.[0]},
       region:r?.ready?{site:r.spec.site,theme:r.spec.theme,boundary:r.spec.geology?.id,coast:r.spec.coastLesson,event:r.spec.event,
         settings:fields(r,regionKeys),view:r.view,cut:r.cut,position:r.camera.position.toArray(),target:r.orbit.target.toArray()}:undefined,
       time:t?fields(t,timeKeys):undefined};
@@ -286,7 +316,8 @@ export class Observatory {
   async restore(s:ReturnType<Observatory["snapshot"]>){
     const m=this.maps;
     if(s.mode==="map"){
-      await this.openMap(s.map.purpose);m.events.visible=s.map.events;m.boundaries.visible=s.map.lines;m.depth=s.map.depth;m.recolor();
+      if(s.map.research){const rates=s.map.rates;if(rates){this.rates.ids=[...rates.ids];this.rates.years=rates.years;this.rates.unit=rates.unit;this.rates.opened=rates.opened;}await this.openResearch(s.map.research);}
+      else await this.openMap(s.map.purpose);m.events.visible=s.map.events;m.boundaries.visible=s.map.lines;m.depth=s.map.depth;m.recolor();
       m.selectStep(m.steps.find(step=>step[0]===s.map.step));m.event=m.rows.find(row=>row[0]===s.map.event);
     }else if(s.mode==="time"&&s.time){
       this.openTime();const t=this.timeline!;Object.assign(t,fields(s.time,timeKeys));t.overview=s.time.overview!==false;t.setYear(s.time.year);
@@ -418,7 +449,7 @@ export class Observatory {
       '<label><input type="checkbox" id="g-future-lines" '+(t.showBoundaries?"checked":"")+'> Modellgrenzen zeigen</label><small>'+assumptions[t.scenario]+'</small>')+
       '<label>Tempo<select id="g-speed">'+opts({"3":"Langsam","7":"Normal","14":"Schnell"},String(t.speed))+'</select></label>'+
       '<details id="g-evidence"><summary>Belege ansehen</summary><label>Hinweis im Globus<select id="g-evidence-kind">'+opts({"":"Ausblenden",margin:"Kontinentalränder",fossil:"Mesosaurus-Fundregionen",rock:"Alte Gebirgsgürtel",india:"Weg Indiens",australia:"Weg Australiens"},t.layer)+'</select></label><p id="g-evidence-name"></p><p id="g-evidence-info"></p>'+
-      button("g-magnet","Magnetstreifen am Rücken")+button("g-motion","Heutige Bewegung")+button("g-real-events","Beobachtete Erdbeben")+'</details>'+
+      '<p><strong>Wegeners Kontinentalverschiebung, ab 1912</strong> · Zusammenpassende Kontinentalränder, verwandte Fossilien, alte Gebirgsgürtel und Spuren früherer Vereisungen stützten die frühere Verbindung der Kontinente.</p><p><strong>Moderne Plattentektonik, seit den 1960er-Jahren</strong> · Ozeanbodenalter, magnetische Anomalien und Erdbebenverteilung belegen Bildung, Bewegung und Recycling ganzer Lithosphärenplatten. Heutige GNSS-Stationen messen Bewegungen direkt.</p>'+button("g-evidence-atlas","Heutige Messungen und Ozeanbodenalter")+button("g-magnet","Magnetstreifen am Rücken")+button("g-motion","Heutige Bewegung")+button("g-real-events","Beobachtete Erdbeben")+'</details>'+
       '<details id="g-gnss"><summary>Heute mit Satelliten messen</summary><label>Messstation<select id="g-station-gnss">'+opts(Object.fromEntries(gnss.map(s=>[s.id,s.id])),gnss[0].id)+'</select></label><p id="g-gnss-text"></p><small>GNSS · Nevada Geodetic Laboratory · Bezugsrahmen IGS14</small></details>'+
       item("Was zeigt das Modell?","Die hellen Flächen sind Kontinentalbereiche, auch unter flachem Meer. In der Vergangenheit zeigen Linien rekonstruierte Plattengrenzen. Die starren Blöcke drehen sich. Grenzen und verformte Zonen stammen aus Zeitschnitten im Abstand von fünf Millionen Jahren. In der Zukunft unterscheiden die Farbtöne bewegliche Kontinentalblöcke.")+
       item("Wie sicher ist die Zukunft?","Die vier Modelle nehmen unterschiedliche künftige Plattengrenzen an. Sie zeigen Möglichkeiten. Wo Küsten, Gebirge und Städte liegen werden, lässt sich daraus nicht ablesen.")+
@@ -448,6 +479,7 @@ export class Observatory {
     this.change("g-evidence-kind",v=>{t.layer=v;if(t.year>0)t.setYear(0);const point=t.evidenceCentre();if(point)this.world.nav.fly({...point,d:16700,tilt:0,bearing:0},true);$("g-evidence-info").textContent=text[v]||"";$("g-evidence-name").textContent="";});
     $("g-evidence-info").textContent=text[t.layer]||"";
     this.action("g-magnet",()=>void this.openRegion(reference("island","magnet")));this.action("g-real-events",()=>void this.openMap());
+    this.action("g-evidence-atlas",()=>void this.openResearch({layers:["age","bounds","gnss"],flat:false,magnitude:6,depth:750}));
     this.action("g-motion",()=>this.navigateBase("plates"));this.action("g-to-atlas",()=>this.navigateBase("plates"));
     if(!$("g-split-caption")){const el=document.createElement("div");el.id="g-split-caption";$("earth").parentElement!.append(el);}
   }

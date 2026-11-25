@@ -90,3 +90,7 @@ Das schulinterne Curriculum ordnet dieses Thema Jahrgang 9 mit einer Wochenstund
 | F4 S19, S20, Bewertung und nachhaltiges Handeln | Den Standort beim gleichen Modellbeben wechseln oder Vorsorgemaßnahmen am Nyos-See vergleichen | Schutzwirkung, Erreichbarkeit, Flächenbedarf und Aufwand gegeneinander abwägen |
 
 Die Kompetenzbezüge und die curricularen Inhalte folgen den oben verlinkten Originalseiten. Bewegungspfeile, Szenariovergleich und einzeln freigegebene Begriffe sind Darstellungshilfen. Die Auswahl von Leitfragen und Arbeitsformen liegt bei der Lehrkraft. Die Fachbegriffe des Leitfadens können zur Vertiefung dienen. Eine begründete Antwort entsteht im Unterrichtsgespräch.
+
+## G6.4 · Forschungsatlas im Entwicklungsbranch
+
+Der fachliche Schwerpunkt „Naturrisiken – Aufbau der Erde und Modell der Plattentektonik“ wird um die heutige Verteilung von Vulkanstandorten und die Altersstruktur der ozeanischen Kruste erweitert. Der Vergleich von Scherrate und Divergenz sowie von relativer Plattenbewegung und Stationsgeschwindigkeiten unterstützt die Unterscheidung von Struktur, Funktion und Prozess. Der Stand der Themenabdeckung wird außerhalb des Unterrichtsmodells geführt. [Forschungsatlas, Belegstichproben und offene Inhalte](g64-forschungsatlas.md)

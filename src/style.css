@@ -388,3 +388,18 @@ body.reading-focus #sidebar .process-reading{font-size:clamp(17px,1.4vw,25px);li
 
 #sidebar #focus-reading{min-height:38px;margin:0 0 .5rem}
 .observing #focus-reading{display:none}
+
+.research-map-plane:not([hidden]){display:grid;place-items:center;position:absolute;inset:0;background:#0e1c20;container-type:size;z-index:4}
+.research-map-plane canvas{position:static;inset:auto;display:block;width:min(100cqw,200cqh);height:auto;cursor:crosshair}
+.research-flat :is(.tools,.orientation,.hint){visibility:hidden}
+#research-layers{display:grid;gap:.15rem}
+#research-layers label{min-height:32px;display:flex;align-items:center}
+#research-reading p,#research-rates p,#research-legend p{margin:.45em 0}
+.research-rate-chart{width:100%;height:auto;background:#1b322f;border-radius:8px}
+#research-rates .g-stack{margin-top:.6em}
+
+#research-rates label{flex-direction:column;align-items:stretch;gap:3px}
+#research-rates summary,#research-profile summary{cursor:pointer}
+.research-figure .research-rate-chart{display:block;max-height:52vh;object-fit:contain;margin:1rem auto}
+.research-figure>div{font-size:clamp(16px,1.6vw,23px);line-height:1.4;margin:1em 0}
+.research-figure>div p{margin:.25em 0 .7em}
