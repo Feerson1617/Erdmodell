@@ -357,6 +357,10 @@ export async function exercise(page, out, { group = "all", film = false, board =
             await tools(true);
             await click("nyos-event");
             await tools(false);
+            const note = page.locator("#modelnote");
+            await note.waitFor({ state: "visible" });
+            const rect = await note.boundingBox();
+            assert.ok(rect.height < 64, "Der einzeilige Modellhinweis lässt das Seeprofil frei");
           }
           if (id === "layers") {
             await tools(true);
