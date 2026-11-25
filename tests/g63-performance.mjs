@@ -5,7 +5,7 @@ import {join,resolve} from "node:path";
 import {pathToFileURL} from "node:url";
 import {mkdir,writeFile} from "node:fs/promises";
 import assert from "node:assert/strict";
-const browser=await chromium.launch(process.env.G6_NATIVE_GPU?{channel:"chrome",headless:false}:{args:["--use-angle=swiftshader","--enable-unsafe-swiftshader"]});
+const browser=await chromium.launch(process.env.G6_NATIVE_GPU?{headless:false}:{args:["--use-angle=swiftshader","--enable-unsafe-swiftshader"]});
 const out=process.env.G63_OUT||"test-results/g63";await mkdir(out,{recursive:true});
 const raw={engine:browser.version(),window:[1920,1080],hardware:process.arch,samples:[]},contexts=[];
 try{

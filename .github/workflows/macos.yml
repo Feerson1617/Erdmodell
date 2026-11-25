@@ -94,6 +94,8 @@ jobs:
           path: .scratch/g62-reference
           persist-credentials: false
       - run: command -v ffmpeg || brew install ffmpeg
+      - name: Für alle G6.3-Vergleiche dieselbe Chromium-Version installieren
+        run: npx playwright install chromium
       - name: Beide versandfertigen Einzeldateien bilden
         run: |
           npm --prefix .scratch/g62-reference run build

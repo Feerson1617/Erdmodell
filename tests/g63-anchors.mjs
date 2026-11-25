@@ -3,7 +3,7 @@ import {resolve,join} from "node:path";
 import {pathToFileURL} from "node:url";
 import {writeFile,mkdir} from "node:fs/promises";
 import assert from "node:assert/strict";
-const browser=await chromium.launch(process.env.G6_NATIVE_GPU?{channel:"chrome",headless:false}:{args:["--use-angle=swiftshader","--enable-unsafe-swiftshader"]});
+const browser=await chromium.launch(process.env.G6_NATIVE_GPU?{headless:false}:{args:["--use-angle=swiftshader","--enable-unsafe-swiftshader"]});
 const p=await browser.newPage({viewport:{width:1366,height:860},reducedMotion:"no-preference"});
 const out=process.env.G63_OUT||"test-results/g63",rows=[];await mkdir(out,{recursive:true});
 await p.addInitScript(()=>{

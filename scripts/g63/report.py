@@ -22,7 +22,8 @@ anchors=data(evidence/'Ankerpruefung.json')
 assert anchors['flightFrames']>0 and anchors['staleLabels']==0 and max(r['error'] for r in anchors['rows'])<1e-7
 assert native['arch']=='arm64' and native['restart']['verified'] and app['classroom']['elapsedMs']>=900000
 assert all(not r['errors'] and not r['network'] for r in (app,web,old,new))
-assert old['complete'] and new['complete'] and old['engine']==new['engine']==perf['engine']
+assert old['complete'] and new['complete']
+assert old['engine']==new['engine']==perf['engine'], f"Chromium-Versionen für Vorher, Nachher und Messung: {old['engine']}, {new['engine']}, {perf['engine']}"
 assert new['product'] in (base/'SHA256.txt').read_text()
 assert perf['complete'] and len(perf['samples'])==12
 assert science['steps']==5819 and science['subduction']==1127 and science['oblique']==435
@@ -56,6 +57,11 @@ report+=['','## Dauerlauf und Auslieferung','',f"Die vom DMG installierte App li
 for scene in sorted({v['scene'] for v in app['classroom']['samples']}):
     values=[v['renderedFps'] for v in app['classroom']['samples'] if v['scene']==scene and v['width']==1920]
     if values:report.append(f'| {scene} | {median(values):.1f} |')
+history=[s for s in app['classroom']['samples'] if s['scene']=='Zeitreise' and s['width']==1920]
+for comparison,label in [(False,'Historische Zeitreise'),(True,'Zukunftsvergleich')]:
+    subset=[s for s in history if s['futureComparison']==comparison]
+    if subset:report.append(f"| {label} einzeln | {median(s['renderedFps'] for s in subset):.1f} |")
+report+=['','Die Messung des Zukunftsvergleichs umfasst auch die Standzeit am Szenarioende. Bei unveränderter Darstellung verwendet die Zeitreise das zuletzt gerenderte Bild erneut. Die Rohdaten enthalten getrennte Zähler für Bildschirmzyklen und tatsächlich neu gerenderte Bilder.']
 report+=['','## Grenzen der Abnahme','','Die Messungen stammen von virtueller Hardware. Eine physische M1-/Smartboard-Abnahme wurde auf Wunsch ausgelassen. Die Lernwirksamkeit im Unterricht wurde nicht empirisch erhoben. Bei verdeckten Objekten oder engem Bildausschnitt können Beschriftungen entfallen. Die Küstenrechnung ist eindimensional. Die vier Zukünfte sind veröffentlichte Möglichkeiten. Die ad hoc signierte App kann bei der ersten Installation eine lokale Gatekeeper-Freigabe erfordern.','',f"SHA-256 Offline-HTML G6.2 `{old['product']}` und G6.3 `{new['product']}`."]
 reportPath=base/'Abnahmebericht.md';reportPath.write_text('\n'.join(report)+'\n');files[reportPath.name]=reportPath
 html=['<!doctype html><html lang="de"><meta charset="utf-8"><title>GeoRisiko G6.3 · Sichtprüfung</title><style>body{margin:3vw;background:#152a22;color:#f5f2e7;font:18px system-ui}a{color:#bde4ca}section{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr));gap:1em}img{width:100%;height:auto}figure{margin:0}</style><h1>GeoRisiko G6.3</h1><p><a href="Abnahmebericht.md">Fachlicher und technischer Abnahmebericht</a></p><h2>Bedienfilme</h2>']

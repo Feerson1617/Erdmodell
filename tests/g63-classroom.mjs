@@ -8,7 +8,7 @@ import {pathToFileURL} from "node:url";
 import {screencast} from "./g5-abnahme.mjs";
 const file=resolve(process.argv[2]),before=process.argv.includes("--before"),fast=Boolean(process.env.G63_QUICK);
 const out=join(process.env.G63_OUT||"test-results/g63",before?"Vorher":"Nachher");await mkdir(out,{recursive:true});
-const browser=await chromium.launch(process.env.G6_NATIVE_GPU?{channel:"chrome",headless:false}:{args:["--enable-unsafe-swiftshader","--use-angle=swiftshader"]});
+const browser=await chromium.launch(process.env.G6_NATIVE_GPU?{headless:false}:{args:["--enable-unsafe-swiftshader","--use-angle=swiftshader"]});
 const p=await browser.newPage({viewport:fast?{width:1280,height:800}:{width:1920,height:1080},deviceScaleFactor:1,reducedMotion:"reduce"});
 p.setDefaultTimeout(75000);
 await p.addInitScript(()=>{localStorage.setItem("georisiko.graphics.g6","classroom");});
