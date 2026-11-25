@@ -79,6 +79,7 @@ export class ResearchAtlas {
     new T.SphereGeometry(R + 18, 160, 96).rotateY(-Math.PI / 2),
     new T.MeshBasicMaterial({ map: this.texture, transparent: true, depthWrite: false, toneMapped: false }),
   );
+  get ready(){return !!this.data && !!this.background;}
   state: ResearchState = { layers: ["bounds"], flat: false, magnitude: 6, depth: 750 };
   private plateColor = makeCanvas(w, h);
   private plateIds?: Uint8ClampedArray;

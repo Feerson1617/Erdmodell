@@ -278,7 +278,7 @@ export class RegionalScene {
           shader.fragmentShader="uniform sampler2D contextImage;varying vec2 landscapeXY;\n"+shader.fragmentShader.replace("#include <map_fragment>", "#include <map_fragment>\nfloat border=smoothstep(.78,1.,max(abs(landscapeXY.x)/6.,abs(landscapeXY.y)/4.5));diffuseColor.rgb=mix(diffuseColor.rgb,texture2D(contextImage,vec2(.5+landscapeXY.x/48.,.5-landscapeXY.y/36.)).rgb,border);");};
       }
       if(this.lib)decorateTerrain(terrain,this.lib,this.relief,this.spec.site==="island"||this.spec.site==="hawaii"?2:this.spec.site==="japan"?1:this.spec.site==="himalaya"?3:this.spec.site==="rift"?4:0,this.grade,this.spec.theme,this.hillshade);
-      if(this.spec.site&&["japan","island","hawaii"].includes(this.spec.site)||this.groundData&&!this.spec.site)seabed(terrain,this.metresPerUnit);
+      if(this.spec.site&&["japan","island","hawaii"].includes(this.spec.site)||this.groundData&&!this.spec.site&&this.spec.theme!=="process")seabed(terrain,this.metresPerUnit);
       for(const front of [false,true]){
         const bounds=new Map<number,[number,number]>();
         const columns=this.water?120:64;const g=indexed(36,columns,(i,j)=>{const z=(front?0:-4.5)+j/8;
@@ -301,7 +301,7 @@ export class RegionalScene {
       }
     }
     geologySolids(this);
-    if(!["forces","lithosphere"].includes(this.spec.theme)&&(this.spec.coastLesson||this.groundData?.some(h=>h<0)||this.windows?.some(h=>h<0))){
+    if(!(this.spec.theme==="process" && [1510,2308].includes(this.spec.geology?.id??0)) && !["forces","lithosphere"].includes(this.spec.theme)&&(this.spec.coastLesson||this.groundData?.some(h=>h<0)||this.windows?.some(h=>h<0))){
       for(const front of [false,true]){
         const g=indexed(42,120,(i,j)=>{const x=-6+12*i/120,z=(front?0:-4.5)+4.5*j/42;return [x,0,z,i/120,j/42];});
         const water=seaMaterial(this.ui.t,this.metresPerUnit);
@@ -392,7 +392,7 @@ export class RegionalScene {
     }
     if(view==="land"||view==="overhead"){
       this.reframe(false);this.view=view;
-      if(view==="overhead"){this.transition=undefined;this.orbit.target.set(0,this.height(0,-.35),-.35);this.camera.position.copy(this.orbit.target).add(new T.Vector3(1.7,6.2,3.2));this.orbit.update();}return;
+      if(view==="overhead"){this.transition=undefined;this.orbit.target.set(0,this.height(0,-.35),-.35);this.camera.position.copy(this.orbit.target).add(this.spec.geology && this.spec.theme==="process"?new T.Vector3(2.6,8.7,8.2):new T.Vector3(1.7,6.2,3.2));this.orbit.update();}return;
     }
     this.reframe(true);this.view=view;if(view==="cut")return;
     if(view==="vent"){

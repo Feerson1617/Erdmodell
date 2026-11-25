@@ -55,6 +55,15 @@ export class World {
   private nyosGround = 0;
   private nyosCoverage?: NyosCoverage;
   private globeOccluded = false;
+  worldDrawn = false;
+  renderEvidence() {
+    return {
+      worldDrawn: this.worldDrawn, globe: this.worldDrawn && this.planet.group.visible,
+      nyos: this.worldDrawn && this.nyos.group.visible && this.nyos.localWeight > 0,
+      terrains: this.worldDrawn ? [...this.terrains].filter(([, t]) => t.group.visible).map(([id]) => id) : [],
+      camera: this.nav.camera.position.toArray(), focus: [this.nav.pose.lat, this.nav.pose.lon],
+    };
+  }
   private terrains = new Map<string, LocalTerrain>();
   region: Region = firstRegion;
   get local() {
@@ -848,7 +857,7 @@ export class World {
   diagnostics() {
     const { lat, lon, d, tilt, bearing } = this.nav.pose;
     return {
-      ready: this.ready,
+      ready: this.ready, rendered: this.renderEvidence(),
       mode: this.mode,
       style: this.style,
       lat,
@@ -1033,7 +1042,8 @@ export class World {
     this.gl.setClearColor(0xaccbd0, zoom);
     const submit = performance.now();
     graphics.activity=this.nav.flight?"camera":"world";graphics.scope=this.mode;
-    if(!this.customRender?.(dt))this.gl.render(this.scene, this.nav.camera);
+    this.worldDrawn = !this.customRender?.(dt);
+    if(this.worldDrawn)this.gl.render(this.scene, this.nav.camera);
     this.renderMs = performance.now() - submit;
     const sample=observeFrame(now);
     if(sample){const ratio=this.resolution.sample(sample.fps,sample.seconds);if(ratio!==undefined)this.gl.setPixelRatio(ratio);}

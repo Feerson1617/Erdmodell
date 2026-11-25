@@ -116,3 +116,14 @@ Der fachliche Schwerpunkt „Naturrisiken – Aufbau der Erde und Modell der Pla
 | Erkenntnis und Medienkompetenz | Beckenmarker, GNSS-Messungen, rekonstruierte Alterswerte, Modellgrenzen beim Zoomen | Quellen und Aussagekraft differenzieren |
 
 Zuordnung zu den Fachanforderungen Geographie Schleswig-Holstein 2015, S. 18–19 und 26, zum Leitfaden 2016, S. 46–47, sowie zum ETS-Fachcurriculum Jahrgang 9, S. 6. Fragestellung, fachliche Kontroverse und Sicherung verantwortet die Lehrkraft.
+
+## G6.4.2 · Räumliche und zeitliche Orientierung im Jahrgang 9
+
+| Bezug zur Fachanforderung Geographie SH (2015), zum Leitfaden (2016) und zum Fachcurriculum ETS | Darstellung | Nachweis |
+|---|---|---|
+| Räumliche Orientierung und Maßstabswechsel | Globus, Deutschland, Helgoland und regionaler Tonga-Ausschnitt mit bestätigter Ortsangabe | Kamera, sichtbare Geländeobjekte und Originalbilder in der Navigationsmatrix |
+| Regionales Beispiel und allgemeiner Prozess | Vulkanbogen über der abtauchenden ozeanischen Platte, getrennte Bezeichnungen für Ort und idealisierten Schnitt | Reale Kamerafahrt, Rückkehr zum Relief und selbes Atlasprofil |
+| Struktur, Funktion und Prozess | Fluide im Mantelkeil, Neubildung der Kruste, Verkürzung und Gebirgswurzel | Schwerpunkte am laufenden Modell und Freigabe einzelner Begriffe |
+| Systemisches Denken und funktionaler Medieneinsatz | Historische Zeit, hypothetische Zukünfte und beobachtete oder modellierte Kartenebenen | Lokale Offline-Galerie, Legenden und Zeitangaben in der Hauptansicht |
+
+Unterrichtsgespräch und Sicherung gestaltet die Lerngruppe mit der Lehrkraft. Quellen und curriculare Einordnung bleiben in dieser Dokumentation.

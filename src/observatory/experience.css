@@ -278,3 +278,121 @@ body.geo-experience.geo-tools-open:not(.observing) #desk #sidebar:not([hidden]) 
     width: 9vw;
   }
 }
+.geo-heading {
+  flex: 1;
+  min-width: 0;
+  line-height: 1.12;
+  display: grid;
+  gap: 2px;
+}
+.geo-heading strong {
+  font-size: clamp(14px, 1.18vw, 23px);
+  color: #f4f8ee;
+  text-wrap: balance;
+}
+.geo-heading #geo-crumb {
+  max-width: none;
+  font-size: clamp(12px, 0.95vw, 17px);
+  color: #bad2c8;
+}
+#geo-clock,
+#geo-legend {
+  position: absolute;
+  z-index: 3;
+  background: #132924ee;
+  color: #edf4eb;
+  border: 1px solid #758f82;
+  border-radius: 6px;
+  padding: 0.36em 0.65em;
+  line-height: 1.22;
+  pointer-events: none;
+}
+#geo-clock {
+  right: 10px;
+  top: 8px;
+  max-width: 48%;
+  font-size: clamp(14px, 1.17vw, 23px);
+  font-variant-numeric: tabular-nums;
+}
+#geo-legend {
+  left: 10px;
+  bottom: 9px;
+  max-width: min(880px, 85%);
+  font-size: clamp(13px, 1vw, 18px);
+  text-wrap: pretty;
+}
+.view:has(#geo-legend:not([hidden])) #geo-model-limit {
+  bottom: auto;
+  top: 8px;
+}
+.geo-experience .studio-object.reading-focus {
+  border-color: #f1ce89;
+}
+.geo-experience .studio-cell .studio-object {
+  font-size: clamp(15px, 1.17vw, 22px);
+}
+.geo-experience .studio-object small {
+  font-size: 0.94em;
+  line-height: 1.22;
+}
+.geo-experience #geo-dock {
+  flex-wrap: wrap;
+}
+.geo-experience #geo-dock select {
+  width: auto;
+  max-width: 190px;
+}
+.geo-experience #geo-dock select#geo-info {
+  width: clamp(96px, 8vw, 135px);
+}
+.geo-experience .geo-selector select {
+  min-width: 0;
+}
+@media (max-width: 1180px) {
+  .geo-experience .brand span,
+  .geo-experience .headTools #present span {
+    display: none;
+  }
+  .geo-experience #geo-dock {
+    gap: 3px;
+  }
+  .geo-experience #geo-dock :is(button, select) {
+    padding-inline: 0.4em;
+  }
+  .geo-experience #geo-time {
+    width: 8vw;
+  }
+}
+@media (max-width: 900px) {
+  .geo-experience .geo-selector select {
+    width: 90px;
+  }
+  .geo-experience #geo-dock {
+    font-size: 14px;
+  }
+  .geo-experience .geo-heading strong {
+    font-size: 14px;
+  }
+  .geo-experience #geo-clock {
+    max-width: 53%;
+    font-size: 13px;
+  }
+  .geo-experience #geo-legend {
+    font-size: 12px;
+  }
+  .geo-experience .headTools {
+    gap: 3px;
+  }
+}
+@media (max-width: 600px) {
+  .geo-heading {
+    flex-basis: 100%;
+  }
+  .geo-experience #geo-dock select {
+    max-width: 150px;
+  }
+}
+
+.geo-experience #geo-legend {
+  z-index: 5;
+}

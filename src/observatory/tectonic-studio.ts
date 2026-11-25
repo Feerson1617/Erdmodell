@@ -1,5 +1,5 @@
 import { places, referenceFor, wilsonPlaces } from "./process-places";
-import { earthFeatures, processFeatures, type Feature } from "./process-labels";
+import { earthFeatures, processFeatures, readingOrder, type Feature } from "./process-labels";
 import * as T from "three";
 import { PlateSection, type Analysis } from "./plate-section";
 import { EarthClassification, layersFor, type Division } from "./earth-classification";
@@ -38,6 +38,13 @@ const check = (id: string, label: string, on: boolean) =>
   '<label><input id="' + id + '" type="checkbox" ' + (on ? "checked" : "") + ">" + label + "</label>";
 const canMelt = (k: ProcessId) => subducts(k) || k === "ridge" || k === "hotspot" || k === "wilson";
 const underwater = (k: ProcessId) => ["ridge", "arc", "oceanTransform", "hotspot"].includes(k);
+function startingAngles(k: ProcessId): [number, number] {
+  if (k === "transform" || k === "oceanTransform") return [0.27, 0.89];
+  if (k === "collision" || k === "complex") return [0.32, 0.31];
+  if (subducts(k)) return [0.29, 0.33];
+  if (k === "ridge") return [0.28, 0.39];
+  return [0.36, 0.42];
+}
 const defaults = () => ({
   interior: false,
   division: "composition" as Division,
@@ -114,6 +121,8 @@ export class TectonicStudio {
   private sampleConfig = "";
   private prior = "";
   private lastGeometry = "";
+  private nextLabelLayout = 0;
+  private labelLayoutKey = "";
   private panelsKey = "";
   private labelResize = new ResizeObserver(() => {
     this.prior = "";
@@ -128,6 +137,8 @@ export class TectonicStudio {
     private locate?: (model: ProcessId) => void,
   ) {
     this.state = { ...defaults(), ...structuredClone(initial ?? {}) };
+    if (!this.state.interior && initial?.yaw === undefined)
+      [this.state.yaw, this.state.pitch] = startingAngles(this.state.models[0]);
     this.overlay.className = "studio-overlay";
     const canvas = gl.domElement;
     canvas.parentElement!.append(this.overlay);
@@ -285,6 +296,7 @@ export class TectonicStudio {
           '<input type="range" id="g-progress" min="0" max="1" step=".001" value="' +
           s.time +
           '"></label><div class="g-buttons"><button id="g-play">Abspielen</button><button id="g-step">Schritt</button><button id="g-reset">Zurücksetzen</button></div>' +
+          '<button id="studio-home">Standardperspektive</button>' +
           field(
             "Ansicht",
             "studio-view",
@@ -410,6 +422,12 @@ export class TectonicStudio {
         s.labels[i] = !s.labels[i];
       });
     });
+    click("studio-home", () => {
+      s.view = "block";
+      s.zoom = 1;
+      [s.yaw, s.pitch] = startingAngles(k);
+      redraw();
+    });
     bind("studio-view", (v) => {
       s.view = v as View;
       [s.yaw, s.pitch] =
@@ -499,6 +517,9 @@ export class TectonicStudio {
       m.full +
       " mm/Jahr Gesamtöffnung.";
   }
+  get painted() {
+    return !!this.prior;
+  }
   motionSample() {
     return this.rows.map((r) => (r.body instanceof PlateSection ? r.body.motionSample() : undefined));
   }
@@ -507,6 +528,7 @@ export class TectonicStudio {
       observing = document.body.classList.contains("observing");
     const info = document.body.dataset.infoDepth,
       choosing = document.body.hasAttribute("data-choose-object");
+    const priorities = ids.map((i) => (!s.interior ? readingOrder(s.models[i], s.time) : []));
     const stage = Math.min(8, Math.floor(s.time * 8 + 0.0001));
     const sig = [
       ids,
@@ -520,7 +542,8 @@ export class TectonicStudio {
       s.analysis,
       s.view,
       s.paths,
-      stage,
+      s.models.includes("wilson") ? stage : "",
+      priorities,
       info,
       observing,
       choosing,
@@ -587,17 +610,17 @@ export class TectonicStudio {
             : "Magnetisierung · warm normal · kühl invers · idealisierte Intervalle";
         slot.append(p);
       }
-      for (const e of entries[n]) {
-        if (!e.show || (!choosing && !observing && e.j >= (ids.length > 1 ? 2 : 4))) continue;
+      const order = priorities[n];
+      const ranked = entries[n]
+        .filter((e) => e.show)
+        .sort((a, b) => (order.length ? order.indexOf(a.j) - order.indexOf(b.j) : a.j - b.j));
+      for (const [rank, e] of ranked.entries()) {
+        if (!e.show || (!choosing && !observing && rank >= (ids.length > 1 ? 2 : 3))) continue;
         const tag = document.createElement("button");
         tag.className = "studio-object";
+        if (rank === 0 && !observing && info === "explain") tag.classList.add("reading-focus");
         tag.textContent = e.anonymous ? "•" : e.feature.name;
-        if (
-          !e.anonymous &&
-          info === "explain" &&
-          !observing &&
-          (ids.length === 1 ? e.j < 2 || (s.view === "wedge" && e.j === 2) : e.j === 0)
-        ) {
+        if (!e.anonymous && info === "explain" && !observing && rank === 0) {
           const line = document.createElement("small");
           line.textContent = e.feature.explanation;
           tag.append(line);
@@ -727,6 +750,13 @@ export class TectonicStudio {
     gl.setClearColor(0x142a34);
     gl.clear();
     gl.setClearColor(bg, alpha);
+    const layoutKey = [this.panelsKey, s.yaw, s.pitch, s.zoom, w, h].join("|");
+    const now = performance.now();
+    const layout = !s.playing || layoutKey !== this.labelLayoutKey || now >= this.nextLabelLayout;
+    if (layout) {
+      this.labelLayoutKey = layoutKey;
+      this.nextLabelLayout = now + 80;
+    }
     for (const [n, id] of ids.entries()) {
       const x = Math.round(((n % cols) * w) / cols),
         y = Math.round(((rows - 1 - Math.floor(n / cols)) * h) / rows),
@@ -738,7 +768,7 @@ export class TectonicStudio {
       cam.aspect = cw / ch;
       const seabed = !s.interior && s.view === "seabed";
       const dist =
-        ((s.interior ? 11.9 : seabed ? 6.4 : 14.2) * Math.max(1, (s.interior ? 1.03 : 1.68) / cam.aspect)) /
+        ((s.interior ? 11.9 : seabed ? 7.9 : 12.6) * Math.max(1, (s.interior ? 1.03 : 1.76) / cam.aspect)) /
         s.zoom;
       const target = s.interior ? 0 : seabed ? 0.02 : -0.52;
       cam.position.set(
@@ -750,15 +780,31 @@ export class TectonicStudio {
       cam.updateProjectionMatrix();
       gl.render(this.rows[id].scene, cam);
       const marks = this.pins.filter((p) => p.cell === n);
-      if (marks.length) {
+      if (marks.length && layout) {
         const features: Feature[] = s.interior
           ? earthFeatures(s.division, s.expanded)
           : processFeatures(s.models[id], s.time);
         const used: { x: number; y: number; w: number; h: number }[] = [];
         const cell = (marks[0].button.parentElement as HTMLElement).getBoundingClientRect();
+        const protectedPoints = features.map((f) => {
+          const p = f.point.clone().project(cam);
+          return { x: ((1 + p.x) * cw) / 2, y: ((1 - p.y) * ch) / 2 };
+        });
+        const pad = Math.max(12, Math.min(cw, ch) * 0.052);
+        const obstructions = [
+          ...marks[0].button.parentElement!.querySelectorAll<HTMLElement>(
+            ":scope > button:not(.studio-object), :scope > span",
+          ),
+          ...document.querySelectorAll<HTMLElement>(
+            "#geo-clock:not([hidden]),#geo-model-limit:not([hidden]),#sidebar",
+          ),
+        ]
+          .map((el) => el.getBoundingClientRect())
+          .filter((b) => b.width && b.height)
+          .map((b) => ({ x: b.left - cell.left, y: b.top - cell.top, w: b.width, h: b.height }));
         const rendered: DOMRect[] = [];
         for (const pin of marks) {
-          const pt = features[pin.index].point.project(cam),
+          const pt = features[pin.index].point.clone().project(cam),
             tag = pin.button;
           const tw = tag.offsetWidth,
             th = tag.offsetHeight;
@@ -780,13 +826,35 @@ export class TectonicStudio {
             [25, -2 * th - 22],
             [-tw - 25, th + 28],
           ];
+          offsets.push(
+            [6 - ax, ay < ch / 2 ? 18 : -th - 20],
+            [cw - tw - 6 - ax, -th / 2],
+            [-tw / 2, 48 - ay],
+            [-tw / 2, ch - th - 30 - ay],
+            [6 - ax, ch * 0.28 - ay],
+            [cw - tw - 6 - ax, ch * 0.28 - ay],
+            [6 - ax, ch * 0.7 - ay],
+            [cw - tw - 6 - ax, ch * 0.7 - ay],
+          );
+          // Prefer the open space just beyond the rock silhouette. The protected
+          // feature discs remain a hard exclusion, including the other labels' anchors.
+          const deck = new T.Vector3(0, s.interior ? 2.9 : 1.1, 0).project(cam);
+          const ceiling = ((1 - deck.y) * ch) / 2;
+          offsets.unshift(
+            [-tw / 2, ceiling - th - 18 - ay],
+            [-tw - 16, ceiling - th - 16 - ay],
+            [18, ceiling - th - 16 - ay],
+          );
           const xy = offsets
             .map(([dx, dy]) => ({ x: clamp(ax + dx, 6, Math.max(6, cw - tw - 6)), y: ay + dy }))
             .find(
               ({ x, y }) =>
                 y > 40 &&
                 y + th < ch - 12 &&
-                !used.some(
+                !protectedPoints.some(
+                  (p) => p.x + pad > x && p.x - pad < x + tw && p.y + pad > y && p.y - pad < y + th,
+                ) &&
+                ![...used, ...obstructions].some(
                   (b) => x < b.x + b.w + 4 && x + tw + 4 > b.x && y < b.y + b.h + 4 && y + th + 4 > b.y,
                 ),
             );
@@ -796,6 +864,8 @@ export class TectonicStudio {
           const { x, y } = xy,
             tx = clamp(ax, x, x + tw),
             ty = clamp(ay, y, y + th);
+          const coordinates = [ax.toFixed(1), ay.toFixed(1)].join(",");
+          if (tag.dataset.anchor !== coordinates) tag.dataset.anchor = coordinates;
           tag.style.left = Math.round(x) + "px";
           tag.style.top = Math.round(y) + "px";
           pin.leader.style.left = Math.round(ax) + "px";

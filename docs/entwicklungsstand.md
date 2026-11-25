@@ -1,5 +1,9 @@
 # Entwicklungsstand und nächste Abnahmestufen
 
+## G6.4.2 · Geographische Integrität
+
+Grundlage ist PR #22. Der [Entwicklungsbericht](g642-entwicklung.md) beschreibt den Deutschland-Nyos-Fehler, die neue Darstellungslogik und die Produktprüfung.
+
 ## G6.4.1 · Geographische Prozessmodelle
 
 Der Entwicklungszweig setzt auf G6.4 aus PR #21 auf. Gemeinsame Raumreferenzen, Rücknavigation, kontextabhängige Darstellung und Wiedergabe bilden die Grundlage für G6.5 bis G6.8. Wissenschaft, Quellen, Unterrichtsbedienung und verbleibende Modellgrenzen stehen im [Entwicklungsbericht G6.4.1](g641-entwicklung.md).
@@ -14,9 +18,10 @@ Die tatsächlichen Aufnahmen und Messwerte der jeweiligen Version stehen im Sich
 
 | Phase | Bereits nutzbare Grundlage | Eigenständig zu entwickelnder und abzunehmender Umfang |
 |---|---|---|
-| G6.4 · Plattentektonik | 52 Platten, PB2002-Grenzsegmente, Erdschalen, Kräfte, Grenzvergleich, Magnetstreifen, Rekonstruktionen, vier Zukünfte | Frei kombinierbare Kartendaten und 2D-Karte mit Metadaten, quantitative relative Komponenten und Vergleichsskala, zwei bis vier synchronisierte Prozesse, durchgehender Rückenprozess mit Messung, Wilson-Zyklus und verknüpfte historische bzw. moderne Belege. |
-| G6.5 · Vulkanische Systeme | Rücken, Inselbögen und Hotspot, zwei Eruptionsvarianten, Island, Hawaii und Japan | Sieben vergleichbare Formen, zusätzliche Prozessmodelle und getrennte Parameter. Eigenes georeferenziertes Eifelmodell mit geeigneten Datenrechten, Laacher-See-Caldera, Maaren, Mofetten und Beobachtungsnetz. |
-| G6.6 · Erdbeben und Tsunami | Drei Seebeben, P-/S-Wellen, finite Bruchausbreitung, 1D-Flachwassermodell und Küstenprofil | Einstellbare Quelle und Tiefe, Oberflächenwellen und synthetische Seismogramme, Momenten-Magnitude mit analytischen Referenzfällen, räumliche Wasserstandsüberlagerung und Prüfung weiterer Quellen. |
-| G7 · Mensch und Umwelt | Gleiche Quelle bei verschiedenen Standorten, Bauweisen, Vorsorge, Evakuierung, Versorgung und Nyos | Erweiterte kontrollierte Standort- und Infrastrukturvergleiche, regionale Nutzungspotenziale, Transfer auf weitere geologische Räume und durchgängige Präsentationswerkzeuge einschließlich Zeichnen, Export und Sequenzen. |
+| G6.4.2 · Geographic Integrity & Classroom Polish | Plattentektonik und durchgehender Raumbezug | Prüfung der Ortswechsel, fachlichen Orientierung und Präsentation. |
+| G6.5 · Erd- und Seebeben einschließlich Tsunamis | Bestehende Erdbeben, Wellen und Küstenprofile | Vertiefung nach ausdrücklicher Abnahme. |
+| G6.6 · Vulkanismus | Island, Hawaii und Japan | Vertiefung der vulkanischen Prozesse und Eruptionsformen. |
+| G6.7 · Maare, Vulkaneifel und limnische Eruptionen | Nyos und geologische Prozessmodelle | Eigenständige regionale Modelle, Rechteprüfung und Fachabnahme. |
+| G6.8 · Classroom & Visual Polish | Gemeinsame Navigation und Modellsteuerung | Abschließende Prüfung der Unterrichtsbedienung und visuellen Qualität. |
 
 Jede Stufe benötigt eine eigene fachliche und visuelle Prüfung, die installierte App, die Offline-Datei, eine kontrollierte Vergleichsmessung und einen Dauerlauf. Das physische Zielgerät muss in der Cloud nicht verfügbar sein.

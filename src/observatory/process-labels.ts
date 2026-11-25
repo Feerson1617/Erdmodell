@@ -3,6 +3,15 @@ import { layersFor, type Division } from "./earth-classification";
 import { wilsonMotion, basin, geologyAt, type ProcessId } from "./tectonic-process";
 
 export type Feature = { name: string; point: T.Vector3; explanation: string };
+// The phase selects a reading focus within simultaneous processes. Indices are
+// stable so that an individual disclosure remains attached to its structure.
+export function readingOrder(k: ProcessId, t: number) {
+  if (k === "subduction" || k === "arc" || k === "oblique")
+    return t < 0.25 ? [1, 0, 2, 3] : t < 0.5 ? [2, 0, 1, 3] : t < 0.75 ? [0, 3, 2, 1] : [3, 0, 2, 1];
+  if (k === "ridge") return t < 0.34 ? [0, 1, 2] : t < 0.68 ? [1, 0, 2] : [2, 1, 0];
+  if (k === "collision") return t < 0.34 ? [1, 2, 0] : t < 0.68 ? [2, 0, 1] : [0, 2, 1];
+  return [];
+}
 export function earthFeatures(division: Division, expanded: boolean): Feature[] {
   const layers = layersFor(division);
   let outer = 3.2;
@@ -29,13 +38,18 @@ export function processFeatures(k: ProcessId, t: number): Feature[] {
   switch (k) {
     case "ridge":
       return [
-        at("Druckentlastung", 0.18, -1.03, "Aufsteigender Mantel schmilzt bei sinkendem Druck teilweise."),
+        at(
+          "Druckentlastung",
+          0.18,
+          -1.03,
+          "Überwiegend fester Mantel steigt auf. Sinkender Druck ermöglicht Teilschmelze.",
+        ),
         at("Rückenachse", 0, top(0), "Magma erstarrt. Neue Kruste wächst auf beiden Flanken."),
         at(
           "Ozeanische Lithosphäre",
           2,
           top(2) - 0.48,
-          "Die abkühlende starre Platte umfasst Kruste und einen Teil des Mantels.",
+          "Die Platte bewegt sich von der Achse fort. Beim Abkühlen wird die starre Lithosphäre dicker.",
         ),
       ];
     case "rift":
@@ -46,7 +60,19 @@ export function processFeatures(k: ProcessId, t: number): Feature[] {
           "Krustenwurzel",
           0,
           top(0) - geologyAt(k, 0, z, t).crust,
-          "Unter dem Gebirge reicht die verdickte Kruste tiefer.",
+          "Unter dem wachsenden Gebirge reicht die verdickte Kruste tiefer.",
+        ),
+        at(
+          "Annäherung",
+          -2.1,
+          top(-2.1),
+          "Die Kontinente bewegen sich aufeinander zu. Die Kruste wird kürzer.",
+        ),
+        at(
+          "Faltung und Überschiebung",
+          -0.45,
+          top(-0.45) - 0.3,
+          "Gestein faltet sich und schiebt sich übereinander. Die Kruste verdickt sich.",
         ),
       ];
     case "arc":

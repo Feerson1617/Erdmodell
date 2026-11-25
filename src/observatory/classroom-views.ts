@@ -6,7 +6,7 @@ import type {Observation} from "./observation";
 
 const examples=["Erdbeben der Erde","Erdbeben und Plattengrenzen","Kalifornien von oben","Blockierte Störung","Plötzlicher Versatz","Wellenausbreitung","Subduktion vor Japan","Seebeben und Tsunami"];
 const key="georisiko.unterrichtsansichten.v1";
-export function classroomViews<Base>(observatory:Observatory,observation:Observation,base:()=>Base,restoreBase:(b:Base)=>Promise<void>,experience?:GeographicExperience){
+export function classroomViews<Base>(observatory:Observatory,observation:Observation,base:()=>Base,restoreBase:(b:Base,current?:()=>boolean)=>Promise<void>,experience?:GeographicExperience){
   type Entry={geography?:ReturnType<GeographicExperience["capture"]>;name:string;scene:ReturnType<Observatory["snapshot"]>;observing:boolean;released?:ReturnType<typeof disclosure>;base:Base};
   const trigger=document.getElementById("saved-views")!;
   const dialog=document.createElement("dialog");dialog.className="classroom-views";dialog.setAttribute("aria-labelledby","views-title");
@@ -30,6 +30,7 @@ export function classroomViews<Base>(observatory:Observatory,observation:Observa
   get("view-close").onclick=()=>dialog.close();
   get("view-save").onclick=()=>{
     const label=name.value.trim();if(!label){name.focus();return;}
+    if(experience&&!experience.settled){status.textContent="Die Ansicht wird noch aufgebaut.";return;}
     const entry={format:1,geography:experience?.capture(),name:label,scene:observatory.snapshot(),observing:observation.active,released:disclosure(),base:base()};
     if(entry.scene.mode==="regional"&&!entry.scene.region){status.textContent="Das Gelände wird noch geladen.";return;}
     if(persist([...entries,entry])){render("s"+(entries.length-1));status.textContent="Ansicht gespeichert.";name.value="";}
@@ -37,11 +38,24 @@ export function classroomViews<Base>(observatory:Observatory,observation:Observa
   get("view-remove").onclick=()=>{const index=Number(list.value.slice(1));if(list.value.startsWith("s")&&persist(entries.filter((_,i)=>i!==index)))render();};
   get("view-apply").onclick=async()=>{
     const select=list.value,i=Number(select.slice(1));dialog.inert=true;
+    const current=experience?.beginRecall()??(()=>true);
     try{
-      if(select.startsWith("p")){await observatory.preset(i);observation.set(true);experience?.restore();}
-      else{const entry=entries[i];if(!entry.scene.mode)await restoreBase(entry.base);await observatory.restore(entry.scene);observation.set(entry.observing);if(entry.observing)restoreDisclosure(entry.released);experience?.restore(entry.geography);}
+      if(select.startsWith("p")){
+        await observatory.preset(i);
+        if(!current())return;
+        observation.set(true);experience?.restore();
+      }else{
+        const entry=entries[i];
+        if(!entry.scene.mode)await restoreBase(entry.base,current);
+        if(!current())return;
+        await observatory.restore(entry.scene);
+        if(!current())return;
+        observation.set(entry.observing);
+        if(entry.observing)restoreDisclosure(entry.released);
+        experience?.restore(entry.geography);
+      }
       dialog.close();
-    }catch{status.textContent="Die gespeicherte Ansicht konnte nicht geöffnet werden.";}
+    }catch{if(current())experience?.restore();status.textContent="Die gespeicherte Ansicht konnte nicht geöffnet werden.";}
     finally{dialog.inert=false;}
   };
   list.ondblclick=()=>get("view-apply").click();

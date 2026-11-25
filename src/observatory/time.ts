@@ -31,6 +31,7 @@ export class TimeGlobe {
   private cache=new Map<string,{used:number;promise:Promise<T.Texture>;texture?:T.Texture}>();private stamp=0;private disposed=false;
   private channels=["",""];private displayed=["",""];private previousMarks="";
   year=-250;scenario:Scenario="past";compare=false;direction=1;speed=7;playing=false;layer="";error="";
+  displayedTime?: { year: number; scenario: Scenario; second?: Scenario };
   get ready(){return Boolean(this.displayed[0] && this.displayed[0]===this.channels[0] && (this.model==="past"?this.reconstruction.ready:this.models) && (!this.compare || (this.displayed[1] && this.displayed[1]===this.channels[1])));}
   reconstruction=new Reconstructions(this.primary.material.uniforms);
   gnss="";tracking="";trail=false;follow=false;showBoundaries=false;comparison:Scenario="novo";
@@ -179,6 +180,7 @@ export class TimeGlobe {
         eye.updateProjectionMatrix();eye.updateMatrixWorld();gl.render(view.scene,eye);}
       gl.setScissorTest(false);gl.setViewport(0,0,w,h);
     }else gl.render(this.primary.scene,camera);
+    if(this.ready) this.displayedTime={year:this.year,scenario:this.model,second:this.compare?this.second:undefined};
     return true;
   }
   pick(ray:T.Raycaster){return ray.intersectObjects(this.markers.children)[0]?.object.name;}
