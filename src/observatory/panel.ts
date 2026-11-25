@@ -1,3 +1,6 @@
+import { createSeismic, mountStudy } from "../seismology";
+import { atlasViews, familyOf, regionViews, isView } from "../seismology/catalog";
+import type { Stage, SeismicState } from "../seismology/stage";
 import {TectonicStudio,type StudioState} from "./tectonic-studio";
 import { ResearchAtlas, type ResearchState } from "./research-atlas";
 import { PlateRates } from "./plate-rates";
@@ -42,7 +45,7 @@ const explain:Record<string,string>={
   hotspot:"Die Platte bewegt sich über einer länger beständigen Schmelzquelle. Nacheinander entstehen Vulkane."
 };
 export class Observatory {
-  mode:""|"map"|"regional"|"time"|"studio"="";readonly maps=new MapLayers();region?:RegionalScene;
+  mode:""|"map"|"regional"|"time"|"studio"|"seismic"="";readonly maps=new MapLayers();region?:RegionalScene;
   theme:Theme="earthquake";private revision=0;private message="";private lastUI="";private labels:HTMLElement;private objectLabels:ObjectLabels;private timePins:AnnotationLayer;private timeKey="";private timeLayout=0;
   private readonly profile=new WaterProfile($("earth").parentElement!);
   private spare?:RegionalScene;private switching=false;private resumePlayback=false;private profileWanted=false;
@@ -54,6 +57,29 @@ export class Observatory {
     this.studio=new TectonicStudio(this.world.gl,state,()=>void this.openResearch({flat:true,layers:["bounds","age"],magnitude:6,depth:750}),
       id=>this.visitPlace?.(id), model=>this.visitModel?.(model));
     this.draw();
+  }
+  study?:Stage;
+  lessonView?:string;
+  visitStudy?:(view:string)=>void;
+  async openStudy(id:string,state?:SeismicState){
+    if(!isView(id))return;
+    if(atlasViews[id]){
+      const next=this.revision+1;
+      await this.openResearch({flat:id!=="trenches",layers:[...atlasViews[id].layers],magnitude:6,depth:750});
+      if(this.revision!==next)return;
+      if(id==="trenches")this.world.nav.fly({lat:35,lon:143,d:8500,tilt:0,bearing:0},true);
+    }else if(regionViews[id]){
+      const preset=regionViews[id],next=this.revision+1;
+      await this.openRegion(reference(preset.site,id==="zao"?"volcano":"earthquake"));
+      if(this.revision!==next||!this.region?.ready)return;
+      const r=this.region;r.ruptureAnalysis=true;r.progress=preset.progress;r.playing=false;r.stress=id==="strain"||id==="park";
+      r.showP=r.showS=id==="parkWaves"||id==="park";r.detail=id==="parkWaves";
+      r.cameraView(preset.camera);r.update(0);
+    }else{
+      this.base(true);this.mode="seismic";this.world.nav.enabled=false;this.mark();
+      this.study=createSeismic(this.world.gl,id,state);
+    }
+    this.lessonView=id;this.draw();
   }
   visitPlace?: (id:string)=>void;
   visitModel?: (id:import("./tectonic-process").ProcessId)=>void;
@@ -67,7 +93,7 @@ export class Observatory {
     await opened;
     if(this.revision!==revision||this.mode!=="map"||this.mapPurpose!=="boundaries"||!this.maps.steps.length)return;
     this.research?.dispose();
-    const atlas=new ResearchAtlas(this.maps,$("earth").parentElement!,step=>this.rates.allowCurrent(step),p=>this.world.nav.fly({...this.world.nav.pose,...p},true),step=>this.visitBoundary?.(step));
+    const atlas=new ResearchAtlas(this.maps,$("earth").parentElement!,step=>this.rates.allowCurrent(step),p=>this.world.nav.fly({...this.world.nav.pose,...p},true),step=>this.visitBoundary?.(step),id=>this.visitStudy?.(id));
     if(state)atlas.state={...state,layers:[...state.layers]};
     this.research=atlas;this.maps.group.visible=false;this.world.scene.add(atlas.globe);
     this.draw();
@@ -88,10 +114,11 @@ export class Observatory {
     world.customRender=(dt)=>this.frame(dt);
   }
   get paintedRegion(){return !!this.region && this.lastScene===this.region && !this.world.worldDrawn;}
-  get painted(){return this.mode==="regional"?this.paintedRegion:this.mode==="studio"?!!this.studio?.painted&&!this.world.worldDrawn:this.mode==="time"?!!this.timeline?.ready&&!this.world.worldDrawn:this.mode==="map"?this.research?.state.flat?!!this.research.ready:this.world.worldDrawn&&this.maps.steps.length>0:true;}
+  get painted(){if(this.study)return this.study.painted&&!this.world.worldDrawn;if(this.research&&!this.research.ready)return false;return this.mode==="regional"?this.paintedRegion:this.mode==="studio"?!!this.studio?.painted&&!this.world.worldDrawn:this.mode==="time"?!!this.timeline?.ready&&!this.world.worldDrawn:this.mode==="map"?this.research?.state.flat?!!this.research.ready:this.world.worldDrawn&&this.maps.steps.length>0:true;}
   private parkfield?:RegionalScene;
   private parkDefaults?:ReturnType<typeof fields<RegionalScene,typeof regionKeys[number]>>;
   close(){
+    this.lessonView=undefined;this.study?.dispose();this.study=undefined;
     this.studio?.dispose();this.studio=undefined;
     this.research?.dispose();this.research=undefined;
     this.profile.hide();this.profileWanted=false;this.switching=false;this.spare?.dispose();this.spare=undefined;this.revision++;
@@ -195,6 +222,7 @@ export class Observatory {
   private change(id:string,fn:(value:string)=>void){const b=$<HTMLSelectElement>(id);if(b)b.onchange=()=>fn(b.value);}
   draw(){
     if(!this.mode)return;this.mark();
+    if(this.study){mountStudy(this.study,this.side);return;}
     if(this.mode==="studio"){this.studio?.mount(this.side);return;}
     const back=button("g-world","Zum Globus"),selectRegions=(theme:Theme,id:string)=>'<label>Region<select id="g-site">'+opts(Object.fromEntries(Object.entries(sites).filter(([k])=>theme!=="volcano"||["island","japan","hawaii"].includes(k)).map(([k,s])=>[k,s.name])),id)+'</select></label>';
     if(this.mode==="map"&&this.research){
@@ -208,7 +236,7 @@ export class Observatory {
       this.side.innerHTML='<p class="g-kicker">Beobachtungen · heute</p><h1>'+(this.mapPurpose==="events"?"Erdbeben der Erde":"Plattengrenzen")+'</h1>'+
         '<div class="g-stack"><label><input id="g-quakes" type="checkbox" '+(m.events.visible?"checked":"")+'> Erdbeben zeigen</label><label><input id="g-lines" type="checkbox" '+(m.boundaries.visible?"checked":"")+'> Plattengrenzen zeigen</label>'+
         (m.events.visible?'<label><input id="g-depth" type="checkbox" '+(m.depth?"checked":"")+'> Tiefe unterscheiden</label><small>USGS · 2019–2023 · Magnitude ab 6</small>'+(m.depth?'<div class="g-legend"><span>Flach</span><span>Mitteltief</span><span>Tief</span></div>':''):'')+
-        (ev?'<h2>Beobachtetes Erdbeben</h2><p>'+ev[1]+' · Magnitude '+ev[5]+' ('+ev[6]+') · '+Math.round(ev[4])+' km tief</p>':'')+
+        (ev?'<h2>Beobachtetes Erdbeben</h2><p>'+ev[1]+' · Magnitude '+ev[5]+' ('+ev[6]+') · '+Math.round(ev[4])+' km tief · Bruchmechanismus hier offen.</p>'+button("quake-general","Allgemeines Bruchmodell"):'')+
         (s?'<h2>'+m.pair+'</h2><p>'+explain[classify(s)]+'</p><small>Dieses Modell erklärt einen möglichen Vorgang an dieser Plattengrenze.</small>'+button("g-segment","Prozess ansehen")+(geology(s).localQuake?button("g-quake-explain",geology(s).marine?"Seebeben erklären":"Erdbeben erklären"):'<small>Die genaue Störung ist hier nicht ausreichend bekannt.</small>')+(["ridge","subduction","arc"].includes(classify(s))?button("g-segment-volcano","Vulkanismus ansehen"):''):'')+
         (this.mapPurpose==="boundaries"?'<label>Grenzbeispiele<select id="g-example" '+(m.steps.length?"":"disabled")+'><option value="">Ort auf dem Globus finden …</option>'+opts(this.examples(),"")+'<optgroup label="Weitere Regionen">'+opts(Object.fromEntries(Object.entries(geographicExamples).filter(([id])=>!this.examplesCache[id])),"")+'</optgroup></select></label>':'')+
         '<label>Referenzregion<select id="g-launch"><option value="">Region wählen …</option>'+opts(Object.fromEntries(Object.entries(sites).filter(([k])=>k!=="hawaii").map(([k,v])=>[k,v.name])),"")+'</select></label>'+
@@ -221,6 +249,7 @@ export class Observatory {
       this.change("g-depth",()=>{m.depth=!m.depth;m.recolor();this.draw();});this.change("g-launch",v=>{if(v)void this.openRegion(reference(v as Site,"earthquake"));});
       this.change("g-example",id=>{const st=m.steps[Number(id)-1];if(!st)return;this.maps.selectStep(undefined);
         this.world.nav.fly({...center(st),d:4100,tilt:0,bearing:0},true);this.draw();});
+      this.action("quake-general",()=>this.visitStudy?.("strike"));
       this.action("g-map-overview",()=>this.world.nav.fly({lat:12,lon:-146,d:15300,tilt:0,bearing:0},true));
       if(s){this.action("g-quake-explain",()=>this.openBoundary(s));this.action("g-segment",()=>this.openBoundary(s,"process"));this.action("g-segment-volcano",()=>this.openBoundary(s,"volcano"));}
     }else if(this.mode==="regional"&&this.region){
@@ -279,6 +308,7 @@ export class Observatory {
   returnPair?:()=>void;
   private lastLabelsRendered=false;
   get subject(){
+    if(this.lessonView)return "seismology/"+this.lessonView;
     if(this.mode==="regional"){const s=this.region?.spec;return [s?.theme,s?.site,s?.geology?.id,s?.process,s?.event,s?.coastLesson].join("/");}
     if(this.studio){const s=this.studio.state;return s.interior?"studio/earth/"+s.division:"studio/"+s.models.join("/");}
     if(this.mode==="time")return "time/"+this.timeline?.model;
@@ -287,6 +317,7 @@ export class Observatory {
   private lastScene?:RegionalScene;
   private drawnState="";private readingState="";
   private frame(dt:number){
+    if(this.study)return this.study.frame(dt);
     if(this.studio)return this.studio.frame(dt);
     if(this.research?.state.flat){graphics.idle=true;graphics.scope="world";graphics.activity="cached";return true;}
     graphics.idle=false;
@@ -331,14 +362,15 @@ export class Observatory {
   }
   snapshot(){
     const r=this.region,t=this.timeline,m=this.maps;
-    return {mode:this.mode,studio:this.studio?structuredClone(this.studio.state):undefined,pose:{...this.world.nav.pose},map:{research:this.research?.state,rates:this.research?{ids:[...this.rates.ids],years:this.rates.years,unit:this.rates.unit,opened:this.rates.opened}:undefined,purpose:this.mapPurpose,events:m.events.visible,lines:m.boundaries.visible,depth:m.depth,step:m.selectedStep?.[0],event:m.event?.[0]},
+    return {mode:this.mode,lessonView:this.lessonView,study:this.study?.snapshot(),studio:this.studio?structuredClone(this.studio.state):undefined,pose:{...this.world.nav.pose},map:{research:this.research?.state,rates:this.research?{ids:[...this.rates.ids],years:this.rates.years,unit:this.rates.unit,opened:this.rates.opened}:undefined,purpose:this.mapPurpose,events:m.events.visible,lines:m.boundaries.visible,depth:m.depth,step:m.selectedStep?.[0],event:m.event?.[0]},
       region:r?.ready?{site:r.spec.site,theme:r.spec.theme,boundary:r.spec.geology?.id,coast:r.spec.coastLesson,event:r.spec.event,
         settings:fields(r,regionKeys),view:r.view,cut:r.cut,position:r.camera.position.toArray(),target:r.orbit.target.toArray()}:undefined,
       time:t?fields(t,timeKeys):undefined};
   }
   async restore(s:ReturnType<Observatory["snapshot"]>){
     const m=this.maps,initial=this.revision;
-    if(s.mode==="studio"&&s.studio)this.openStudio(s.studio);
+    if(s.mode==="seismic"&&s.study&&familyOf(s.study.view))await this.openStudy(s.study.view,s.study);
+    else if(s.mode==="studio"&&s.studio)this.openStudio(s.studio);
     else if(s.mode==="map"){
       if(s.map.research){const rates=s.map.rates;if(rates){this.rates.ids=[...rates.ids];this.rates.years=rates.years;this.rates.unit=rates.unit;this.rates.opened=rates.opened;}await this.openResearch(s.map.research);}
       else await this.openMap(s.map.purpose);
@@ -360,6 +392,7 @@ export class Observatory {
       const r=this.region;if(!r?.ready)throw Error("Gelände fehlt");
       Object.assign(r,fields(v.settings,regionKeys));r.moreNames=Boolean(v.settings.moreNames);r.analysis=Boolean(r.analysis&&r.water);r.progress=T.MathUtils.clamp(r.progress,0,1);r.restoreCamera(v.view,v.cut,v.position,v.target);
     }
+    this.lessonView=isView(s.lessonView)?s.lessonView:undefined;
     this.world.nav.stop();this.world.nav.pose={...s.pose};this.world.nav.goal={...s.pose};this.draw();
   }
   async preset(i:number){
@@ -372,7 +405,7 @@ export class Observatory {
     const names=new Set<string>();r.renderScene.traverseVisible(object=>{if((object as T.Mesh).isMesh && object.name)names.add(object.name);});
     return [...names];
   }
-  diagnostics(){const r=this.region;return {painted:this.painted,overlay:this.maps.group.visible,renderScene:this.paintedRegion?r?.renderScene.uuid:undefined,drawnObjects:this.paintedRegion&&r?this.drawnObjects(r):undefined,atlas:this.research?.state,studio:this.studio?.state,materialMotion:this.studio?.motionSample(),selection:this.objectLabels.audit,graphics:{profile:graphics.profile,grade:quality()},mode:this.mode,purpose:this.mapPurpose,mapLayers:{events:this.maps.events.visible,lines:this.maps.boundaries.visible,depth:this.maps.depth},camera:r?.ready?{position:r.camera.position.toArray(),target:r.orbit.target.toArray()}:undefined,settings:r?fields(r,regionKeys):undefined,timings:r?.timings,switching:this.switching,analysis:r?.analysis,view:r?.view,event:r?.spec.event,playing:r?.playing,vectors:r?.vectors,coastLesson:r?.spec.coastLesson,site:r?.spec.site,geology:r?.spec.geology,physics:r?.ready?r.physicalState():undefined,process:r?.spec.process,theme:this.theme,ready:!!this.studio||!this.switching&&(r?.ready??(this.maps.steps.length>0)),progress:r?.progress,cut:r?.cut,viewSettled:r?.viewSettled,focus:r?.faultModel?.kind==="unknown"?undefined:r?.focus,epicenter:r?.faultModel?.kind==="unknown"?undefined:r?.epicenter,events:this.maps.rows.length,steps:this.maps.steps.length,selected:this.maps.selectedStep?.[0],...this.timeDiagnostics()};}
+  diagnostics(){const r=this.region;return {study:this.study?.snapshot(),studyObjects:this.study?.scene.children.map(o=>o.name).filter(Boolean),lessonView:this.lessonView,painted:this.painted,overlay:this.maps.group.visible,renderScene:this.paintedRegion?r?.renderScene.uuid:undefined,drawnObjects:this.paintedRegion&&r?this.drawnObjects(r):undefined,atlas:this.research?.state,studio:this.studio?.state,materialMotion:this.studio?.motionSample(),selection:this.objectLabels.audit,graphics:{profile:graphics.profile,grade:quality()},mode:this.mode,purpose:this.mapPurpose,mapLayers:{events:this.maps.events.visible,lines:this.maps.boundaries.visible,depth:this.maps.depth},camera:r?.ready?{position:r.camera.position.toArray(),target:r.orbit.target.toArray()}:undefined,settings:r?fields(r,regionKeys):undefined,timings:r?.timings,switching:this.switching,analysis:r?.analysis,view:r?.view,event:r?.spec.event,playing:r?.playing,vectors:r?.vectors,coastLesson:r?.spec.coastLesson,site:r?.spec.site,geology:r?.spec.geology,physics:r?.ready?r.physicalState():undefined,process:r?.spec.process,theme:this.theme,ready:!!this.studio||!this.switching&&(r?.ready??(this.maps.steps.length>0)),progress:r?.progress,cut:r?.cut,viewSettled:r?.viewSettled,focus:r?.faultModel?.kind==="unknown"?undefined:r?.focus,epicenter:r?.faultModel?.kind==="unknown"?undefined:r?.epicenter,events:this.maps.rows.length,steps:this.maps.steps.length,selected:this.maps.selectedStep?.[0],...this.timeDiagnostics()};}
   private enrich(r:RegionalScene){addTeachingModels(r);}
   private extraControls(r:RegionalScene){
     if(r.spec.theme==="forces")return '<details><summary>Antrieb einzeln zeigen</summary>'+["Wärmetransport","Kraft am Rücken","Zug der abtauchenden Platte","Mantelbewegung","Kopplung von Mantel und Platte"].map((label,i)=>'<label><input id="force-'+i+'" type="checkbox" '+(((r.forceLayers??31)&(1<<i))?'checked':'')+'>'+label+'</label>').join("")+'<small>Pfeile geben Richtung und Ort qualitativ an. Ihre Länge misst keine Kraft.</small></details>';

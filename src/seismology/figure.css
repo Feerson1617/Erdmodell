@@ -1,0 +1,90 @@
+.seismic-figure {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  color: #edf3e8;
+  z-index: 3;
+}
+.seismic-figure > svg {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  stroke: #c4dccc;
+  stroke-width: 1.2;
+  opacity: 0.72;
+}
+.seismic-label,
+.seismic-caption,
+.seismic-chart {
+  background: #102422eb;
+  border: 1px solid #72948a88;
+  border-radius: 5px;
+}
+.seismic-label {
+  position: absolute;
+  left: 0;
+  top: 0;
+  padding: 3px 7px;
+  font-size: clamp(12px, 1.12vw, 21px);
+  line-height: 1.25;
+  font-weight: 600;
+}
+.seismic-caption {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  max-width: min(54%, 38em);
+  padding: 7px 11px;
+  font-size: clamp(13px, 1.2vw, 22px);
+  line-height: 1.3;
+}
+.view .seismic-figure canvas.seismic-chart {
+  position: absolute;
+  inset: auto 2% 2%;
+  width: 96%;
+  height: 22%;
+  cursor: default;
+  box-sizing: border-box;
+}
+.seismic-figure:has(.seismic-chart:not([hidden])) .seismic-caption {
+  bottom: 25%;
+  max-width: min(55%, 40em);
+}
+#geo-legend .quake-key {
+  display: inline-flex;
+  align-items: center;
+  margin-right: 0.8em;
+  gap: 0.35em;
+}
+.quake-key i {
+  display: inline-block;
+  width: 0.7em;
+  height: 0.7em;
+  background: var(--symbol);
+  border-radius: 50%;
+}
+.quake-key i.line {
+  height: 0.18em;
+  border-radius: 0;
+}
+.quake-key i.large {
+  width: 1em;
+  height: 1em;
+}
+.geo-experience #geo-dock #geo-related {
+  font-size: 0.92em;
+}
+@media (max-width: 950px) {
+  .seismic-caption {
+    font-size: 12px;
+    max-width: 70%;
+  }
+  .geo-experience #geo-dock #geo-preset {
+    max-width: 144px;
+  }
+}
+.quake-key i.volcano {
+  border-radius: 0;
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+}

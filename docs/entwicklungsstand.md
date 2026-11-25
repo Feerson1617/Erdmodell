@@ -1,5 +1,9 @@
 # Entwicklungsstand und nächste Abnahmestufen
 
+## G6.5 · Erdbeben und Vulkanismus
+
+Der neue Entwicklungszweig baut auf dem gesicherten G6.4.2-Commit aus PR #23 auf. [Bestand, Fachprüfung und Modellgrenzen](g65-erdbeben.md)
+
 ## G6.4.2 · Geographische Integrität
 
 Grundlage ist PR #22. Der [Entwicklungsbericht](g642-entwicklung.md) beschreibt den Deutschland-Nyos-Fehler, die neue Darstellungslogik und die Produktprüfung.
@@ -19,9 +23,11 @@ Die tatsächlichen Aufnahmen und Messwerte der jeweiligen Version stehen im Sich
 | Phase | Bereits nutzbare Grundlage | Eigenständig zu entwickelnder und abzunehmender Umfang |
 |---|---|---|
 | G6.4.2 · Geographic Integrity & Classroom Polish | Plattentektonik und durchgehender Raumbezug | Prüfung der Ortswechsel, fachlichen Orientierung und Präsentation. |
-| G6.5 · Erd- und Seebeben einschließlich Tsunamis | Bestehende Erdbeben, Wellen und Küstenprofile | Vertiefung nach ausdrücklicher Abnahme. |
+| G6.5 · Erdbeben und Übergang zum Vulkanismus | Karten, Referenzräume und Erdbebendynamik | Produktabnahme mit gemessenen und synthetischen Seismogrammen. |
 | G6.6 · Vulkanismus | Island, Hawaii und Japan | Vertiefung der vulkanischen Prozesse und Eruptionsformen. |
-| G6.7 · Maare, Vulkaneifel und limnische Eruptionen | Nyos und geologische Prozessmodelle | Eigenständige regionale Modelle, Rechteprüfung und Fachabnahme. |
+| G6.7 · Maare, Vulkaneifel, Ulmener Maar und limnische Eruptionen | Nyos und geologische Prozessmodelle | Eigenständige regionale Modelle, Rechteprüfung und Fachabnahme. |
 | G6.8 · Classroom & Visual Polish | Gemeinsame Navigation und Modellsteuerung | Abschließende Prüfung der Unterrichtsbedienung und visuellen Qualität. |
 
 Jede Stufe benötigt eine eigene fachliche und visuelle Prüfung, die installierte App, die Offline-Datei, eine kontrollierte Vergleichsmessung und einen Dauerlauf. Das physische Zielgerät muss in der Cloud nicht verfügbar sein.
+
+Die eigenständige Tsunamivertiefung folgt nach G6.8. [Reihenfolge](roadmap.md)

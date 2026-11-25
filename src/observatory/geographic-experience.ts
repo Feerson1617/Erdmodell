@@ -1,3 +1,7 @@
+import { regionalPhase } from "../seismology/regional-rupture";
+import {seismicLegend} from "../seismology/legend";
+import { atlasViews,connections,familyOf,isView,titleFor } from "../seismology/catalog";
+import {presetOptions} from "../seismology";
 import { BufferGeometry, LineSegments, LineBasicMaterial } from "three";
 import germany from "./deutschland-grenze.json";
 import { modelTitle, timeCaption, mapLegend } from "./presentation-context";
@@ -174,6 +178,9 @@ export class GeographicExperience {
       option(earth, id, name);
     const models = groups(topics, "Plattentektonik");
     for (const [id, name] of Object.entries(processes)) option(models, "process-" + id, name);
+    const seismic = groups(topics, "Erdbeben und Vulkanismus");
+    for(const [id,name] of Object.entries({distribution:"Globale Erdbebenverteilung",park:"Erdbebenentstehung",strike:"Bruchmechanismen",particles:"Seismische Wellen",rays:"Wellen im Erdinneren",moment:"Magnitude und Intensität",observed:"Japan · Erdbebenherde",vt:"Vulkanische Seismizität"}))
+      option(seismic,"seismic-"+id,name);
     const hazard = groups(topics, "Naturgefahren und Orte");
     for (const [id, name] of Object.entries({
       events: "Erdbeben der Erde",
@@ -208,7 +215,7 @@ export class GeographicExperience {
     };
     this.toolbar.id = "geo-dock";
     this.toolbar.innerHTML =
-      '<button id="geo-back" hidden>Zurück</button><button id="geo-skip" hidden>Fahrt beenden</button><button id="geo-land" hidden>Regionales Relief</button><button id="geo-section" hidden>Schnitt öffnen</button><button id="geo-return" hidden>Auf der Erde zeigen</button><button id="geo-play" hidden>Abspielen</button><input id="geo-time" aria-label="Modellzeit" type="range" hidden><button id="geo-step" hidden>Schritt</button><button id="geo-reset" hidden>Zurücksetzen</button><select id="geo-preset" aria-label="Prozessdarstellung" hidden></select><select id="geo-info" aria-label="Informationstiefe"><option value="observe">Beobachten</option><option value="neutral">Beobachten ohne Ort</option><option value="terms" selected>Fachbegriffe</option><option value="explain">Erklären</option></select><button id="geo-release" hidden>Begriff freigeben</button><button id="geo-clear" hidden>Freigabe löschen</button><button id="geo-tools" aria-expanded="false">Ansicht</button>';
+      '<button id="geo-back" hidden>Zurück</button><button id="geo-skip" hidden>Fahrt beenden</button><button id="geo-land" hidden>Regionales Relief</button><button id="geo-section" hidden>Schnitt öffnen</button><button id="geo-return" hidden>Auf der Erde zeigen</button><button id="geo-play" hidden>Abspielen</button><input id="geo-time" aria-label="Modellzeit" type="range" hidden><button id="geo-step" hidden>Schritt</button><button id="geo-reset" hidden>Zurücksetzen</button><select id="geo-preset" aria-label="Prozessdarstellung" hidden></select><select id="geo-info" aria-label="Informationstiefe"><option value="observe">Beobachten</option><option value="neutral">Beobachten ohne Ort</option><option value="terms" selected>Fachbegriffe</option><option value="explain">Erklären</option></select><button id="geo-related" hidden></button><button id="geo-release" hidden>Begriff freigeben</button><button id="geo-clear" hidden>Freigabe löschen</button><button id="geo-tools" aria-expanded="false">Ansicht</button>';
     el("app").append(this.toolbar);
     this.pins.id = "geo-markers";
     document.querySelector(".view")!.append(this.pins);
@@ -287,6 +294,7 @@ export class GeographicExperience {
     };
     el("geo-clear").onclick = () => resetReveals();
     el<HTMLSelectElement>("geo-preset").onchange = (e) => {
+      if(this.obs.lessonView){void this.topic("seismic-"+(e.target as HTMLSelectElement).value);return;}
       const original = el<HTMLSelectElement>("studio-preset");
       if (original) {
         original.value = (e.target as HTMLSelectElement).value;
@@ -297,6 +305,8 @@ export class GeographicExperience {
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape") this.drawer(false);
     });
+    el("geo-related").onclick=()=>{const id=this.obs.lessonView&&connections[this.obs.lessonView]?.[0];if(id)void this.topic(isView(id)?"seismic-"+id:id);};
+    obs.visitStudy=id=>void this.topic("seismic-"+id);
     obs.visitModel = (id) => void this.topic("process-" + id);
     obs.visitPlace = (id) => void this.map(id);
     obs.visitBoundary = (step) => void this.boundary(step);
@@ -360,6 +370,7 @@ export class GeographicExperience {
       return;
     }
     const scene = structuredClone(this.obs.snapshot());
+    if (scene.study) scene.study.playing = false;
     if (scene.studio) scene.studio.playing = false;
     if (scene.time) scene.time.playing = false;
     if (scene.region) scene.region.settings.playing = false;
@@ -476,6 +487,11 @@ export class GeographicExperience {
     this.remember();
     const epoch = this.epoch;
     this.focus = {};
+    if(value.startsWith("seismic-")){
+      this.awaiting=true;
+      try{await this.obs.openStudy(value.slice(8));}finally{if(this.epoch===epoch)this.awaiting=false;}
+      return;
+    }
     if (value.startsWith("process-")) {
       const model = value.slice(8) as ProcessId;
       await this.journey(referenceFor[model], () => this.openSection(model, false));
@@ -524,7 +540,7 @@ export class GeographicExperience {
     this.restoring = false;
     this.setDepth(item.depth);
     if (this.depth === "observe") restoreDisclosure(item.reveals);
-    if (item.scene.map.research) this.drawer(true);
+    if (item.scene.map.research && !item.scene.lessonView) this.drawer(true);
     this.signature = "";
     this.pinKey = "";
   }
@@ -547,6 +563,14 @@ export class GeographicExperience {
     this.setTime(step ? Math.min(+bar.max, +bar.value + jump) : +bar.min);
   }
   private orient() {
+    const id=this.obs.lessonView;
+    if(id&&this.obs.study){
+      if(familyOf(id)==="section")return "Erde › Asien › Japan · regionales Tiefenprofil";
+      if(id==="record")return "Erde › Japan → New Mexico · Stationsaufzeichnung";
+      if(familyOf(id)==="core")return "Erde · globaler Schnitt";
+      return "Erde · allgemeines Anschauungsmodell";
+    }
+    if(id&&atlasViews[id])return "Erde · Global · Erdbebenkatalog";
     const region = this.obs.region,
       s = this.obs.studioState;
     if (s && !s.interior && s.models.length > 1 && s.focus < 0)
@@ -730,15 +754,15 @@ export class GeographicExperience {
       this.source = first(["g-progress", "g-year"]) as unknown as HTMLInputElement | undefined;
       this.step = first(["g-step", "pair-step"]);
       this.reset = first(["g-reset", "nyos-reset"]);
-      const seek =
-        !!this.source || (!!this.play && (this.world.mode === "nyos" || !!this.world.mosaic?.pair));
+      const seek = familyOf(this.obs.lessonView??"")!=="section" && (
+        !!this.source || (!!this.play && (this.world.mode === "nyos" || !!this.world.mosaic?.pair)));
       const p = this.currentPlace(),
         s = this.obs.studioState;
       for (const [id, show] of Object.entries({
-        play: !!this.play,
+        play: !!this.play && familyOf(this.obs.lessonView??"")!=="section",
         step: !!this.step || seek,
         time: seek,
-        reset: !!this.reset || seek,
+        reset: (!!this.reset || seek) && familyOf(this.obs.lessonView??"")!=="section",
         back: this.history.length > 0,
         skip: !!this.world.nav.flight,
         land: !!p && (p.bathy || p.site) && this.focus.overview && this.settled,
@@ -755,7 +779,8 @@ export class GeographicExperience {
             this.obs.mode === "time"),
         clear: this.depth === "observe" && document.body.classList.contains("show-some-labels"),
         tools: !side.hidden && this.depth !== "observe",
-        preset: !!el("studio-preset") && this.depth !== "observe",
+        preset: (!!el("studio-preset") || !!this.obs.lessonView) && this.depth !== "observe",
+        related: !!this.obs.lessonView && this.depth !== "observe",
       }))
         el("geo-" + id).hidden = !show;
       const bar = el<HTMLInputElement>("geo-time");
@@ -766,7 +791,11 @@ export class GeographicExperience {
         this.neutral && this.depth === "observe" ? "neutral" : this.depth;
       const src = el<HTMLSelectElement>("studio-preset"),
         preset = el<HTMLSelectElement>("geo-preset");
-      if (src) {
+      if(this.obs.lessonView){
+        presetOptions(preset,this.obs.lessonView);
+        text(el("geo-related"),connections[this.obs.lessonView]?.[1]??"");
+      }else if (src) {
+        delete preset.dataset.seismic;
         preset.replaceChildren(...Array.from(src.options, (o) => o.cloneNode(true)));
         preset.value = src.value;
       }
@@ -785,7 +814,7 @@ export class GeographicExperience {
     if (!title.hidden)
       text(
         title,
-        this.nationalBoundary.visible ? "Deutschland in Mitteleuropa" : globeOutsideSite ? "Die Erde im Überblick" : modelTitle(this.obs, this.world),
+        this.obs.lessonView ? titleFor(this.obs.lessonView) : this.nationalBoundary.visible ? "Deutschland in Mitteleuropa" : globeOutsideSite ? "Die Erde im Überblick" : modelTitle(this.obs, this.world),
       );
     for (const [id, value] of [
       ["geo-clock", (ready || !!this.obs.timeState?.displayedTime) && !anonymous && !globeOutsideSite ? timeCaption(this.obs, this.world) : ""],
@@ -800,11 +829,15 @@ export class GeographicExperience {
     ]) {
       const field = el(id);
       field.hidden = !value;
-      if (value) text(field, value);
+      const atlas=this.obs.atlasState;
+      if(value&&id==="geo-legend"&&this.obs.lessonView&&atlas&&atlas.layers.every(k=>["bounds","quakes","depth","magnitude","volcano","trench"].includes(k))&&(!atlas.base||atlas.base==="earth"))seismicLegend(field,atlas);
+      else if(value){delete field.dataset.keys;text(field,value);}
     }
     const note = el("geo-model-limit");
-    const limit =
-      this.focus.overview && !this.focus.country && this.obs.mode === "map" && !this.obs.atlasState
+    const id=this.obs.lessonView;
+    const seismicLimit=id && this.obs.study ? (id==="record"?"Originalmessung · EarthScope / IU · keine Modellkurve":familyOf(id)==="section"?"ComCat · M ≥ 4,5 · 2019–2023 · projizierte Herdorte":familyOf(id)==="core"?"IASP91 · berechnete Laufwege · Quelle in 15 km Tiefe":familyOf(id)==="magma"?"Möglicher Modellverlauf · Ursache und Eruptionszeitpunkt bleiben offen":"Anschauungsmodell · Bewegung didaktisch überhöht"):"";
+    const limit = (id&&r?.ruptureAnalysis&&r.spec.theme==="earthquake" ? (this.depth==="explain"?regionalPhase(r.progress)+" · ":"")+"Schematisches Ereignis · Versatz überhöht" : "") || seismicLimit ||
+      (this.focus.overview && !this.focus.country && this.obs.mode === "map" && !this.obs.atlasState
         ? "Heute gleichzeitig · Pfeile: relative Bewegungsrichtung nach PB2002 · unterschiedliche natürliche Geschwindigkeiten"
         : this.obs.atlasState?.layers.some((k) => k === "age" || k === "magnetic")
           ? "Ozeanbodenalter und Magnetik · globales 1°-Raster · räumliche Auflösung bleibt beim Zoomen gleich"
@@ -812,7 +845,7 @@ export class GeographicExperience {
             ? "Modellannahme · Lage und Tiefe der langlebigen Quelle sind nur indirekt erschlossen."
             : this.obs.studioState && this.obs.studioState.models.length > 1
               ? "Gemeinsame Modellphase · natürliche Prozessdauern unterscheiden sich."
-              : "";
+              : "");
     note.hidden = !ready || !limit || this.depth === "observe";
     if (!note.hidden) text(note, limit);
     if (this.play) {
