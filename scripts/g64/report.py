@@ -90,6 +90,7 @@ geology=data(evidence/'Plattentektonik/Geologie.json')
 assert app['tectonics']['complete'] and web['tectonics']['complete']
 assert atlas['complete'] and atlas['favoriteRestored'] and not atlas['errors'] and not atlas['network']
 assert models['complete'] and models['favorite'] and len(models['models'])==10 and len(models['states'])==9
+assert models['mantleWedge']['closedSurfaces']==3 and min(models['mantleWedge']['spans'])>.3
 assert len(models['smartboards'])==4 and all(v['ratio']>=.85 for v in models['smartboards'])
 assert len(models['films'])==2 and all(f['frames']>=5 for f in models['films'])
 assert geology['spreading'] and geology['deformation'] and len(geology['regions'])==2
@@ -99,6 +100,12 @@ report+=['','## G6.4 · Plattentektonik','',
          '','| Präsentationsformat | Anteil der Modellfläche |','|---|---:|']
 for v in models['smartboards']:report.append(f"| {v['width']} × {v['height']} | {100*v['ratio']:.1f} % |")
 report+=['','Die Werte bezeichnen die sichtbare Zeichenfläche. Der Anteil des gezeichneten Gesteins hängt vom gewählten Zoom ab. Die Bilder sind Originalaufnahmen. Die Blocklandschaften sind idealisiert. Einen fotorealistischen Standard aller weltweiten Grenzräume und eine physische Geräteabnahme bescheinigt diese Prüfung nicht.']
+processPerf=data(evidence/'Plattentektonik/Prozessleistung.json')
+assert len(processPerf['samples'])==4
+report+=['','### Prozessmodelle am virtuellen Mac','','Gemessen bei 1.920 × 1.080 Fensterpixeln. Die separate Spalte gibt den tatsächlich gerenderten Framebuffer an.','','| Modelle | Zustand | Neue Bilder/s | P95 Bildabstand | Größter Bildabstand | Renderziel |','|---:|---|---:|---:|---:|---|']
+for q in processPerf['samples']:
+    res=q['resolution']
+    report.append(f"| {q['n']} | {'animiert' if q['running'] else 'pausiert'} | {q['renderedFps']:.1f} | {q['p95Ms']:.1f} ms | {q['maxMs']:.1f} ms | {res['width']} × {res['height']} |")
 reportPath=base/'Abnahmebericht.md';reportPath.write_text('\n'.join(report)+'\n');files[reportPath.name]=reportPath
 html=['<!doctype html><html lang="de"><meta charset="utf-8"><title>GeoRisiko G6.4 · Sichtprüfung</title><style>body{margin:3vw;background:#152a22;color:#f5f2e7;font:18px system-ui}a{color:#bde4ca}section{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr));gap:1em}img{width:100%;height:auto}figure{margin:0}</style><h1>GeoRisiko G6.4</h1><p><a href="Abnahmebericht.md">Technischer Abnahmebericht</a> · <a href="Dokumentation/g64-plattentektonik.md">Fachwissenschaftlicher Prüfbericht</a> · <a href="Dokumentation/g64-bestand.md">Änderungen und offene Phasen</a></p><h2>Bedienfilme</h2>']
 for f in new['films']+volcano[1]['films']:

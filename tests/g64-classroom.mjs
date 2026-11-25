@@ -63,6 +63,28 @@ export async function visitStudio(page, out, extensive = false) {
     await page.check("#studio-paths");
     await page.check("#studio-label-1");
     await shot("06-Subduktion-Mantelkeil");
+    await select("studio-view", "wedge");
+    await shot("06a-Raeumlicher-Mantelkeil");
+    if (extensive) {
+      const volume = await page.evaluate(() => {
+        const obj = window.lastStudioScene.getObjectByName("Mantelkeil");
+        const xyz = obj.children[0].geometry.attributes.position;
+        const p = [[], [], []];
+        for (let i = 0; i < xyz.count; i++) {
+          p[0].push(xyz.getX(i));
+          p[1].push(xyz.getY(i));
+          p[2].push(xyz.getZ(i));
+        }
+        return {
+          spans: p.map((a) => Math.max(...a) - Math.min(...a)),
+          closedSurfaces: obj.children.length,
+        };
+      });
+      assert.equal(volume.closedSurfaces, 3);
+      assert.ok(volume.spans.every((n) => n > 0.3));
+      report.mantleWedge = volume;
+    }
+    await select("studio-view", "block");
     await page.locator(".studio-cell button").first().click();
     assert.equal((await state()).time, 0.54);
     if (extensive && process.env.G64_FILM) {
@@ -95,7 +117,9 @@ export async function visitStudio(page, out, extensive = false) {
         await screencast(page, out, "Wilson-Zyklus", async () => {
           await phase(0);
           await click("g-play");
-          await page.waitForFunction(() => window.geoObservatory().observatory.studio.time >= 1, null, {timeout: 100000});
+          await page.waitForFunction(() => window.geoObservatory().observatory.studio.time >= 1, null, {
+            timeout: 100000,
+          });
           await page.waitForTimeout(650);
         }),
       );
@@ -218,6 +242,18 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     return r.abort();
   });
   try {
+    await page.addInitScript(() => {
+      window.__THREE_DEVTOOLS__ = new EventTarget();
+      window.__THREE_DEVTOOLS__.addEventListener("observe", ({ detail: r }) => {
+        if (r.isWebGLRenderer) {
+          const draw = r.render.bind(r);
+          r.render = (scene, cam) => {
+            window.lastStudioScene = scene;
+            return draw(scene, cam);
+          };
+        }
+      });
+    });
     await page.goto(pathToFileURL(resolve(process.argv[2])).href);
     await page.waitForFunction(() => window.geoObservatory?.().ready);
     await visitStudio(page, process.env.G64_OUT || "test-results/g64", true);

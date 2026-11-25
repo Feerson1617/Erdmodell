@@ -5,6 +5,7 @@ import {
   processes,
   explanations,
   wilsonStages,
+  subducts,
   spreading,
   clamp,
   type ProcessId,
@@ -18,6 +19,7 @@ const views = {
   top: "Von oben",
   section: "Frontalschnitt",
   seabed: "Über dem Meeresboden",
+  wedge: "Mantelkeil räumlich freilegen",
 };
 type View = keyof typeof views;
 const options = (entries: Record<string, string>, active: string) =>
@@ -102,6 +104,9 @@ export class TectonicStudio {
   private overlay = document.createElement("div");
   private events = new AbortController();
   private textureRevision = 0;
+  private sampleEnd = 0;
+  private sampleStart = 0;
+  private sampleConfig = "";
   private prior = "";
   private lastGeometry = "";
   private panelsKey = "";
@@ -165,6 +170,7 @@ export class TectonicStudio {
   private build() {
     for (const row of this.rows) row.body.dispose();
     const s = this.state;
+    if (s.view === "wedge" && !s.models.some(subducts)) s.view = "block";
     const repaint = () => {
       this.textureRevision++;
     };
@@ -177,7 +183,7 @@ export class TectonicStudio {
       world.add(body.group);
       return { scene: world, body };
     });
-    this.lastGeometry = this.prior = this.panelsKey = "";
+    this.lastGeometry = this.prior = this.panelsKey = this.sampleConfig = "";
   }
   mount(side: HTMLElement) {
     const detailsOpen = side.querySelector<HTMLDetailsElement>("#studio-details")?.open;
@@ -240,7 +246,14 @@ export class TectonicStudio {
           '<input type="range" id="g-progress" min="0" max="1" step=".001" value="' +
           s.time +
           '"></label><div class="g-buttons"><button id="g-play">Abspielen</button><button id="g-step">Schritt</button><button id="g-reset">Zurücksetzen</button></div>' +
-          field("Ansicht", "studio-view", views, s.view) +
+          field(
+            "Ansicht",
+            "studio-view",
+            Object.fromEntries(
+              Object.entries(views).filter(([key]) => key !== "wedge" || s.models.some(subducts)),
+            ),
+            s.view,
+          ) +
           (s.models.length > 1
             ? "<small>Gleiche Modellphase · natürliche Prozesse dauern unterschiedlich lange.</small>"
             : "") +
@@ -501,10 +514,13 @@ export class TectonicStudio {
     const gl = this.gl,
       w = gl.domElement.clientWidth,
       h = gl.domElement.clientHeight;
-    const tick = s.playing ? Math.floor(s.time * 400) / 400 : s.time;
-    const geometry = [tick, s.analysis, s.view, s.paths, s.vectors, s.rate, s.km, s.measure].join("|");
+    // The GPU interpolates positions between close analytic samples. Paused/scrubbed states are exact.
+    const tick = s.playing ? Math.min(1, Math.ceil(s.time * 400) / 400) : s.time;
+    const config = [s.analysis, s.view, s.paths, s.vectors, s.rate, s.km, s.measure, ids].join("|");
+    const geometry = [tick, config].join("|");
     const signature = [
       geometry,
+      s.time,
       s.yaw,
       s.pitch,
       s.zoom,
@@ -520,7 +536,16 @@ export class TectonicStudio {
     graphics.activity = graphics.idle ? "cached" : s.playing ? "animation" : "camera";
     if (graphics.idle) return true;
     if (this.lastGeometry !== geometry) {
-      for (const row of this.rows) {
+      const continuous =
+        s.playing &&
+        this.sampleConfig === config &&
+        tick >= this.sampleEnd &&
+        tick - this.sampleEnd <= 0.002501;
+      this.sampleStart = continuous ? this.sampleEnd : tick;
+      this.sampleEnd = tick;
+      this.sampleConfig = config;
+      for (const id of ids) {
+        const row = this.rows[id];
         if (row.body instanceof PlateSection)
           row.body.update(
             tick,
@@ -535,9 +560,18 @@ export class TectonicStudio {
             s.rate,
             s.km,
             s.measure,
+            s.view === "wedge",
           );
       }
       this.lastGeometry = geometry;
+    }
+    const fraction =
+      s.playing && this.sampleEnd > this.sampleStart
+        ? clamp((s.time - this.sampleStart) / (this.sampleEnd - this.sampleStart))
+        : 1;
+    for (const id of ids) {
+      const row = this.rows[id];
+      if (row.body instanceof PlateSection) row.body.fraction.value = fraction;
     }
     this.prior = signature;
     const cols = Math.min(2, ids.length),

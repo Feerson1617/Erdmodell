@@ -6,7 +6,7 @@ export type Analysis = "natural" | "materials" | "age" | "magnet";
 const W = 4.8,
   D = 2.5;
 const color = (hex: number) => new T.Color(hex);
-const palette = [0xc2a389, 0x956c58, 0x746b62, 0x555a58, 0x856445, 0x995b40, 0x795345].map(color);
+const palette = [0xc2a389, 0x956c58, 0x746b62, 0x555a58, 0x806447, 0x8d6850, 0x795345].map(color);
 const ocean = color(0x45616c),
   land = color(0x81906e),
   peak = color(0xccbda4),
@@ -20,14 +20,18 @@ class Grid {
   mesh: T.Mesh;
   private positions: T.BufferAttribute;
   private colors: T.BufferAttribute;
+  private previous: T.BufferAttribute;
   constructor(
-    private nx: number,
+    readonly nx: number,
     private ny: number,
     material: T.Material,
+    private changingNormals = false,
   ) {
     const count = (nx + 1) * (ny + 1);
     this.positions = new T.BufferAttribute(new Float32Array(count * 3), 3).setUsage(T.DynamicDrawUsage);
     this.colors = new T.BufferAttribute(new Float32Array(count * 3), 3).setUsage(T.DynamicDrawUsage);
+    this.previous = new T.BufferAttribute(new Float32Array(count * 3), 3).setUsage(T.DynamicDrawUsage);
+    this.geometry.setAttribute("previousPosition", this.previous);
     this.geometry.setAttribute("position", this.positions);
     this.geometry.setAttribute("color", this.colors);
     const indices: number[] = [];
@@ -43,6 +47,8 @@ class Grid {
     this.mesh.frustumCulled = false;
   }
   write(fn: Writer) {
+    this.previous.array.set(this.positions.array);
+    this.previous.needsUpdate = true;
     const p = new T.Vector3(),
       c = new T.Color();
     for (let j = 0, k = 0; j <= this.ny; j++)
@@ -52,11 +58,37 @@ class Grid {
         this.colors.setXYZ(k, c.r, c.g, c.b);
       }
     this.positions.needsUpdate = this.colors.needsUpdate = true;
-    this.geometry.computeVertexNormals();
+    if (this.changingNormals || !this.geometry.hasAttribute("normal")) this.geometry.computeVertexNormals();
+  }
+}
+// A closed solid swept along dip. The two end caps and the four longitudinal
+// faces share positions. Only the deliberately opened teaching view exposes it.
+class SectionBody {
+  readonly group = new T.Group();
+  private skin: Grid;
+  private caps: Grid[];
+  constructor(material: T.Material) {
+    this.skin = new Grid(32, 24, material, true);
+    this.caps = [new Grid(8, 4, material, true), new Grid(8, 4, material, true)];
+    this.group.add(this.skin.mesh, ...this.caps.map((g) => g.mesh));
+  }
+  shape(draw: (along: number, strike: number, depth: number, p: T.Vector3, c: T.Color) => void) {
+    this.skin.write((u, v, p, c) => {
+      const q = v * 4,
+        face = Math.min(3, Math.floor(q)),
+        w = q - face;
+      if (face === 0) draw(u, w, 0, p, c);
+      if (face === 1) draw(u, 1, w, p, c);
+      if (face === 2) draw(u, 1 - w, 1, p, c);
+      if (face === 3) draw(u, 0, 1 - w, p, c);
+    });
+    this.caps.forEach((cap, index) => cap.write((u, v, p, c) => draw(index, u, v, p, c)));
   }
 }
 export class PlateSection {
   readonly group = new T.Group();
+  readonly fraction = { value: 1 };
+  private natural = { value: 1 };
   private surface: Grid;
   private front: Grid;
   private ends: Grid[];
@@ -64,6 +96,7 @@ export class PlateSection {
   private water: T.Mesh;
   private rock: T.MeshStandardMaterial;
   private pockets = new T.Group();
+  private bodies?: [SectionBody, SectionBody];
   private zone: T.InstancedMesh;
   private pillows: T.InstancedMesh;
   private fluids: T.InstancedMesh;
@@ -77,7 +110,7 @@ export class PlateSection {
   ) {
     this.rock = new T.MeshStandardMaterial({ vertexColors: true, side: T.DoubleSide, roughness: 0.91 });
     const div = quality() === 0 ? 42 : 64;
-    this.surface = new Grid(div, Math.round(div * 0.55), this.rock);
+    this.surface = new Grid(div, Math.round(div * 0.55), this.rock, true);
     this.front = new Grid(div, 30, this.rock);
     this.ends = [new Grid(28, 24, this.rock), new Grid(28, 24, this.rock), new Grid(div, 24, this.rock)];
     this.slab = new Grid(57, 7, this.rock);
@@ -146,23 +179,37 @@ export class PlateSection {
             faciesColor: { value: lib.color },
             faciesRelief: { value: lib.relief },
             detailGrade: { value: 1 },
+            geometryFraction: this.fraction,
+            naturalFacies: this.natural,
           });
           s.vertexShader =
-            "varying vec3 specimenPoint;\n" +
+            "attribute vec3 previousPosition; uniform float geometryFraction; varying vec3 specimenPoint;\n" +
             s.vertexShader.replace(
               "#include <begin_vertex>",
-              "#include <begin_vertex>\nspecimenPoint=position;",
+              "#include <begin_vertex>\ntransformed=mix(previousPosition,position,geometryFraction);specimenPoint=transformed;",
             );
-          s.fragmentShader = "varying vec3 specimenPoint;\n" + libraryGLSL + s.fragmentShader;
+          s.fragmentShader =
+            "varying vec3 specimenPoint;uniform float naturalFacies;\n" + libraryGLSL + s.fragmentShader;
           s.fragmentShader = s.fragmentShader.replace(
             "#include <color_fragment>",
             `#include <color_fragment>
           vec3 p=specimenPoint; vec3 n=abs(normalize(cross(dFdx(p),dFdy(p))));
           vec2 uv=n.y>max(n.x,n.z)?p.xz:(n.z>n.x?p.xy:p.zy);
-          float facies=p.y < -1.2?2.:(p.y<-.25?3.:0.);
-          vec3 tex=fieldSample(faciesColor,uv*1.33,facies).rgb;
-          float fine=fieldSample(faciesRelief,uv*2.5,facies).r;
-          diffuseColor.rgb*=clamp(.78+.36*luma6(tex)+.20*fine,.76,1.21);`,
+          float facies=n.y>.67?(p.y<-.14?3.:0.):(p.y<-.9?4.:5.);
+          vec2 bedding=uv*vec2(.81,1.48)+vec2(.16*sin(p.y*2.6+p.z*.41),0.);
+          vec3 stone=fieldSample(faciesColor,bedding*.66,facies).rgb;
+          vec3 gravel=fieldSample(faciesColor,uv*2.1+.24,facies).rgb;
+          float macro=clamp(.53+1.88*sqrt(luma6(stone)),.55,1.54);
+          float fine=clamp(.73+1.1*sqrt(luma6(gravel)),.74,1.35);
+          vec3 tint=clamp(stone/(luma6(stone)+.035),vec3(.54),vec3(1.55));
+          diffuseColor.rgb*=mix(vec3(1.),mix(vec3(1.),tint,.34)*macro*fine,naturalFacies);
+          vec2 detailNormal=fieldSample(faciesRelief,bedding*.66,facies).rg*2.-1.;`,
+          );
+          s.fragmentShader = s.fragmentShader.replace(
+            "#include <normal_fragment_maps>",
+            `#include <normal_fragment_maps>
+            vec3 t=normalize(dFdx(vViewPosition));vec3 b=normalize(dFdy(vViewPosition));
+            normal=normalize(normal+.27*naturalFacies*(detailNormal.x*t+detailNormal.y*b));`,
           );
         };
         m.customProgramCacheKey = () => "g64-core-sample";
@@ -180,11 +227,16 @@ export class PlateSection {
     rate: number,
     km: number,
     ruler: boolean,
+    expose = false,
   ) {
+    this.natural.value = analysis === "natural" ? 1 : 0;
     const k = this.kind;
+    const sub = subducts(k) || (k === "wilson" && t > 0.53 && t < 0.88);
+    const open = expose && sub;
+    const edge = open ? 0.18 : D;
     this.surface.write((a, b, p, c) => {
       const x = (a * 2 - 1) * W,
-        z = (b * 2 - 1) * D,
+        z = -D + b * (D + edge),
         g = geologyAt(k, x, z, t);
       p.set(x, g.top, z);
       if (analysis === "age" || analysis === "magnet") {
@@ -197,9 +249,15 @@ export class PlateSection {
         else c.lerp(fissure, g.fault * 0.78);
       }
     });
-    const section = (x: number, z: number, depth: number, p: T.Vector3, c: T.Color) => {
-      const g = geologyAt(k, x, z, t),
-        y = g.top + depth * (-2.52 - g.top);
+    const section = (
+      g: ReturnType<typeof geologyAt>,
+      x: number,
+      z: number,
+      depth: number,
+      p: T.Vector3,
+      c: T.Color,
+    ) => {
+      const y = g.top + depth * (-2.52 - g.top);
       const d = g.top - y,
         fold =
           k === "collision" || k === "complex" || k === "wilson"
@@ -216,22 +274,58 @@ export class PlateSection {
       }
       p.set(x, y, z);
     };
-    this.front.write((u, v, p, c) => section((u * 2 - 1) * W, D, v, p, c));
-    for (const [index, side] of this.ends.entries())
-      side.write((u, v, p, c) =>
-        section(
-          index === 2 ? (u * 2 - 1) * W : index === 0 ? -W : W,
-          index === 2 ? -D : (u * 2 - 1) * D,
-          v,
-          p,
-          c,
-        ),
-      );
-    const sub = subducts(k) || (k === "wilson" && t > 0.53 && t < 0.88);
+    if (cut) {
+      // All vertices down a vertical column share one surface and one crustal thickness.
+      // Side walls stay planar throughout the animation.
+      const profiles = [this.front, ...this.ends];
+      for (const [i, grid] of profiles.entries()) {
+        const columns = Array.from({ length: grid.nx + 1 }, (_, j) => {
+          const u = (2 * j) / grid.nx - 1,
+            x = i === 1 ? -W : i === 2 ? W : u * W,
+            z = i === 0 ? edge : i === 3 ? -D : -D + (u + 1) * 0.5 * (D + edge);
+          return { x, z, g: geologyAt(k, x, z, t) };
+        });
+        grid.write((u, depth, p, c) => {
+          const { x, z, g } = columns[Math.round(u * grid.nx)];
+          section(g, x, z, depth, p, c);
+        });
+      }
+    }
+
     const x0 = k === "wilson" ? basin(t) - 0.28 : 0;
     const extension =
       k === "wilson" ? clamp((t - 0.53) / 0.16) * clamp((0.89 - t) / 0.06) : 0.59 + 0.41 * t;
-    this.slab.mesh.visible = sub && cut;
+    if (open && !this.bodies) {
+      this.bodies = [new SectionBody(this.rock), new SectionBody(this.rock)];
+      this.bodies[0].group.name = "Abtauchende Lithosphäre";
+      this.bodies[1].group.name = "Mantelkeil";
+      this.group.add(...this.bodies.map((b) => b.group));
+    }
+    if (this.bodies) for (const body of this.bodies) body.group.visible = open;
+    if (open && this.bodies) {
+      const slabHeight = (x: number, z: number) => {
+        const dx = x - x0;
+        return dx < 0
+          ? geologyAt(k, x, z, t).top - 0.05
+          : geologyAt(k, x0, z, t).top - 0.05 - dx * 0.54 - dx * dx * 0.19;
+      };
+      this.bodies[0].shape((u, v, depth, p, c) => {
+        const x = x0 - 1.74 + u * (1.74 + 2.4 * extension),
+          z = edge + v * (D - edge);
+        p.set(x, slabHeight(x, z) - depth * 0.4, z);
+        c.copy(depth < 0.4 ? palette[3] : palette[4]);
+      });
+      this.bodies[1].shape((u, v, depth, p, c) => {
+        const x = x0 + 0.25 + u * (1.97 * extension),
+          z = edge + v * (D - edge);
+        const g = geologyAt(k, x, z, t),
+          floor = slabHeight(x, z) + 0.009,
+          roof = Math.max(floor, g.top - g.crust);
+        p.set(x, roof + (floor - roof) * depth, z);
+        c.copy(palette[4]).lerp(palette[5], depth * 0.65);
+      });
+    }
+    this.slab.mesh.visible = sub && cut && !open;
     if (sub)
       this.slab.write((u, v, p, c) => {
         const x = x0 - 1.75 + u * (1.75 + 2.4 * extension),
@@ -317,7 +411,8 @@ export class PlateSection {
       }
       this.pillows.instanceMatrix.needsUpdate = true;
     }
-    this.water.visible = analysis === "natural" && !["transform", "collision", "complex"].includes(k);
+    this.water.visible =
+      !open && analysis === "natural" && !["transform", "collision", "complex"].includes(k);
     this.front.mesh.visible = cut;
     this.ends.forEach((e) => (e.mesh.visible = cut));
     this.arrows.visible = vectors;
@@ -337,7 +432,7 @@ export class PlateSection {
             : new T.Vector3(
                 along ? 0 : dir,
                 0,
-                along ? side : k === "oblique" ? side * 0.72 : 0,
+                along ? -side : k === "oblique" ? -side * 0.72 : 0,
               ).normalize(),
       );
     }
