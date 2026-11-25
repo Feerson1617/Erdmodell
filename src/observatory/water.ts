@@ -55,6 +55,20 @@ export class WaterSection{
       const t=Math.round(i*1000/120)/1000;return {t,...this.extent(t)};
     });
   }
+  // Read the interpolated solver state of originally wet cells. A dry hill cannot signal a wave.
+  signals(t:number){
+    let surface=0,bed=0,away=0,shore=0;
+    const coast=this.extent(0).shore;
+    for(let i=0;i<this.cells;i++){
+      if(this.depths[i]<=.001)continue;
+      const x=-6+i*this.dx,eta=this.sample(x,t),depth=this.sample(x,t,true);
+      const change=Math.abs(eta-this.surfaces[i]),floor=Math.abs(eta-depth-(this.surfaces[i]-this.depths[i]));
+      surface=Math.max(surface,change);bed=Math.max(bed,floor);
+      if(floor<.002)away=Math.max(away,change);
+      if(Math.abs(x-coast)<=2*this.dx)shore=Math.max(shore,change);
+    }
+    return {surface,bed,away,shore};
+  }
   extent(t:number){
     let newlyWet=0,shore=6,deepest=0;
     for(let i=0;i<this.cells;i++){const x=-6+i*this.dx,depth=this.sample(x,t,true);

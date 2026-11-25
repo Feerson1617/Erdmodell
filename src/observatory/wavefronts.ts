@@ -13,6 +13,14 @@ export function waveAnalysis(r:RegionalScene){
     const indices=[];for(let i=0;i<points;i++){const k=i*2;indices.push(k,k+1,k+2,k+1,k+3,k+2);}g.setIndex(indices);
     const mat=new T.MeshBasicMaterial({color,transparent:true,opacity:.75,depthWrite:false,side:T.DoubleSide});
     const m=new T.Mesh(g,mat);m.name=n?"S-Wellenfront":"P-Wellenfront";m.userData.explanation={name:m.name,answer:n?"Gestein bewegt sich quer zur Laufrichtung.":"Das Gestein wird zusammengedrückt und gedehnt."};m.material.onBeforeCompile=s=>{s.vertexShader="attribute float edge;varying float faceEdge;\n"+s.vertexShader.replace("#include <begin_vertex>","#include <begin_vertex>\nfaceEdge=edge;");s.fragmentShader="varying float faceEdge;\n"+s.fragmentShader.replace("#include <color_fragment>","#include <color_fragment>\ndiffuseColor.a*=.22+.78*smoothstep(.0,.75,faceEdge);");};m.frustumCulled=false;
+    m.userData.lessonAnchor=()=>{
+      const indices=g.index!,pos=g.attributes.position;let best=Infinity,at;
+      for(let i=0;i<g.drawRange.count;i+=12){const vertex=new T.Vector3().fromBufferAttribute(pos,indices.getX(i));
+        const q=vertex.clone().project(r.camera);
+        if(Math.max(Math.abs(q.x),Math.abs(q.y),Math.abs(q.z))>=1)continue;
+        const score=(q.x-(n?-.36:.44))**2+(q.y+.16)**2;if(score<best){best=score;at=vertex;}}
+      return at;
+    };
     r.section.add(m);fronts.push(m);
     const beads=new T.InstancedMesh(new T.SphereGeometry(.069,10,7),new T.MeshStandardMaterial({color,emissive:color,emissiveIntensity:.22}),14);
     beads.name=n?"S-Gesteinspunkte":"P-Gesteinspunkte";beads.frustumCulled=false;detail.add(beads);markers.push(beads);

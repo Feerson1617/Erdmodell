@@ -1,4 +1,4 @@
-import {claimObject} from "./reveal";
+import {beginCandidates,claimObject} from "./reveal";
 import * as T from "three";
 import {AnnotationLayer,project,type Annotation} from "../annotations";
 import type {RegionalScene} from "./regional";
@@ -25,7 +25,7 @@ const vocabulary:Record<string,[string,string]>={
 };
 const preferred=["Überfluteter Bereich","Wasserwelle","Hebung des Meeresbodens","Senkung des Meeresbodens","Erdbebenherd","Epizentrum","P-Wellenfront","S-Wellenfront","Lavafluss","Basaltische Spalte","Geländemarker","Ruhige Nahbucht","Verdrängte Wassersäule","Ursprüngliche Uferlinie","Magmareservoir","Asche und Gas","Versetzte Geländelinie","Mantelkeil","Gebäude","Evakuierungsweg","Zug der absinkenden Platte","Starrer oberster Mantel","Blockierter Kontakt","Abtauchende ozeanische Kruste","Relative Bewegungsrichtung","Elastisch verformtes Gestein"];
 function description(o:T.Object3D):Info|undefined{
- if(o.userData.explanation)return o.userData.explanation;
+ const own=o.userData.explanation;if(own)return own;
  const v=vocabulary[o.name];if(v)return {name:v[0],answer:v[1]};
  if(o.parent?.userData.explanation)return o.parent.userData.explanation;
 }
@@ -62,33 +62,58 @@ function terrainBlocks(r:RegionalScene,point:T.Vector3){
 export class ObjectLabels{
  private layer:AnnotationLayer;private selected="";private key="";private last=0;private rev=0;
  private scene?:T.Scene;private objects:T.Mesh[]=[];private signals:HTMLElement[];
- private ro:ResizeObserver;private targets=new Map<string,T.Mesh>();private object?:T.Mesh;private picked?:T.Vector3;
+ private ro:ResizeObserver;private targets=new Map<string,T.Mesh>();private object?:T.Mesh;private picked?:()=>T.Vector3|undefined;
+ private halo=new T.Mesh(new T.RingGeometry(.66,1,32),new T.MeshBasicMaterial({color:0xffdc76,side:T.DoubleSide,depthTest:true,depthWrite:false}));
+ private identify(mesh:T.Mesh){return "regional-"+description(mesh)!.name;}
+ private priorities(r:RegionalScene){
+   if(r.view==="waves")return ["Erdbebenherd","Epizentrum","P-Wellenfront","S-Wellenfront"];
+   if(r.view==="focus"||r.view==="fault")return ["Erdbebenherd","Epizentrum","Störungsfläche","Bruchfront"];
+   if(r.view==="coast"||r.view==="ocean"||r.view==="water")return ["Überfluteter Bereich","Wasserwelle","Meeresboden","Verdrängte Wassersäule","Ursprüngliche Uferlinie","Wasseroberfläche"];
+   if(r.spec.theme==="volcano")return ["Lavafluss","Asche und Gas","Basaltische Spalte","Magmareservoir","Magma","Vulkanbau"];
+   if(r.cut&&r.spec.geology?.descending)return ["Abtauchende ozeanische Kruste","Kruste der Oberplatte","Tiefseegraben","Mantelkeil","Blockierter Kontakt"];
+   if(r.spec.site==="san"&&r.view==="overhead")return ["Vergleichsweg","Sich verschiebende Geländelinie","Versetzte Geländelinie","Elastisch verformtes Gestein"];
+   return preferred;
+ }
  constructor(private host:HTMLElement){
    host.classList.add("annotations");this.layer=new AnnotationLayer(host,a=>this.select(a.id));
    this.signals=[".tools","#obswitch","#observation-controls",".orientation","#water-profile"].flatMap(s=>Array.from(document.querySelectorAll<HTMLElement>(s)));
    this.ro=new ResizeObserver(()=>{this.rev++;this.key="";});this.ro.observe(host);for(const el of this.signals)this.ro.observe(el);
  }
- clear(){this.scene=undefined;this.object=undefined;this.selected="";this.picked=undefined;this.key="";this.targets.clear();this.layer.clear();this.rev++;}
- private select(id:string,object=this.targets.get(id),point?:T.Vector3){
+ clear(){this.halo.removeFromParent();this.scene=undefined;this.object=undefined;this.selected="";this.picked=undefined;this.key="";this.targets.clear();this.layer.clear();this.rev++;}
+ private select(id:string,object=this.targets.get(id),point?:()=>T.Vector3|undefined){
    if(!object)return;
-   const info=description(object);claimObject(id,info?info.name+" · "+info.answer:"");this.selected=id;this.object=object;this.picked=point?object.worldToLocal(point.clone()):undefined;this.key="";
+   const info=description(object);claimObject(id,info?info.name+" · "+info.answer:"");this.selected=id;this.object=object;this.picked=point;this.key="";
    const field=document.getElementById("g-object");
    if(info&&field){field.dataset.selection=id;field.textContent=info.name+" · "+info.answer;field.hidden=false;}
  }
  pick(r:RegionalScene,x:number,y:number){
    const rect=this.host.getBoundingClientRect(),ray=new T.Raycaster();ray.params.Line.threshold=.045;
    ray.setFromCamera(new T.Vector2(2*(x-rect.left)/rect.width-1,1-2*(y-rect.top)/rect.height),r.camera);
-   const hit=ray.intersectObjects(r.renderScene.children,true).find(h=>hitVisible(r,h));
-   if(hit&&description(hit.object))this.select(hit.object.uuid,hit.object as T.Mesh,hit.point);
+   const hit=ray.intersectObjects(r.renderScene.children,true).find(h=>h.object!==this.halo&&hitVisible(r,h));
+   if(hit&&description(hit.object)){
+     const mesh=hit.object as T.Mesh,face=hit.face,weights=hit.barycoord?.clone(),instance=hit.instanceId;
+     const local=mesh.worldToLocal(hit.point.clone()),index=hit.faceIndex;
+     const materialPoint=()=>{
+       if(!face||!weights)return mesh.localToWorld(local.clone());
+       const geo=mesh.geometry,offset=(index??0)*3;
+       if(offset<geo.drawRange.start||offset>=geo.drawRange.start+geo.drawRange.count||!hitVisible(r,hit))return;
+       const vertex=(i:number)=>mesh.userData.lessonVertex?.(i)??new T.Vector3().fromBufferAttribute(geo.attributes.position,i);
+       const p=vertex(face.a).multiplyScalar(weights.x).addScaledVector(vertex(face.b),weights.y).addScaledVector(vertex(face.c),weights.z);
+       if(mesh instanceof T.InstancedMesh&&instance!==undefined){if(instance>=mesh.count)return;mesh.getMatrixAt(instance,matrix);p.applyMatrix4(matrix);}
+       return mesh.localToWorld(p);
+     };
+     this.select(this.identify(mesh),mesh,materialPoint);
+   }
  }
  draw(r:RegionalScene,key:string,allowed:(id:string,index:number)=>boolean){
    if(this.scene!==r.renderScene){this.clear();this.scene=r.renderScene;}
    const observing=document.body.classList.contains("observing"),show=r.names||observing;
    const state=[key,this.rev,this.selected,show,r.moreNames,document.body.dataset.reveal].join("|");
    const now=performance.now();if(this.key===state||this.key&&now-this.last<110&&(r.playing||!r.viewSettled))return;
-   this.last=now;this.key=state;
+   this.last=now;this.key=state;beginCandidates();this.halo.visible=false;const priority=this.priorities(r);
+   if(!show&&!this.object){this.layer.draw([],this.signals,this.rev);return;}
    this.objects=[];r.renderScene.traverseVisible(o=>{if((o as T.Mesh).geometry&&description(o))this.objects.push(o as T.Mesh);});
-   this.objects.sort((a,b)=>this.rank(a)-this.rank(b));
+   this.objects.sort((a,b)=>this.rank(a,priority)-this.rank(b,priority));
    // The cut face exposes the front rocks. A nearer opaque rock may cover a deeper label.
    const rocks=this.objects.filter(o=>o.geometry?.hasAttribute("geologyCoord")&&r.section.visible);
    const sight=new T.Raycaster(),direction=new T.Vector3(),eye=r.camera.position;
@@ -98,7 +123,7 @@ export class ObjectLabels{
    for(const mesh of this.objects){
      const info=description(mesh)!;if(used.has(info.name))continue;
      if(!show&&this.object!==mesh)continue;
-     const p=this.picked&&mesh===this.object?mesh.localToWorld(this.picked.clone()):anchor(mesh);if(!p)continue;
+     const p=this.picked&&mesh===this.object?this.picked():anchor(mesh);if(!p)continue;
      if(mesh.name==="Gelände"&&p.z>4.52*(1-r.opening))continue;
      const xy=project(p,r.camera,rect.width,rect.height);if(!xy||terrainBlocks(r,p))continue;
      // Front faces of a cut are visible only from the open half-space.
@@ -107,11 +132,18 @@ export class ObjectLabels{
        direction.subVectors(p,eye);sight.far=direction.length()-.045;sight.set(eye,direction.normalize());
        if(sight.intersectObjects(rocks,false).some(hit=>hit.object!==mesh&&hitVisible(r,hit)))continue;
      }
-     used.add(info.name);if(!allowed(mesh.uuid,used.size-1))continue;this.targets.set(mesh.uuid,mesh);out.push({id:mesh.uuid,name:info.name,text:info.answer,phase,source,model,...xy});
+     if(this.object===mesh){
+       direction.subVectors(p,eye);sight.far=direction.length()-.025;sight.set(eye,direction.normalize());
+       const covered=sight.intersectObjects(r.renderScene.children,true).some(h=>h.object!==this.halo&&hitVisible(r,h)&&!((h.object as T.Mesh).material as T.Material)?.transparent);
+       if(covered)continue;
+     }
+     used.add(info.name);const id=this.identify(mesh);if(!allowed(id,used.size-1))continue;
+     if(this.object===mesh){this.scene!.add(this.halo);this.halo.position.copy(p).lerp(eye,.002);this.halo.quaternion.copy(r.camera.quaternion);this.halo.scale.setScalar(eye.distanceTo(p)*.011);this.halo.visible=true;}
+     this.targets.set(id,mesh);out.push({id,name:info.name,text:info.answer,phase,source,model,...xy});
      if(out.length>=(r.moreNames?8:4))break;
    }
    this.layer.draw(out,this.signals,this.rev);for(const button of this.host.querySelectorAll<HTMLButtonElement>("button"))button.setAttribute("aria-pressed",String(button.dataset.object===this.selected));
    if(this.selected&&!this.targets.has(this.selected)){this.object=undefined;this.selected="";this.picked=undefined;const field=document.getElementById("g-object");if(field)field.textContent="";}
  }
- private rank(m:T.Mesh){if(this.object===m)return -1;const i=preferred.indexOf(description(m)!.name);return i<0?100:i;}
+ private rank(m:T.Mesh,priority:string[]){if(this.object===m)return -1;const name=description(m)!.name,i=priority.indexOf(name),j=preferred.indexOf(name);return i>=0?i:j>=0?20+j:100;}
 }

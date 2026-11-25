@@ -92,6 +92,8 @@ export function eruption(r:RegionalScene,x:number,top:number){
     const bed=(xx:number,zz:number)=>{const u=T.MathUtils.clamp((xx+6)*16,0,191.999),v=T.MathUtils.clamp((zz+4.5)*16,0,143.999),a=Math.floor(u),b=Math.floor(v),h=r.rockCeiling.image.data as Float32Array;
       return T.MathUtils.lerp(T.MathUtils.lerp(h[b*193+a],h[b*193+a+1],u-a),T.MathUtils.lerp(h[(b+1)*193+a],h[(b+1)*193+a+1],u-a),v-b);};
     m.userData.lessonAnchor=()=>new T.Vector3(.03,mountain(hotspot,.03,0)+(bed(m.position.x+.03*m.scale.x,m.position.z)-m.position.y-.002)/m.scale.y,0);
+    m.userData.lessonVertex=(i:number)=>{const p=new T.Vector3().fromBufferAttribute(shape.attributes.position,i);
+      p.y+=(bed(m.position.x+p.x*m.scale.x,m.position.z+p.z*m.scale.z)-m.position.y-.002)/m.scale.y;return p;};
     m.raycast=(ray,hits)=>{
       picking??=new T.Mesh(shape.clone(),rock);const next=m.matrixWorld.elements.join(",");
       if(next!==pose){pose=next;const drawn=picking.geometry.attributes.position,rest=shape.attributes.position;

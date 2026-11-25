@@ -145,7 +145,7 @@ function witness(r:RegionalScene){
   r.markerEnds=[[0,0,0],[0,0,0]];
   for(const [index,side] of [-1,1].entries()){
     for(const stripe of [false,true]){
-      const coords:number[]=[],indices:number[]=[],half=stripe?.011:.078;
+      const coords:number[]=[],indices:number[]=[],half=stripe?.022:.095;
       for(let i=0;i<=72;i++){
         const x=side*i*.055,center=-.42+.12*Math.sin(x*.9);
         for(const edge of [-1,1]){const z=center+edge*half;coords.push(x,r.height(x,z)+(stripe?.032:.026),z);}
@@ -156,7 +156,13 @@ function witness(r:RegionalScene){
       if(!stripe&&r.lib){const tex=r.lib.color;mat.onBeforeCompile=sh=>{
         sh.uniforms.track={value:tex};sh.vertexShader="varying vec2 trackUV;\n"+sh.vertexShader.replace("#include <begin_vertex>","#include <begin_vertex>\ntrackUV=position.xz;");
         sh.fragmentShader="uniform sampler2D track;varying vec2 trackUV;\n"+sh.fragmentShader.replace("#include <color_fragment>","#include <color_fragment>\nvec2 p=trackUV*3.;float grit=textureGrad(track,(vec2(1.,1.)+.004+.992*fract(p))/vec2(4.,2.),dFdx(p)/vec2(4.,2.),dFdy(p)/vec2(4.,2.)).g;diffuseColor.rgb*=.57+1.4*sqrt(grit);");};}
-      const road=object(g,mat,"marker");road.name="Schematischer Vergleichsweg";r.witnesses.add(road);r.bindRock(g,side);
+      const road=object(g,mat,"marker");road.name="Schematischer Vergleichsweg";
+      Object.defineProperty(road.userData,"explanation",{get:()=>{
+        const released=r.faultModel.release(r.progress,0,r.height(0,-.42),-.42);
+        const offset=Math.abs(r.markerEnds[0][2]-r.markerEnds[1][2]);
+        if(released<=0||offset<.006)return {name:"Vergleichsweg",answer:"Die helle Linie verbindet beide Seiten. Ihre Lage lässt sich vor und nach dem Beben vergleichen."};
+        return {name:released>=.999?"Versetzte Geländelinie":"Sich verschiebende Geländelinie",answer:released>=.999?"Die beiden Wegenden liegen jetzt seitlich versetzt.":"Die Wegenden verschieben sich gerade gegeneinander."};
+      }});r.witnesses.add(road);r.bindRock(g,side);
       if(stripe)r.onAnimate(()=>{const p=g.attributes.position;r.markerEnds[index]=[p.getX(0),p.getY(0),(p.getZ(0)+p.getZ(1))/2];});
     }
   }

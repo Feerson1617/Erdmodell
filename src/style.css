@@ -375,3 +375,14 @@ body:not(.observing) #desk.pair-layout[data-mode=plates] #modelnote{left:8px}
 }
 
 .annotations .annotation-anchor:has(button[aria-pressed="true"])::after{content:"";position:absolute;left:-5px;top:-5px;width:10px;height:10px;border:2px solid #ffdb82;border-radius:50%;box-shadow:0 0 0 2px #173137;pointer-events:none}
+#g-split-caption{inset:10px 0 auto;transform:none;background:none;display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:0 10px}
+#g-split-caption[hidden]{display:none}#g-split-caption div{justify-self:center;max-width:92%;background:#172b25ed;padding:7px 12px;border-radius:6px}#g-split-caption strong,#g-split-caption span{display:block}#g-split-caption span{font-size:.9rem}
+#g-split-caption::after{content:attr(data-camera);grid-column:1/-1;justify-self:center;border-radius:4px;padding:2px 8px;background:#182e26dd;font-size:.85rem}
+.observing:not(.show-cause) #g-split-caption span{display:none}
+#discussion{display:flex;align-items:center;gap:.6rem;flex:none;padding:3px clamp(8px,1.4vw,24px);background:#192b22;border-top:1px solid #435446}
+#discussion button{white-space:nowrap;min-height:38px}#discussion p{margin:.25em 0;flex:1;color:#f5ebcc;font-size:clamp(16px,1.3vw,24px)}#focus-reading{margin-left:auto}
+body.reading-focus:not(.observing) #desk[data-mode=observatory]{display:grid;grid-template-columns:minmax(285px,39fr) minmax(0,61fr)}
+body.reading-focus:not(.observing) #desk[data-mode=observatory] #sidebar{position:static;grid-column:1;grid-row:1;width:auto;max-height:100%;padding:clamp(16px,2vw,34px);overflow:auto;margin:0}
+body.reading-focus:not(.observing) #desk[data-mode=observatory] .view{grid-column:2;grid-row:1}
+body.reading-focus #sidebar .process-reading{font-size:clamp(17px,1.4vw,25px);line-height:1.4}
+@media(max-width:760px){#discussion{flex-wrap:wrap}#discussion p{flex-basis:62%}body.reading-focus:not(.observing) #desk[data-mode=observatory]{grid-template-columns:minmax(220px,40%) minmax(0,1fr)}}
