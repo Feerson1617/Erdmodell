@@ -1,3 +1,4 @@
+import { earthFeatures, processFeatures, type Feature } from "./process-labels";
 import * as T from "three";
 import { PlateSection, type Analysis } from "./plate-section";
 import { EarthClassification, layersFor, type Division } from "./earth-classification";
@@ -110,6 +111,7 @@ export class TectonicStudio {
   private prior = "";
   private lastGeometry = "";
   private panelsKey = "";
+  private pins: { button: HTMLButtonElement; index: number; cell: number }[] = [];
   private side?: HTMLElement;
   constructor(
     private gl: T.WebGLRenderer,
@@ -305,7 +307,7 @@ export class TectonicStudio {
           '</details><details><summary>Was zeigt das Modell?</summary><p data-teach="cause">' +
           explanations[k] +
           '</p><p id="studio-stage" data-teach="phase"></p><small>Idealisiertes Prozessmodell. Höhen und Zeiten sind überhöht. Die Materialbewegung ist qualitativ. Bei der Spreizung entspricht der Ablauf 1,2 Millionen Modelljahren. Die ungleich breiten Polaritätsintervalle sind idealisiert.</small></details>') +
-      '<button id="studio-atlas">Im Forschungsatlas untersuchen</button></div>';
+      '<p id="studio-info" hidden aria-live="polite" data-teach="cause"></p><button id="studio-atlas">Im Forschungsatlas untersuchen</button></div>';
     if (detailsOpen && side.querySelector("details#studio-details"))
       side.querySelector<HTMLDetailsElement>("#studio-details")!.open = true;
     const element = <E extends HTMLElement>(id: string) => side.querySelector<E>("#" + id);
@@ -435,6 +437,17 @@ export class TectonicStudio {
       observing = document.body.classList.contains("observing");
     beginCandidates();
     const names = ids.map((i) => !s.interior && allowsLabel("studio-" + i) && (observing || s.labels[i]));
+    const choosing = document.body.hasAttribute("data-choose-object");
+    const features = ids.map((i) =>
+      s.interior ? earthFeatures(s.division, s.expanded) : processFeatures(s.models[i], s.time),
+    );
+    const entries = features.map((list, n) =>
+      list.map((feature, j) => {
+        const id = "studio-feature-" + ids[n] + "-" + j;
+        const allowed = allowsLabel(id) && (observing || (s.interior ? s.layer === j : s.labels[ids[n]]));
+        return { id, j, feature, show: allowed || choosing, anonymous: !allowed };
+      }),
+    );
     const stage = Math.min(8, Math.floor(s.time * 8 + 0.0001)),
       sig = [
         ids,
@@ -447,10 +460,14 @@ export class TectonicStudio {
         s.analysis,
         s.division,
         s.expanded,
+        entries.map((list) =>
+          list.map((e) => (e.show ? (e.anonymous ? "dot" : e.feature.name) : "")).join(","),
+        ),
       ].join("/");
     if (this.panelsKey === sig) return;
     this.panelsKey = sig;
     this.overlay.replaceChildren();
+    this.pins = [];
     this.overlay.style.gridTemplateColumns = "repeat(" + Math.min(2, ids.length) + ",1fr)";
     for (const [n, i] of ids.entries()) {
       const slot = document.createElement("div");
@@ -482,6 +499,23 @@ export class TectonicStudio {
             ? "Alter · Rot <1,5 · Ocker <3 · Sand <4,5 · Grün <6 · Blau ≥6 Ma"
             : "Magnetisierung · warm normal · kühl invers · idealisierte Intervalle";
         slot.append(p);
+      }
+      for (const e of entries[n]) {
+        if (!e.show) continue;
+        const tag = document.createElement("button");
+        tag.className = "studio-object";
+        tag.textContent = e.anonymous ? "•" : e.feature.name;
+        tag.setAttribute("aria-label", e.anonymous ? "Objekt auswählen" : e.feature.name);
+        tag.onclick = () => {
+          if (claimObject(e.id, e.feature.explanation)) return;
+          const info = this.side?.querySelector<HTMLElement>("#studio-info");
+          if (info) {
+            info.hidden = false;
+            info.textContent = e.feature.name + " · " + e.feature.explanation;
+          }
+        };
+        slot.append(tag);
+        this.pins.push({ button: tag, index: e.j, cell: n });
       }
       this.overlay.append(slot);
     }
@@ -520,6 +554,7 @@ export class TectonicStudio {
     const geometry = [tick, config].join("|");
     const signature = [
       geometry,
+      this.panelsKey,
       s.time,
       s.yaw,
       s.pitch,
@@ -607,6 +642,34 @@ export class TectonicStudio {
       cam.lookAt(0, target, 0);
       cam.updateProjectionMatrix();
       gl.render(this.rows[id].scene, cam);
+      const marks = this.pins.filter((p) => p.cell === n);
+      if (marks.length) {
+        const features: Feature[] = s.interior
+          ? earthFeatures(s.division, s.expanded)
+          : processFeatures(s.models[id], s.time);
+        const used: { x: number; y: number; w: number; h: number }[] = [];
+        for (const pin of marks) {
+          const pt = features[pin.index].point.project(cam),
+            tag = pin.button;
+          const tw = tag.offsetWidth,
+            th = tag.offsetHeight;
+          let px = clamp(((pt.x + 1) * cw) / 2 - tw / 2, 4, Math.max(4, cw - tw - 4)),
+            py = clamp(((1 - pt.y) * ch) / 2 - th, 44, Math.max(44, ch - th - 30));
+          for (const prior of used)
+            if (
+              px < prior.x + prior.w + 3 &&
+              px + tw + 3 > prior.x &&
+              py < prior.y + prior.h + 3 &&
+              py + th + 3 > prior.y
+            )
+              py = prior.y + prior.h + 4;
+          tag.style.visibility =
+            py + th > ch - 12 || Math.abs(pt.x) > 1 || Math.abs(pt.y) > 1 ? "hidden" : "visible";
+          tag.style.left = Math.round(px) + "px";
+          tag.style.top = Math.round(py) + "px";
+          used.push({ x: px, y: py, w: tw, h: th });
+        }
+      }
     }
     gl.setScissorTest(false);
     gl.setViewport(0, 0, w, h);

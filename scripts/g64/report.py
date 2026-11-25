@@ -43,7 +43,7 @@ for path in evidence.rglob('*'):
     if path.is_file() and path.suffix in {'.json','.jpg','.mp4'}:files[str(path.relative_to(evidence))]=path
 for path in base.rglob('*'):
     if path.is_file() and evidence not in path.parents and path.suffix in {'.json','.log','.txt','.jpg'}:files['Protokolle/'+str(path.relative_to(base))]=path
-for name in ['g64-plattentektonik.md','g64-bestand.md','g64-forschungsatlas.md','g631-fachpruefung.md','entwicklungsstand.md','curriculum-coverage.md','g63-unterricht.md','g62-lernmodell.md','g51-quellen.md','g5-quellen.md','g6-quellen.md','g61-landschaften.md','mac-installation.md']:
+for name in ['g64-grafikpruefung.md','g64-plattentektonik.md','g64-bestand.md','g64-forschungsatlas.md','g631-fachpruefung.md','entwicklungsstand.md','curriculum-coverage.md','g63-unterricht.md','g62-lernmodell.md','g51-quellen.md','g5-quellen.md','g6-quellen.md','g61-landschaften.md','mac-installation.md']:
     files['Dokumentation/'+name]=root/'docs'/name
 for path in (root/'public/licenses').glob('*'):
     if path.is_file():files['Lizenzen/'+path.name]=path
@@ -107,7 +107,7 @@ for q in processPerf['samples']:
     res=q['resolution']
     report.append(f"| {q['n']} | {'animiert' if q['running'] else 'pausiert'} | {q['renderedFps']:.1f} | {q['p95Ms']:.1f} ms | {q['maxMs']:.1f} ms | {res['width']} × {res['height']} |")
 reportPath=base/'Abnahmebericht.md';reportPath.write_text('\n'.join(report)+'\n');files[reportPath.name]=reportPath
-html=['<!doctype html><html lang="de"><meta charset="utf-8"><title>GeoRisiko G6.4 · Sichtprüfung</title><style>body{margin:3vw;background:#152a22;color:#f5f2e7;font:18px system-ui}a{color:#bde4ca}section{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr));gap:1em}img{width:100%;height:auto}figure{margin:0}</style><h1>GeoRisiko G6.4</h1><p><a href="Abnahmebericht.md">Technischer Abnahmebericht</a> · <a href="Dokumentation/g64-plattentektonik.md">Fachwissenschaftlicher Prüfbericht</a> · <a href="Dokumentation/g64-bestand.md">Änderungen und offene Phasen</a></p><h2>Bedienfilme</h2>']
+html=['<!doctype html><html lang="de"><meta charset="utf-8"><title>GeoRisiko G6.4 · Sichtprüfung</title><style>body{margin:3vw;background:#152a22;color:#f5f2e7;font:18px system-ui}a{color:#bde4ca}section{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr));gap:1em}img{width:100%;height:auto}figure{margin:0}</style><h1>GeoRisiko G6.4</h1><p><a href="Abnahmebericht.md">Technischer Abnahmebericht</a> · <a href="Dokumentation/g64-plattentektonik.md">Fachwissenschaftlicher Prüfbericht</a> · <a href="Dokumentation/g64-grafikpruefung.md">Grafischer Qualitätsbericht</a> · <a href="Dokumentation/curriculum-coverage.md">Curriculare Abdeckung</a> · <a href="Dokumentation/g64-bestand.md">Bestandsanalyse</a></p><h2>Bedienfilme</h2>']
 for f in new['films']+volcano[1]['films']:
     name=escape(f['name']);html.append(f'<p><a href="Nachher/{name}.mp4">{name}</a> · {f["seconds"]:.1f} Sekunden</p>')
 for shot in sorted([v['name'] for v in new['shots']]+volcano[1]['shots']):

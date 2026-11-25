@@ -15,7 +15,7 @@
 | Plattenantrieb | **Antrieb einzeln zeigen** im Antriebsmodell öffnen | Wärmetransport, Mantelbewegung, Rückenkraft, Plattenzug und Kopplung lassen sich einzeln zuschalten. Pfeillängen sind qualitativ. |
 | Zeitreise | **Wie entstand die Theorie?** öffnen | Historische Belege, Wegeners offene Antriebsfrage und die späteren Messungen am Ozeanboden und per Satellit werden zeitlich eingeordnet. |
 
-Für die Präsentation sind die Modellwahl, die Ansichten, Start/Pause und die Modellzeit direkt erreichbar. Werkzeuge und Datenquellen öffnen auf Wunsch. Der Beobachtungsmodus verdeckt die Seitenleiste und übernimmt die gemeinsame Zeitsteuerung. **Informationen freigeben → Ein Name mehr** gibt im Prozessvergleich eine Bezeichnung frei. Individuelle Ansichten sind über das Lesezeichen in der Kopfzeile speicherbar.
+Für die Präsentation sind die Modellwahl, die Ansichten, Start/Pause und die Modellzeit direkt erreichbar. Werkzeuge und Datenquellen öffnen auf Wunsch. Der Beobachtungsmodus verdeckt die Seitenleiste und übernimmt die gemeinsame Zeitsteuerung. **Informationen freigeben → Ein Name mehr** gibt im Prozessvergleich oder im Erdinneren eine Bezeichnung frei. **Objekt antippen** bietet an den geologischen Strukturen neutrale Auswahlpunkte. Individuelle Ansichten sind über das Lesezeichen in der Kopfzeile speicherbar.
 
 ## Graphische Gestaltung
 

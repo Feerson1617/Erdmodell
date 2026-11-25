@@ -276,6 +276,7 @@ export class Observatory {
   private lastLabelsRendered=false;
   get subject(){
     if(this.mode==="regional"){const s=this.region?.spec;return [s?.theme,s?.site,s?.geology?.id,s?.process,s?.event,s?.coastLesson].join("/");}
+    if(this.studio){const s=this.studio.state;return s.interior?"studio/earth/"+s.division:"studio/"+s.models.join("/");}
     if(this.mode==="time")return "time/"+this.timeline?.model;
     return this.mode==="map"?"map/"+this.mapPurpose:[this.world.mode,this.world.mosaic?.pair?.step[0],this.world.processSite,this.world.mode==="nyos"?this.world.nyosLesson.view:""].join("/");
   }

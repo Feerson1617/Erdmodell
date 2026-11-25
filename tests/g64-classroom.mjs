@@ -40,6 +40,17 @@ export async function visitStudio(page, out, extensive = false) {
     await select("studio-layer", "0");
     await click("studio-expand");
     await shot("02-Mechanische-Schichten");
+    await click("obswitch");
+    await page.waitForFunction(() => !document.querySelector(".studio-object"));
+    await page.locator("#observe-release summary").click();
+    await page.locator('[data-release="one"]').click();
+    await page.waitForFunction(
+      () => document.querySelector(".studio-object")?.textContent === "Lithosphäre",
+    );
+    assert.equal(await page.locator(".studio-object:visible").count(), 1);
+    await page.locator('[data-release="none"]').click();
+    await page.locator("#observe-release summary").click();
+    await click("obswitch");
     await click("nav-plates");
     await click("g-studio");
     if (!(await page.locator("#studio-details").evaluate((x) => x.open)))
