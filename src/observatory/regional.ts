@@ -403,6 +403,10 @@ export class RegionalScene {
     }
     const f=this.faultModel,x=view==="coast"?(this.spec.coastLesson?-2.98:-4.65):view==="ocean"?0:view==="water"?f.hx:Math.max(-3.9,Math.min(3.9,f.hx));
     const y=view==="waves"||view==="focus"?f.hy:view==="coast"||view==="water"||view==="ocean"?0:f.top-.35;
+    if(this.ruptureAnalysis && this.spec.site==="san" && view==="fault"){
+      const goal=new T.Vector3(f.hx,f.hy+.35,-.1);this.transition=undefined;
+      this.orbit.target.copy(goal);this.camera.position.copy(goal).add(new T.Vector3(3.25,1.5,4.1));this.orbit.update();return;
+    }
     const goal=new T.Vector3(x,y,-.18),to=goal.clone().add(new T.Vector3(view==="water"?2:view==="coast"?-.6:.25,view==="water"?2.3:view==="coast"?1.48:.54,view==="ocean"?9:view==="waves"?6.4:view==="coast"?2.5:4.5));
     this.transition=undefined;this.camera.position.copy(to);this.orbit.target.copy(goal);this.orbit.update();
   }

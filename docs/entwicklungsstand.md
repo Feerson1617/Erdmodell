@@ -1,5 +1,9 @@
 # Entwicklungsstand und nächste Abnahmestufen
 
+## G6.5.1 · Seismische Integrität
+
+Die Produktprüfung misst direkt im WebGL-Bild die Sichtbarkeit der Modelle beim Fensterwechsel. Beide Stationen zeigen die Ankunft der gleichen Wellen. [Korrekturbericht](g651-korrektur.md)
+
 ## G6.5 · Erdbeben und Vulkanismus
 
 Der neue Entwicklungszweig baut auf dem gesicherten G6.4.2-Commit aus PR #23 auf. [Bestand, Fachprüfung und Modellgrenzen](g65-erdbeben.md)

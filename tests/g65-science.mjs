@@ -9,7 +9,7 @@ import {
   stationTrace,
   rupture,
   volcanicTrace,
-  mechanisms,
+  mechanisms, faultMotion,groundMotion,
 } from "../src/seismology/physics.ts";
 const read = async (file) => JSON.parse(await readFile(file, "utf8"));
 const checks = [];
@@ -54,6 +54,15 @@ assert.ok(
     mechanisms.oblique.rake > 0 &&
     mechanisms.oblique.rake < 90,
 );
+for(const [km,p,s] of [[30,5,8.5714285714],[60,10,17.1428571429]]){
+  near(arrival(km,"p"),p,1e-8,"P bei "+km+" km");near(arrival(km,"s"),s,1e-8,"S bei "+km+" km");
+  const before=groundMotion(km,p-.001);assert.equal(before.longitudinal,0);assert.equal(before.transverse,0);
+}
+const transient=[false,true].map(soil=>Array.from({length:350},(_,i)=>groundMotion(45,15+i/50,soil).transverse));
+assert.ok(transient[1].reduce((v,a)=>v+a*a,0)>transient[0].reduce((v,a)=>v+a*a,0)*2);
+const strain=t=>faultMotion(t,.4,0,0).offset-faultMotion(t,.05,0,0).offset;
+assert.ok(strain(.34)>.1&&Math.abs(strain(1))<.001&&faultMotion(1,.05,0,0).permanent>.4);
+near(faultMotion(1,0,5,0).permanent,0,0,"Außerhalb der Bruchfläche");
 const rays = await read("src/seismology/iasp91.json");
 for (const q of rays) {
   const maxDepth = Math.max(...q.points.map((p) => p[2]));

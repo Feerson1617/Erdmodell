@@ -289,7 +289,7 @@ export class GeographicExperience {
     el<HTMLInputElement>("geo-time").oninput = () => this.setTime(+el<HTMLInputElement>("geo-time").value);
     el<HTMLSelectElement>("geo-info").onchange = (e) => this.setDepth((e.target as HTMLSelectElement).value);
     el("geo-release").onclick = () => {
-      if (this.obs.studioState || this.obs.region) document.body.toggleAttribute("data-choose-object");
+      if (this.obs.studioState || this.obs.region || this.obs.study) document.body.toggleAttribute("data-choose-object");
       else nextLabel();
     };
     el("geo-clear").onclick = () => resetReveals();
@@ -772,7 +772,7 @@ export class GeographicExperience {
           (!!r && r.spec.theme !== "forces" && r.spec.theme !== "lithosphere" && !this.currentPlace()),
         release:
           this.depth === "observe" &&
-          (!!s ||
+          (!!s || !!this.obs.study ||
             !!r ||
             this.world.mode === "inside" ||
             this.world.mode === "nyos" ||

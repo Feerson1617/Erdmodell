@@ -1,3 +1,4 @@
+import { corrections, geometry } from "./g651-visual.mjs";
 import { seismicClassroom } from "./g65-classroom.mjs";
 import { integrity } from "./g642-integrity.mjs";
 import assert from "node:assert/strict";
@@ -50,7 +51,7 @@ try {
   const page = native ? await app.firstWindow() : await ctx.newPage();
   if (!native)
     await page.goto(
-      pathToFileURL(resolve("artifacts/GeoRisiko-G6.5-Web-Test.html")).href,
+      pathToFileURL(resolve("artifacts/GeoRisiko-G6.5.1-Web-Test.html")).href,
     );
   if (native) {
     assert.match(page.url(), /^georisiko:/);
@@ -72,23 +73,25 @@ try {
     startMs: performance.now() - time,
     network,
   };
-  if (group !== "integritaet" && group !== "seismologie")
+  if (!["integritaet", "seismologie", "korrektur"].includes(group))
     await exercise(page, out, {
       group,
-      film: process.env.G65_FILM === "1",
+      film: false,
       board: !native && group !== "raum",
     });
   if (group === "all" || group === "integritaet")
     await integrity(page, out, {
       native,
       app,
-      film: process.env.G65_FILM === "1",
+      film: false,
     });
   if (group === "all" || group === "seismologie")
     await seismicClassroom(page, out, {
       app,
-      film: process.env.G65_FILM === "1",
+      film: false,
     });
+  if (group === "all" || group === "korrektur")
+    await corrections(page, out, { app, film: process.env.G65_FILM === "1" });
   if (process.argv.includes("--long")) {
     await app.evaluate(({ BrowserWindow }) =>
       BrowserWindow.getAllWindows()[0].setContentSize(1366, 768),
@@ -99,7 +102,16 @@ try {
     const start = performance.now(),
       rows = [];
     const set = async (k) => {
-      await page.selectOption("#geo-topic", "seismic-" + k);
+      const topic =
+        { stations: "particles", sites: "moment", monitor: "vt" }[k] || k;
+      await page.selectOption("#geo-topic", "seismic-" + topic);
+      if (topic !== k) {
+        await page.waitForFunction(
+          (id) => window.geoObservatory().observatory.lessonView === id,
+          topic,
+        );
+        await page.selectOption("#geo-preset", k);
+      }
       await page.waitForFunction(
         (k) =>
           window.geoObservatory().observatory.lessonView === k &&
@@ -110,11 +122,11 @@ try {
     const cycle = [
       "strike",
       "park",
-      "particles",
-      "moment",
+      "stations",
+      "sites",
       "rays",
-      "vt",
-      "park",
+      "monitor",
+      "particles",
     ];
     for (let i = 0; performance.now() - start < 900000; i++) {
       const change = performance.now();
@@ -133,8 +145,10 @@ try {
       const changeMs = performance.now() - change;
       await page.locator("#geo-time").fill("0.05");
       await page.click("#geo-play");
+      const animatedVisible = await geometry(page);
       const sample = await page.evaluate(() => window.geoDeviceProbe(17000));
       await page.locator("#geo-time").fill("0.63");
+      const visible = await geometry(page);
       const idle = await page.evaluate(() => window.geoDeviceProbe(1500));
       const rss = await app.evaluate(({ app }) =>
         app
@@ -145,6 +159,8 @@ try {
       rows.push({
         process: cycle[i % cycle.length],
         changeMs,
+        animatedVisible,
+        visible,
         animatedFps: sample.renderedFps,
         frameP95: sample.p95,
         idleRendered: idle.renderedFrames,

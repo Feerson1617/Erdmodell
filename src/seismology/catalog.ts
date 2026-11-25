@@ -102,6 +102,7 @@ export const families = {
     variants: {
       rays: "P- und S-Schattenzonen",
       conversion: "Wellenumwandlung · SKS",
+      allRays: "Alle berechneten Laufwege",
     },
   },
   source: {
@@ -194,9 +195,10 @@ export const connections: Record<string, [string, string]> = {
   record: ["observed", "Herde in Japan"],
   rays: ["inside", "Zum Schalenmodell"],
   conversion: ["inside", "Zum Schalenmodell"],
+  allRays: ["inside", "Zum Schalenmodell"],
   moment: ["sites", "Örtliche Wirkung"],
   sites: ["distance", "Entfernung vergleichen"],
-  distance: ["moment", "Zur Quelle"],
+  distance: ["risk", "Bebauung und Untergrund"],
   tectonic: ["vt", "Vulkanischer Raum"],
   vt: ["monitor", "Zur Überwachung"],
   fluid: ["monitor", "Zur Überwachung"],

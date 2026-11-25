@@ -256,6 +256,8 @@ export class World {
       );
     });
     canvas.addEventListener("webglcontextrestored", () => {
+      graphics.surfaceRevision++;
+      this.resize();
       this.running = true;
       this.last = 0;
       requestAnimationFrame(this.render);
@@ -270,7 +272,11 @@ export class World {
     const w = this.canvas.clientWidth,
       h = this.canvas.clientHeight;
     if (!w || !h) return;
-    this.gl.setSize(w, h, false);
+    const ratio = this.gl.getPixelRatio();
+    if (this.canvas.width !== Math.floor(w * ratio) || this.canvas.height !== Math.floor(h * ratio)) {
+      this.gl.setSize(w, h, false);
+      graphics.surfaceRevision++;
+    }
     this.nav.camera.aspect = w / h;
     this.nav.camera.fov =
       w < h
@@ -1046,7 +1052,7 @@ export class World {
     if(this.worldDrawn)this.gl.render(this.scene, this.nav.camera);
     this.renderMs = performance.now() - submit;
     const sample=observeFrame(now);
-    if(sample){const ratio=this.resolution.sample(sample.fps,sample.seconds);if(ratio!==undefined)this.gl.setPixelRatio(ratio);}
+    if(sample){const ratio=this.resolution.sample(sample.fps,sample.seconds);if(ratio!==undefined && ratio!==this.gl.getPixelRatio()){this.gl.setPixelRatio(ratio);graphics.surfaceRevision++;}}
     this.onFrame?.();
   };
 }

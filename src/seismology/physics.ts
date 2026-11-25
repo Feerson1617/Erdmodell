@@ -48,19 +48,23 @@ export function displacement(wave: Wave, km: number, sec: number, depthKm = 0) {
       ];
   }
 }
+// Homogeneous path, followed by an optional illustrative local site response.
+export function groundMotion(km: number, sec: number, sediment = false) {
+  const attenuation = 4 / Math.sqrt(Math.max(8, km));
+  const pAge = sec - arrival(km, "p"),
+    sAge = sec - arrival(km, "s");
+  const longitudinal = attenuation * 0.61 * packet(pAge, 1.25, 1.65);
+  const transverse =
+    attenuation *
+    (sediment
+      ? 0.52 * packet(sAge, 0.89, 1.55) + 1.48 * packet(sAge, 0.46, 4.1)
+      : packet(sAge, 0.89, 1.55));
+  return { longitudinal, transverse };
+}
+// A single inclined sensor axis records a signed component of that same displacement.
 export function stationTrace(km: number, sec: number, sediment = false) {
-  const scale = 4 / Math.sqrt(km);
-  return (
-    scale *
-    (0.42 * packet(sec - arrival(km, "p"), 1.4) +
-      packet(sec - arrival(km, "s"), 0.85) +
-      (sediment ? 1.35 : 0.55) *
-        packet(
-          sec - arrival(km, "rayleigh"),
-          sediment ? 0.54 : 0.75,
-          sediment ? 3.5 : 1.8,
-        ))
-  );
+  const m = groundMotion(km, sec, sediment);
+  return (m.longitudinal + m.transverse) * Math.SQRT1_2;
 }
 export function volcanicTrace(id: string, sec: number) {
   if (id === "quiet") return 0.025 * Math.sin(1.5 * sec);
@@ -89,4 +93,19 @@ export function rupture(t: number, along: number, down: number) {
   const span = Math.hypot(along / 4, down / 2);
   const advance = Math.max(0, Math.min(1, (t - 0.34) * 3.7 - span * 0.67));
   return advance * advance * (3 - 2 * advance) * Math.max(0, 1 - span ** 3);
+}
+
+export function faultMotion(
+  t: number,
+  separation: number,
+  along: number,
+  down: number,
+) {
+  const lock = Math.exp(-Math.abs(separation) * 1.5);
+  const released = rupture(t, along, down);
+  const loaded = Math.min(1, t / 0.34) * Math.exp(-Math.abs(along) * 0.16);
+  // Held far-field displacement relaxes its near-fault gradient as the rupture arrives.
+  const elastic = 0.46 * loaded * (1 - lock) * (1 - released);
+  const permanent = 0.49 * released;
+  return { elastic, permanent, offset: elastic + permanent };
 }

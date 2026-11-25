@@ -138,3 +138,7 @@ Unterrichtsgespräch und Sicherung gestaltet die Lerngruppe mit der Lehrkraft. Q
 | Naturrisiken | Gleiche Quelle, unterschiedliche Untergründe und Standorte, gemeinsame Auswertung von Überwachungsdaten | Grenzen von Intensitätsaussagen und Vorhersagen |
 
 Grundlagen sind die Fachanforderungen Geographie Schleswig-Holstein Sek. I 2015, der Leitfaden 2016 und das schulinterne Fachcurriculum der ETS Tönning/Friedrichstadt für Jahrgang 9. Aufgaben, Diskussion und Sicherung verbleiben bei der Lehrkraft. [Fachprüfung und Darstellungen](g65-erdbeben.md)
+
+## G6.5.1 · Erdbewegung beobachten und vergleichen
+
+Für Jahrgang 9 verbinden Parkfield und Japan die regionale Orientierung mit dem allgemeinen Prozessmodell. Die Lehrkraft kann erst sichtbare Strukturen vergleichen lassen und danach einzelne Begriffe freigeben. Die zwei Stationen veranschaulichen bei unterschiedlicher Entfernung denselben Prozess. Bei den Standortmodellen bleibt die Entfernung konstant, während sich der Untergrund ändert. Diese kontrollierten Vergleiche konkretisieren räumliche Orientierung, Modellbildung und systemisches Denken gemäß den oben belegten Fachanforderungen, dem Leitfaden und dem schulinternen Curriculum.

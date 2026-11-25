@@ -8,18 +8,19 @@ import {spawnSync} from "node:child_process";
 
 export async function screencast(page,dir,name,perform,options={}) {
   const scratch=await mkdtemp(join(tmpdir(),"georisiko-film-")),cdp=await page.context().newCDPSession(page);
+  const {fixedFrame=false,...capture}=options;
   const frames=[],writes=[];
   cdp.on("Page.screencastFrame",ev=>{const file=String(frames.length).padStart(6,"0")+".jpg";
     frames.push({file,time:ev.metadata.timestamp});writes.push(writeFile(join(scratch,file),Buffer.from(ev.data,"base64")));
     void cdp.send("Page.screencastFrameAck",{sessionId:ev.sessionId}).catch(()=>{});
   });
-  await cdp.send("Page.startScreencast",{format:"jpeg",quality:76,maxWidth:960,maxHeight:600,everyNthFrame:2,...options});
+  await cdp.send("Page.startScreencast",{format:"jpeg",quality:76,maxWidth:960,maxHeight:600,everyNthFrame:2,...capture});
   try{await page.waitForTimeout(320);await perform();await page.waitForTimeout(480);}
   finally{await cdp.send("Page.stopScreencast");await cdp.detach();await Promise.all(writes);}
   assert.ok(frames.length>=5,name+" sichtbare Filmframes");
   const lines=frames.flatMap((f,i)=>["file '"+f.file+"'","duration "+Math.max(.017,(frames[i+1]?.time??f.time+.22)-f.time)]);
   await writeFile(join(scratch,"frames.txt"),lines.join("\n")+"\nfile '"+frames.at(-1).file+"'\n");
-  const file=join(dir,name+".mp4"),ff=spawnSync("ffmpeg",["-loglevel","error","-y","-f","concat","-safe","1","-i",join(scratch,"frames.txt"),"-vf","pad=ceil(iw/2)*2:ceil(ih/2)*2","-c:v","libx264","-preset","veryfast","-crf","25","-pix_fmt","yuv420p","-movflags","+faststart",file]);
+  const file=join(dir,name+".mp4"),ff=spawnSync("ffmpeg",["-loglevel","error","-y","-f","concat","-safe","1","-i",join(scratch,"frames.txt"),"-vf",fixedFrame?"scale=960:540:force_original_aspect_ratio=decrease,pad=960:540:(ow-iw)/2:(oh-ih)/2,setsar=1":"pad=ceil(iw/2)*2:ceil(ih/2)*2","-c:v","libx264","-preset","veryfast","-crf","25","-pix_fmt","yuv420p","-movflags","+faststart",file]);
   assert.equal(ff.status,0,String(ff.stderr));return {name,frames:frames.length,seconds:frames.at(-1).time-frames[0].time};
 }
 export async function acceptG5(p,{dir,product,measure,films=true}){
