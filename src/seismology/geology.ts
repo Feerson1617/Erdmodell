@@ -13,7 +13,7 @@ const terrain = (x: number, z: number) =>
   0.035 * Math.cos(z * 2 + x);
 const palette = [0x706660, 0x9f8471, 0xc4a588, 0x917456, 0xc3b793, 0x85977e];
 type Mapping = (u: number, v: number) => T.Vector3;
-function surface(
+export function surface(
   s: Stage,
   cols: number,
   rows: number,
@@ -68,7 +68,7 @@ function surface(
     `,
       );
   };
-  if (mechanisms[s.view]) {
+  if (mechanisms[s.view] || ["storage","degassing","contact","maar","dryMaar","lakeMaar"].includes(s.view)) {
     void materials().then((lib) => {
       if (s.disposed) return;
       const base = mat.onBeforeCompile;
@@ -509,6 +509,12 @@ export function intrusion(s: Stage) {
     "Schmelzreiche Zone",
   );
   reservoir.scale.set(1.25, 0.48, 0.26);
+  // Melt lenses and crystals occupy only part of the crustal volume.
+  for(let i=0;i<22;i++){
+    const x=-1.65+(i%8)*.28, y=-2.25+Math.sin(i*2.37)*.28;
+    const lens=s.dot(vec(x,y,0.28),i%3===0?0xbdb19b:0xe68c59,.12,"Kristall und Schmelzlinse");
+    lens.scale.set(1.8,.45,.8);
+  }
   const path = [
     vec(-0.55, -1.95, 0.11),
     vec(-0.18, -1.34, 0.11),
@@ -555,6 +561,7 @@ export function intrusion(s: Stage) {
   if (s.view !== "quiet")
     s.label(vec(0.8, -0.32, 0.15), "Bruchzone", "", (t) => t > 0.26);
   if (s.view === "monitor") {
+    s.label(vec(2.2,0.7,0),"Temperatur","Wärmefluss und Oberflächentemperatur ergänzen Gas-, Lage- und Erschütterungsmessungen");
     for (const [x, n, c] of [
       [-3, "GNSS", colors.s],
       [1.7, "Seismometer", colors.p],

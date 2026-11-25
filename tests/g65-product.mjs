@@ -51,7 +51,7 @@ try {
   const page = native ? await app.firstWindow() : await ctx.newPage();
   if (!native)
     await page.goto(
-      pathToFileURL(resolve("artifacts/GeoRisiko-G6.5.1-Web-Test.html")).href,
+      pathToFileURL(resolve("artifacts/GeoRisiko-G6.6-Web-Test.html")).href,
     );
   if (native) {
     assert.match(page.url(), /^georisiko:/);

@@ -23,7 +23,7 @@ jobs:
           name: Produktionsbuild
           path: |
             dist/
-            artifacts/GeoRisiko-G6.5.1-Web-Test.html
+            artifacts/GeoRisiko-G6.6-Web-Test.html
   browser:
     needs: build
     runs-on: ubuntu-24.04

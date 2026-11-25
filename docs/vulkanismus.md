@@ -1,0 +1,6 @@
+# Vulkanische Systeme · G6.6
+Hawaii und Japan verwenden das bestehende Regionalrelief und dessen Gelände-, Lava- und Eruptionsmodelle. Die Direktwahl öffnet die Vulkanform oder die vorbereitete effusive bzw. explosive Variante. Der Lavaweg folgt dem Gelände; eine erstarrende Kruste verdeckt Teile der Glut. Beim explosiven Beispiel treten Asche und Fragmente auf. Gasverlust, Kristallgehalt und Viskosität beeinflussen den Verlauf. Dieselbe Vulkanform kann unterschiedlich eruptieren.
+
+Die bestehenden Rückenschnitte zeigen Druckentlastung, der Zaozan-Schnitt wasserhaltige Fluide aus der Platte und partielle Aufschmelzung im festen Mantelkeil. Unter Hawaii ist Druckentlastung beim Aufstieg heißen Mantelmaterials möglich. Die Krustenschnitte ergänzen Schmelzlinsen, Kristalle, Gänge und Gastransport. Den Modellen liegen qualitative Prozessbeziehungen zugrunde. Ausbruchstermine, Gasflüsse und Mengen werden daraus nicht berechnet. Der Kontakt mit externem Grundwasser führt bei ausreichender Wärmeübertragung möglicherweise zur Fragmentierung.
+
+Fachliche Referenzen: [USGS – Volcano Hazards](https://www.usgs.gov/programs/VHP), [USGS – Volcanic gases](https://www.usgs.gov/programs/VHP/volcanic-gases-can-be-harmful-health-vegetation-and-infrastructure), [White & Ross 2011 – Maar-diatreme volcanoes](https://doi.org/10.1016/j.jvolgeores.2011.01.010).

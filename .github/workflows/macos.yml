@@ -24,7 +24,7 @@ jobs:
           cache: npm
       - run: npm ci && npm run mac:build
       - run: bash scripts/mount-macos.sh
-      - run: python3 scripts/g52/product-check.py artifacts/macos/GeoRisiko-G6.5.1-macOS-arm64-app.zip artifacts/GeoRisiko-G6.5.1-Web-Test.html test-results/G65/Ressourcen.json
+      - run: python3 scripts/g52/product-check.py artifacts/macos/GeoRisiko-G6.6-macOS-arm64-app.zip artifacts/GeoRisiko-G6.6-Web-Test.html test-results/G65/Ressourcen.json
       - run: node tests/g65-science.mjs test-results/G65/App
       - run: node tests/g65-product.mjs --installed --long
       - if: always()
@@ -39,17 +39,17 @@ jobs:
             !test-results/G65/App/Profil/**
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
-          path: artifacts/macos/GeoRisiko-G6.5.1-macOS-arm64.dmg
+          path: artifacts/macos/GeoRisiko-G6.6-macOS-arm64.dmg
           archive: false
           if-no-files-found: error
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
-          path: artifacts/macos/GeoRisiko-G6.5.1-macOS-arm64-app.zip
+          path: artifacts/macos/GeoRisiko-G6.6-macOS-arm64-app.zip
           archive: false
           if-no-files-found: error
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
-          path: artifacts/GeoRisiko-G6.5.1-Web-Test.html
+          path: artifacts/GeoRisiko-G6.6-Web-Test.html
           archive: false
           if-no-files-found: error
   classroom:
@@ -97,7 +97,7 @@ jobs:
           npm --prefix .scratch/g65 run build && npm --prefix .scratch/g65 run standalone
           npm run build && npm run standalone
           npx playwright install chromium
-      - run: node tests/g651-compare.mjs .scratch/g65/artifacts/GeoRisiko-G6.5-Web-Test.html artifacts/GeoRisiko-G6.5.1-Web-Test.html
+      - run: node tests/g651-compare.mjs .scratch/g65/artifacts/GeoRisiko-G6.5-Web-Test.html artifacts/GeoRisiko-G6.6-Web-Test.html
       - if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -126,6 +126,6 @@ jobs:
       - run: python3 scripts/g651/report.py
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
-          path: artifacts/GeoRisiko-G6.5.1-Sichtpruefung.zip
+          path: artifacts/GeoRisiko-G6.6-Sichtpruefung.zip
           archive: false
           if-no-files-found: error

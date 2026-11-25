@@ -181,6 +181,8 @@ export class GeographicExperience {
     const seismic = groups(topics, "Erdbeben und Vulkanismus");
     for(const [id,name] of Object.entries({distribution:"Globale Erdbebenverteilung",park:"Erdbebenentstehung",strike:"Bruchmechanismen",particles:"Seismische Wellen",rays:"Wellen im Erdinneren",moment:"Magnitude und Intensität",observed:"Japan · Erdbebenherde",vt:"Vulkanische Seismizität"}))
       option(seismic,"seismic-"+id,name);
+    const volcanism=groups(topics,"Vulkanismus");
+    for(const id of ["shield","cone","storage","degassing","contact"])option(volcanism,"seismic-"+id,titleFor(id));
     const hazard = groups(topics, "Naturgefahren und Orte");
     for (const [id, name] of Object.entries({
       events: "Erdbeben der Erde",
