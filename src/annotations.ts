@@ -109,12 +109,18 @@ export class AnnotationLayer {
       if (label.model && button.dataset.model !== label.model) button.dataset.model = label.model;
       if (label.phase && button.dataset.phase !== label.phase) button.dataset.phase = label.phase;
       if(button.firstElementChild?.textContent!==label.name)button.firstElementChild!.textContent=label.name;
-      let size = this.sizes.get(label.name);
+      const explain=document.body.dataset.infoDepth==="explain" && !document.body.classList.contains("observing");
+      const caption=explain ? label.text.split(/(?<=[.!?])\s+/)[0] : "";
+      let small=button.querySelector("small");
+      if(caption){if(!small){small=document.createElement("small");button.append(small);}if(small.textContent!==caption)small.textContent=caption;}
+      else small?.remove();
+      const sizeKey=label.name+"|"+caption;
+      let size = this.sizes.get(sizeKey);
       if (!size) {
         if (!button.isConnected) this.host.append(anchor);
         this.work.measures++;
         size = { width: button.offsetWidth, height: button.offsetHeight };
-        this.sizes.set(label.name, size);
+        this.sizes.set(sizeKey, size);
       }
       const w = size.width,
         h = size.height,

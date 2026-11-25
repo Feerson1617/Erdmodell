@@ -45,10 +45,11 @@ const layerLegend: Record<Layer, string> = {
   ridge: "Türkis · ozeanische Spreizungsgrenzen nach PB2002",
   trench: "Hellorange · Subduktionsfronten nach PB2002, angenäherter Grabenverlauf",
   mountain: "Sandfarben · Grenzabschnitte in breiten Deformationsgürteln nach Bird",
-  age: "Rekonstruiertes Meeresbodenalter (EarthByte) in Millionen Jahren · <10 Rot, <40 Orange, <80 Ocker, <120 Grün, <160 Türkis, ab 160 Blau. Ohne Modellwert transparent.",
+  age: "Rekonstruiertes Meeresbodenalter (EarthByte) in Millionen Jahren · <10 Rot, <40 Orange, <80 Ocker, <120 Grün, <160 Türkis, ab 160 Blau. Globales 1°-Raster, beim Zoomen unverändert. Ohne Modellwert transparent.",
   magnetic:
-    "NOAA EMAG2v3 · aus Messungen abgeleitete magnetische Anomalie auf Meeresniveau. Rot positiv, Blau negativ, Symbolgröße nach Betrag. 5°-Stichprobe aus dem 1°-Raster, Einzelwerte per Klick. Lokale Magnetstreifen sind bei dieser Auflösung nicht auflösbar.",
+    "NOAA EMAG2v3 · aus Messungen abgeleitete magnetische Anomalie auf Meeresniveau. Rot positiv, Blau negativ, Deckkraft nach Betrag. Globale 1°-Rasterzellen, Einzelwerte per Klick. Lokale Magnetstreifen sind bei dieser Auflösung nicht auflösbar.",
   gnss: "Mintgrün · horizontale GNSS-Geschwindigkeiten, NGL MIDAS im globalen Rahmen IGS14",
+  ice: "Eisblau · drei Becken mit glazialen Sedimenten des späten Paläozoikums, heutige Lage",
   fossil: "Hellgrün · zwei Mesosaurus-Fundregionen",
   rock: "Rosa · Appalachen und Highlands, Vergleichsregionen",
 };
@@ -96,6 +97,7 @@ export class ResearchAtlas {
     view: HTMLElement,
     private selectStep: (step: Step) => void,
     private orient: (p:GeoPoint) => void,
+    private openProcess: (step:Step) => void,
   ) {
     this.texture.colorSpace = T.SRGBColorSpace;
     this.globe.renderOrder = 4;
@@ -244,7 +246,7 @@ export class ResearchAtlas {
       ["Platten und Bewegung", ["plates","bounds","vectors","gnss"]],
       ["Erdbeben und Vulkanismus", ["quakes","depth","magnitude","volcano","hotspot"]],
       ["Relief und Ozeanboden", ["ridge","trench","mountain","age","magnetic"]],
-      ["Kontinentaldrift", ["fossil","rock"]],
+      ["Kontinentaldrift", ["fossil","rock","ice"]],
     ];
     for (const [name, ids] of groups) {
       const group = document.createElement("fieldset");
@@ -301,15 +303,15 @@ export class ResearchAtlas {
       c.globalAlpha = 1;
     }
     if (layers.has("magnetic"))
-      for (let lat = -85; lat <= 85; lat += 5)
-        for (let lon = -180; lon < 180; lon += 5) {
+      for (let lat = -89; lat <= 89; lat++)
+        for (let lon = -180; lon < 180; lon++) {
           const mag = gridValue(d.magnetic, lat, lon, 0.2, 800);
           if (mag === undefined || Math.abs(mag) < 0.1) continue;
           const [x, y] = xy(lat, lon);
           c.fillStyle = mag > 0 ? "#ff8375" : "#8bbaff";
-          c.beginPath();
-          c.arc(x, y, Math.min(5, 0.8 + Math.sqrt(Math.abs(mag)) * 0.35), 0, 2 * Math.PI);
-          c.fill();
+          c.globalAlpha = Math.min(.85,.14+Math.sqrt(Math.abs(mag))*.055);
+          c.fillRect(x-2,y-2,4,4);
+          c.globalAlpha=1;
         }
     const line = (x: number, y: number, dx: number, dy: number) => {
       for (const off of [0, dx > 0 ? -w : w]) {
@@ -421,6 +423,7 @@ export class ResearchAtlas {
     const d = this.data;
     if (!d || !this.reading) return;
 
+    let selected: Step | undefined;
     const l = new Set(this.state.layers),
       parts = [
         `${decimal(Math.abs(lat))}° ${lat < 0 ? "S" : "N"} · ${decimal(Math.abs(lon))}° ${lon < 0 ? "W" : "O"}`,
@@ -439,7 +442,7 @@ export class ResearchAtlas {
     ] as const) {
       if (!l.has(key)) continue;
       const val = gridValue(d[key], lat, lon, scale, offset);
-      parts.push(atlasLayers[key] + " · " + (val === undefined ? "ohne Daten" : decimal(val) + " " + unit));
+      parts.push(atlasLayers[key] + " · 1°-Raster · " + (val === undefined ? "ohne Daten" : decimal(val) + " " + unit));
     }
     if (["bounds", "ridge", "trench", "mountain"].some((k) => l.has(k as Layer))) {
       const step = this.maps.nearestStep(
@@ -452,7 +455,7 @@ export class ResearchAtlas {
         parts.push(
           "PB2002 #" + step[0] + " · " + k.pair + " · " + decimal(k.speed) + " mm/Jahr · " + k.azimuth + "°",
         );
-        this.selectStep(step);
+        this.selectStep(step); selected=step;
       }
     }
     const nearby = d.points
@@ -471,5 +474,10 @@ export class ResearchAtlas {
         return p;
       }),
     );
+    if (selected) {
+      const step=selected, button=document.createElement("button");
+      button.id="research-process";button.textContent="Prozess dieses Grenzabschnitts öffnen";
+      button.onclick=()=>this.openProcess(step); this.reading.append(button);
+    }
   }
 }

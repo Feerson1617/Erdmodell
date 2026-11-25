@@ -104,3 +104,15 @@ Der fachliche Schwerpunkt „Naturrisiken – Aufbau der Erde und Modell der Pla
 | Methoden und Modellkritik | Alter auf einer Rückenflanke und Entfernung messen, Halb- und Gesamtspreizung unterscheiden. Datenprodukt und Polaritätsmodell wechseln. | 100 km in 4 Ma entsprechen 25 mm/Jahr je Flanke. Bilder 03 und 04 sowie das Atlantikprofil. |
 | Räume vergleichen | Neun Wilson-Stadien durchlaufen und heutige Analogien lokalisieren. | Möglicher Entwicklungspfad. Originalbilder und Film 07. |
 | Erkenntnisgewinn | Historische Fundregionen, Ozeanbodenalter und GNSS mit verschiedenen Bezugsrahmen begründen. | Quellen und Zeiten jedes Datensatzes in der Legende. HOFN, zwei Grenzpaare und Erdbebenfilter im Prüfprotokoll. |
+
+## G6.4.1 · Räumliche Orientierung am Prozessmodell
+
+| Unterrichtlicher Bezug | Räumlicher Zugang im Modell | Beitrag der Lehrkraft und Lernenden |
+|---|---|---|
+| Orientierung und Wechsel der Raumdimension | Erde, Pazifik, Tongagraben, regionales Relief und Schnitt mit fortbestehendem Ortsbezug | Räume auf der Karte einordnen und die Reichweite der Aussagen beurteilen |
+| Region und allgemeiner Prozess | Thematischer Einstieg und Wahl des Ortes führen zur gleichen Prozessgeometrie | Gemeinsamkeiten und regionale Besonderheiten erörtern |
+| Struktur, Funktion und Prozess | Unterplatte, Fluidweg und Mantelkeil mit verankerten Erläuterungen | Ursachen und Zusammenwirken sprachlich erschließen |
+| Systemisches Denken | Globale gleichzeitige Prozesse, lokaler Rücken und übergeordnete Beckenschließung | Zeitdimensionen und Bilanz von Bildung und Verbrauch diskutieren |
+| Erkenntnis und Medienkompetenz | Beckenmarker, GNSS-Messungen, rekonstruierte Alterswerte, Modellgrenzen beim Zoomen | Quellen und Aussagekraft differenzieren |
+
+Zuordnung zu den Fachanforderungen Geographie Schleswig-Holstein 2015, S. 18–19 und 26, zum Leitfaden 2016, S. 46–47, sowie zum ETS-Fachcurriculum Jahrgang 9, S. 6. Fragestellung, fachliche Kontroverse und Sicherung verantwortet die Lehrkraft.

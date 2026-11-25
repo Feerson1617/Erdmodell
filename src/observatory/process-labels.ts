@@ -1,6 +1,6 @@
 import * as T from "three";
 import { layersFor, type Division } from "./earth-classification";
-import { geologyAt, type ProcessId } from "./tectonic-process";
+import { wilsonMotion, basin, geologyAt, type ProcessId } from "./tectonic-process";
 
 export type Feature = { name: string; point: T.Vector3; explanation: string };
 export function earthFeatures(division: Division, expanded: boolean): Feature[] {
@@ -29,7 +29,8 @@ export function processFeatures(k: ProcessId, t: number): Feature[] {
   switch (k) {
     case "ridge":
       return [
-        at("Rückenachse", 0, top(0), "Hier kommt auf beiden Flanken neue ozeanische Kruste hinzu."),
+        at("Druckentlastung", .18, -1.03, "Aufsteigender Mantel schmilzt bei sinkendem Druck teilweise."),
+        at("Rückenachse", 0, top(0), "Magma erstarrt. Neue Kruste wächst auf beiden Flanken."),
         at(
           "Ozeanische Lithosphäre",
           2,
@@ -61,7 +62,7 @@ export function processFeatures(k: ProcessId, t: number): Feature[] {
           "Mantelkeil",
           x,
           (slab + g.top - g.crust) * 0.5,
-          "Dieser Mantelbereich liegt zwischen Unterplatte und Oberplatte.",
+          "Freigesetzte Fluide erleichtern die Teilschmelze im festen Mantel.",
         ),
         at(
           "Unterplatte",
@@ -69,6 +70,8 @@ export function processFeatures(k: ProcessId, t: number): Feature[] {
           top(0) - 0.2 - 0.54 * (x + 0.4) - 0.19 * (x + 0.4) ** 2,
           "Die ozeanische Lithosphäre taucht in den Mantel ein.",
         ),
+        at("Fluidweg",1.05,slab+.15,"Wasserhaltige Minerale der Unterplatte geben Fluide ab."),
+        at("Magmaaufstieg",1.46,top(1.46)-.24,"Ein Teil der Schmelze steigt durch die Oberplatte auf."),
       ];
     }
     case "transform":
@@ -93,18 +96,20 @@ export function processFeatures(k: ProcessId, t: number): Feature[] {
     case "hotspot":
       return [
         {
-          name: "Aktive Quelle",
+          name: "Aktiver Vulkan",
           point: new T.Vector3(-1.55, geologyAt(k, -1.55, 0, t).top, 0),
           explanation: "Neue Vulkanbauten entstehen über der länger bestehenden Quelle.",
         },
+        {name:"Schmelzregion",point:new T.Vector3(-1.55,-1.18,.08),explanation:"Heißer Mantel steigt auf und schmilzt bei sinkendem Druck teilweise."},
+        {name:"Älterer Vulkanbau",point:new T.Vector3(-1.55+(2+t)*1.05,geologyAt(k,-1.55+(2+t)*1.05,0,t).top,0),explanation:"Die bewegte Platte trägt diesen Bau von der Schmelzregion fort."},
       ];
     case "wilson":
       return [
         at(
           t < 0.19 ? "Graben" : t < 0.79 ? "Ozeanbecken" : "Kollisionszone",
-          0,
-          top(0),
-          "Der markierte Bereich liegt in der Mitte des idealisierten Entwicklungsmodells.",
+          basin(t)*.65,
+          top(basin(t)*.65),
+          wilsonMotion(t).reading,
         ),
       ];
   }

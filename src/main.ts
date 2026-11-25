@@ -3,6 +3,7 @@ import {beginCandidates,allowsLabel,claimObject} from "./observatory/reveal";
 import {installProfiles} from "./observatory/graphics";
 import {classroomViews} from "./observatory/classroom-views";
 import {fields,lessonKeys} from "./observatory/saved-state";
+import { GeographicExperience } from "./observatory/geographic-experience";
 import {Observation} from "./observatory/observation";
 import { Observatory } from "./observatory/panel";
 import { reference } from "./observatory/regional";
@@ -17,6 +18,7 @@ import { AnnotationLayer, type Annotation } from "./annotations";
 import { siteCatalog, firstRegion } from "./regions";
 import "@fontsource-variable/dm-sans/wght.css";
 import "./style.css";
+import "./observatory/experience.css";
 import { createIcons, Globe2, Layers3, MapPin, Maximize, Minimize, Info, Plus, Minus, RotateCcw, Waypoints, Orbit, Compass, X, Eye, EyeOff, Navigation2, Waves, Bookmark } from "lucide";
 import { World } from "./world";
 import { layers } from "./model";
@@ -467,6 +469,7 @@ async function boot() {
   }
   const observation=new Observation(()=>observatory.subject);
   observatory=new Observatory(world,side,navigate);
+  const experience = friday ? undefined : new GeographicExperience(world,observatory,observation,navigate);
   const baseView=()=>({
     mode:world.mode,site:world.region.id,style:world.style,labels,released:[...released],
     shell:{...fields(world.shell,["cut","selected","subdued"]),visible:[...world.shell.visible],opacity:[...world.shell.opacity],comparison:world.shell.expanded?"expanded" as const:world.shell.lithosphere?"lithosphere" as const:"reference" as const},
@@ -487,7 +490,7 @@ async function boot() {
       Object.assign(world,fields(b.process,["processProgress","processPlaying","processLoop","processSlow","singlePlateName","smallPlateNames"]));
     }
     renderSide();
-  });
+  },experience);
   for(const [id,run] of [["earthquake",()=>observatory.openMap()],["volcano",()=>observatory.openRegion(reference("hawaii","volcano"))],["risk",()=>observatory.openRegion(reference("san","risk"))]] as const){
     $("nav-"+id).classList.add("obsNav");$("nav-"+id).onclick=run;
   }
@@ -550,7 +553,7 @@ async function boot() {
   let lastHud = 0;
   let lastBearing = NaN;
   world.onFrame = () => {
-    observation.update();
+    observation.update(); experience?.update(performance.now());
     if(observatory.mode){if(status.textContent)status.textContent="";return;}
     if (world.mode==="inside"||world.mode==="plates") updatePins();
     const now = performance.now();

@@ -49,25 +49,25 @@ export class Observatory {
   private mapPurpose:"events"|"boundaries"="events";
   private research?:ResearchAtlas;
   private studio?:TectonicStudio;
-  private returnStudio?:StudioState;
   openStudio(state?:Partial<StudioState>){
     this.base();this.mode="studio";this.world.nav.enabled=false;this.mark();
-    this.studio=new TectonicStudio(this.world.gl,state,()=>void this.openResearch({flat:true,layers:["bounds","age"],magnitude:6,depth:750}),async id=>{
-      const saved=structuredClone(this.studio!.state);saved.playing=false;
-      const revision=this.revision;
-      if(Object.hasOwn(sites,id))await this.openRegion(reference(id as Site,"process"));
-      else {await this.maps.init();if(revision!==this.revision)return;await this.openBoundary(this.maps.steps[Number(id)-1],"process");}
-      if(this.region && this.revision===revision+1){this.returnStudio=saved;this.draw();}
-    });
+    this.studio=new TectonicStudio(this.world.gl,state,()=>void this.openResearch({flat:true,layers:["bounds","age"],magnitude:6,depth:750}),
+      id=>this.visitPlace?.(id), model=>this.visitModel?.(model));
     this.draw();
   }
+  visitPlace?: (id:string)=>void;
+  visitModel?: (id:import("./tectonic-process").ProcessId)=>void;
+  visitBoundary?: (step:Step)=>void;
+  get studioState(){return this.studio?.state;}
+  get atlasState(){return this.research?.state;}
+  get timeState(){return this.timeline;}
   private readonly rates=new PlateRates();
   async openResearch(state?:ResearchState){
     const opened=this.openMap("boundaries"),revision=this.revision;
     await opened;
     if(this.revision!==revision||this.mode!=="map"||this.mapPurpose!=="boundaries"||!this.maps.steps.length)return;
     this.research?.dispose();
-    const atlas=new ResearchAtlas(this.maps,$("earth").parentElement!,step=>this.rates.allowCurrent(step),p=>this.world.nav.fly({...this.world.nav.pose,...p},true));
+    const atlas=new ResearchAtlas(this.maps,$("earth").parentElement!,step=>this.rates.allowCurrent(step),p=>this.world.nav.fly({...this.world.nav.pose,...p},true),step=>this.visitBoundary?.(step));
     if(state)atlas.state={...state,layers:[...state.layers]};
     this.research=atlas;this.maps.group.visible=false;this.world.scene.add(atlas.globe);
     this.draw();
@@ -90,7 +90,7 @@ export class Observatory {
   private parkfield?:RegionalScene;
   private parkDefaults?:ReturnType<typeof fields<RegionalScene,typeof regionKeys[number]>>;
   close(){
-    this.returnStudio=undefined;this.studio?.dispose();this.studio=undefined;
+    this.studio?.dispose();this.studio=undefined;
     this.research?.dispose();this.research=undefined;
     this.profile.hide();this.profileWanted=false;this.switching=false;this.spare?.dispose();this.spare=undefined;this.revision++;
     const r=this.region;
@@ -110,9 +110,9 @@ export class Observatory {
     for(const id of ["modelnote","orbitProcess","nyosPin","nyosRelief"])$(id).hidden=true;
     $("pins").replaceChildren();$("platePins").replaceChildren();
   }
-  async openMap(purpose:"events"|"boundaries"="events"){
+  async openMap(purpose:"events"|"boundaries"="events",keepCamera=false){
     this.base();this.mode="map";this.mapPurpose=purpose;this.theme="earthquake";this.mark();
-    this.world.nav.fly({lat:purpose==="events"?12:15,lon:purpose==="events"?-146:-20,d:15300,tilt:0,bearing:0},true);
+    if(!keepCamera)this.world.nav.fly({lat:purpose==="events"?12:15,lon:purpose==="events"?-146:-20,d:15300,tilt:0,bearing:0},true);
     void materials().then(lib=>{if(this.mode==="map"){this.world.gl.initTexture(lib.color);this.world.gl.initTexture(lib.relief);}}).catch(()=>{});
     this.world.nav.minimumDistance=150;this.maps.group.visible=true;this.maps.events.visible=purpose==="events";this.maps.boundaries.visible=true;
     this.maps.event=undefined;this.maps.selectStep(undefined);this.draw();
@@ -234,7 +234,6 @@ export class Observatory {
         item("Was geschieht hier?",explain[sp.process])+
         (sp.geology?item("Was ist an diesem Ort belegt?",this.regionText(sp.geology)):"")+this.extraInfo(r))+
         button("g-map","Zur Weltkarte")+back+'</div>';
-      if(this.returnStudio){const link=document.createElement("button");link.id="studio-return";link.textContent="Zum Prozessvergleich";link.onclick=()=>this.openStudio(this.returnStudio);this.side.querySelector("h1")?.after(link);}
       if(r.localActive){
         const link=document.createElement("button");link.id="g-local-process";
         link.textContent=sp.site==="japan"?"Zum regionalen Wasser- und Küstenmodell":sp.theme==="volcano"?"Zum regionalen Vulkan":"Zum regionalen Prozess";
@@ -361,7 +360,7 @@ export class Observatory {
       r.cameraView(i<5?"overhead":i===5?"waves":i===6?"cut":"water");r.progress=[0,0,0,.30,.49,.53,0,.48][i];r.stress=i===3;}
     this.draw();
   }
-  diagnostics(){const r=this.region;return {studio:this.studio?.state,selection:this.objectLabels.audit,graphics:{profile:graphics.profile,grade:quality()},mode:this.mode,purpose:this.mapPurpose,mapLayers:{events:this.maps.events.visible,lines:this.maps.boundaries.visible,depth:this.maps.depth},camera:r?.ready?{position:r.camera.position.toArray(),target:r.orbit.target.toArray()}:undefined,settings:r?fields(r,regionKeys):undefined,timings:r?.timings,switching:this.switching,analysis:r?.analysis,view:r?.view,event:r?.spec.event,playing:r?.playing,vectors:r?.vectors,coastLesson:r?.spec.coastLesson,site:r?.spec.site,geology:r?.spec.geology,physics:r?.ready?r.physicalState():undefined,process:r?.spec.process,theme:this.theme,ready:!!this.studio||!this.switching&&(r?.ready??(this.maps.steps.length>0)),progress:r?.progress,cut:r?.cut,viewSettled:r?.viewSettled,focus:r?.faultModel?.kind==="unknown"?undefined:r?.focus,epicenter:r?.faultModel?.kind==="unknown"?undefined:r?.epicenter,events:this.maps.rows.length,steps:this.maps.steps.length,selected:this.maps.selectedStep?.[0],...this.timeDiagnostics()};}
+  diagnostics(){const r=this.region;return {studio:this.studio?.state,materialMotion:this.studio?.motionSample(),selection:this.objectLabels.audit,graphics:{profile:graphics.profile,grade:quality()},mode:this.mode,purpose:this.mapPurpose,mapLayers:{events:this.maps.events.visible,lines:this.maps.boundaries.visible,depth:this.maps.depth},camera:r?.ready?{position:r.camera.position.toArray(),target:r.orbit.target.toArray()}:undefined,settings:r?fields(r,regionKeys):undefined,timings:r?.timings,switching:this.switching,analysis:r?.analysis,view:r?.view,event:r?.spec.event,playing:r?.playing,vectors:r?.vectors,coastLesson:r?.spec.coastLesson,site:r?.spec.site,geology:r?.spec.geology,physics:r?.ready?r.physicalState():undefined,process:r?.spec.process,theme:this.theme,ready:!!this.studio||!this.switching&&(r?.ready??(this.maps.steps.length>0)),progress:r?.progress,cut:r?.cut,viewSettled:r?.viewSettled,focus:r?.faultModel?.kind==="unknown"?undefined:r?.focus,epicenter:r?.faultModel?.kind==="unknown"?undefined:r?.epicenter,events:this.maps.rows.length,steps:this.maps.steps.length,selected:this.maps.selectedStep?.[0],...this.timeDiagnostics()};}
   private enrich(r:RegionalScene){addTeachingModels(r);}
   private extraControls(r:RegionalScene){
     if(r.spec.theme==="forces")return '<details><summary>Antrieb einzeln zeigen</summary>'+["Wärmetransport","Kraft am Rücken","Zug der abtauchenden Platte","Mantelbewegung","Kopplung von Mantel und Platte"].map((label,i)=>'<label><input id="force-'+i+'" type="checkbox" '+(((r.forceLayers??31)&(1<<i))?'checked':'')+'>'+label+'</label>').join("")+'<small>Pfeile geben Richtung und Ort qualitativ an. Ihre Länge misst keine Kraft.</small></details>';
@@ -471,7 +470,7 @@ export class Observatory {
       (t.compare?'<label>Zweites Modell<select id="g-second">'+opts(Object.fromEntries(Object.entries(labels).filter(([k])=>k!=="past"&&k!==t.scenario)),t.second)+'</select></label><label>Perspektive<select id="g-compare-camera">'+opts({overview:"Kontinentalanordnungen im Überblick",same:"Gleiche Perspektive"},t.overview?"overview":"same")+'</select></label><small>Gemeinsamer Zeitraum bis +'+Math.min(scenarios[t.scenario].end,scenarios[t.second].end)+' Mio. Jahre. '+assumptions[t.second]+'</small>':'')+
       '<label><input type="checkbox" id="g-future-lines" '+(t.showBoundaries?"checked":"")+'> Modellgrenzen zeigen</label><small>'+assumptions[t.scenario]+'</small>')+
       '<label>Tempo<select id="g-speed">'+opts({"3":"Langsam","7":"Normal","14":"Schnell"},String(t.speed))+'</select></label>'+
-      '<details id="g-evidence"><summary>Belege ansehen</summary><label>Hinweis im Globus<select id="g-evidence-kind">'+opts({"":"Ausblenden",margin:"Kontinentalränder",fossil:"Mesosaurus-Fundregionen",rock:"Alte Gebirgsgürtel",india:"Weg Indiens",australia:"Weg Australiens"},t.layer)+'</select></label><p id="g-evidence-name"></p><p id="g-evidence-info"></p>'+
+      '<details id="g-evidence"><summary>Belege ansehen</summary><label>Hinweis im Globus<select id="g-evidence-kind">'+opts({"":"Ausblenden",margin:"Kontinentalränder",fossil:"Mesosaurus-Fundregionen",rock:"Alte Gebirgsgürtel",ice:"Spuren früherer Vereisung",india:"Weg Indiens",australia:"Weg Australiens"},t.layer)+'</select></label><p id="g-evidence-name"></p><p id="g-evidence-info"></p>'+
       '<p><strong>Wegeners Kontinentalverschiebung, ab 1912</strong> · Zusammenpassende Kontinentalränder, verwandte Fossilien, alte Gebirgsgürtel und Spuren früherer Vereisungen stützten die frühere Verbindung der Kontinente.</p><p><strong>Moderne Plattentektonik, seit den 1960er-Jahren</strong> · Ozeanbodenalter, magnetische Anomalien und Erdbebenverteilung belegen Bildung, Bewegung und Recycling ganzer Lithosphärenplatten. Heutige GNSS-Stationen messen Bewegungen direkt.</p>'+button("g-evidence-atlas","Heutige Messungen und Ozeanbodenalter")+button("g-magnet","Magnetstreifen am Rücken")+button("g-motion","Heutige Bewegung")+button("g-real-events","Beobachtete Erdbeben")+'</details>'+
       '<details id="g-gnss"><summary>Heute mit Satelliten messen</summary><label>Messstation<select id="g-station-gnss">'+opts(Object.fromEntries(gnss.map(s=>[s.id,s.id])),gnss[0].id)+'</select></label><p id="g-gnss-text"></p><small>GNSS · Nevada Geodetic Laboratory · Bezugsrahmen IGS14</small></details>'+
       item("Was zeigt das Modell?","Die hellen Flächen sind Kontinentalbereiche, auch unter flachem Meer. In der Vergangenheit zeigen Linien rekonstruierte Plattengrenzen. Die starren Blöcke drehen sich. Grenzen und verformte Zonen stammen aus Zeitschnitten im Abstand von fünf Millionen Jahren. In der Zukunft unterscheiden die Farbtöne bewegliche Kontinentalblöcke.")+
@@ -498,7 +497,7 @@ export class Observatory {
     this.change("g-station",v=>{t.playing=false;t.setYear(Number(v));this.draw();});
     this.change("g-scenario",v=>{t.playing=false;t.scenario=v as Scenario;t.setYear(v==="past"?Math.min(0,t.year):Math.min(Math.max(5,t.year),scenarios[t.scenario].end));this.draw();});
     this.change("g-compare",()=>{if(t.year<=0)t.setYear(5);t.compare=!t.compare;if(t.compare&&t.overview)this.focusTime();this.draw();});
-    const text:Record<string,string>={margin:"Die Ränder Südamerikas und Afrikas liegen in der Rekonstruktion näher beieinander. Auch überflutete Teile gehören zum Kontinent.",fossil:"Reste des Süßwasserreptils Mesosaurus finden sich im Paraná- und im Karoo-Becken. Die Punkte markieren Fundregionen. Die Tiere lebten vor der hier gezeigten Zeit.",rock:"In den Appalachen und im kaledonischen Gebirgsgürtel finden sich Spuren einer gemeinsamen alten Gebirgsbildung. Die Punkte markieren Untersuchungsregionen.",india:"Indien wandert im Modell nach Norden.",australia:"Australien trennt sich von der Antarktis."};
+    const text:Record<string,string>={ice:"Eiszeitliche Ablagerungen im Paraná-, Karoo- und Talchir-Becken zeugen von der spätpaläozoischen Vereisung Gondwanas. Beckenmarker, keine Eisgrenzen. Die Vereisung liegt vor dem ältesten Zeitschnitt.",margin:"Die Ränder Südamerikas und Afrikas liegen in der Rekonstruktion näher beieinander. Auch überflutete Teile gehören zum Kontinent.",fossil:"Reste des Süßwasserreptils Mesosaurus finden sich im Paraná- und im Karoo-Becken. Die Punkte markieren Fundregionen. Die Tiere lebten vor der hier gezeigten Zeit.",rock:"In den Appalachen und im kaledonischen Gebirgsgürtel finden sich Spuren einer gemeinsamen alten Gebirgsbildung. Die Punkte markieren Untersuchungsregionen.",india:"Indien wandert im Modell nach Norden.",australia:"Australien trennt sich von der Antarktis."};
     this.change("g-evidence-kind",v=>{t.layer=v;if(t.year>0)t.setYear(0);const point=t.evidenceCentre();if(point)this.world.nav.fly({...point,d:16700,tilt:0,bearing:0},true);$("g-evidence-info").textContent=text[v]||"";$("g-evidence-name").textContent="";});
     $("g-evidence-info").textContent=text[t.layer]||"";
     this.action("g-magnet",()=>void this.openRegion(reference("island","magnet")));this.action("g-real-events",()=>void this.openMap());

@@ -1,5 +1,9 @@
 # GeoRisiko für Mac
 
+## G6.4.1 · Geographische Prozessmodelle
+
+Der Entwicklungsbranch basiert auf G6.4 aus PR #21. Die Themen- und Ortswahl erschließen dieselben Modelle. Die aktuelle Unterrichtsansicht, Quellen und Modellgrenzen sind im [Entwicklungsbericht](docs/g641-entwicklung.md) dokumentiert.
+
 G6.4 ergänzt den Forschungsatlas, zwei Erdgliederungen, zehn bewegliche Prozessmodelle, den synchronen Vierfachvergleich und den Wilson-Zyklus. Unter **Plattentektonik → Prozessmodelle** lässt sich der Vergleich direkt öffnen. Die Galerie im separaten Sichtprüfungspaket öffnet lokal per Doppelklick. [Bedienung und Fachprüfung](docs/g64-plattentektonik.md) · [Atlas und Messwerkzeuge](docs/g64-forschungsatlas.md) · [Gesicherte Rückfallversion G6.3.1](https://github.com/Feerson1617/Erdmodell/pull/20)
 
 GeoRisiko ist ein offline nutzbares 3D-Erdobservatorium für den Geographieunterricht. Die Lehrkraft zeigt am Globus Erdschalen, Plattengrenzen, regionale Prozesse und den Nyos-See. Die Mac-App und die einzelne Test-HTML verwenden denselben Three.js-Kern.
