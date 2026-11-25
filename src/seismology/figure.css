@@ -43,12 +43,12 @@
   position: absolute;
   inset: auto 2% 2%;
   width: 96%;
-  height: 22%;
+  height: clamp(122px, 25%, 270px);
   cursor: default;
   box-sizing: border-box;
 }
 .seismic-figure:has(.seismic-chart:not([hidden])) .seismic-caption {
-  bottom: 25%;
+  bottom: calc(clamp(122px, 25%, 270px) + 3%);
   max-width: min(55%, 40em);
 }
 #geo-legend .quake-key {
@@ -87,4 +87,22 @@
 .quake-key i.volcano {
   border-radius: 0;
   clip-path: polygon(50% 0, 100% 100%, 0 100%);
+}
+
+.seismic-pick {
+  position: absolute;
+  left: 0;
+  top: 0;
+  pointer-events: auto;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 2px solid #fff0bb;
+  border-radius: 50%;
+  background: #18333a66;
+  box-shadow: 0 0 0 2px #18292d;
+}
+.seismic-pick:hover,
+.seismic-pick:focus-visible {
+  background: #d9c784a8;
 }

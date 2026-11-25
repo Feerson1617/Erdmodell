@@ -30,6 +30,9 @@ export function addRupturePatch(r: RegionalScene) {
   const material = new T.ShaderMaterial({
     transparent: true,
     depthWrite: false,
+    polygonOffset: true,
+    polygonOffsetFactor: -2,
+    polygonOffsetUnits: -2,
     side: T.DoubleSide,
     uniforms: { phase },
     vertexShader:
@@ -37,12 +40,56 @@ export function addRupturePatch(r: RegionalScene) {
     fragmentShader: `varying float d;uniform float phase;void main(){if(d>1.)discard;
       float front=clamp((phase-${onset})*4.,0.,1.2);
       vec3 c=mix(vec3(.65,.45,.24),vec3(.91,.32,.1),smoothstep(d,d+.12,front));
-      float ring=exp(-24.*abs(d-front))*step(.001,front);
-      gl_FragColor=vec4(mix(c,vec3(1.,.9,.62),ring),(.26+.41*ring)*(1.-smoothstep(.87,1.,d)));}`,
+      float ring=exp(-15.*abs(d-front))*step(.001,front);
+      gl_FragColor=vec4(mix(c,vec3(1.,.9,.62),ring),(.58+.38*ring)*(1.-smoothstep(.87,1.,d)));}`,
   });
   const face = new T.Mesh(g, material);
   face.name = "Begrenzte Bruchfläche";
   r.section.add(face);
+  if (r.spec.site === "san") {
+    // The Parkfield cut removes the front half. Put the witness surface inside that opening.
+    const witnesses = new T.Group();
+    r.scene.add(witnesses);
+    const p = new T.Vector3(),
+      q = new T.Vector3();
+    for (const z of [-0.78, 0.54])
+      for (const side of [-1, 1]) {
+        const pts = Array.from({ length: 34 }, (_, i) => {
+          const x = f.trace + side * (0.015 + (i / 33) * 2.7);
+          return new T.Vector3(x, r.height(x, z) + 0.047, z);
+        });
+        const width = 0.035,
+          vertices = new Float32Array(pts.length * 6),
+          idx = [];
+        for (let i = 0; i < pts.length - 1; i++) {
+          const a = i * 2;
+          idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
+        }
+        const geom = new T.BufferGeometry(),
+          attr = new T.BufferAttribute(vertices, 3);
+        geom.setAttribute("position", attr);
+        geom.setIndex(idx);
+        const strip = new T.Mesh(
+          geom,
+          new T.MeshBasicMaterial({ color: 0xffdc91, side: T.DoubleSide }),
+        );
+        strip.frustumCulled = false;
+        strip.name = "Spur des Geländeversatzes";
+        witnesses.add(strip);
+        r.onAnimate((t) => {
+          witnesses.visible = r.ruptureAnalysis;
+          if (!witnesses.visible) return;
+          pts.forEach((point, i) => {
+            p.copy(point);
+            f.offset(q, p.x, p.y, p.z, side, t);
+            p.add(q);
+            attr.setXYZ(i * 2, p.x, p.y, p.z - width);
+            attr.setXYZ(i * 2 + 1, p.x, p.y, p.z + width);
+          });
+          attr.needsUpdate = true;
+        });
+      }
+  }
   r.onAnimate((t) => {
     phase.value = t;
     face.visible = r.ruptureAnalysis && r.cut;

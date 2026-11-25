@@ -4,7 +4,7 @@ Das Nyos-Modul dient als regionales Fallbeispiel für den Unterrichtsbesuch am 1
 
 ## Folgeplanung ab G6.5
 
-1. G6.5 · Erdbeben, Seismologie und der geologische Übergang zum Vulkanismus.
+1. G6.5.1 · Darstellungszuverlässigkeit, Stationsvergleich und Unterrichtskorrektur auf Grundlage von G6.5.
 2. G6.6 · Vulkanismus und Eruptionsprozesse nach ausdrücklicher Abnahme.
 3. G6.7 · Maare, Vulkaneifel, Ulmener Maar und limnische Eruptionen.
 4. G6.8 · Abschließendes Classroom & Visual Polish.

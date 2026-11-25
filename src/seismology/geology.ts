@@ -1,11 +1,14 @@
 import * as T from "three";
 import { Stage, colors, vec } from "./stage";
-import { mechanisms, rupture, referenceSource } from "./physics";
+import { mechanisms, rupture, referenceSource, faultMotion } from "./physics";
+import { materials, libraryGLSL, quality } from "../observatory/graphics";
+import { specimen, randomSequence } from "../observatory/local-plants";
 import events from "../observatory/japan-events.json";
 import miyagi from "../observatory/miyagi.json";
 
 const terrain = (x: number, z: number) =>
-  0.12 * Math.sin(0.72 * x + 0.4 * z) +
+  0.23 * Math.sin(0.72 * x + 0.4 * z) +
+  0.32 * Math.exp(-0.48 * ((x + 2.4) ** 2 + (z + 1.6) ** 2)) +
   0.07 * Math.sin(x * 1.5 - z * 0.72) +
   0.035 * Math.cos(z * 2 + x);
 const palette = [0x706660, 0x9f8471, 0xc4a588, 0x917456, 0xc3b793, 0x85977e];
@@ -44,6 +47,7 @@ function surface(
   const m = s.mesh(g, 0xffffff, name),
     mat = m.material as T.MeshStandardMaterial;
   mat.vertexColors = true;
+  m.receiveShadow = true;
   // Fine discontinuous bedding follows each material point as the block deforms.
   g.setAttribute("rockPoint", new T.Float32BufferAttribute(positions, 3));
   mat.onBeforeCompile = (shader) => {
@@ -64,6 +68,40 @@ function surface(
     `,
       );
   };
+  if (mechanisms[s.view]) {
+    void materials().then((lib) => {
+      if (s.disposed) return;
+      const base = mat.onBeforeCompile;
+      mat.customProgramCacheKey = () =>
+        "seismic-facies-" + (name === "Gelände" ? "land" : "rock");
+      mat.onBeforeCompile = (shader, renderer) => {
+        base.call(mat, shader, renderer);
+        Object.assign(shader.uniforms, {
+          faciesColor: { value: lib.color },
+          faciesRelief: { value: lib.relief },
+          detailGrade: { value: quality() },
+        });
+        const uv =
+          name === "Gelände"
+            ? "rockCoord.xz"
+            : "vec2(rockCoord.x+.7*rockCoord.z,rockCoord.y)";
+        const tile = name === "Gelände" ? "0." : "1.";
+        shader.fragmentShader =
+          libraryGLSL +
+          shader.fragmentShader.replace(
+            "#include <color_fragment>",
+            `#include <color_fragment>
+          vec2 strataUV=${uv}*1.4;
+          vec3 grain=fieldSample(faciesColor,strataUV,${tile}).rgb;
+          vec3 relief=fieldSample(faciesRelief,strataUV,${tile}).rgb;
+          diffuseColor.rgb*=clamp(.55+1.45*luma6(grain)+.55*(relief.g-.5),.42,1.55);
+          `,
+          );
+      };
+      mat.needsUpdate = true;
+      s.refresh();
+    });
+  }
   return m;
 }
 export function faultStudy(s: Stage) {
@@ -79,23 +117,20 @@ export function faultStudy(s: Stage) {
       Math.cos(r),
     );
   const movement = (p: T.Vector3, side: number, t: number, out: T.Vector3) => {
-    const delta = p.x - plane(p.y),
-      lock = Math.exp(-Math.abs(delta) * 1.5);
-    const patch = rupture(
+    const motion = faultMotion(
       t,
+      p.x - plane(p.y),
       p.z,
-      (p.y - depth) / Math.max(0.25, Math.sin(angle)),
+      (p.y - depth) / Math.sin(angle),
     );
-    const strain =
-      Math.min(1, t / 0.34) *
-      0.28 *
-      (1 - lock) *
-      Math.exp(-Math.abs(p.z) * 0.16);
-    return out
-      .copy(p)
-      .addScaledVector(along, side * (strain + 0.95 * lock * patch));
+    return out.copy(p).addScaledVector(along, side * motion.offset);
   };
-  s.look(6, 4.2, 14, -0.65);
+  s.look(
+    s.view === "strike" ? 5.2 : 3.2,
+    s.view === "strike" ? 6.7 : 3.8,
+    13,
+    -0.65,
+  );
   s.halfWidth = 6.5;
   s.halfHeight = 3.15;
   const levels = [-3, -2.25, -1.72, -1.16, -0.69, -0.29, 0];
@@ -106,6 +141,18 @@ export function faultStudy(s: Stage) {
         x = seam + (side * 5 - seam) * u;
       return vec(x, h + terrain(x, z) * Math.exp(h * 0.9), z);
     };
+    const witness = vec(
+      plane(depth) + side * 0.19,
+      depth,
+      side > 0 ? -0.08 : 0.07,
+    );
+    const marker = s.dot(
+      witness,
+      side > 0 ? 0x78ded1 : 0xf3bd75,
+      0.13,
+      side > 0 ? "Material rechts" : "Material links",
+    );
+    s.animate((t) => movement(witness, side, t, marker.position));
     const patches: T.Mesh[] = [];
     for (let k = 0; k < levels.length - 1; k++) {
       for (const z of [-2.65, front])
@@ -177,14 +224,21 @@ export function faultStudy(s: Stage) {
       });
       a.needsUpdate = true;
     });
-    for (let i = 0; i < 9; i++) {
-      const p = map(0.12 + i * 0.1, 0, -1.35 + Math.sin(i * 19 + side) * 0.65);
-      p.y += 0.13;
-      const tree = s.mesh(
-        new T.ConeGeometry(0.09, 0.31, 7),
-        0x365843,
-        "Vegetation",
+    const random = randomSequence(436 + side),
+      grove = [specimen("oak", 51, true), specimen("shrub", 82, true)];
+    for (let i = 0; i < 17; i++) {
+      const p = map(
+        0.12 + random() * 0.83,
+        0,
+        -2.55 + random() * (front + 2.48),
       );
+      if (Math.abs(p.z + 0.44) < 0.16) continue;
+      const k = i % 2,
+        tree = s.mesh(grove[k], 0xffffff, "Vegetation");
+      (tree.material as T.MeshStandardMaterial).vertexColors = true;
+      tree.castShadow = true;
+      tree.scale.setScalar((k ? 0.16 : 0.075) * (0.72 + random() * 0.7));
+      tree.rotation.y = random() * Math.PI * 2;
       s.animate((t) => movement(p, side, t, tree.position));
     }
   }
@@ -244,12 +298,13 @@ export function faultStudy(s: Stage) {
   s.label(epi, "Epizentrum", "senkrecht über dem Herd");
   s.label(origin, "Hypozentrum", "Beginn des Bruchs");
   s.label(vec(-2.3, 0, -0.44), "Geländemarker");
+  s.label(vec(plane(-0.62), -0.62, 0.9), "Störungsfläche");
   s.explain((t) =>
     t < 0.34
       ? "Der Fernbereich bewegt sich langsam. Am verhakten Abschnitt verformt sich das Gestein elastisch."
       : t < 0.65
         ? "Der Bruch beginnt am Herd und erfasst einen begrenzten Teil der Störungsfläche."
-        : "Nach dem Bruch bleibt ein relativer Versatz. Die Geländemarker machen seine Richtung sichtbar.",
+        : "Die elastische Verzerrung lässt am gebrochenen Abschnitt nach. Die versetzten Geländemarker zeigen die bleibende Verschiebung.",
   );
 }
 export function japan(s: Stage) {

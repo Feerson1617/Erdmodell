@@ -694,7 +694,7 @@ export class TectonicStudio {
       gl.domElement.width,
       ids,
       this.textureRevision,
-      graphics.revision,
+      graphics.surfaceRevision, graphics.revision,
     ].join("/");
     graphics.scope = "tectonic-studio";
     graphics.idle = signature === this.prior;

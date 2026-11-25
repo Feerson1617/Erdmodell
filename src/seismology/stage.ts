@@ -1,5 +1,6 @@
 import * as T from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { allowsLabel, claimObject } from "../observatory/reveal";
 import { graphics } from "../observatory/graphics";
 
 export const vec = (x = 0, y = 0, z = 0) => new T.Vector3(x, y, z);
@@ -14,6 +15,8 @@ export interface SeismicState {
 }
 type Label = {
   point: T.Vector3;
+  id: string;
+  pick: HTMLButtonElement;
   node: HTMLElement;
   leader: SVGLineElement;
   name: string;
@@ -70,6 +73,28 @@ export class Stage {
     this.scene.add(new T.HemisphereLight(0xfff1d5, 0x8298ad, 2.1));
     const sun = new T.DirectionalLight(0xffe3b6, 2.2);
     sun.position.set(-5, 10, 7);
+    if (
+      [
+        "strike",
+        "normal",
+        "reverse",
+        "thrust",
+        "oblique",
+        "megathrust",
+      ].includes(view)
+    ) {
+      sun.castShadow = true;
+      Object.assign(sun.shadow.camera, {
+        left: -7,
+        right: 7,
+        top: 5,
+        bottom: -5,
+        far: 35,
+      });
+      sun.shadow.camera.updateProjectionMatrix();
+      sun.shadow.mapSize.set(512, 512);
+      sun.shadow.normalBias = 0.015;
+    }
     this.scene.add(sun);
     const fill = new T.DirectionalLight(0x8cd9ed, 0.85);
     fill.position.set(4, 5, -8);
@@ -148,9 +173,19 @@ export class Stage {
       this.leaders.namespaceURI!,
       "line",
     ) as SVGLineElement;
+    const id = "seismic/" + this.view + "/" + name;
+    const pick = document.createElement("button");
+    pick.type = "button";
+    pick.className = "seismic-pick";
+    pick.setAttribute("aria-label", name + " freigeben");
+    pick.dataset.term = name;
+    pick.hidden = true;
+    pick.onclick = () => claimObject(id, name);
+    node.dataset.term = name;
+    this.root.append(pick);
     this.leaders.append(leader);
     this.root.append(node);
-    this.labels.push({ point, node, leader, name, detail, show });
+    this.labels.push({ point, node, leader, name, detail, show, id, pick });
   }
   explain(f: (t: number) => string) {
     this.statement = f;
@@ -195,6 +230,12 @@ export class Stage {
       key = [
         w,
         h,
+        cv.width,
+        cv.height,
+        graphics.surfaceRevision,
+        graphics.revision,
+        document.body.dataset.reveal,
+        document.body.hasAttribute("data-choose-object"),
         this.camera.zoom,
         ...this.camera.matrixWorld.elements,
         depth,
@@ -213,6 +254,16 @@ export class Stage {
       this.tick = this.time;
       this.syncUI?.();
     }
+    this.gl.setRenderTarget(null);
+    this.gl.setScissorTest(false);
+    const ratio = this.gl.getPixelRatio();
+    this.gl.setViewport(0, 0, cv.width / ratio, cv.height / ratio);
+    if (
+      this.scene.children.some(
+        (o) => o instanceof T.DirectionalLight && o.castShadow,
+      )
+    )
+      this.gl.shadowMap.needsUpdate = true;
     this.gl.render(this.scene, this.camera);
     this.painted = true;
     const hidden = depth === "observe",
@@ -238,13 +289,21 @@ export class Stage {
       });
       this.labels.forEach((l, i) => {
         const { x, y } = pts[i];
-        let visible =
-          !hidden &&
-          l.show(this.time) &&
-          x > 4 &&
-          x < w - 4 &&
-          y > 4 &&
-          y < h - 4;
+        const inside =
+          l.show(this.time) && x > 4 && x < w - 4 && y > 4 && y < h - 4;
+        const visible = inside && (!hidden || allowsLabel(l.id));
+        l.pick.hidden = !(
+          inside &&
+          hidden &&
+          document.body.hasAttribute("data-choose-object")
+        );
+        if (!l.pick.hidden)
+          l.pick.style.transform =
+            "translate(" +
+            Math.round(x) +
+            "px," +
+            Math.round(y) +
+            "px) translate(-50%,-50%)";
         l.node.hidden = !visible;
         l.leader.style.display = visible ? "" : "none";
         if (!visible) return;
@@ -273,7 +332,10 @@ export class Stage {
               q.x >= 4 &&
               q.right < w - 4 &&
               q.y > 22 &&
-              q.bottom < h * (this.plot?.hidden === false ? 0.74 : 0.89) &&
+              q.bottom <
+                (this.plot && !this.plot.hidden
+                  ? this.plot.offsetTop - 5
+                  : h * 0.94) &&
               !used.some(
                 (r) =>
                   q.right >= r.x - 4 &&
@@ -311,15 +373,52 @@ export class Stage {
       if (!hidden) {
         const cw = this.plot.clientWidth,
           ch = this.plot.clientHeight;
-        if (this.plot.width !== cw || this.plot.height !== ch) {
-          this.plot.width = cw;
-          this.plot.height = ch;
+        const ratio = Math.min(2, window.devicePixelRatio || 1),
+          pw = Math.round(cw * ratio),
+          ph = Math.round(ch * ratio);
+        if (this.plot.width !== pw || this.plot.height !== ph) {
+          this.plot.width = pw;
+          this.plot.height = ph;
         }
-        this.dynamic.draw(this.plot.getContext("2d")!, cw, ch, this.time);
+        const ctx = this.plot.getContext("2d")!;
+        ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+        this.dynamic.draw(ctx, cw, ch, this.time);
       }
     }
     this.lastKey = key;
     return true;
+  }
+  samplingGeometry() {
+    const find = (name: string) => this.scene.getObjectByName(name);
+    const vector = (name: string) => find(name)?.position.toArray();
+    const road = this.scene.getObjectByName("Straßenmarkierung") as
+      | T.Line
+      | undefined;
+    const points = road?.geometry.getAttribute("position");
+    return {
+      markers: [vector("Material links"), vector("Material rechts")],
+      sensors: [vector("Sensor 0"), vector("Sensor 1")],
+      fronts: [vector("Front P"), vector("Front S")],
+      surface: this.scene.children
+        .filter((x) => x.name === "Bewegte Oberfläche")
+        .map((x) => x.position.toArray()),
+      road: points
+        ? [0, Math.floor(points.count / 2), points.count - 1].map((i) => [
+            points.getX(i),
+            points.getY(i),
+            points.getZ(i),
+          ])
+        : undefined,
+    };
+  }
+  projectedPoints() {
+    // Project actual world-space anchors into the canvas for independent pixel sampling.
+    return this.labels
+      .filter((l) => l.show(this.time))
+      .map((l) => {
+        const p = l.point.clone().project(this.camera);
+        return { name: l.name, x: (p.x + 1) / 2, y: (1 - p.y) / 2, depth: p.z };
+      });
   }
   snapshot(): SeismicState {
     return {
@@ -346,6 +445,7 @@ export class Stage {
     const mats = new Set<T.Material>(),
       geos = new Set<T.BufferGeometry>();
     this.scene.traverse((o) => {
+      if (o instanceof T.DirectionalLight) o.shadow.dispose();
       const m = o as T.Mesh;
       if (m.geometry) geos.add(m.geometry);
       if (m.material)

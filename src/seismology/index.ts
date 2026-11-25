@@ -54,7 +54,7 @@ export function mountStudy(stage: Stage, side: HTMLElement) {
     f === "core"
       ? "Laufwege aus IASP91 · 15 km Quelltiefe · kugelsymmetrisches Referenzmodell."
       : stage.view === "record"
-        ? "Global Seismographic Network · EarthScope/USGS · 20 Abtastungen pro Sekunde, vertikal, digitale Zählwerte."
+        ? "Global Seismographic Network · EarthScope/USGS · 25.200 Abtastungen bei 20 Hz. Gespeichert sind 1.260 Sekundenintervalle mit Minimum und Maximum. Zählwerte sind digitale Instrumenteneinheiten."
         : f === "section"
           ? "USGS ComCat · 2019–2023 · M ≥ 4,5. Miyagi-Profil aus dem Slab2-Eingangsdatensatz."
           : stage.view === "moment"

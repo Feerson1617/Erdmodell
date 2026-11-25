@@ -5,7 +5,7 @@ import {localAsset} from "../assets";
 export type Profile="auto"|"classroom"|"maximum";
 const key="georisiko.graphics.g6";
 export const cadence=new RenderCadence();
-export const graphics={profile:"auto" as Profile,adaptive:1,revision:0,idle:false,activity:"world" as Activity,scope:"world"};
+export const graphics={profile:"auto" as Profile,adaptive:1,revision:0,surfaceRevision:0,idle:false,activity:"world" as Activity,scope:"world"};
 try{const saved=localStorage.getItem(key);if(saved==="maximum"||saved==="classroom")graphics.profile=saved;}catch{/* private file session */}
 export function quality(){return graphics.profile==="maximum"?2:graphics.profile==="classroom"?1:graphics.adaptive;}
 export function observeFrame(now:number){

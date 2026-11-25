@@ -256,6 +256,8 @@ export class World {
       );
     });
     canvas.addEventListener("webglcontextrestored", () => {
+      graphics.surfaceRevision++;
+      this.resize();
       this.running = true;
       this.last = 0;
       requestAnimationFrame(this.render);
@@ -266,11 +268,17 @@ export class World {
     this.sizeDirty = true;
   }
   private applySize() {
-    this.sizeDirty = false;
     const w = this.canvas.clientWidth,
       h = this.canvas.clientHeight;
     if (!w || !h) return;
-    this.gl.setSize(w, h, false);
+    const ratio = this.gl.getPixelRatio();
+    const changed = this.canvas.width !== Math.floor(w * ratio) || this.canvas.height !== Math.floor(h * ratio);
+    if (!changed && !this.sizeDirty) return;
+    this.sizeDirty = false;
+    if (changed) {
+      this.gl.setSize(w, h, false);
+      graphics.surfaceRevision++;
+    }
     this.nav.camera.aspect = w / h;
     this.nav.camera.fov =
       w < h
@@ -925,7 +933,8 @@ export class World {
     this.frameMs = this.last ? now - this.last : 0;
     const dt = clamp((now - this.last) / 1000, 0.001, 0.12);
     this.last = now;
-    if (this.sizeDirty) this.applySize();
+    // Layout can change before ResizeObserver runs. Size the drawing buffer before any scene projects or draws.
+    this.applySize();
     this.frames++;
     this.frameCount++;
     if (now - this.fpsStart >= 900) {
@@ -1046,7 +1055,7 @@ export class World {
     if(this.worldDrawn)this.gl.render(this.scene, this.nav.camera);
     this.renderMs = performance.now() - submit;
     const sample=observeFrame(now);
-    if(sample){const ratio=this.resolution.sample(sample.fps,sample.seconds);if(ratio!==undefined)this.gl.setPixelRatio(ratio);}
+    if(sample){const ratio=this.resolution.sample(sample.fps,sample.seconds);if(ratio!==undefined && ratio!==this.gl.getPixelRatio()){this.gl.setPixelRatio(ratio);graphics.surfaceRevision++;}}
     this.onFrame?.();
   };
 }

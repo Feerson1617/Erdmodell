@@ -4,6 +4,8 @@ import {
   speed,
   displacement,
   stationTrace,
+  arrival,
+  groundMotion,
   volcanicTrace,
   type Wave,
 } from "./physics";
@@ -11,56 +13,98 @@ import { localAsset } from "../assets";
 import rays from "./iasp91.json";
 import recording from "./tohoku-anmo.json";
 
-type Track = { label: string; color: string; sample: (sec: number) => number };
+type Track = {
+  label: string;
+  color: string;
+  sample: (sec: number) => number;
+  km?: number;
+};
 function chart(s: Stage, tracks: Track[], seconds: number, header: string) {
+  const paper = document.createElement("canvas");
+  let cached = "";
   s.chart((c, w, h, t) => {
-    c.clearRect(0, 0, w, h);
-    c.font = "600 " + Math.max(11, Math.min(17, h * 0.14)) + "px system-ui";
-    c.fillStyle = "#e0ece9";
-    c.fillText(header, 12, 18);
-    const left = Math.min(150, w * 0.21),
-      right = w - 22,
+    const left = Math.min(155, w * 0.19),
+      right = w - 28,
       top = 27,
-      dh = (h - top - 14) / tracks.length;
-    for (let j = 0; j <= 4; j++) {
-      const x = left + ((right - left) * j) / 4;
-      c.strokeStyle = "#49615d";
+      bottom = h - 24;
+    const lane = (bottom - top) / tracks.length,
+      axis = (sec: number) => left + ((right - left) * sec) / seconds;
+    // The entire reference trace uses one fixed gain. Reveal only elapsed model time.
+    const scale = c.getTransform().a,
+      key = [w, h, scale].join("/");
+    if (cached !== key) {
+      cached = key;
+      paper.width = Math.round(w * scale);
+      paper.height = Math.round(h * scale);
+      const ink = paper.getContext("2d")!;
+      ink.scale(scale, scale);
+      tracks.forEach((tr, i) => {
+        const y = top + (i + 0.5) * lane;
+        ink.strokeStyle = tr.color;
+        ink.lineWidth = 1.8;
+        ink.beginPath();
+        for (let px = 0; px <= right - left; px++) {
+          const v = tr.sample((px * seconds) / (right - left)),
+            yy = y - v * lane * 0.44;
+          if (px) ink.lineTo(left + px, yy);
+          else ink.moveTo(left, yy);
+        }
+        ink.stroke();
+      });
+    }
+    c.clearRect(0, 0, w, h);
+    c.font = "600 " + Math.max(12, Math.min(18, h * 0.13)) + "px system-ui";
+    c.fillStyle = "#ecf4ef";
+    c.fillText(header, 12, 18);
+    for (let sec = 0; sec <= seconds; sec += 5) {
+      const x = axis(sec);
+      c.strokeStyle = "#49625f";
       c.beginPath();
       c.moveTo(x, top);
-      c.lineTo(x, h - 14);
+      c.lineTo(x, bottom);
       c.stroke();
-      c.fillStyle = "#a4bcb4";
-      c.font = "11px system-ui";
-      c.fillText(Math.round((seconds * j) / 4) + " s", x - 8, h - 2);
+      c.fillStyle = "#c2d8ce";
+      c.font = "13px system-ui";
+      c.fillText(sec + " s", x - 6, h - 5);
     }
-    tracks.forEach((track, i) => {
-      const y = top + (i + 0.5) * dh;
-      c.strokeStyle = "#52675e";
+    tracks.forEach((tr, i) => {
+      const y = top + (i + 0.5) * lane;
+      c.strokeStyle = "#617974";
       c.beginPath();
       c.moveTo(left, y);
       c.lineTo(right, y);
       c.stroke();
-      c.fillStyle = track.color;
-      c.font = "600 " + Math.max(11, Math.min(15, dh * 0.55)) + "px system-ui";
-      c.fillText(track.label, 12, y + 4);
-      c.strokeStyle = track.color;
-      c.lineWidth = 1.6;
-      c.beginPath();
-      const n = Math.ceil((right - left) * t);
-      for (let j = 0; j <= n; j++) {
-        const xx = j / (right - left);
-        const v = track.sample(xx * seconds),
-          yy = y - Math.max(-1.25, Math.min(1.25, v)) * dh * 0.39;
-        if (!j) c.moveTo(left, yy);
-        else c.lineTo(left + j, yy);
-      }
-      c.stroke();
+      c.fillStyle = tr.color;
+      c.font = "600 " + Math.max(12, Math.min(17, lane * 0.5)) + "px system-ui";
+      c.fillText(tr.label, 12, y + 5);
+      if (tr.km !== undefined)
+        for (const wave of ["p", "s"] as const) {
+          const sec = arrival(tr.km, wave),
+            x = axis(sec);
+          c.fillStyle = wave === "p" ? "#ffd58b" : "#78e2db";
+          c.fillRect(x - 1, y - lane * 0.45, 2, lane * 0.8);
+          c.font = "bold 12px system-ui";
+          c.fillText(
+            wave.toUpperCase() +
+              " " +
+              sec.toLocaleString("de-DE", { maximumFractionDigits: 2 }),
+            x + 3,
+            y - lane * 0.16,
+          );
+        }
     });
-    const x = left + (right - left) * t;
-    c.strokeStyle = "#fff3c6";
+    const cursor = axis(t * seconds);
+    c.save();
     c.beginPath();
-    c.moveTo(x, top - 3);
-    c.lineTo(x, h - 13);
+    c.rect(left, top, cursor - left, bottom - top);
+    c.clip();
+    c.drawImage(paper, 0, 0, w, h);
+    c.restore();
+    c.strokeStyle = "#fff0bc";
+    c.lineWidth = 1.6;
+    c.beginPath();
+    c.moveTo(cursor, top);
+    c.lineTo(cursor, bottom);
     c.stroke();
   });
 }
@@ -69,7 +113,11 @@ export function waveField(s: Stage) {
   const surface = s.view === "surface",
     motion: Wave[] = surface ? ["rayleigh", "love"] : ["p", "s"];
   const stations = ["stations", "sites", "distance"].includes(s.view);
-  s.look(1.5, 3.3, 15, stations ? -1 : 0);
+  if (stations) {
+    stationField(s);
+    return;
+  }
+  s.look(1.5, 3.3, 15);
   s.halfHeight = 3.25;
   s.halfWidth = 6.7;
   s.duration = 28;
@@ -79,7 +127,7 @@ export function waveField(s: Stage) {
       ? ["Rayleigh · elliptisch", "Love · horizontal quer"]
       : ["P · längs", "S · quer"];
   for (const [row, mode] of motion.entries()) {
-    const y = (stations ? 1.35 : 1.5) - row * 1.85;
+    const y = 1.5 - row * 1.85;
     s.box(
       0,
       y - (surface ? 0.65 : 0.41),
@@ -95,6 +143,7 @@ export function waveField(s: Stage) {
       new T.MeshStandardMaterial({ color: colorsUsed[row] }),
       49 * 3,
     );
+    mesh.frustumCulled = false;
     mesh.name = labels[row];
     s.scene.add(mesh);
     const front = s.line(
@@ -134,39 +183,204 @@ export function waveField(s: Stage) {
       mesh.instanceMatrix.needsUpdate = true;
     });
   }
-  if (stations) {
-    const distances = s.view === "sites" ? [45, 45] : [30, 60];
-    for (const [i, km] of distances.entries()) {
-      const x = -5.25 + km / 8,
-        y = 1.7 - i * 1.85;
-      s.box(x, y, 0.05, 0.17, 0.24, 0.16, colorsUsed[i], "Messstation");
-      s.label(
-        V(x, y + 0.13, 0.05),
-        s.view === "sites" ? (i ? "Sediment" : "Fels") : km + " km",
-      );
-    }
-    chart(
-      s,
-      distances.map((km, i) => ({
-        label:
-          s.view === "sites" ? (i ? "Sediment" : "Fels") : "Station " + (i + 1),
-        color: i ? "#76ded7" : "#ffcf79",
-        sample: (sec) => stationTrace(km, sec, s.view === "sites" && i === 1),
-      })),
-      28,
-      "Modellseismogramme · gleiche Quelle · relative Amplitude",
-    );
-  }
   s.explain(() =>
-    s.view === "sites"
-      ? "Bei gleicher Quelle und Entfernung verändert hier eine Sedimentschicht Amplitude und Frequenz. Ihre Wirkung hängt vom Schichtaufbau ab."
-      : s.view === "distance"
-        ? "Mit größerer Entfernung wachsen die Laufzeiten und der Abstand zwischen den P- und S-Ankünften. Die örtliche Erschütterung kann abweichen."
-        : stations
-          ? "Beide Stationen empfangen zuerst die schnellere P-Welle. Die Spuren entstehen synchron zur Modellzeit."
-          : surface
-            ? "Rayleigh-Wellen bewegen Teilchen im vereinfachten Modell auf Ellipsen. Love-Wellen schwingen horizontal quer zur Ausbreitung."
-            : "Die Front läuft von links nach rechts. Markierte Ruhelagen bleiben fest, während die Teilchen um sie schwingen.",
+    surface
+      ? "Rayleigh-Wellen bewegen Teilchen auf Ellipsen. Love-Wellen schwingen horizontal quer zur Ausbreitung."
+      : "Die Front wandert nach rechts. Die markierten Gesteinsteilchen schwingen um ihre feste Ruhelage.",
+  );
+}
+function stationField(s: Stage) {
+  const sites = s.view === "sites",
+    distances = sites ? [45, 45] : [30, 60],
+    seconds = 28;
+  s.duration = seconds;
+  s.halfWidth = 6.45;
+  s.halfHeight = 3.1;
+  s.look(0.8, 5.4, 15, -0.9);
+  const xs = (km: number) => -5.35 + (km * 10.7) / 72;
+  if (!sites) {
+    s.box(0, 0.31, -0.23, 11.15, 0.7, 1.75, 0x687d79, "Gesteinsprofil");
+    s.box(0, -0.17, -0.23, 11.15, 0.25, 1.75, 0x887463, "Schichtgrenze");
+    const origin = V(xs(0), 0.91, 0.14);
+    s.dot(origin, colors.hot, 0.2, "Gemeinsamer Herd");
+    s.label(origin, "Quelle");
+    for (const wave of ["p", "s"] as const) {
+      const front = s.mesh(
+        new T.PlaneGeometry(1.65, 1.16),
+        wave === "p" ? colors.p : colors.s,
+        "Front " + wave.toUpperCase(),
+        true,
+      );
+      front.rotation.y = Math.PI / 2;
+      front.material.transparent = true;
+      front.material.opacity = 0.47;
+      front.material.depthWrite = false;
+      const rim = s.mesh(
+        new T.TubeGeometry(
+          new T.CatmullRomCurve3([
+            V(0, -0.05, -1.05),
+            V(0, 0.56, -0.85),
+            V(0, 0.83, -0.22),
+            V(0, 0.56, 0.49),
+            V(0, -0.05, 0.72),
+          ]),
+          24,
+          0.046,
+          8,
+          false,
+        ),
+        wave === "p" ? colors.p : colors.s,
+        "Wellenfront im Profil",
+        true,
+      );
+      const tip = s.dot(
+        V(),
+        wave === "p" ? colors.p : colors.s,
+        0.12,
+        "Frontspitze " + wave.toUpperCase(),
+      );
+      const anchor = V();
+      s.label(
+        anchor,
+        wave === "p" ? "P-Front" : "S-Front",
+        "",
+        (t) => speed[wave] * t * seconds <= 72,
+      );
+      s.animate((t) => {
+        const km = speed[wave] * t * seconds;
+        rim.visible = front.visible = tip.visible = km <= 72;
+        rim.position.set(xs(km), 0.84, 0);
+        front.position.set(xs(km), 1.07, -0.24);
+        tip.position.set(xs(km), 1.4, 0.57);
+        anchor.copy(tip.position);
+      });
+    }
+    const particles = new T.InstancedMesh(
+      new T.SphereGeometry(0.084, 12, 8),
+      new T.MeshStandardMaterial({ color: 0xf4d295 }),
+      73 * 4,
+    );
+    particles.name = "Gesteinsteilchen";
+    particles.frustumCulled = false;
+    s.scene.add(particles);
+    const dummy = new T.Object3D();
+    for (let km = 0; km <= 72; km += 6)
+      s.line(
+        [V(xs(km), 0.68, 0.55), V(xs(km), 0.77, 0.55)],
+        0xfff4cc,
+        "Ruhelage",
+      );
+    s.animate((t) => {
+      for (let km = 0; km <= 72; km++) {
+        const m = groundMotion(km, t * seconds);
+        for (let j = 0; j < 4; j++) {
+          dummy.position.set(
+            xs(km) + m.longitudinal * 0.48,
+            0.86 + m.transverse * 0.48,
+            0.42 - j * 0.45,
+          );
+          dummy.updateMatrix();
+          particles.setMatrixAt(4 * km + j, dummy.matrix);
+        }
+      }
+      particles.instanceMatrix.needsUpdate = true;
+    });
+  } else {
+    const source = V(0, -0.25, 0);
+    s.dot(source, colors.hot, 0.18, "Gemeinsame Quelle");
+    s.label(source, "Gleiche Quelle");
+    for (const sign of [-1, 1])
+      s.line([source, V(sign * 2.65, 0.35, 0)], 0xecb177, "Gleiche Entfernung");
+  }
+  const labels = sites
+    ? ["Fels · 45 km", "Sediment · 45 km"]
+    : ["Station A · 30 km", "Station B · 60 km"];
+  distances.forEach((km, i) => {
+    const x = sites ? (i ? 2.95 : -2.95) : xs(km);
+    const rock = sites && !i,
+      z = sites ? 0 : -0.05,
+      y = sites ? 0.79 : 0.84;
+    if (sites) {
+      for (let j = 0; j < 3; j++)
+        s.box(
+          x,
+          -0.38 + j * 0.43,
+          z,
+          4.5,
+          0.42,
+          1.96,
+          rock
+            ? [0x685e56, 0x88796e, 0x817767][j]
+            : [0x705f4d, 0xb89161, 0xd2b17b][j],
+          "Untergrund",
+        );
+    }
+    const top = sites
+      ? s.box(
+          x,
+          y,
+          z,
+          4.5,
+          0.22,
+          1.99,
+          rock ? 0x929480 : 0xcab284,
+          "Bewegte Oberfläche",
+        )
+      : undefined;
+    const marker = s.box(
+      x,
+      y + 0.33,
+      z,
+      0.52,
+      0.55,
+      0.48,
+      0xe1e3cf,
+      "Sensor " + i,
+    );
+    const roof = s.box(
+      x,
+      y + 0.63,
+      z,
+      0.63,
+      0.08,
+      0.56,
+      0xa59ec3,
+      "Sensorkopf " + i,
+    );
+    const anchor = V(x, y + 0.69, z);
+    s.label(anchor, labels[i]);
+    const rest = s.line(
+      [V(x - 0.83, y + 0.06, z + 0.56), V(x + 0.83, y + 0.06, z + 0.56)],
+      0xf6e7c2,
+      "Unbewegter Höhenbezug",
+    );
+    rest.name = "Ruhelage " + i;
+    s.animate((t) => {
+      const m = groundMotion(km, t * seconds, sites && i === 1),
+        gain = sites ? 0.66 : 0.48;
+      const dx = m.longitudinal * gain,
+        dy = m.transverse * gain;
+      marker.position.set(x + dx, y + 0.33 + dy, z);
+      roof.position.set(x + dx, y + 0.63 + dy, z);
+      anchor.set(x + dx, y + 0.69 + dy, z);
+      if (top) top.position.set(x + dx, y + dy, z);
+    });
+  });
+  chart(
+    s,
+    distances.map((km, i) => ({
+      km,
+      label: labels[i],
+      color: "#f1eede",
+      sample: (sec) => stationTrace(km, sec, sites && i === 1),
+    })),
+    seconds,
+    "Modellseismogramme · geneigte Messachse · gleiche relative Skala",
+  );
+  s.explain(() =>
+    sites
+      ? "Beide Standorte liegen 45 km vom selben Herd entfernt. In diesem Schichtmodell schwingt das Sediment länger und bei tieferen Frequenzen."
+      : "Dieselbe P-Front und dieselbe S-Front passieren beide Stationen. Die Kurven zeigen die Bodenbewegung entlang derselben geneigten Messachse.",
   );
 }
 export function earthPaths(s: Stage) {
@@ -202,10 +416,11 @@ export function earthPaths(s: Stage) {
     arc(sign * 103, sign * 180, R + 0.15, colors.s);
   }
   for (const [i, p] of rays.entries()) {
+    if (s.view === "rays" && !["P", "S", "PKP"].includes(p.phase)) continue;
     if (s.view === "conversion" && p.phase !== "SKS" && p.phase !== "S")
       continue;
     const side = i % 2 ? 1 : -1;
-    if (p.phase === "SKS" && s.view !== "conversion") continue;
+    if (p.phase === "SKS" && s.view === "rays") continue;
     const pts = p.points.map(([, theta, d]) =>
       V(
         side * Math.sin(theta) * (6371 - d) * scale,
@@ -351,9 +566,21 @@ export function realRecord(s: Stage) {
       c.lineTo(x, mid - ((b - recording.mean) / max) * amp);
     }
     c.stroke();
-    c.fillStyle = "#acc5be";
+    for (const [i, clock] of [
+      "05:55",
+      "06:02",
+      "06:09",
+      "06:16 UTC",
+    ].entries()) {
+      const x = l + (i * (right - l)) / 3;
+      c.fillStyle = "#afcfc6";
+      c.fillRect(x, h * 0.72, 1, 6);
+      c.font = "13px system-ui";
+      c.fillText(clock, Math.min(right - 69, Math.max(l, x - 18)), h - 20);
+    }
+    c.fillStyle = "#ccded9";
     c.fillText(
-      "Vertikalkomponente · digitale Zählwerte · je Sekunde Minimum und Maximum",
+      "Vertikal · 1.260 Sekundenintervalle · Minimum und Maximum der digitalen Zählwerte",
       l,
       h - 5,
     );
