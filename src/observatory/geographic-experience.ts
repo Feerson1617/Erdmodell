@@ -163,7 +163,7 @@ export class GeographicExperience {
       '<select id="geo-topic" aria-label="Thema oder Prozess"></select><select id="geo-place" aria-label="Raum oder Ort"></select><div class="geo-heading"><span id="geo-crumb" aria-live="polite"></span><strong id="geo-title"></strong></div>';
     header.insertBefore(nav, header.querySelector("nav"));
     const topics = el<HTMLSelectElement>("geo-topic");
-    option(topics, "", "Thema wählen");
+    option(topics, "", "Thema");
     const earth = groups(topics, "Erde und Platten");
     for (const [id, name] of Object.entries({
       globe: "Erde",
@@ -204,7 +204,7 @@ export class GeographicExperience {
       if (value) void this.topic(value);
     };
     const list = el<HTMLSelectElement>("geo-place");
-    option(list, "", "Ort wählen");
+    option(list, "", "Ort");
     option(list, "*", "Alle Plattenprozesse");
     for (const space of Object.keys(regions)) {
       const group = groups(list, space);
@@ -773,6 +773,7 @@ export class GeographicExperience {
       r?.localStill,
       document.body.dataset.reveal,
     ].join("/");
+    const staticModel = ["eifel", "ulmen", "aerial", "lakeCut", "lakeCompare"].includes(this.obs.lessonView ?? "");
     if (this.signature !== state || this.root !== side.firstChild) {
       this.signature = state;
       this.root = side.firstChild;
@@ -781,16 +782,15 @@ export class GeographicExperience {
       this.source = first(["g-progress", "g-year"]) as unknown as HTMLInputElement | undefined;
       this.step = first(["g-step", "pair-step"]);
       this.reset = first(["g-reset", "nyos-reset"]);
-      const staticRelief=["eifel","ulmen","aerial","lakeCut"].includes(this.obs.lessonView??"");
-      const seek = !staticRelief && familyOf(this.obs.lessonView??"")!=="section" && (
+      const seek = !staticModel && familyOf(this.obs.lessonView??"")!=="section" && (
         !!this.source || (!!this.play && (this.world.mode === "nyos" || !!this.world.mosaic?.pair)));
       const p = this.currentPlace(),
         s = this.obs.studioState;
       for (const [id, show] of Object.entries({
-        play: !staticRelief && !!this.play && familyOf(this.obs.lessonView??"")!=="section",
-        step: !staticRelief && (!!this.step || seek),
+        play: !staticModel && !!this.play && familyOf(this.obs.lessonView??"")!=="section",
+        step: !staticModel && (!!this.step || seek),
         time: seek,
-        reset: !staticRelief && (!!this.reset || seek) && familyOf(this.obs.lessonView??"")!=="section",
+        reset: !staticModel && (!!this.reset || seek) && familyOf(this.obs.lessonView??"")!=="section",
         back: this.history.length > 0,
         skip: !!this.world.nav.flight,
         land: !!p && (p.bathy || p.site) && this.focus.overview && this.settled,
@@ -846,7 +846,7 @@ export class GeographicExperience {
         this.obs.lessonView ? titleFor(this.obs.lessonView) : this.focus.country === "Kamerun" ? "Kamerun in Zentralafrika" : this.nationalBoundary.visible ? "Deutschland in Mitteleuropa" : globeOutsideSite ? "Die Erde im Überblick" : modelTitle(this.obs, this.world),
       );
     for (const [id, value] of [
-      ["geo-clock", (ready || !!this.obs.timeState?.displayedTime) && !anonymous && !globeOutsideSite ? timeCaption(this.obs, this.world) : ""],
+      ["geo-clock", !staticModel && (ready || !!this.obs.timeState?.displayedTime) && !anonymous && !globeOutsideSite ? timeCaption(this.obs, this.world) : ""],
       [
         "geo-legend",
         ready && !anonymous

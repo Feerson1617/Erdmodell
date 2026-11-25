@@ -128,7 +128,7 @@ try {
       "mixing",
       "rays",
       "degassing",
-      "lakeCompare",
+      "dissolved",
     ];
     for (let i = 0; performance.now() - start < 900000; i++) {
       const change = performance.now();

@@ -200,7 +200,7 @@ export async function volcanicProduct(
     await check("Nyos-Entgasung");
     await page.click("#geo-related");
     await arrived("lakeCompare");
-    await time(0.36);
+    await page.selectOption(".lake-evidence select", "3");
     await check("Seenvergleich");
     await page.selectOption(".lake-evidence select", "7");
     assert.match(
@@ -253,7 +253,7 @@ export async function volcanicProduct(
         await playback(13);
         await page.click("#geo-related");
         await arrived("lakeCompare");
-        await time(0.68);
+        await page.selectOption(".lake-evidence select", "8");
         await page.waitForTimeout(2000);
       });
     }

@@ -177,14 +177,14 @@ export function lakeSection(s: Stage) {
       );
     }
     s.line(
-      [vec(-4.55, -0.95, 0.35), vec(-4.55 + 100 * scale, -0.95, 0.35)],
+      [vec(-4.55, 1.32, 0.35), vec(-4.55 + 100 * scale, 1.32, 0.35)],
       0xffd998,
       "100 m",
     );
     s.label(
-      vec(-4.35, -0.95, 0.35),
+      vec(-4.35, 1.32, 0.35),
       "100 m",
-      "Gemeinsamer Horizontal- und Tiefenmaßstab",
+      "Gemeinsamer Maßstab · Beckenprofile idealisiert",
     );
     const panel = document.createElement("section");
     panel.className = "lake-evidence";
