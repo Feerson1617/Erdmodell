@@ -126,7 +126,8 @@ export async function corrections(page, out, { app, film = false } = {}) {
     await arrived(id);
   };
   const preset = async (id) => {
-    await select("geo-preset", id);
+    if ((await page.locator("#geo-preset").getAttribute("data-seismic")) !== id)
+      await select("geo-preset", id);
     await arrived(id);
   };
   const phase = async (t) => {

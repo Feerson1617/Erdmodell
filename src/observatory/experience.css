@@ -492,7 +492,7 @@ body.geo-experience.present #app > header {
   z-index:7;
 }
 body.geo-tools-open #geo-advanced-playback:has(button:not([hidden])) {display:block;}
-.geo-experience #desk #sidebar:has(+ #geo-advanced-playback button:not([hidden])) {max-height:calc(100% - 56px);}
+body.geo-experience.geo-tools-open #desk:has(#geo-advanced-playback button:not([hidden])) #sidebar {max-height:calc(100% - 56px);}
 @media (max-height:700px) {
   body.geo-experience.present #app > header {padding-block:2px;}
   .geo-experience.present .geo-heading {padding-block:0;gap:1px;}

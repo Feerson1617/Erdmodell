@@ -1,7 +1,7 @@
 // Normal UI paths shared by the product tests.
 export async function switchPresentation(page) {
-  if (await page.locator("body.geo-experience.present").count()) {
-    const tools = page.locator("#geo-controls");
+  const tools = page.locator("body.geo-experience.present #geo-controls");
+  if (await tools.count()) {
     if ((await tools.getAttribute("aria-expanded")) === "false")
       await tools.click();
   }
