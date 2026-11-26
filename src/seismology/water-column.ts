@@ -155,8 +155,8 @@ export function mixingSection(s: Stage) {
       }
       s.label(
         vec(cx, 1.55 - height * 0.7, 0.07),
-        "Stabile Tiefenschicht",
-        "Mehr gelöste Stoffe erhöhen die Dichte",
+        "Meromixis",
+        "Das Tiefenwasser mischt sich langfristig nicht vollständig mit der oberen Schicht",
       );
     }
     s.label(
@@ -170,7 +170,7 @@ export function mixingSection(s: Stage) {
       ? "Sommer · warmes Oberflächenwasser. Gold bis Blau zeigt die Temperatur, helle Spuren zeigen Wasserbewegung."
       : t < 0.38
         ? "Die Oberfläche kühlt ab. Süßwasser hat bei etwa 4 °C seine größte Dichte."
-        : "Bei ähnlicher Dichte kann Wind die Wassersäule mischen. Wo gelöste Stoffe das Tiefenwasser dichter halten, endet die starke Mischung an der Schichtgrenze.",
+        : "Gelöste Stoffe können das Tiefenwasser dichter halten und die Durchmischung begrenzen.",
   );
 }
 
@@ -463,27 +463,20 @@ function comparisonColumn(s: Stage, example: GasCase) {
   legend.className = "column-legend";
   legend.innerHTML =
     '<span><i class="gas-scale"></i> Gelöstes CO₂ · wenig bis viel</span><span><b class="water-key">↑</b> Wasserbewegung</span><span><b class="bubble-key">○</b> Freie Gasblasen</span>';
-  const compare = document.createElement("button");
-  compare.textContent = weak
-    ? "Gasreiches Beispiel"
-    : "Untersättigtes Beispiel";
-  compare.onclick = () =>
-    s.visitStudy?.(weak ? "waterColumn" : "unsaturated", s.time);
-  legend.append(compare);
   s.root.append(legend);
   s.explain((t) =>
     t < 0.15
       ? weak
         ? "Weniger gelöstes CO₂ im Tiefenwasser. Die anfängliche Anhebung ist in beiden Modellen gleich."
-        : "Mehr gelöstes CO₂ im Tiefenwasser. Sättigung hängt auch von Temperatur, Gaspartialdruck, Umgebungsdruck und Wasserchemie ab."
+        : "Im Tiefenwasser ist mehr CO₂ gelöst. Sättigung hängt auch von Temperatur, Gaspartialdruck, Umgebungsdruck und Wasserchemie ab."
       : t < 0.37
         ? "Das Wasser steigt auf. Der Umgebungsdruck sinkt."
         : weak
-          ? "Das Wasser bleibt untersättigt. Es perlt kein Gas aus. Die anfängliche Bewegung klingt ab."
+          ? "Das Wasser ist untersättigt und kann unter diesen Bedingungen noch CO₂ aufnehmen. Die Bewegung klingt ohne Blasenbildung ab."
           : t < 0.54
             ? "Bei Übersättigung kann CO₂ ausperlen. Freie Blasen werden sichtbar."
             : t < 0.82
-              ? "Blasen wachsen. Das Gemisch wird weniger dicht, steigt schneller und reißt Wasser mit."
+              ? "Positive Rückkopplung: Wachsende Gasblasen verringern die Dichte des Gemischs. Es steigt schneller und reißt Wasser mit."
               : "Weiterer Aufstieg verstärkt die Druckentlastung. Ein Teil des CO₂ tritt in die Luft aus.",
   );
 }

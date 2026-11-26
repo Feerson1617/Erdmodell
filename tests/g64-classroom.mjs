@@ -1,3 +1,4 @@
+import { switchPresentation } from "./geographic-controls.mjs";
 import assert from "node:assert/strict";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
@@ -171,7 +172,7 @@ export async function visitStudio(page, out, extensive = false) {
     await page.locator('[data-release="none"]').click();
     await page.locator("#observe-release summary").click();
     if (extensive) {
-      await click("present");
+      await switchPresentation(page);
       await page.waitForFunction(() => document.body.classList.contains("present"));
     }
     if (extensive)
@@ -189,7 +190,7 @@ export async function visitStudio(page, out, extensive = false) {
         report.smartboards.push({ width, height, ratio });
         await shot("09-Praesentation-" + width);
       }
-    if (extensive) await click("present");
+    if (extensive) await switchPresentation(page);
     await click("obswitch");
     if (extensive) {
       await page.setViewportSize({ width: 1366, height: 768 });

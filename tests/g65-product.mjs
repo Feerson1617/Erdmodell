@@ -1,3 +1,4 @@
+import {focusProduct} from "./g682-product.mjs";
 import {correctionProduct} from "./g681-product.mjs";
 import { ubProduct } from "./g68-product.mjs";
 import { corrections, geometry } from "./g651-visual.mjs";
@@ -54,7 +55,7 @@ try {
   const page = native ? await app.firstWindow() : await ctx.newPage();
   if (!native)
     await page.goto(
-      pathToFileURL(resolve("artifacts/GeoRisiko-G6.8.1-Web-Test.html")).href,
+      pathToFileURL(resolve("artifacts/GeoRisiko-G6.8.2-Web-Test.html")).href,
     );
   if (native) {
     assert.match(page.url(), /^georisiko:/);
@@ -76,7 +77,7 @@ try {
     startMs: performance.now() - time,
     network,
   };
-  if (!["integritaet", "seismologie", "korrektur","vulkaneifel","ub","rc"].includes(group))
+  if (!["integritaet", "seismologie", "korrektur","vulkaneifel","ub","rc","focus"].includes(group))
     await exercise(page, out, {
       group,
       film: false,
@@ -97,7 +98,8 @@ try {
     await corrections(page, out, { app, film: false });
   if(group==="all"||group==="vulkaneifel")await volcanicProduct(page,out,{app,phase:"G67",film:false});
   if (group==="all" || group==="ub") await ubProduct(page,out,{app,film:false});
-  if (group==="all" || group==="rc") await correctionProduct(page,out,{app,film:process.env.G65_FILM==="1"});
+  if (group==="all" || group==="rc") await correctionProduct(page,out,{app,film:false});
+  if (group==="all" || group==="focus") await focusProduct(page,out,{app,film:process.env.G65_FILM==="1"});
   const targetMinutes=Number(process.env.G68_SOAK_MINUTES||15);
   if (process.argv.includes("--long")) {
     await app.evaluate(({ BrowserWindow }) =>
@@ -140,6 +142,16 @@ try {
     ];
     for (let i = 0; performance.now() - start < targetMinutes*60000; i++) {
       const change = performance.now();
+      if(i%6===0){
+        const {switchPresentation}=await import("./geographic-controls.mjs");
+        await switchPresentation(page);
+        await page.waitForFunction(()=>document.body.classList.contains("present"));
+        await page.click("#geo-controls");
+        await page.selectOption("#geo-info",i%12===0 ? "observe" : "terms");
+        await switchPresentation(page);
+        await page.waitForFunction(()=>!document.body.classList.contains("present"));
+        await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].setContentSize(1366,768));
+      }
       if (i % 4 === 0) {
         await page.selectOption(
           "#geo-place",

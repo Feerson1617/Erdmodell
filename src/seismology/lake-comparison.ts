@@ -129,6 +129,21 @@ export function compareBasins(s: Stage) {
   // Preserve the original saved comparison position across the three groups.
   s.animate((t) => show(t < 4 / 12 ? 0 : t < 9 / 12 ? 1 : 2));
 }
+function chartTextures(canvas: HTMLCanvasElement, colour: string, clear: number[][]) {
+  const blank = document.createElement("canvas");
+  blank.width = canvas.width;
+  blank.height = canvas.height;
+  const ctx = blank.getContext("2d")!;
+  ctx.drawImage(canvas, 0, 0);
+  ctx.fillStyle = colour;
+  for (const [x, y, w, h] of clear) ctx.fillRect(x, y, w, h);
+  return [canvas, blank].map(c=>{
+    const texture = new T.CanvasTexture(c);
+    texture.colorSpace = T.SRGBColorSpace;
+    return texture;
+  });
+}
+
 export function historicalProfiles(s: Stage) {
   s.controls.enableRotate = false;
   const conductivity = s.view === "conductivity",
@@ -144,19 +159,10 @@ export function historicalProfiles(s: Stage) {
     y = (d: number) => 142 + (d / 210) * 484;
   ctx.fillStyle = "#1a3237";
   ctx.fillRect(0, 0, 1400, 720);
-  ctx.font = "bold 38px system-ui";
-  ctx.fillStyle = "#f4f2dc";
-  ctx.fillText(
-    conductivity
-      ? "Elektrische Leitfähigkeit bei 25 °C"
-      : "Gelöstes CO₂ im Tiefenprofil",
-    65,
-    62,
-  );
-  ctx.font = "27px system-ui";
+  ctx.font = "34px system-ui";
   ctx.fillStyle = "#c4d9d4";
-  ctx.fillText(conductivity ? "µS/cm" : "mmol/kg Wasser", 151, 114);
-  ctx.fillText("Tiefe (m)", 16, 113);
+  ctx.fillText(conductivity ? "µS/cm bei 25 °C" : "mmol/kg Wasser", 151, 114);
+  ctx.fillText("Tiefe (m)", 20, 64);
   for (const d of [0, 50, 100, 150, 200]) {
     ctx.fillText(String(d), 55, y(d) + 9);
     ctx.strokeStyle = "#4f6669";
@@ -168,7 +174,7 @@ export function historicalProfiles(s: Stage) {
   }
   for (let i = 0; i <= 4; i++) {
     const v = (max * i) / 4;
-    ctx.fillText(String(v), x(v) - 14, 672);
+    ctx.fillText(String(v), x(v) - 14, 674);
     ctx.beginPath();
     ctx.moveTo(x(v), y(0));
     ctx.lineTo(x(v), y(210));
@@ -202,15 +208,14 @@ export function historicalProfiles(s: Stage) {
     });
     ctx.fillText((i ? "▲ " : "● ") + series.date, 635 + i * 300, 109);
   });
-  const tex = new T.CanvasTexture(c);
-  tex.colorSpace = T.SRGBColorSpace;
+  const [tex, blank] = chartTextures(c, "#1a3237", [[0,0,1400,126],[0,126,136,515],[0,640,1400,80]]);
   const graph = s.mesh(
     new T.PlaneGeometry(9.8, 5.04),
     0xffffff,
     "Publizierte Tiefenprofile",
     true,
   );
-  (graph.material as T.MeshBasicMaterial).map = tex;
+  s.protectDiagram(graph as T.Mesh<T.PlaneGeometry,T.MeshBasicMaterial>, tex, blank);
   const sample = profiles[0].samples[2];
   s.label(
     vec(
@@ -226,7 +231,7 @@ export function historicalProfiles(s: Stage) {
   s.explain(() =>
     conductivity
       ? "Leitfähigkeit beschreibt gelöste Ionen. Die beiden Jahre zeigen eigene Messreihen."
-      : "1993 vor und 2006 während der Entgasung. Tabelle 3 enthält Messungen und aus Leitfähigkeit abgeleitete CO₂-Werte. Keine vergleichbare Ulmener CO₂-Kurve im Modell.",
+      : "1993 vor und 2006 während der Entgasung. Gezeigt sind gemessene und aus Leitfähigkeit abgeleitete CO₂-Werte.",
   );
 }
 
@@ -244,10 +249,8 @@ export function historicalInventory(s: Stage) {
   ctx.fillStyle = "#183136";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.fillStyle = "#f3f3da";
-  ctx.font = "bold 42px system-ui";
-  ctx.fillText("Geschätzter CO₂-Vorrat des ganzen Sees", 45, 58);
-  ctx.font = "32px system-ui";
-  ctx.fillText("Milliarden Mol", 45, 109);
+  ctx.font = "34px system-ui";
+  ctx.fillText("Geschätzte Milliarden Mol CO₂", 45, 80);
 
   ctx.lineWidth = 2;
   for (const total of [0, 4, 8, 12, 16]) {
@@ -273,7 +276,7 @@ export function historicalInventory(s: Stage) {
   ctx.stroke();
   ctx.fillStyle = "#f0c68c";
   ctx.textAlign = "right";
-  ctx.fillText("2001 · Entgasung beginnt", launch - 12, 248);
+  ctx.fillText("2001 · Entgasung beginnt", 1320, 80);
 
   ctx.strokeStyle = "#9de2df";
   ctx.lineWidth = 3;
@@ -315,17 +318,14 @@ export function historicalInventory(s: Stage) {
     55,
     663,
   );
-  const texture = new T.CanvasTexture(canvas);
-  texture.colorSpace = T.SRGBColorSpace;
+  const [texture, blank] = chartTextures(canvas, "#183136", [[0,0,1400,122],[0,122,114,420],[0,540,1400,145]]);
   const panel = s.mesh(
     new T.PlaneGeometry(10, 685 / 140),
     0xffffff,
     "Publiziertes historisches CO₂-Inventar",
     true,
   );
-  panel.scale.y = 0.88;
-  panel.position.y = 0.37;
-  (panel.material as T.MeshBasicMaterial).map = texture;
+  s.protectDiagram(panel as T.Mesh<T.PlaneGeometry,T.MeshBasicMaterial>, texture, blank);
   s.label(
     vec(
       (x(2006) / 1400 - 0.5) * 10,

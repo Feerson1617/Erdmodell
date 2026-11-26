@@ -10,7 +10,7 @@ const native = process.argv.includes("--installed"),
 await mkdir(out, { recursive: true });
 const profile = await mkdtemp(join(tmpdir(), "georisiko-neustart-"));
 const file = pathToFileURL(
-  resolve("artifacts/GeoRisiko-G6.8.1-Web-Test.html"),
+  resolve("artifacts/GeoRisiko-G6.8.2-Web-Test.html"),
 ).href;
 const savedName = "G6.8.1 Wassersäule";
 let first, restored, mask;

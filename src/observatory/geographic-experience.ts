@@ -1,11 +1,10 @@
 import { towns } from "../seismology/ulmen-wittlich";
-import { regionalPhase } from "../seismology/regional-rupture";
 import {seismicLegend} from "../seismology/legend";
 import { atlasViews,connections,familyOf,isView,titleFor } from "../seismology/catalog";
 import {presetOptions} from "../seismology";
 import { BufferGeometry, LineSegments, LineBasicMaterial } from "three";
 import germany from "./deutschland-grenze.json";
-import { modelTitle, timeCaption, mapLegend } from "./presentation-context";
+import { modelTitle, timeCaption, mapLegend, atlasLegendRows } from "./presentation-context";
 import { disclosure, restoreDisclosure, nextLabel, resetReveals } from "./reveal";
 import { type Bounds, nyosSite, regions as landscapes } from "../regions";
 import { angularDistance, position, R } from "../geo";
@@ -61,7 +60,7 @@ const groups = (select: HTMLSelectElement, title: string) => {
 };
 
 const studySources:Record<string,string>={
-      towns:"Amtliches Luftbild · Norden oben · Großkreisentfernung",
+      towns:"Amtliches Luftbild · Norden oben · Relief dreifach überhöht",
       wittlich:"Amtliches Luftbild und Oberflächenmodell",
       inventory:"Kusakabe et al. 2008 · Tabelle 4 · historisch",
       eifel:"Luftbild und Oberflächenhöhen · Relief vierfach überhöht",
@@ -164,6 +163,15 @@ export class GeographicExperience {
   private lastTick = 0;
   private depth = "terms";
   private neutral = false;
+  private presentation = false;
+  private readonly presentationTools = document.createElement("section");
+  private readonly presentationButton = document.createElement("button");
+  private readonly advancedPlayback = document.createElement("div");
+  private readonly secondary = document.createElement("div");
+  private readonly locationControls = document.createElement("div");
+  private readonly headerTools = document.querySelector<HTMLElement>(".headTools")!;
+  private readonly headerToolPosition = document.createComment("header tools");
+  private readonly locationPosition = document.createComment("location controls");
   private play?: HTMLButtonElement;
   private source?: HTMLInputElement;
   private step?: HTMLButtonElement;
@@ -185,6 +193,10 @@ export class GeographicExperience {
     nav.innerHTML =
       '<select id="geo-topic" aria-label="Thema oder Prozess"></select><select id="geo-place" aria-label="Raum oder Ort"></select><div class="geo-heading"><span id="geo-crumb" aria-live="polite"></span><strong id="geo-title"></strong></div>';
     header.insertBefore(nav, header.querySelector("nav"));
+    this.locationControls.className = "geo-location-controls";
+    nav.prepend(this.locationPosition, this.locationControls);
+    this.locationControls.append(el("geo-topic"), el("geo-place"));
+    this.headerTools.before(this.headerToolPosition);
     const topics = el<HTMLSelectElement>("geo-topic");
     option(topics, "", "Thema");
     const earth = groups(topics, "Erde und Platten");
@@ -224,7 +236,7 @@ export class GeographicExperience {
     topics.onchange = () => {
       const value = topics.value;
       topics.selectedIndex = 0;
-      if (value) void this.topic(value);
+      if (value) { this.closePresentationTools(); void this.topic(value); }
     };
     const list = el<HTMLSelectElement>("geo-place");
     option(list, "", "Ort");
@@ -238,18 +250,35 @@ export class GeographicExperience {
     const germany = groups(list, "Europa › Deutschland");
     option(germany, "country-de", "Deutschland im Überblick");
     option(germany,"eifel","Vulkaneifel");option(germany,"ulmen","Ulmen · Ulmener Maar");
-    option(germany,"towns","Ulmen und Wittlich · Region");
+    option(germany,"towns","Ulmen und Wittlich");
     option(germany,"wittlich","Wittlich");
     for (const [id, p] of landscapes) option(germany, "local-" + id, p.name);
     list.onchange = () => {
       const value = list.value;
       list.selectedIndex = 0;
-      if (value) void this.map(value);
+      if (value) { this.closePresentationTools(); void this.map(value); }
     };
     this.toolbar.id = "geo-dock";
     this.toolbar.innerHTML =
-      '<button id="geo-back" hidden>Zurück</button><button id="geo-skip" hidden>Fahrt beenden</button><button id="geo-land" hidden>Regionales Relief</button><button id="geo-section" hidden>Schnitt öffnen</button><button id="geo-return" hidden>Auf der Erde zeigen</button><button id="geo-play" hidden>Abspielen</button><input id="geo-time" aria-label="Modellzeit" type="range" hidden><button id="geo-step" hidden>Schritt</button><button id="geo-reset" hidden>Zurücksetzen</button><select id="geo-preset" aria-label="Prozessdarstellung" hidden></select><select id="geo-info" aria-label="Informationstiefe"><option value="observe">Beobachten</option><option value="neutral">Beobachten ohne Ort</option><option value="terms" selected>Fachbegriffe</option><option value="explain">Erklären</option></select><button id="geo-related" hidden></button><button id="geo-release" hidden>Begriff freigeben</button><button id="geo-clear" hidden>Freigabe löschen</button><button id="geo-tools" aria-expanded="false">Ansicht</button>';
-    el("app").append(this.toolbar);
+      '<button id="geo-back" hidden>Zurück</button><button id="geo-skip" hidden>Fahrt beenden</button><button id="geo-land" hidden>Regionales Relief</button><button id="geo-section" hidden>Schnitt öffnen</button><button id="geo-return" hidden>Auf der Erde zeigen</button><button id="geo-play" hidden>Abspielen</button><input id="geo-time" aria-label="Modellzeit" type="range" hidden><button id="geo-step" hidden>Schritt</button><button id="geo-reset" hidden>Zurücksetzen</button><select id="geo-preset" aria-label="Darstellungen" hidden></select><select id="geo-info" aria-label="Informationstiefe"><option value="observe">Beobachten</option><option value="neutral">Beobachten ohne Ort</option><option value="terms" selected>Fachbegriffe</option><option value="explain">Erklären</option></select><button id="geo-release" hidden>Begriff freigeben</button><button id="geo-clear" hidden>Freigabe löschen</button><button id="geo-tools" aria-expanded="false">Werkzeuge</button>';
+    this.secondary.id = "geo-secondary";
+    this.secondary.append(...[...this.toolbar.children].filter(node =>
+      !["geo-play", "geo-time", "geo-reset"].includes(node.id)));
+    this.toolbar.prepend(this.secondary);
+    this.advancedPlayback.id = "geo-advanced-playback";
+    this.advancedPlayback.append(this.secondary.querySelector("#geo-step")!);
+    el("desk").append(this.advancedPlayback);
+    this.presentationButton.id = "geo-controls";
+    this.presentationButton.textContent = "Steuerung";
+    this.presentationButton.setAttribute("aria-expanded", "false");
+    this.presentationButton.setAttribute("aria-controls", "geo-presentation-tools");
+    this.presentationButton.hidden = true;
+    this.presentationButton.onclick = () => this.controlPresentation(this.presentationTools.hidden);
+    this.toolbar.append(this.presentationButton);
+    this.presentationTools.id = "geo-presentation-tools";
+    this.presentationTools.setAttribute("aria-label", "Steuerung der Präsentation");
+    this.presentationTools.hidden = true;
+    el("app").append(this.toolbar, this.presentationTools);
     this.pins.id = "geo-markers";
     this.lakePin.hidden=true;
     this.lakePin.onclick=()=>{if(this.focus.lake==="ulmen")void this.map("ulmen");else if(this.focus.lake==="nyos")void this.topic("nyos");};
@@ -277,7 +306,7 @@ export class GeographicExperience {
       this.pins.append(button);
       this.markers.push({ id, place, button });
     }
-    el("geo-back").onclick = () => void this.back();
+    el("geo-back").onclick = () => {this.closePresentationTools();void this.back();};
     el("geo-skip").onclick = () => this.skip();
     el("geo-land").onclick = () => void this.relief();
     el("geo-section").onclick = () => {
@@ -325,28 +354,108 @@ export class GeographicExperience {
     el<HTMLInputElement>("geo-time").oninput = () => this.setTime(+el<HTMLInputElement>("geo-time").value);
     el<HTMLSelectElement>("geo-info").onchange = (e) => this.setDepth((e.target as HTMLSelectElement).value);
     el("geo-release").onclick = () => {
+      this.closePresentationTools();
       if (this.obs.studioState || this.obs.region || this.obs.study) document.body.toggleAttribute("data-choose-object");
       else nextLabel();
     };
     el("geo-clear").onclick = () => resetReveals();
     el<HTMLSelectElement>("geo-preset").onchange = (e) => {
-      if(!this.obs.lessonView && this.world.mode==="nyos" && !this.obs.mode){const id=(e.target as HTMLSelectElement).value;if(id)void this.topic(id);return;}
-      if(this.obs.lessonView){void this.topic("seismic-"+(e.target as HTMLSelectElement).value);return;}
+      const select = e.target as HTMLSelectElement;
+      const id = select.value, current = this.obs.lessonView;
+      if (!id) return;
+      if (id.startsWith("compare:")) {
+        const field = document.querySelector<HTMLSelectElement>(".lake-evidence select");
+        if (field) {
+          field.value = id.slice(8);
+          field.dispatchEvent(new Event("change"));
+        }
+        select.value = "";
+        this.closePresentationTools();
+        return;
+      }
+      if (id.startsWith("place:")) {
+        select.value = "";
+        this.closePresentationTools();
+        void this.map(id.slice(6));
+        return;
+      }
+      if (current) {
+        const target = id.startsWith("related:") ? id.slice(8) : id;
+        const gasExample = ["waterColumn","unsaturated"].includes(current) &&
+          ["waterColumn","unsaturated"].includes(target);
+        const time = gasExample ? this.obs.study?.time : undefined;
+        select.value = "";
+        this.closePresentationTools();
+        void this.topic(isView(target) ? "seismic-" + target : target, time);
+        return;
+      }
+      if (this.world.mode === "nyos" && !this.obs.mode) {
+        select.value = "";
+        this.closePresentationTools();
+        void this.topic(id);
+        return;
+      }
       const original = el<HTMLSelectElement>("studio-preset");
       if (original) {
-        original.value = (e.target as HTMLSelectElement).value;
+        original.value = id;
         original.dispatchEvent(new Event("change"));
+        this.closePresentationTools();
       }
     };
-    el("geo-tools").onclick = () => this.drawer(!document.body.classList.contains("geo-tools-open"));
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") this.drawer(false);
-    });
-    el("geo-related").onclick=()=>{if(!this.obs.lessonView&&this.world.mode==="nyos"){void this.topic("seismic-lakeCompare");return;}const id=this.relatedStudy()?.[0];if(id)void this.topic(isView(id)?"seismic-"+id:id);};
+    el("geo-tools").onclick = () => {
+      const opening = !document.body.classList.contains("geo-tools-open");
+      this.closePresentationTools();
+      this.drawer(opening);
+    };
     obs.visitStudy=(id,time)=>void this.topic("seismic-"+id,time);
     obs.visitModel = (id) => void this.topic("process-" + id);
     obs.visitPlace = (id) => void this.map(id);
     obs.visitBoundary = (step) => void this.boundary(step);
+  }
+  setPresentation(active: boolean) {
+    if (active === this.presentation) return;
+    this.presentation = active;
+    this.drawer(false);
+    this.signature = "";
+    if (active) {
+      this.secondary.append(el("geo-step"));
+      this.presentationTools.append(this.locationControls, this.secondary, this.headerTools);
+      this.presentationButton.hidden = false;
+      this.presentationButton.focus();
+    } else {
+      this.controlPresentation(false);
+      this.locationPosition.after(this.locationControls);
+      this.advancedPlayback.append(el("geo-step"));
+      this.toolbar.prepend(this.secondary);
+      this.headerToolPosition.after(this.headerTools);
+      this.presentationButton.hidden = true;
+      el("present").focus();
+    }
+  }
+  private controlPresentation(open: boolean) {
+    this.presentationTools.hidden = !open;
+    this.presentationButton.setAttribute("aria-expanded", String(open));
+    if (open) {
+      this.drawer(false);
+      el("geo-topic").focus();
+    } else if (this.presentationTools.contains(document.activeElement)) {
+      this.presentationButton.focus();
+    }
+  }
+  private closePresentationTools() {
+    if (!this.presentationTools.hidden) this.controlPresentation(false);
+  }
+  escape() {
+    if (!this.presentationTools.hidden) {
+      this.controlPresentation(false);
+      return true;
+    }
+    if (document.body.classList.contains("geo-tools-open")) {
+      this.drawer(false);
+      if (this.presentation) this.presentationButton.focus();
+      return true;
+    }
+    return false;
   }
   private relatedStudy(){
     const study=this.obs.study,id=this.obs.lessonView;
@@ -579,7 +688,7 @@ export class GeographicExperience {
     else if (value === "forces") this.obs.openConcept("forces");
     else if (value === "research") {
       await this.obs.openResearch();
-      if (epoch === this.epoch) this.drawer(true);
+      if (epoch === this.epoch && !this.presentation) this.drawer(true);
     } else if (value === "events") await this.obs.openMap();
     else if (value === "past" || value === "future") {
       this.obs.openTime();
@@ -617,7 +726,7 @@ export class GeographicExperience {
     this.restoring = false;
     this.setDepth(item.depth);
     if (this.depth === "observe") restoreDisclosure(item.reveals);
-    if (item.scene.map.research && !item.scene.lessonView) this.drawer(true);
+    if (item.scene.map.research && !item.scene.lessonView && !this.presentation) this.drawer(true);
     this.signature = "";
     this.pinKey = "";
   }
@@ -823,6 +932,7 @@ export class GeographicExperience {
       r = this.obs.region;
     const state = [
       this.obs.subject,
+      this.relatedStudy()?.[0],
       this.depth,
       this.history.length,
       !!this.flight,
@@ -872,7 +982,6 @@ export class GeographicExperience {
         clear: this.depth === "observe" && document.body.classList.contains("show-some-labels"),
         tools: !side.hidden && this.depth !== "observe",
         preset: (this.world.mode==="nyos" && !this.obs.mode || !!el("studio-preset") || !!this.obs.lessonView) && this.depth !== "observe",
-        related: (!!this.relatedStudy() || this.world.mode==="nyos"&&!this.obs.mode) && this.depth !== "observe",
       }))
         el("geo-" + id).hidden = !show;
       const bar = el<HTMLInputElement>("geo-time");
@@ -884,17 +993,28 @@ export class GeographicExperience {
       const src = el<HTMLSelectElement>("studio-preset"),
         preset = el<HTMLSelectElement>("geo-preset");
       if(this.obs.lessonView){
-        presetOptions(preset,this.obs.lessonView);
-        text(el("geo-related"),connections[this.obs.lessonView]?.[1]??"");
+        presetOptions(preset,this.obs.lessonView,this.relatedStudy());
+        if(this.obs.lessonView==="lakeCompare"){
+          const field=document.querySelector<HTMLSelectElement>(".lake-evidence select");
+          if(field){
+            const group=groups(preset,"Vergleich");
+            Array.from(field.options).forEach(o=>option(group,"compare:"+o.value,o.textContent??""));
+          }
+        }
+        if(this.obs.lessonView==="landCompare"){
+          const group=groups(preset,"Orte auf der Erde");
+          option(group,"place:globe-ulmen","Ulmen verorten");
+          option(group,"place:globe-nyos","Nyos verorten");
+        }
       }else if (src) {
         delete preset.dataset.seismic;
+        delete preset.dataset.related;
         preset.replaceChildren(...Array.from(src.options, (o) => o.cloneNode(true)));
         preset.value = src.value;
       }
       if (this.obs.mode === "map" && this.focus.overview && !this.obs.atlasState)
         el("geo-tools").hidden = true;
     }
-    if(this.obs.lessonView==="maar")text(el("geo-related"),this.relatedStudy()?.[1]??"");
     const ready = this.settled;
     const orientation = ready ? this.orient() : "Ortswechsel …";
     el("geo-crumb").dataset.settled = String(ready);
@@ -904,9 +1024,8 @@ export class GeographicExperience {
     const title = el("geo-title");
     title.hidden = !ready || anonymous;
     if(this.world.mode==="nyos"&&!this.obs.mode){
-      text(el("geo-related"),"Seen vergleichen");
       const menu=el<HTMLSelectElement>("geo-preset");
-      if(menu.dataset.seismic!=="nyosDetail"){menu.replaceChildren(...[["","Ansicht am Nyos"],["nyos-section","Seeprofil"],["seismic-waterColumn","Wassersäule vergrößern"],["nyos-event","Ereignis im Tal"],["nyos-pipe","Entgasung"],["seismic-pipeCut","Rohrschnitt"],["seismic-landCompare","Landschaften vergleichen"]].map(([id,name])=>new Option(name,id)));menu.dataset.seismic="nyosDetail";}
+      if(menu.dataset.seismic!=="nyosDetail"){menu.dataset.related="nyos:seismic-lakeCompare";menu.replaceChildren(...[["","Darstellungen"],["nyos-section","Seeprofil"],["seismic-waterColumn","Wassersäule vergrößern"],["nyos-event","Ereignis im Tal"],["nyos-pipe","Entgasung"],["seismic-pipeCut","Rohrschnitt"],["seismic-landCompare","Landschaften vergleichen"],["seismic-lakeCompare","Seen vergleichen"]].map(([id,name])=>new Option(name,id)));menu.dataset.seismic="nyosDetail";}
     }
     const globeOutsideSite = !this.obs.mode && (this.world.mode === "place" || this.world.mode === "nyos") && !this.onLocalTerrain();
     if (!title.hidden)
@@ -915,7 +1034,7 @@ export class GeographicExperience {
         this.obs.lessonView ? titleFor(this.obs.lessonView) : this.focus.lake ? lakeSites[this.focus.lake].name+" auf der Erde" : this.focus.country === "Kamerun" ? "Kamerun in Zentralafrika" : this.nationalBoundary.visible ? "Deutschland in Mitteleuropa" : globeOutsideSite ? "Die Erde im Überblick" : modelTitle(this.obs, this.world),
       );
     for (const [id, value] of [
-      ["geo-clock", !staticModel && (ready || !!this.obs.timeState?.displayedTime) && !anonymous && !globeOutsideSite ? timeCaption(this.obs, this.world) : ""],
+      ["geo-clock", !staticModel && (ready || !!this.obs.timeState?.displayedTime) && !anonymous && !globeOutsideSite ? timeCaption(this.obs, this.world, this.depth==="explain") : ""],
       [
         "geo-legend",
         ready && !anonymous
@@ -929,12 +1048,13 @@ export class GeographicExperience {
       field.hidden = !value;
       const atlas=this.obs.atlasState;
       if(value&&id==="geo-legend"&&this.obs.lessonView&&atlas&&atlas.layers.every(k=>["bounds","quakes","depth","magnitude","volcano","trench"].includes(k))&&(!atlas.base||atlas.base==="earth"))seismicLegend(field,atlas);
+      else if(value && id==="geo-legend" && atlas) atlasLegendRows(field,value);
       else if(value){delete field.dataset.keys;text(field,value);}
     }
     const note = el("geo-model-limit");
     const id=this.obs.lessonView;
     const seismicLimit=id && this.obs.study ? (studySources[id] ?? (id==="record"?"Originalmessung · EarthScope / IU · keine Modellkurve":familyOf(id)==="section"?"ComCat · M ≥ 4,5 · 2019–2023 · Profilprojektion · Tiefe 1,33-fach überhöht":familyOf(id)==="core"?"IASP91 · berechnete Laufwege · Quelle in 15 km Tiefe":familyOf(id)==="magma"?"Möglicher Modellverlauf · Ursache und Eruptionszeitpunkt bleiben offen":"Anschauungsmodell · Bewegung didaktisch überhöht")):"";
-    const limit = (id&&r?.ruptureAnalysis&&r.spec.theme==="earthquake" ? (this.depth==="explain"?regionalPhase(r.progress)+" · ":"")+"Schematisches Ereignis · Versatz überhöht" : "") || seismicLimit ||
+    const limit = (id&&r?.ruptureAnalysis&&r.spec.theme==="earthquake" ? "Schematisches Ereignis · Versatz überhöht" : "") || seismicLimit ||
       (this.focus.overview && !this.focus.country && !this.focus.lake && this.obs.mode === "map" && !this.obs.atlasState
         ? "Heute gleichzeitig · Pfeile: relative Bewegungsrichtung nach PB2002 · unterschiedliche natürliche Geschwindigkeiten"
         : this.obs.atlasState?.layers.some((k) => k === "age" || k === "magnetic")

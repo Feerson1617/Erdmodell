@@ -240,16 +240,16 @@ export function maar(s: Stage) {
   s.label(
     vec(0, -2.55, 0.1),
     "Diatrem",
-    "mit Bruchstücken gefüllter Schlot",
+    "mit Bruchstücken gefüllter Explosionsschlot",
     (t) => t > 0.64,
   );
   s.explain((t) =>
     t < 0.28
       ? "Magma steigt unter der ursprünglichen Geländeoberfläche in wasserführende Schichten."
       : t < 0.76
-        ? "Vier beispielhafte Impulse · Magma und Nebengestein werden ausgeworfen. Rückfall baut den Wall auf, Einbruch vertieft den Krater."
+        ? "Ausgeworfenes Gestein baut den Tuffwall auf. Wiederholte Explosionen und Einbrüche vertiefen den Krater."
         : dry
           ? "Ein Maar kann trocken bleiben oder später verlanden."
-          : "Spätere Zeitskala · Wasser kann sich im eingetieften Maar sammeln. Der See entsteht nach der Eruption.",
+          : "Nach der Eruption kann sich Wasser im Krater sammeln. Gezeigt ist eine spätere Entwicklungsphase.",
   );
 }

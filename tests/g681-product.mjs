@@ -1,3 +1,4 @@
+import { chooseRelated, switchPresentation } from "./geographic-controls.mjs";
 import assert from "node:assert/strict";
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -59,7 +60,7 @@ export async function correctionProduct(page, out, { app, film = false } = {}) {
     await arrived(id);
   };
   const related = async (id) => {
-    await page.click("#geo-related");
+    await chooseRelated(page);
     await arrived(id);
   };
   const place = async (id) => {
@@ -101,7 +102,7 @@ export async function correctionProduct(page, out, { app, film = false } = {}) {
     return pixel;
   };
   const swap = async (weak) => {
-    await page.locator(".column-legend button").click();
+    await page.selectOption("#geo-preset",weak ? "unsaturated" : "waterColumn");
     await arrived(weak ? "unsaturated" : "waterColumn");
   };
   const geo = () =>
@@ -158,7 +159,7 @@ export async function correctionProduct(page, out, { app, film = false } = {}) {
     matchedCamera: true,
     matchedPhase: true,
   };
-  await page.click("#geo-related");
+  await chooseRelated(page);
   await page.waitForFunction(
     () =>
       window.geoObservatory().rendered.nyos && !window.geoObservatory().flying,
@@ -177,7 +178,7 @@ export async function correctionProduct(page, out, { app, film = false } = {}) {
   await health.waitFor();
   assert.match(
     await health.innerText(),
-    /beeinträchtigen die Atmung.*Sauerstoffanteil/s,
+    /Hohe CO₂-Konzentrationen können lebensgefährlich sein/,
   );
   await shot("A-Wirkung-im-Tal");
   report.routes.A = { event: "Nyos 1986", health: await health.innerText() };
@@ -199,7 +200,7 @@ export async function correctionProduct(page, out, { app, film = false } = {}) {
     "Ulmen",
     "Ulmener Maar",
     "Wittlich",
-    "Rund 26 km Luftlinie",
+    "26 km Luftlinie",
     "5 km",
   ])
     assert.ok(names.includes(n), n);
@@ -349,14 +350,14 @@ export async function correctionProduct(page, out, { app, film = false } = {}) {
     if (w === 740 || w === 1920) await shot("D-Fenster-" + w);
   }
   await resize(1366, 768);
-  await page.click("#present");
+  await switchPresentation(page);
   await page.waitForFunction(() => document.body.classList.contains("present"));
   await shot("D-Vollbild");
   report.presentation = await page.evaluate(() => {
     const r = document.querySelector("#earth").getBoundingClientRect();
     return (r.width * r.height) / (innerWidth * innerHeight);
   });
-  await page.click("#present");
+  await switchPresentation(page);
   await page.waitForFunction(
     () => !document.body.classList.contains("present"),
   );

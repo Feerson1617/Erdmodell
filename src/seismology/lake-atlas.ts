@@ -92,18 +92,6 @@ export function lakeAtlas(s: Stage) {
       () =>
         "Blick nach Norden, Höhen jeweils 1,6-fach überhöht. Die Bildfelder zeigen unterschiedlich große Gebiete. Der Profilvergleich zeigt beide Seen im selben Maßstab.",
     );
-    const links = document.createElement("div");
-    links.className = "lake-origins";
-    for (const [name, id] of [
-      ["Ulmen verorten", "globe-ulmen"],
-      ["Nyos verorten", "globe-nyos"],
-    ]) {
-      const button = document.createElement("button");
-      button.textContent = name;
-      button.onclick = () => s.visitPlace?.(id);
-      links.append(button);
-    }
-    s.root.append(links);
     return;
   }
   const wide = s.view === "eifel",
@@ -224,8 +212,7 @@ export function regionalTowns(s: Stage) {
     const distance = Math.round(greatCircleKm(towns.ulmen, towns.wittlich));
     s.label(
       center,
-      "Rund " + distance + " km Luftlinie",
-      "Großkreis zwischen den Ortsmitten",
+      distance + " km Luftlinie",
     );
     const length = (5000 / townRegion.width) * width;
     s.line(
@@ -245,6 +232,6 @@ export function regionalTowns(s: Stage) {
   s.explain(() =>
     detail
       ? "Wittlich liegt in der Wittlicher Senke. Das Relief ist dreifach überhöht."
-      : "Ulmen liegt in der Vulkaneifel, Wittlich südöstlich davon. Die helle Linie verbindet die Ortsmitten.",
+      : "Ulmen liegt in der Vulkaneifel. Wittlich liegt rund 26 km südsüdwestlich von Ulmen in der Wittlicher Senke.",
   );
 }

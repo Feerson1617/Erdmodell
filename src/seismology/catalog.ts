@@ -7,8 +7,8 @@ export const atlasViews: Record<string, { name: string; layers: Layer[] }> = {
     name: "Erdbeben und Plattengrenzen",
     layers: ["bounds", "quakes"],
   },
-  depthMap: { name: "Globale Herdtiefen", layers: ["quakes", "depth"] },
-  sizeMap: { name: "Globale Magnituden", layers: ["quakes", "magnitude"] },
+  depthMap: { name: "Tiefe der Erdbebenherde weltweit", layers: ["quakes", "depth"] },
+  sizeMap: { name: "Magnitude der Erdbeben weltweit", layers: ["quakes", "magnitude"] },
   trenches: {
     name: "Beben und Subduktionsfronten",
     layers: ["trench", "quakes", "depth"],
@@ -75,17 +75,17 @@ export const regionViews: Record<
     progress: 0.48,
   },
   zao: {
-    name: "Zaozan · Fluid und Magmenbildung",
+    name: "Magmenbildung unter Zaozan",
     site: "japan",
     camera: "cut",
     progress: 0.54,
   },
 };
 export const families = {
-  maars:{title:"Maarentstehung",variants:{maar:"Maarentstehung · mit See",dryMaar:"Trockenmaar",contactDetail:"Kontakt im Porenraum"}},
-  eifel:{title:"Vulkaneifel",variants:{eifel:"Vulkaneifel · Übersicht",towns:"Ulmen und Wittlich · regionales Relief",wittlich:"Wittlich · Stadt und Relief",ulmen:"Ulmener Maar · Landschaft",aerial:"Ulmen · Draufsicht",lakeCut:"Idealisierter Seeschnitt"}},
-  lakes:{title:"Seen und Gase",variants:{mixing:"Chemisch stabile Tiefenschicht",turnover:"Jahreszeitliche Vollzirkulation",mixCompare:"Zwei Seetypen im Vergleich",dissolved:"Gelöstes Kohlendioxid",waterColumn:"Gasreiche Wassersäule",unsaturated:"Untersättigte Wassersäule",pipeCut:"Nyos · Entgasungsrohr im Schnitt",profiles:"Nyos · historische CO₂-Profile",conductivity:"Nyos · historische Leitfähigkeit",inventory:"Nyos · historischer CO₂-Gesamtvorrat",landCompare:"Ulmen und Nyos · Landschaften",lakeCompare:"Ulmener Maar und Nyos"}},
-  plumbing: {title:"Magmatische Prozesse",variants:{storage:"Schmelze im festen Gestein",degassing:"Vulkanische Gase",contact:"Magma trifft Grundwasser",forms:"Schild- und Schichtvulkan"}},
+  maars:{title:"Maarentstehung",variants:{maar:"Maarentstehung",dryMaar:"Trockenmaar",contactDetail:"Magma trifft auf Grundwasser"}},
+  eifel:{title:"Vulkaneifel",variants:{eifel:"Vulkaneifel · Übersicht",towns:"Ulmen und Wittlich",wittlich:"Wittlich · Stadt und Relief",ulmen:"Ulmener Maar · Landschaft",aerial:"Ulmen · Draufsicht",lakeCut:"Aufbau des Sees"}},
+  lakes:{title:"Seen und Gase",variants:{mixing:"Stabile Tiefenschichtung",turnover:"Jahreszeitliche Durchmischung",mixCompare:"Zwei Seetypen im Vergleich",dissolved:"Gelöstes Kohlendioxid",waterColumn:"Gasreiche Wassersäule",unsaturated:"Untersättigte Wassersäule",pipeCut:"Funktion des Entgasungsrohrs",profiles:"CO₂-Tiefenprofile aus Nyos",conductivity:"Leitfähigkeit im Nyos-See",inventory:"CO₂-Vorrat im Nyos-See",landCompare:"Ulmen und Nyos im Luftbild",lakeCompare:"Ulmener Maar und Nyos"}},
+  plumbing: {title:"Magmatische Prozesse",variants:{storage:"Schmelze und Kristalle im Gestein",degassing:"Vulkanische Gase",contact:"Wasser am Magmagang",forms:"Schild- und Schichtvulkan"}},
   faults: {
     title: "Bruchmechanismen",
     variants: {
@@ -107,7 +107,7 @@ export const families = {
     },
   },
   core: {
-    title: "Seismische Wege durch die Erde",
+    title: "Erdbebenwellen im Erdinneren",
     variants: {
       rays: "P- und S-Schattenzonen",
       conversion: "Wellenumwandlung · SKS",

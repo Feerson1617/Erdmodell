@@ -104,12 +104,21 @@ export function mountStudy(stage: Stage, side: HTMLElement) {
   stage.syncUI = sync;
   sync();
 }
-export function presetOptions(select: HTMLSelectElement, id: string) {
-  if (select.dataset.seismic !== id) {
-    select.replaceChildren(
-      ...viewOptions(id).map(([v, n]) => new Option(n, v)),
-    );
-    select.dataset.seismic = id;
+export function presetOptions(select: HTMLSelectElement, id: string, related?: readonly string[]) {
+  const variants = viewOptions(id).filter(([value]) => value !== id);
+  select.replaceChildren(new Option("Darstellungen", ""));
+  if (variants.length) {
+    const group = document.createElement("optgroup");
+    group.label = "Ansichten zu diesem Thema";
+    group.append(...variants.map(([value, title]) => new Option(title, value)));
+    select.append(group);
   }
-  select.value = id;
+  if (related && !variants.some(([value]) => value === related[0])) {
+    const group = document.createElement("optgroup");
+    group.label = "Fachlicher Zusammenhang";
+    group.append(new Option(related[1], "related:" + related[0]));
+    select.append(group);
+  }
+  select.dataset.seismic = id;
+  select.dataset.related = related ? (variants.some(([value]) => value === related[0]) ? related[0] : "related:" + related[0]) : "";
 }

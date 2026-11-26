@@ -382,6 +382,7 @@ function setPresentation(value: boolean) {
   layoutRevision++;
   present = value;
   document.body.classList.toggle("present", value);
+  experience?.setPresentation(value);
   const toggle = $("present");
   toggle.setAttribute("aria-pressed", String(value));
   const label = value ? "Präsentation beenden" : "Präsentieren";
@@ -389,6 +390,7 @@ function setPresentation(value: boolean) {
   toggle.innerHTML = icon(value ? "minimize" : "maximize") + `<span>${label}</span>`;
   paint();
 }
+let experience: GeographicExperience | undefined;
 const pinObstacles = [document.querySelector<HTMLElement>(".tools")!, $("modelnote"),document.querySelector<HTMLElement>(".orientation")!];
 const layoutObserver = new ResizeObserver(()=>{layoutRevision++;});
 for (const el of [...pinObstacles, side,$("earth")]) layoutObserver.observe(el);
@@ -469,7 +471,8 @@ async function boot() {
   }
   const observation=new Observation(()=>observatory.subject);
   observatory=new Observatory(world,side,navigate);
-  const experience = friday ? undefined : new GeographicExperience(world,observatory,observation,navigate);
+  experience = friday ? undefined : new GeographicExperience(world,observatory,observation,navigate);
+  if (present) experience?.setPresentation(true);
   const baseView=()=>({
     mode:world.mode,site:world.region.id,style:world.style,labels,released:[...released],
     shell:{...fields(world.shell,["cut","selected","subdued"]),visible:[...world.shell.visible],opacity:[...world.shell.opacity],comparison:world.shell.expanded?"expanded" as const:world.shell.lithosphere?"lithosphere" as const:"reference" as const},
@@ -527,10 +530,14 @@ async function boot() {
       $("definition").querySelector<HTMLButtonElement>(":scope > button")?.click();
       return;
     }
+    if (e.key === "Escape" && !dialog.open && experience?.escape()) {
+      e.preventDefault();
+      return;
+    }
     if (
       dialog.open ||
-      e.target instanceof HTMLInputElement ||
-      e.target instanceof HTMLSelectElement ||
+      (e.key !== "Escape" && (e.target instanceof HTMLInputElement ||
+      e.target instanceof HTMLSelectElement)) ||
       e.altKey ||
       e.ctrlKey ||
       e.metaKey

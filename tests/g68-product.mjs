@@ -1,3 +1,4 @@
+import { chooseRelated, compareLake, switchPresentation } from "./geographic-controls.mjs";
 import utils from "playwright-core/lib/utilsBundle";
 const { jpegjs } = utils;
 import assert from "node:assert/strict";
@@ -38,7 +39,7 @@ export async function ubProduct(page, out, { app, film = false } = {}) {
     await arrived(id);
   };
   const related = async (id) => {
-    await page.click("#geo-related");
+    await chooseRelated(page);
     await arrived(id);
   };
   const time = (t) => page.locator("#geo-time").fill(String(t));
@@ -219,7 +220,7 @@ export async function ubProduct(page, out, { app, film = false } = {}) {
   await select("geo-preset", "seismic-waterColumn");
   await arrived("waterColumn");
   await time(0.68);
-  await page.click("#geo-related");
+  await chooseRelated(page);
   await settled();
   await time(0.89);
   await page.waitForFunction(()=>{const w=window.geoObservatory();return !w.flying&&w.rendered.nyos&&w.nyos.eventVisual.reliefAnalysis&&Math.abs(w.d-4.25)<.1;});
@@ -246,7 +247,7 @@ export async function ubProduct(page, out, { app, film = false } = {}) {
   await shot("G-Landschaften");
   report.globeOrigins=[];
   for(const [name,lat,lon] of [["Ulmen verorten",50.2106,6.9828],["Nyos verorten",6.43834,10.298663]]){
-    await page.getByRole("button",{name,exact:true}).click();await settled();
+    await page.selectOption("#geo-preset",{label:name});await settled();
     await page.waitForFunction(()=>window.geoObservatory().rendered.globe&&document.querySelector("#geo-crumb").textContent.includes("Verortung"));
     const center=await geo();assert.ok(Math.abs(center.lat-lat)<.05&&Math.abs(center.lon-lon)<.05&&center.globe);
     report.globeOrigins.push(center);await page.click("#geo-back");await arrived("landCompare");
@@ -254,7 +255,7 @@ export async function ubProduct(page, out, { app, film = false } = {}) {
   await related("lakeCompare");
   await shot("G-Massstab");
   for (const i of ["0", "1", "2"]) {
-    await page.selectOption(".lake-evidence select", i);
+    await compareLake(page, i);
     const value = await page.locator(".lake-evidence").innerText();
     if (i === "1")
       assert.match(
@@ -339,11 +340,11 @@ export async function ubProduct(page, out, { app, film = false } = {}) {
     if (w === 740 || w === 1920) await shot("G-Fenster-" + w);
   }
   await resize(1366, 768);
-  await page.click("#present");
+  await switchPresentation(page);
   await page.waitForFunction(() => document.body.classList.contains("present"));
   report.presentation = await diagram();
   await geometry(page);
-  await page.click("#present");
+  await switchPresentation(page);
   await page.waitForFunction(
     () => !document.body.classList.contains("present"),
   );
@@ -375,7 +376,7 @@ export async function ubProduct(page, out, { app, film = false } = {}) {
           await play(6);
           await study("waterColumn", true);
           await play(23);
-          await page.click("#geo-related");
+          await chooseRelated(page);
           await settled();
           await play(15);
         },
@@ -392,7 +393,7 @@ export async function ubProduct(page, out, { app, film = false } = {}) {
           await page.waitForTimeout(2200);
           await study("landCompare");
           await related("lakeCompare");
-          await page.selectOption(".lake-evidence select", "1");
+          await compareLake(page, "1");
           await page.waitForTimeout(2500);
         },
       ],

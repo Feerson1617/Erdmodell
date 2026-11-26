@@ -72,9 +72,6 @@
   width: 1em;
   height: 1em;
 }
-.geo-experience #geo-dock #geo-related {
-  font-size: 0.92em;
-}
 @media (max-width: 950px) {
   .seismic-caption {
     font-size: 12px;
@@ -110,7 +107,6 @@
 .lake-evidence select{grid-column:1/-1;justify-self:start;max-width:100%;font:inherit}.lake-evidence strong,.lake-evidence span{display:block}
 body[data-info-depth="observe"] .lake-evidence{display:none}
 
-.lake-origins{position:absolute;top:.5rem;left:.6rem;display:flex;gap:.45rem;pointer-events:auto}body[data-info-depth="observe"] .lake-origins{display:none}
 
 .column-legend {
   position: absolute;
@@ -123,7 +119,7 @@ body[data-info-depth="observe"] .lake-evidence{display:none}
   border-radius: .4rem;
   background: #14292ff5;
   font-size: clamp(12px,1.15vw,19px);
-  pointer-events: auto;
+  pointer-events: none;
 }
 .column-legend span { display: flex; gap: .4rem; align-items: center; }
 .column-legend .gas-scale {
@@ -143,3 +139,38 @@ body[data-info-depth="observe"] .column-legend { display: none; }
   }
   .seismic-figure:has(.column-legend) .seismic-caption { max-width: 53%; }
 }
+
+.seismic-label {
+  max-width: min(39vw, 440px);
+  text-wrap: pretty;
+  padding: .24em .5em;
+  background: #13292bf4;
+}
+.seismic-caption {
+  max-width: min(68%, 39em);
+  text-wrap: pretty;
+  background: #142829f2;
+}
+.present .seismic-label { font-size:clamp(13px,1.16vw,26px); }
+.present .seismic-caption { font-size:clamp(14px,1.08vw,23px); }
+.present :is(.column-legend,.lake-evidence) { font-size:clamp(12px,1vw,21px); }
+.seismic-figure:is([data-study="profiles"],[data-study="conductivity"],[data-study="inventory"]) .seismic-caption {
+  max-width: min(85%, 60em);
+}
+.seismic-figure:has(.column-legend) .seismic-caption { max-width: min(60%, 39em); }
+.view:has(.column-legend) #geo-clock {right:auto;left:12px;top:44px;}
+@media (max-width:920px) {
+  .seismic-figure:has(.column-legend) .seismic-caption {max-width:53%;}
+}
+.lake-evidence select {display:none;}
+#geo-legend .atlas-key {display:inline-block;margin:.12em .75em .12em 0;}
+.atlas-key i {
+  display:inline-block;
+  width:.63em;
+  height:.63em;
+  margin-inline-end:.34em;
+  background:var(--symbol);
+  border-radius:50%;
+}
+.atlas-key i.line {height:.2em;border-radius:0;vertical-align:middle;}
+.atlas-key i.volcano {border-radius:0;clip-path:polygon(50% 0,0 100%,100% 100%);}

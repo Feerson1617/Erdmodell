@@ -1,3 +1,4 @@
+import { chooseRelated, switchPresentation } from "./geographic-controls.mjs";
 import assert from "node:assert/strict";
 import { PNG } from "pngjs";
 import { join } from "node:path";
@@ -291,7 +292,7 @@ export async function corrections(page, out, { app, film = false } = {}) {
     await resize(900, 600);
     await check("Laufende-Groessenaenderung");
     await click("geo-play");
-    await click("present");
+    await switchPresentation(page);
     await page.waitForFunction(() =>
       document.body.classList.contains("present"),
     );
@@ -303,7 +304,7 @@ export async function corrections(page, out, { app, film = false } = {}) {
       );
     else assert.ok(await page.evaluate(() => !!document.fullscreenElement));
     await check("Vollbild");
-    await click("present");
+    await switchPresentation(page);
     await page.waitForFunction(
       () => !document.body.classList.contains("present"),
     );
@@ -407,7 +408,7 @@ export async function corrections(page, out, { app, film = false } = {}) {
     assert.ok(Math.abs(results.soil[0] - results.soil[1]) > 0.035);
     await check("Untergrundreaktion", true);
     await preset("distance");
-    await click("geo-related");
+    await chooseRelated(page);
     await page.waitForFunction(
       () => window.geoObservatory().observatory.theme === "risk",
     );
@@ -525,7 +526,7 @@ export async function corrections(page, out, { app, film = false } = {}) {
         await topic("park");
         await playThrough("park");
         await preset("break");
-        await click("geo-related");
+        await chooseRelated(page);
         await arrived("strike");
         await playThrough("strike");
       });
@@ -581,7 +582,7 @@ export async function corrections(page, out, { app, film = false } = {}) {
           "vt",
           "monitor",
         ]) {
-          await click("geo-related");
+          await chooseRelated(page);
           await arrived(id);
           await page.waitForTimeout(1700);
         }
