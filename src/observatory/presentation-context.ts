@@ -1,3 +1,4 @@
+import { faultCaption, nyosEventCaption, pipeCaption, studyCaption, tectonicCaption } from "./process-caption";
 import { scenarios } from "./time";
 import type { Observatory } from "./panel";
 import type { World } from "../world";
@@ -5,8 +6,8 @@ import type { ProcessId } from "./tectonic-process";
 import type { Layer } from "./research-data";
 
 const titles: Record<ProcessId, string> = {
-  ridge: "Mittelozeanischer Rücken – Bildung neuer ozeanischer Kruste",
-  rift: "Grabenbruch – Dehnung eines Kontinents",
+  ridge: "Neue Kruste am mittelozeanischen Rücken",
+  rift: "Dehnung am Grabenbruch",
   arc: "Subduktion – Entstehung eines Vulkanbogens",
   subduction: "Subduktion am Kontinentalrand",
   oblique: "Schräge Subduktion am Plattenrand",
@@ -31,7 +32,7 @@ export function modelTitle(o: Observatory, w: World) {
         : titles[s.models[Math.max(0, s.focus)]];
   if (t)
     return (t.displayedTime?.scenario ?? t.model) === "past"
-      ? "Kontinentaldrift – Veränderung der Kontinentalanordnung"
+      ? "Kontinentaldrift"
       : "Zukünftige Kontinentalanordnungen";
   if (o.mode === "map")
     return o.atlasState
@@ -60,17 +61,18 @@ export function modelTitle(o: Observatory, w: World) {
     globe: "Die Erde im Überblick",
     inside: "Struktur der Erde",
     plates: "Struktur und Bewegung der Erdplatten",
-    nyos: "Nyos-See – Schichtung und Gasfreisetzung",
+    nyos: w.nyosLesson.view === "event" ? "Limnische Eruption am Nyos"
+      : w.nyosLesson.view === "protection" && w.nyosLesson.measure === "pipe" ? "Kontrollierte Entgasung am Nyos" : "Nyos-See",
     place: "Lokale Landschaftsstruktur",
   }[w.mode];
 }
-export function timeCaption(o: Observatory, w: World) {
+export function timeCaption(o: Observatory, w: World, explain = true) {
   if(o.study){const id=o.study.view,t=o.study.time;
     if(id==="record")return "11. März 2011 · "+new Date(Date.UTC(2011,2,11,5,55)+Math.min(1259,t*1260)*1000).toISOString().slice(11,19)+" UTC";
     if(["observed","slab","shallowDeep"].includes(id))return "Katalogzeitraum 2019–2023";
     if(["rays","conversion"].includes(id))return "Laufzeit im Referenzmodell · "+Math.round(t*1600)+" s";
     if(["particles","surface","stations","sites","distance"].includes(id))return "Modellzeit · "+(t*28).toFixed(1).replace(".",",")+" s";
-    return "Modellphase · "+Math.round(t*100)+" %";
+    return explain ? studyCaption(id,t) : "";
   }
   const t = o.timeState,
     s = o.studioState;
@@ -95,9 +97,14 @@ export function timeCaption(o: Observatory, w: World) {
   if (s && !s.interior)
     return s.models.length === 1 && s.models[0] === "ridge"
       ? Math.round(s.time * 1200000).toLocaleString("de-DE") + " Modelljahre · beschleunigt"
-      : "Modellphase " + Math.round(s.time * 100) + " % · geologische Entwicklung, beschleunigt";
-  if (o.region?.spec.theme === "earthquake" || (w.mode === "nyos" && w.nyosLesson.view === "event"))
-    return "Kurzes Ereignis · Modellzeit";
+      : explain && (s.focus >= 0 || s.models.length === 1) ? tectonicCaption(s.models[Math.max(s.focus,0)],s.time) : "";
+  if (!explain) return "";
+  if (o.region?.ruptureAnalysis && o.region.spec.theme==="earthquake")
+    return faultCaption(o.region.progress,true);
+  if (!o.mode && w.mode==="nyos"){
+    if(w.nyosLesson.view==="event")return nyosEventCaption(w.nyosLesson.progress);
+    if(w.nyosLesson.view==="protection" && w.nyosLesson.measure==="pipe")return pipeCaption(w.nyosLesson.progress);
+  }
   return "";
 }
 const keys: Record<Layer, string> = {
@@ -150,4 +157,31 @@ export function mapLegend(o: Observatory, w: World) {
         : "Linien · modellierte Plattengrenzen (PB2002)"
       : "";
   return "";
+}
+
+const swatches: [RegExp, string, string?][] = [
+  [/^(Türkis|Tiefe · Petrol)/, "#6dd4c0", "line"], [/^Mintpfeile/, "#a5e5bc", "line"],
+  [/^Gelbe Pfeile/, "#f2cf69", "line"], [/^Gelbe Punkte/, "#ffe78d"],
+  [/^Korallenrote/, "#ff906e", "volcano"], [/^Hellorange/, "#ffba87", "line"],
+  [/^Gold/, "#f6cb6c"], [/^Sand/, "#d2b68c"], [/^Hellgrün/, "#adde97"],
+  [/^Rosa/, "#e8a6bf"], [/^Eisblau/, "#98cbe6"],
+];
+export function atlasLegendRows(host: HTMLElement, legend: string) {
+  if(host.dataset.keys===legend) return;
+  host.dataset.keys=legend;
+  const rows=legend.split("　|　").map(text=>{
+    const row=document.createElement("span");
+    row.className="atlas-key";
+    const match=swatches.find(([pattern])=>pattern.test(text));
+    if (match){
+      const icon=document.createElement("i");
+      icon.style.setProperty("--symbol",match[1]);
+      if(match[2])icon.className=match[2];
+      icon.setAttribute("aria-hidden","true");
+      row.append(icon);
+    }
+    row.append(text);
+    return row;
+  });
+  host.replaceChildren(...rows);
 }

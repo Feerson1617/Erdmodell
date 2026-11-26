@@ -1,3 +1,4 @@
+import { chooseRelated, compareLake } from "./geographic-controls.mjs";
 import assert from "node:assert/strict";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -69,7 +70,7 @@ export async function volcanicProduct(
   if (phase === "G67") await lakes();
   async function lakes() {
     const relate = async (id) => {
-      await page.click("#geo-related");
+      await chooseRelated(page);
       await arrived(id);
     };
     const nyos = async (id) => {
@@ -198,16 +199,16 @@ export async function volcanicProduct(
     await nyos("pipe");
     await time(0.82);
     await check("Nyos-Entgasung");
-    await page.click("#geo-related");
+    await chooseRelated(page);
     await arrived("lakeCompare");
-    await page.selectOption(".lake-evidence select", "0");
+    await compareLake(page, "0");
     await check("Seenvergleich");
-    await page.selectOption(".lake-evidence select", "1");
+    await compareLake(page, "1");
     assert.match(
       await page.locator(".lake-evidence").innerText(),
       /Für diese Darstellung liegen keine belastbaren Messdaten vor/,
     );
-    await page.selectOption(".lake-evidence select", "1");
+    await compareLake(page, "1");
     assert.match(await page.locator(".lake-evidence").innerText(), /15,6 bar/);
     report.routes.push("G");
     if (film) {
@@ -251,9 +252,9 @@ export async function volcanicProduct(
         await playback(25);
         await nyos("pipe");
         await playback(13);
-        await page.click("#geo-related");
+        await chooseRelated(page);
         await arrived("lakeCompare");
-        await page.selectOption(".lake-evidence select", "1");
+        await compareLake(page, "1");
         await page.waitForTimeout(2000);
       });
     }

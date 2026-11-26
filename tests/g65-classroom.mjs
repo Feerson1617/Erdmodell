@@ -1,3 +1,4 @@
+import { chooseRelated } from "./geographic-controls.mjs";
 import assert from "node:assert/strict";
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -72,7 +73,7 @@ export async function seismicClassroom(page, out, { app, film = false } = {}) {
   };
   const link = async (id) => {
     const t = performance.now();
-    await click("geo-related");
+    await chooseRelated(page);
     await arrive(id, t);
   };
   const phase = async (t) => {
@@ -167,7 +168,7 @@ export async function seismicClassroom(page, out, { app, film = false } = {}) {
       await preset("conversion");
       await phase(0.61);
       await photo("SKS");
-      await click("geo-related");
+      await chooseRelated(page);
       await settled();
       assert.equal(
         await page.evaluate(() => window.geoObservatory().mode),

@@ -1,3 +1,4 @@
+import { switchPresentation } from "./geographic-controls.mjs";
 import assert from "node:assert/strict";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -210,6 +211,7 @@ export async function exercise(page, out, { group = "all", film = false, board =
         await tools(true);
         await click("research-process");
         await waitStudio("arc");
+        if (!await page.locator("#geo-step").isVisible()) await tools(true);
         await click("geo-step");
         await click("geo-back");
         await page.waitForSelector("#research-process:visible");
@@ -404,7 +406,7 @@ export async function exercise(page, out, { group = "all", film = false, board =
           [2560, 1440],
         ]) {
           await page.setViewportSize({ width, height });
-          if (!(await page.evaluate(() => Boolean(document.fullscreenElement)))) await click("present");
+          if (!(await page.evaluate(() => Boolean(document.fullscreenElement)))) await switchPresentation(page);
           await page.waitForFunction(
             () => Boolean(document.fullscreenElement) && document.body.classList.contains("present"),
           );
@@ -433,7 +435,7 @@ export async function exercise(page, out, { group = "all", film = false, board =
             }
           log.boards.push(m);
           await shot("Smartboard-" + width);
-          await click("present");
+          await switchPresentation(page);
           await page.waitForFunction(() => !document.fullscreenElement);
         }
       }

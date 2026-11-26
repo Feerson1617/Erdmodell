@@ -35,8 +35,15 @@ export class Stage {
   scene = new T.Scene();
   camera = new T.OrthographicCamera(-8, 8, 4, -4, 0.1, 200);
   controls: OrbitControls;
-  visitPlace?: (id:string)=>void;
-  visitStudy?: (id: string, time?: number) => void;
+  diagram?: T.Mesh<T.PlaneGeometry, T.MeshBasicMaterial>;
+  private chartTextures?: [T.Texture, T.Texture];
+  protectDiagram(mesh: T.Mesh<T.PlaneGeometry, T.MeshBasicMaterial>, complete: T.Texture, anonymous: T.Texture) {
+    this.diagram = mesh;
+    this.chartTextures = [complete, anonymous];
+    mesh.material.map = complete;
+    this.controls.enableZoom = false;
+    this.camera.zoom = 1;
+  }
   pendingTextures = 0;
   painted = false;
   time = 0;
@@ -219,19 +226,24 @@ export class Stage {
       if (this.time === 1) this.playing = false;
     }
     this.controls.update();
-    const cv = this.gl.domElement,
+    const depth = document.body.dataset.infoDepth || "terms",
+      cv = this.gl.domElement,
       w = cv.clientWidth,
-      h = cv.clientHeight,
-      aspect = w / Math.max(h, 1);
-    const height = Math.max(this.halfHeight, this.halfWidth / aspect);
-    this.camera.left = -height * aspect;
-    this.camera.right = height * aspect;
-    this.camera.top = height;
-    this.camera.bottom = -height;
+      h = cv.clientHeight;
+    // Leave a dedicated strip beneath the diagram for the reading. The
+    // viewport stays full-size so annotations and axes share one projection.
+    const footer = this.diagram ? Math.min(h * .25, depth === "explain" ? 104 : 48) : 0;
+    const headroom = this.diagram ? 46 : 0;
+    const usable = Math.max(1, h - footer - headroom);
+    const unit = Math.max(this.halfHeight / usable, this.halfWidth / Math.max(w, 1));
+    const midpoint = unit * (headroom - footer);
+    this.camera.left = -unit * w;
+    this.camera.right = unit * w;
+    this.camera.top = unit * h + midpoint;
+    this.camera.bottom = -unit * h + midpoint;
     this.camera.updateProjectionMatrix();
     this.camera.updateMatrixWorld();
-    const depth = document.body.dataset.infoDepth || "terms",
-      key = [
+    const key = [
         w,
         h,
         cv.width,
@@ -241,6 +253,7 @@ export class Stage {
         document.body.dataset.reveal,
         document.body.hasAttribute("data-choose-object"),
         this.camera.zoom,
+        document.body.classList.contains("present"),
         ...this.camera.matrixWorld.elements,
         depth,
         this.time,
@@ -253,6 +266,8 @@ export class Stage {
         ? "animation"
         : "still";
     if (graphics.idle) return true;
+    if (this.diagram && this.chartTextures)
+      this.diagram.material.map = this.chartTextures[depth === "observe" ? 1 : 0];
     if (this.tick !== this.time) {
       this.updates.forEach((f) => f(this.time));
       this.tick = this.time;
@@ -278,15 +293,14 @@ export class Stage {
       const text = this.statement(this.time);
       this.caption.hidden = depth !== "explain" || !text;
       if (this.caption.textContent !== text) this.caption.textContent = text;
-      const used: { x: number; y: number; right: number; bottom: number }[] =
-        [];
-      if (!this.caption.hidden)
-        used.push({
-          x: this.caption.offsetLeft,
-          y: this.caption.offsetTop,
-          right: this.caption.offsetLeft + this.caption.offsetWidth,
-          bottom: this.caption.offsetTop + this.caption.offsetHeight,
-        });
+      const used: { x: number; y: number; right: number; bottom: number }[] = [];
+      const frame = cv.getBoundingClientRect();
+      for(const node of [this.caption, ...this.root.querySelectorAll<HTMLElement>(".column-legend,.lake-evidence"),
+        ...this.root.parentElement!.querySelectorAll<HTMLElement>("#geo-clock,#geo-legend,#geo-model-limit")]){
+        if(!node.offsetWidth) continue;
+        const r=node.getBoundingClientRect();
+        used.push({x:r.left-frame.left,y:r.top-frame.top,right:r.right-frame.left,bottom:r.bottom-frame.top});
+      }
       const pts = this.labels.map((l) => {
         const p = l.point.clone().project(this.camera);
         return { x: ((p.x + 1) * w) / 2, y: ((1 - p.y) * h) / 2 };
@@ -393,6 +407,12 @@ export class Stage {
     return true;
   }
   samplingGeometry() {
+    const diagram = this.diagram;
+    const chart = diagram && [[-1,-1],[1,1]].map(([x,y])=>{
+      const g=diagram.geometry.parameters;
+      const p=diagram.localToWorld(vec(x*g.width*.5,y*g.height*.5,0)).project(this.camera);
+      return [(p.x+1)/2,(1-p.y)/2];
+    });
     const find = (name: string) => this.scene.getObjectByName(name);
     const vector = (name: string) => find(name)?.position.toArray();
     const road = this.scene.getObjectByName("Straßenmarkierung") as
@@ -400,6 +420,7 @@ export class Stage {
       | undefined;
     const points = road?.geometry.getAttribute("position");
     return {
+      chart,
       markers: [vector("Material links"), vector("Material rechts")],
       sensors: [vector("Sensor 0"), vector("Sensor 1")],
       fronts: [vector("Front P"), vector("Front S")],
@@ -439,12 +460,13 @@ export class Stage {
     this.playing = s.playing;
     this.camera.position.fromArray(s.eye);
     this.controls.target.fromArray(s.target);
-    this.camera.zoom = s.zoom;
+    this.camera.zoom = this.diagram ? 1 : s.zoom;
     this.controls.update();
   }
   dispose() {
     this.disposed = true;
     this.controls.dispose();
+    this.chartTextures?.forEach(texture=>texture.dispose());
     this.root.remove();
     const mats = new Set<T.Material>(),
       geos = new Set<T.BufferGeometry>();

@@ -256,13 +256,6 @@ body.geo-experience.geo-tools-open:not(.observing) #desk #sidebar:not([hidden]) 
   line-height: 1.14;
 }
 
-.geo-experience.present #app > header .headTools :is(button, summary) {
-  height: 44px;
-  min-height: 44px;
-}
-.geo-experience.present #app > header .geo-selector select {
-  min-height: 42px;
-}
 .geo-experience.present #geo-dock :is(button, select, input[type="range"]) {
   min-height: 44px;
 }
@@ -395,4 +388,122 @@ body.geo-experience.geo-tools-open:not(.observing) #desk #sidebar:not([hidden]) 
 
 .geo-experience #geo-legend {
   z-index: 5;
+}
+
+.geo-location-controls { display: flex; gap: 6px; flex: none; }
+#geo-secondary { display: contents; }
+#geo-back { order: -4; }
+#geo-play { order: -3; }
+#geo-time { order: -2; }
+#geo-reset { order: -1; }
+#geo-controls { border: 1px solid #61776b; background: #233732; }
+#geo-presentation-tools {
+  position: absolute;
+  right: 12px;
+  bottom: 58px;
+  z-index: 12;
+  width: min(420px, calc(100vw - 24px));
+  max-height: calc(100vh - 120px);
+  overflow: auto;
+  padding: 13px;
+  display: grid;
+  gap: 12px;
+  background: #152924fc;
+  border: 1px solid #6d897d;
+  border-radius: 10px;
+  box-shadow: 0 6px 28px #06131085;
+}
+#geo-presentation-tools .geo-location-controls,
+#geo-presentation-tools #geo-secondary {
+  display: grid;
+  grid-template-columns: repeat(2,minmax(0,1fr));
+  gap: 7px;
+}
+#geo-presentation-tools .headTools { display: flex; margin: 0; gap: 6px; }
+#geo-presentation-tools :is(button,select) { min-height: 43px; }
+#geo-presentation-tools #geo-preset { grid-column: 1/-1; }
+#geo-presentation-tools #present { margin-left: auto; min-width: auto; padding-inline: .6rem; }
+#geo-presentation-tools #present span { display: inline; }
+body.geo-experience.present #app > header {
+  padding: .26rem clamp(10px,1.6vw,28px);
+  min-height: 0;
+  background: #142622;
+  border: 0;
+}
+.geo-experience.present #app > header:has(#geo-title[hidden]):has(#geo-crumb[hidden]) { display:none; }
+.geo-experience.present #app > header .brand {display:none;}
+.geo-experience.present .geo-heading {gap:.2rem; padding-block:.12rem; }
+.geo-experience.present #geo-title {font-size:clamp(16px,1.7vw,36px); font-weight:650; order:-1;}
+.geo-experience.present .geo-heading #geo-crumb {font-size:clamp(12px,.92vw,18px); color:#cbddd3;}
+.geo-experience.present #geo-dock {
+  gap: clamp(5px,.7vw,12px);
+  min-height: 43px;
+  padding: 2px 8px;
+  background: #142622;
+}
+.geo-experience.present #geo-dock button:not(#geo-controls) {
+  border-color: transparent;
+  background: #21352f;
+}
+.geo-experience.present #geo-dock #geo-time {width:clamp(120px,17vw,315px);}
+.geo-experience.present #geo-clock {
+  font-size:clamp(14px,1.24vw,26px);
+  background:#182b29ed;
+  border-color:#546d64;
+}
+.geo-experience.present :is(#geo-legend,#geo-model-limit) {font-size:clamp(12px,1.0vw,22px);}
+.geo-experience.present .annotations button,
+.geo-experience.present .annotations button:has(small),
+.geo-experience.present .studio-cell .studio-object {
+  font-size:clamp(14px,1.19vw,26px);
+  min-height: 0;
+}
+.geo-experience .annotations button[data-object="nyos-valley"] {
+  max-width: min(380px, 46vw);
+  border-color:#b5ac89;
+}
+.geo-experience.present .annotations button[data-object="nyos-valley"] {
+  max-width: min(455px, 51vw);
+}
+.geo-experience.present .annotations button[data-object="nyos-valley"] small {
+  font-size:clamp(14px,1.09vw,23px);
+  line-height:1.25;
+}
+.geo-experience #geo-model-limit {
+  top:8px;
+  bottom:auto;
+  max-width: min(56%, 880px);
+  z-index:4;
+}
+.geo-experience .view:has(.seismic-figure) #geo-model-limit {
+  color: #d9e5db;
+  padding: .3em .55em;
+}
+@media (max-width: 900px) {
+  .geo-experience.present #geo-title {font-size:clamp(16px,2vw,21px);}
+  .geo-experience.present #geo-dock :is(button,input[type="range"]) {font-size:14px; min-height:40px;}
+}
+
+#geo-advanced-playback {
+  display:none;
+  position:absolute;
+  right:12px;
+  bottom:10px;
+  z-index:7;
+}
+body.geo-tools-open #geo-advanced-playback:has(button:not([hidden])) {display:block;}
+body.geo-experience.geo-tools-open #desk:has(#geo-advanced-playback button:not([hidden])) #sidebar {max-height:calc(100% - 56px);}
+@media (max-height:700px) {
+  body.geo-experience.present #app > header {padding-block:2px;}
+  .geo-experience.present .geo-heading {padding-block:0;gap:1px;}
+  .geo-experience.present #geo-title {font-size:clamp(15px,1.65vw,21px);}
+  .geo-experience.present #geo-dock {min-height:38px;}
+  .geo-experience.present #geo-dock :is(button,input[type="range"]) {min-height:35px;}
+  #geo-presentation-tools {bottom:49px;}
+}
+.geo-experience .annotations button[data-object="nyos-valley"]:has(small) {
+  width:min(350px,44vw);
+}
+.geo-experience.present .annotations button[data-object="nyos-valley"]:has(small) {
+  width:min(420px,51vw);
 }

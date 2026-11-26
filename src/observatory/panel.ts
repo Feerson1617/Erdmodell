@@ -78,8 +78,6 @@ export class Observatory {
     }else{
       this.base(true);this.mode="seismic";this.world.nav.enabled=false;this.mark();
       this.study=createSeismic(this.world.gl,id,state);
-      this.study.visitPlace=this.visitPlace;
-      this.study.visitStudy=this.visitStudy;
       if (startTime !== undefined) this.study.time=startTime;
     }
     this.lessonView=id;this.draw();
