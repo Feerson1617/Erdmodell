@@ -507,3 +507,10 @@ body.geo-experience.geo-tools-open #desk:has(#geo-advanced-playback button:not([
 .geo-experience.present .annotations button[data-object="nyos-valley"]:has(small) {
   width:min(420px,51vw);
 }
+
+.geo-location-controls > select[hidden] {display:none!important}
+#content input[type=search] {width:100%; padding:.65rem; font:inherit}
+.geo-categories,.geo-results {display:flex;flex-wrap:wrap;gap:.45rem;margin-top:.8rem}
+.geo-categories button[aria-pressed=true] {background:#366457}
+.geo-results button {text-align:left}
+#geo-help {min-width:2.5rem}

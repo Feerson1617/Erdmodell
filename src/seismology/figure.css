@@ -174,3 +174,5 @@ body[data-info-depth="observe"] .column-legend { display: none; }
 }
 .atlas-key i.line {height:.2em;border-radius:0;vertical-align:middle;}
 .atlas-key i.volcano {border-radius:0;clip-path:polygon(50% 0,0 100%,100% 100%);}
+
+button.seismic-label:not([hidden]) {pointer-events:auto;cursor:pointer;color:inherit;text-align:left}

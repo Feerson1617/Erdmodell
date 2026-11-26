@@ -103,6 +103,13 @@ function showDefinition(item: Pick<Annotation,"name"|"text">) {
     area.insertBefore(questions,close);
     area.insertBefore(answer,close);
   }
+  if (document.body.classList.contains("geo-experience") && !side.offsetWidth) {
+    title.id = "dialogTitle";
+    content.replaceChildren(...Array.from(area.children));
+    close.remove();
+    if (!dialog.open) dialog.showModal();
+    return;
+  }
   area.hidden = false;
   side.scrollTop = 0;
   close.focus({preventScroll:true});

@@ -1,3 +1,4 @@
+import {termInfo} from "./exploration-menu";
 import { places, referenceFor, wilsonPlaces } from "./process-places";
 import { earthFeatures, processFeatures, readingOrder, type Feature } from "./process-labels";
 import * as T from "three";
@@ -628,6 +629,9 @@ export class TectonicStudio {
         tag.setAttribute("aria-label", e.anonymous ? "Objekt auswählen" : e.feature.name);
         tag.onclick = () => {
           if (claimObject(e.id, e.feature.explanation)) return;
+          if (!this.side?.offsetWidth && !e.anonymous) {
+            termInfo(e.feature.name,e.feature.explanation);
+          }
           const info = this.side?.querySelector<HTMLElement>("#studio-info");
           if (info) {
             info.hidden = false;

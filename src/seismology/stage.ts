@@ -1,3 +1,4 @@
+import { termInfo } from "../observatory/exploration-menu";
 import * as T from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { allowsLabel, claimObject } from "../observatory/reveal";
@@ -60,6 +61,7 @@ export class Stage {
     "svg",
   );
   private labels: Label[] = [];
+  private readonly pointerEvents=new AbortController();
   private updates: Update[] = [];
   private lastKey = "";
   private tick = -1;
@@ -110,6 +112,20 @@ export class Stage {
     fill.position.set(4, 5, -8);
     this.scene.add(fill);
     this.camera.position.set(6, 4.6, 15);
+    let press: {x:number;y:number;id:number}|undefined;
+    const events={signal:this.pointerEvents.signal};
+    canvas.addEventListener("pointerdown",e=>{press=e.isPrimary?{x:e.clientX,y:e.clientY,id:e.pointerId}:undefined;},events);
+    canvas.addEventListener("pointermove",e=>{if(press&&Math.hypot(e.clientX-press.x,e.clientY-press.y)>5)press=undefined;},events);
+    canvas.addEventListener("pointercancel",()=>{press=undefined;},events);
+    canvas.addEventListener("pointerup",e=>{
+      if(e.pointerId!==press?.id || !press)return;
+      press=undefined;
+      const rect=canvas.getBoundingClientRect(),ray=new T.Raycaster();
+      ray.setFromCamera(new T.Vector2(2*(e.clientX-rect.left)/rect.width-1,1-2*(e.clientY-rect.top)/rect.height),this.camera);
+      const hit=ray.intersectObjects(this.scene.children,true).find(h=>h.object.visible && h.object instanceof T.Mesh);
+      const label=hit && this.labels.find(l=>l.name===(hit.object.userData.term || hit.object.name) && l.show(this.time));
+      if(label?.detail && allowsLabel(label.id)) termInfo(label.name,label.detail);
+    },events);
     this.controls = new OrbitControls(this.camera, canvas);
     this.controls.enablePan = false;
     this.controls.minZoom = 0.7;
@@ -177,8 +193,11 @@ export class Stage {
     detail = "",
     show: (t: number) => boolean = () => true,
   ) {
-    const node = document.createElement("div");
+    const node = document.createElement(detail ? "button" : "div");
     node.className = "seismic-label";
+    if (detail) node.onclick = () => {
+      if (allowsLabel(id)) termInfo(name, detail);
+    };
     node.textContent = name;
     const leader = document.createElementNS(
       this.leaders.namespaceURI!,
@@ -464,6 +483,7 @@ export class Stage {
     this.controls.update();
   }
   dispose() {
+    this.pointerEvents.abort();
     this.disposed = true;
     this.controls.dispose();
     this.chartTextures?.forEach(texture=>texture.dispose());
