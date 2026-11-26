@@ -119,7 +119,13 @@ try {
           (id) => window.geoObservatory().observatory.lessonView === id,
           topic,
         );
+        const info = await page.locator("#geo-info").inputValue();
+        // Choose the variant with names enabled, then resume observing it.
+        if (info === "observe" || info === "neutral")
+          await page.selectOption("#geo-info", "terms");
         await page.selectOption("#geo-preset", k);
+        if (info === "observe" || info === "neutral")
+          await page.selectOption("#geo-info", info);
       }
       await page.waitForFunction(
         (k) =>
