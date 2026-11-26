@@ -1,6 +1,6 @@
 # Installation und Geräteprüfung
 
-Für G6.8.2 heißen die aktuellen Pakete `GeoRisiko-G6.8.2-macOS-arm64.dmg` und `GeoRisiko-G6.8.2-macOS-arm64-app.zip`. Die separate Datei `GeoRisiko-G6.8.2-Web-Test.html` öffnet sich nach dem Herunterladen direkt im Browser. Die App verwendet eine Ad-hoc-Signatur. Eine Schulgeräteverwaltung kann die lokale Ausführung einschränken.
+Für G6.9 heißen die aktuellen Pakete `GeoRisiko-G6.9-macOS-arm64.dmg` und `GeoRisiko-G6.9-macOS-arm64-app.zip`. Die separate Datei `GeoRisiko-G6.9-Web-Test.html` öffnet sich nach dem Herunterladen direkt im Browser. Die App verwendet eine Ad-hoc-Signatur. Eine Schulgeräteverwaltung kann die lokale Ausführung einschränken.
 
 ## Unterrichtsgerät
 
@@ -8,7 +8,7 @@ Die private Entwicklungsfassung benötigt Apple Silicon und mindestens macOS 13 
 
  Der Build und der Test dokumentieren die tatsächlich verwendete macOS-Version und die vom Bundle deklarierte Mindestversion im Installationsprotokoll. Für das Öffnen der fertigen App sind ein Mac mit kompatiblem macOS und ein funktionierender WebGL-2-Grafikpfad erforderlich. Electron, Programmcode, Geodaten, Schriften und Texturen sind im Bundle enthalten.
 
-1. Im erfolgreichen macOS-Lauf **GeoRisiko-G6.8.2-macOS-arm64.dmg** herunterladen. Die SHA-256-Prüfsummen der Installationsdateien und der HTML stehen im Abnahmepaket.
+1. Im erfolgreichen macOS-Lauf **GeoRisiko-G6.9-macOS-arm64.dmg** herunterladen. Die SHA-256-Prüfsummen der Installationsdateien und der HTML stehen im Abnahmepaket.
 2. Das DMG doppelklicken und **GeoRisiko** über die Verknüpfung in **Programme** ziehen. Das Volume auswerfen.
 3. **GeoRisiko** im Finder unter Programme doppelklicken. Beim App-ZIP das Archiv im Finder entpacken und die vollständige GeoRisiko.app nach Programme ziehen.
 4. Für das Smartboard den gewünschten Bildschirm in den macOS-Displays auswählen. Das Fenster auf diesen Bildschirm ziehen. „Präsentieren“ oder **Control–Command–F** schaltet die Präsentation um. Der grüne macOS-Fensterknopf funktioniert ebenfalls. **⌘M**, **⌘W**, **⌘O** und **⌘Q** dienen zum Minimieren, Schließen, Öffnen des Modellfensters und Beenden.

@@ -1,3 +1,4 @@
+import {termDetails} from "./term-details";
 import { termInfo } from "../observatory/exploration-menu";
 import * as T from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
@@ -124,7 +125,7 @@ export class Stage {
       ray.setFromCamera(new T.Vector2(2*(e.clientX-rect.left)/rect.width-1,1-2*(e.clientY-rect.top)/rect.height),this.camera);
       const hit=ray.intersectObjects(this.scene.children,true).find(h=>h.object.visible && h.object instanceof T.Mesh);
       const label=hit && this.labels.find(l=>l.name===(hit.object.userData.term || hit.object.name) && l.show(this.time));
-      if(label?.detail && allowsLabel(label.id)) termInfo(label.name,label.detail);
+      if(label && allowsLabel(label.id) && label.node.dataset.explanation) termInfo(label.name,label.node.dataset.explanation);
     },events);
     this.controls = new OrbitControls(this.camera, canvas);
     this.controls.enablePan = false;
@@ -193,10 +194,12 @@ export class Stage {
     detail = "",
     show: (t: number) => boolean = () => true,
   ) {
-    const node = document.createElement(detail ? "button" : "div");
+    const explanation = detail || termDetails[name];
+    const node = document.createElement(explanation ? "button" : "div");
     node.className = "seismic-label";
-    if (detail) node.onclick = () => {
-      if (allowsLabel(id)) termInfo(name, detail);
+    if(explanation) node.dataset.explanation=explanation;
+    if (explanation) node.onclick = () => {
+      if (allowsLabel(id)) termInfo(name, explanation);
     };
     node.textContent = name;
     const leader = document.createElementNS(

@@ -1,3 +1,4 @@
+import {selectControl} from "./lesson-navigation.mjs";
 import { switchPresentation } from "./geographic-controls.mjs";
 import assert from "node:assert/strict";
 import { mkdir, writeFile } from "node:fs/promises";
@@ -60,7 +61,7 @@ export async function exercise(page, out, { group = "all", film = false, board =
     log.actions.push(id);
   };
   const select = async (id, value) => {
-    await page.selectOption("#" + id, value);
+    await selectControl(page, "#" + id, value);
     log.actions.push(id + " = " + value);
   };
   const topic = (v) => select("geo-topic", v);

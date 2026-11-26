@@ -1,3 +1,5 @@
+import {geographicProduct} from "./g69-product.mjs";
+import {selectControl} from "./lesson-navigation.mjs";
 import {focusProduct} from "./g682-product.mjs";
 import {correctionProduct} from "./g681-product.mjs";
 import { ubProduct } from "./g68-product.mjs";
@@ -56,7 +58,7 @@ try {
   const page = native ? await app.firstWindow() : await ctx.newPage();
   if (!native)
     await page.goto(
-      pathToFileURL(resolve("artifacts/GeoRisiko-G6.8.2-Web-Test.html")).href,
+      pathToFileURL(resolve("artifacts/GeoRisiko-G6.9-Web-Test.html")).href,
     );
   if (native) {
     assert.match(page.url(), /^georisiko:/);
@@ -78,7 +80,7 @@ try {
     startMs: performance.now() - time,
     network,
   };
-  if (!["integritaet", "seismologie", "korrektur","vulkaneifel","ub","rc","focus"].includes(group))
+  if (!["geographie","integritaet", "seismologie", "korrektur","vulkaneifel","ub","rc","focus"].includes(group))
     await exercise(page, out, {
       group,
       film: false,
@@ -101,6 +103,7 @@ try {
   if (group==="all" || group==="ub") await ubProduct(page,out,{app,film:false});
   if (group==="all" || group==="rc") await correctionProduct(page,out,{app,film:false});
   if (group==="all" || group==="focus") await focusProduct(page,out,{app,film:process.env.G65_FILM==="1"});
+  if (group==="all" || group==="geographie") await geographicProduct(page,out,process.env.G65_FILM==="1");
   const targetMinutes=Number(process.env.G68_SOAK_MINUTES||15);
   if (process.argv.includes("--long")) {
     await app.evaluate(({ BrowserWindow }) =>
@@ -126,7 +129,7 @@ try {
     const set = async (k) => {
       const topic =
         { stations: "particles", sites: "moment", monitor: "vt", unsaturated: "waterColumn" }[k] || k;
-      await page.selectOption("#geo-topic", "seismic-" + topic);
+      await selectControl(page, "#geo-topic", "seismic-" + topic);
       if (topic !== k) {
         await page.waitForFunction(
           (id) => window.geoObservatory().observatory.lessonView === id,
@@ -135,10 +138,10 @@ try {
         const info = await page.locator("#geo-info").inputValue();
         // Choose the variant with names enabled, then resume observing it.
         if (info === "observe" || info === "neutral")
-          await page.selectOption("#geo-info", "terms");
-        await page.selectOption("#geo-preset", k);
+          await selectControl(page, "#geo-info", "terms");
+        await selectControl(page, "#geo-preset", k);
         if (info === "observe" || info === "neutral")
-          await page.selectOption("#geo-info", info);
+          await selectControl(page, "#geo-info", info);
       }
       await page.waitForFunction(
         (k) =>
@@ -163,15 +166,20 @@ try {
       const change = performance.now();
       await present(false);
       if (i % 4 === 0) {
-        await page.selectOption(
+        await selectControl(page,
           "#geo-place",
-          i % 8 === 0 ? "country-de" : "hawaii",
+          ["sylt","denmark","maunaloa","zaozan","alps","country-de"][Math.floor(i/4)%6],
         );
         await page.waitForFunction(
           () =>
             document.querySelector("#geo-crumb").dataset.settled === "true" &&
             !window.geoObservatory().flying,
         );
+      }
+      if(i%4===0){
+        await page.click("#geo-help");await page.click("#closeDialog");
+        await selectControl(page,"#geo-topic","inside");
+        await page.waitForFunction(()=>window.geoObservatory().mode==="inside");
       }
       await set(cycle[i % cycle.length]);
       const info = ["observe", "terms", "explain", "neutral"][Math.floor(i / 2) % 4];
@@ -180,7 +188,7 @@ try {
         await present(true);
         await page.click("#geo-controls");
       }
-      await page.selectOption("#geo-info", info);
+      await selectControl(page, "#geo-info", info);
       if (presentation) await page.click("#geo-controls");
       const changeMs = performance.now() - change;
       await page.locator("#geo-time").fill("0.05");

@@ -207,6 +207,7 @@ export class GeographicExperience {
     for (const [id, name] of Object.entries({
       globe: "Erde",
       global: "Globale Plattenprozesse",
+      system: "Plattengrenzen, Erdbeben und Vulkane",
       inside: "Schalenschnitt",
       layers: "Innerer Aufbau",
       plates: "Plattenatlas",
@@ -267,16 +268,31 @@ export class GeographicExperience {
     explorationMenu(this.locationControls, topics, list, () => {
       const observing = this.depth === "observe";
       const title = el("geo-title").textContent || modelTitle(this.obs,this.world);
+      const id=this.obs.lessonView ?? "";
+      const guidance: Record<string,string> = {
+        maars:"Den Querschnitt verfolgen und einzelne Phasen der Maarbildung anhalten.",
+        plumbing:"Oberfläche und idealisierten Untergrund miteinander vergleichen.",
+        faults:"Die beiden Gesteinsblöcke vor und nach der Bewegung betrachten.",
+        waves:"Die Ausbreitung der Welle mit der Bewegung an einem Ort vergleichen.",
+        core:"Die berechneten Wellenwege vom Erdbebenherd durch die Erde verfolgen.",
+        source:"Die Erdbebenquelle und die Erschütterung am jeweiligen Standort vergleichen.",
+        section:"Die Lage der erfassten Erdbebenherde im Tiefenprofil betrachten.",
+        magma:"Beobachten, an welcher Stelle des Modellkörpers sich das Signal verändert.",
+        lakes:"Auf die dargestellten Tiefen und die Unterschiede zwischen den Schichten achten.",
+        eifel:"Die Landschaft drehen und die Lage des Gewässers im Relief betrachten.",
+      };
       const description = observing ? "Die Ansicht ist zur eigenständigen Beobachtung geöffnet." :
         [title, this.orient(), el("geo-model-limit").hidden ? "" : el("geo-model-limit").textContent].filter(Boolean).join(" · ");
       const actions = [];
       const available = (id: string) => !el(id).hidden;
+      if (!observing && !this.obs.study?.diagram && guidance[familyOf(id) ?? ""]) actions.push(guidance[familyOf(id)!]);
       if (this.obs.study?.diagram) actions.push("Achsen, Messzeitpunkte und Werte vergleichen.");
       else actions.push("Durch Ziehen den Blickwinkel ändern.");
       if (available("geo-play")) actions.push("Animation abspielen, pausieren und die Modellzeit verändern.");
       if (available("geo-release")) actions.push("Mit Begriff freigeben einzelne Strukturen aufdecken.");
       if (this.world.mode === "inside" && !observing) actions.push("Schalen auswählen und ihre Eigenschaften betrachten.");
-      if (this.obs.atlasState && !observing) actions.push("Unter Werkzeuge die wissenschaftlichen Kartenebenen wählen.");
+      if (this.obs.atlasState && !observing) actions.push("Unter Werkzeuge Kartenebenen wählen. Standorte und katalogisierte Erdbeben lassen sich räumlich vergleichen. Sie zeigen keine zeitgleichen Ausbrüche.");
+      if (!this.obs.mode && this.world.mode==="globe") actions.push("Mit Mausrad oder zwei Fingern die Größe des Ausschnitts verändern.");
       const variants = el<HTMLSelectElement>("geo-preset");
       const related = !observing && available("geo-preset") ? Array.from(variants.options).filter(o=>o.value).slice(0,3).map(o=>o.text).join(", ") : "";
       return [description,actions.join(" "),related ? "Unter Darstellungen: "+related : "Weitere Themen und Orte über „Was lernen wir heute?“ öffnen."];
@@ -716,6 +732,7 @@ export class GeographicExperience {
     if (value === "global") await this.journey("*");
     else if (value === "layers") this.obs.openStudio({ interior: true });
     else if (value === "forces") this.obs.openConcept("forces");
+    else if (value === "system") await this.obs.openResearch({flat:false,layers:["bounds","quakes","volcano","trench"],magnitude:5.5,depth:750});
     else if (value === "research") {
       await this.obs.openResearch();
       if (epoch === this.epoch && !this.presentation) this.drawer(true);
@@ -1070,7 +1087,7 @@ export class GeographicExperience {
     if (!title.hidden)
       text(
         title,
-        this.atVent() ? viewpoints[this.focus.vent!][0] : this.obs.lessonView ? titleFor(this.obs.lessonView) : this.focus.lake ? lakeSites[this.focus.lake].name+" auf der Erde" : this.focus.country === "Kamerun" ? "Kamerun in Zentralafrika" : this.nationalBoundary.visible ? "Deutschland in Mitteleuropa" : globeOutsideSite ? "Die Erde im Überblick" : modelTitle(this.obs, this.world),
+        this.atVent() ? viewpoints[this.focus.vent!][0] : this.obs.lessonView ? titleFor(this.obs.lessonView) : this.focus.lake ? lakeSites[this.focus.lake].name+" auf der Erde" : this.focus.country === "Kamerun" ? "Kamerun in Zentralafrika" : this.nationalBoundary.visible ? "Deutschland in Mitteleuropa" : !this.obs.mode && this.world.mode==="globe" && !orientation.includes("Global") ? orientation.split(" · ")[0] : globeOutsideSite ? "Die Erde im Überblick" : modelTitle(this.obs, this.world),
       );
     for (const [id, value] of [
       ["geo-clock", !staticModel && (ready || !!this.obs.timeState?.displayedTime) && !anonymous && !globeOutsideSite ? timeCaption(this.obs, this.world, this.depth==="explain") : ""],

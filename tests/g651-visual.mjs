@@ -1,3 +1,4 @@
+import {selectControl} from "./lesson-navigation.mjs";
 import { chooseRelated, switchPresentation } from "./geographic-controls.mjs";
 import assert from "node:assert/strict";
 import { PNG } from "pngjs";
@@ -30,6 +31,7 @@ export async function geometry(page, { enforce = true, textured = false } = {}) 
     return Math.max(data[k], data[k + 1], data[k + 2]) > 98;
   };
   const cols=new Uint32Array(w), rows=new Uint32Array(h);
+  const bins=new Set();
   let count = 0,
     n = 0,
     amber = 0,
@@ -42,6 +44,7 @@ export async function geometry(page, { enforce = true, textured = false } = {}) 
         r = data[k],
         g = data[k + 1],
         b = data[k + 2];
+      bins.add((r>>4)*256+(g>>4)*16+(b>>4));
       if (r > 115 && r > 1.15 * b && g > b + 12) amber++;
       if (g > 115 && g > r + 12 && b > r + 12) green++;
     }
@@ -76,6 +79,7 @@ export async function geometry(page, { enforce = true, textured = false } = {}) 
     width: w,
     height: h,
     foreground: count / n,
+    paletteSize:bins.size,
     amber: amber / n,
     green: green / n,
     anchors,
@@ -105,7 +109,7 @@ export async function corrections(page, out, { app, film = false } = {}) {
   };
   const error = (e) => results.errors.push(String(e));
   page.on("pageerror", error);
-  const select = (id, v) => page.selectOption("#" + id, v),
+  const select = (id, v) => selectControl(page, "#" + id, v),
     click = (id) => page.click("#" + id);
   const wait = () =>
     page.evaluate(
@@ -433,7 +437,7 @@ export async function corrections(page, out, { app, film = false } = {}) {
     assert.deepEqual(await named(), []);
     await topic("particles");
     await click("saved-views");
-    await page.selectOption("#saved-list", { label: "G651 Begriffe" });
+    await selectControl(page, "#saved-list", { label: "G651 Begriffe" });
     await click("view-apply");
     await arrived("strike");
     await wait();
@@ -501,7 +505,7 @@ export async function corrections(page, out, { app, film = false } = {}) {
     await click("view-close");
     await topic("park");
     await click("saved-views");
-    await page.selectOption("#saved-list", { label: "G651 Vulkanmonitor" });
+    await selectControl(page, "#saved-list", { label: "G651 Vulkanmonitor" });
     await click("view-apply");
     await arrived("monitor");
     await check("Monitoring-wiederhergestellt", true);

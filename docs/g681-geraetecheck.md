@@ -12,3 +12,6 @@
 - [ ] Die wichtigsten Unterrichtsansichten direkt über **Thema**, **Ort** und die Favoriten aufrufen. [Bedienübersicht](g68-lehrkraft.md)
 
 Für die Ablage Datum, macOS-Version, externe Auflösung, Skalierung, Eingabegerät und Laufzeit notieren. In der App kann **Hilfe → Ausführliche Unterrichtsprüfung** ein lokales JSON-Protokoll sichern.
+
+- [ ] In G6.9 von Schleswig-Holstein nach Sylt und Dänemark zoomen. Bildübergänge, rote oder grüne Linien sowie die räumliche Einordnung am Smartboard prüfen.
+- [ ] An Mauna Loa und Zaōzan den Schnitt öffnen und Fachbegriffe antippen. Hilfe im Beobachtungsmodus und im Vollbild lesen.

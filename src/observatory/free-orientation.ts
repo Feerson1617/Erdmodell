@@ -29,7 +29,8 @@ export class FreeOrientation {
     if(!ray.ray.intersectSphere(sphere,hit))return "Erde · Global";
     const center=hit.clone(), lat=Math.asin(center.y/R)*180/Math.PI,lon=Math.atan2(center.x,center.z)*180/Math.PI;
     const points=[center]; let horizon=false;
-    for(const x of [-.9,.9])for(const y of [-.9,.9]){
+    for(const x of [-.9,0,.9])for(const y of [-.9,0,.9]){
+      if(x===0 && y===0)continue;
       ray.setFromCamera(new Vector2(x,y),camera);
       if(ray.ray.intersectSphere(sphere,hit))points.push(hit.clone());else horizon=true;
     }

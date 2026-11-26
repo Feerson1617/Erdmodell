@@ -144,6 +144,8 @@ export class TerrainLODManager {
           vec4 local=sampleLayer(layer2,ll,vec4(8.26,54.42,.62,.38),weights.z);
           vec4 cover=sampleLayer(layer1,ll,vec4(7.55,54.01,1.44,1.09),weights.y);
           vec4 region=sampleLayer(layer0,ll,vec4(4.,51.,9.,8.),weights.x);
+          // Lift shadows in the Sentinel mosaic for projection onto a classroom screen.
+          region.rgb=pow(region.rgb,vec3(mix(1.,.85,scientific)));
           vec3 globalColor=mix(texture2D(map,vMapUv).rgb,texture2D(daylight,vMapUv).rgb,scientific*.95);
           vec3 earth=cover.rgb;
           if(cover.a<.9999){

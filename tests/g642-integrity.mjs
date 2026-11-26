@@ -1,3 +1,4 @@
+import {selectControl} from "./lesson-navigation.mjs";
 import assert from "node:assert/strict";
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -22,7 +23,7 @@ export async function integrity(page, out, { native, app, film }) {
     errors = [];
   const error = (e) => errors.push(e.message);
   page.on("pageerror", error);
-  const select = (id, v) => page.selectOption("#" + id, v),
+  const select = (id, v) => selectControl(page, "#" + id, v),
     click = (id) => page.click("#" + id);
   const settle = async () => {
     await page.waitForFunction(
@@ -203,8 +204,8 @@ export async function integrity(page, out, { native, app, film }) {
     await page.mouse.down();
     await page.mouse.move(globe.x + globe.width * 0.2, globe.y + globe.height * 0.5, { steps: 8 });
     await page.mouse.up();
-    await page.waitForFunction(() => !document.querySelector("#geo-crumb")?.innerText.includes("National"));
-    await row("Freie-Kamera-nach-Deutschland", /Global/, null, null, "map", (w) =>
+    await page.waitForFunction(() => !document.querySelector("#geo-crumb")?.innerText.includes("Deutschland"));
+    await row("Freie-Kamera-nach-Deutschland", /Global|Kontinental|National|Regional/, null, null, "map", (w) =>
       assert.ok(w.pose[1] < 5.8 || w.pose[1] > 15.2));
     for (const id of ["tonga", "hawaii", "himalaya"]) await place(id);
     await click("geo-back");

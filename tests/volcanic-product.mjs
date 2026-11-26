@@ -1,3 +1,4 @@
+import {selectControl} from "./lesson-navigation.mjs";
 import { chooseRelated, compareLake } from "./geographic-controls.mjs";
 import assert from "node:assert/strict";
 import { mkdir, writeFile } from "node:fs/promises";
@@ -20,7 +21,7 @@ export async function volcanicProduct(
   };
   const errors = (e) => report.errors.push(String(e));
   page.on("pageerror", errors);
-  const select = (id, v) => page.selectOption("#" + id, v);
+  const select = (id, v) => selectControl(page, "#" + id, v);
   const arrived = (id) =>
     page.waitForFunction(
       (id) =>

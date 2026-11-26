@@ -1,3 +1,4 @@
+import {selectControl} from "./lesson-navigation.mjs";
 import assert from "node:assert/strict";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
@@ -38,7 +39,7 @@ const routes = [
 let favorite;
 try {
   for (const [i, file] of files.entries()) {
-    const version = i ? "G6.8.2" : "G6.8.1";
+    const version = i ? "G6.9" : "G6.8.2";
     const dir = join(
       process.env.G65_OUT || "test-results/G65/Vergleich",
       version,
@@ -69,12 +70,12 @@ try {
       startMs: performance.now() - start,
       commit: i
         ? process.env.TEST_COMMIT
-        : "cb63276b9a97c79a87671f8d132199180e035497",
+        : "d49322677c91979a9cf6b5cfe1bc7117182cafc0",
       samples: [],
       errors: [],
     };
     page.on("pageerror", (error) => report.errors.push(String(error)));
-    const select = (id, v) => page.selectOption("#" + id, v);
+    const select = (id, v) => selectControl(page, "#" + id, v);
     const waitReady = () =>
       page.waitForFunction(
         () =>
@@ -108,7 +109,7 @@ try {
     };
     if (i) {
       await page.click("#saved-views");
-      await page.selectOption("#saved-list", { label: "G6.8.1 GeoRisiko" });
+      await selectControl(page, "#saved-list", { label: "G6.8.2 GeoRisiko" });
       await page.click("#view-apply");
       await lesson("waterColumn");
       assert.ok(
@@ -123,7 +124,7 @@ try {
       await topic("seismic-waterColumn");
       await page.locator("#geo-time").fill("0.63");
       await page.click("#saved-views");
-      await page.fill("#view-name", "G6.8.1 GeoRisiko");
+      await page.fill("#view-name", "G6.8.2 GeoRisiko");
       await page.click("#view-save");
       await page.click("#view-close");
       favorite = await page.evaluate(() =>
