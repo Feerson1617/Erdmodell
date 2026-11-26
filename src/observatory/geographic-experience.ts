@@ -1,3 +1,5 @@
+import {FreeOrientation,viewpoints} from "./free-orientation";
+import { explorationMenu } from "./exploration-menu";
 import { towns } from "../seismology/ulmen-wittlich";
 import {seismicLegend} from "../seismology/legend";
 import { atlasViews,connections,familyOf,isView,titleFor } from "../seismology/catalog";
@@ -30,6 +32,7 @@ const lakeSites = {
   nyos: { lat:6.43834, lon:10.298663, name:"Nyos-See", region:"Afrika › Kamerun" }
 } as const;
 type MapFocus = {
+  vent?: "maunaloa" | "zaozan";
   lake?: keyof typeof lakeSites;
   place?: string;
   space?: string;
@@ -71,7 +74,7 @@ const studySources:Record<string,string>={
       maar:"Idealisiertes Entwicklungsmodell · vier beispielhafte Impulse",dryMaar:"Qualitatives Entwicklungsmodell",lakeMaar:"Qualitatives Entwicklungsmodell",
       waterColumn:"Qualitatives gasreiches Beispiel · Farben ohne Messwerte",pipeCut:"Qualitativer technischer Schnitt",dissolved:"Analysefarbe · qualitativer Gasgehalt",
       unsaturated:"Qualitatives Gegenbeispiel · keine Ortsmessung",mixCompare:"Qualitative Wasserbewegung · identische Beckengeometrie",
-      mixing:"Qualitatives Zirkulationsmodell",turnover:"Qualitatives Zirkulationsmodell",forms:"Idealisierte Vulkanformen",contactDetail:"Schematischer Porenraum · stark vergrößert"
+      mixing:"Qualitatives Zirkulationsmodell",turnover:"Qualitatives Zirkulationsmodell",forms:"DEM und Satellitenbild · Mauna Loa 72 km, Zaōzan 20 km · Relief ×2 · Untergrund idealisiert",contactDetail:"Schematischer Porenraum · stark vergrößert"
     };
 
 export class GeographicExperience {
@@ -162,6 +165,7 @@ export class GeographicExperience {
   private pinKey = "";
   private lastTick = 0;
   private depth = "terms";
+  private readonly freeOrientation=new FreeOrientation();
   private neutral = false;
   private presentation = false;
   private readonly presentationTools = document.createElement("section");
@@ -247,6 +251,8 @@ export class GeographicExperience {
       if (space === "Afrika") option(group, "country-cm", "Kamerun im Überblick");
       for (const [id, p] of Object.entries(places)) if (p.space === space) option(group, id, p.name);
     }
+    const references=groups(list,"Landschaften auf der Erde");
+    for(const [id,[name]] of Object.entries(viewpoints)) option(references,id,name);
     const germany = groups(list, "Europa › Deutschland");
     option(germany, "country-de", "Deutschland im Überblick");
     option(germany,"eifel","Vulkaneifel");option(germany,"ulmen","Ulmen · Ulmener Maar");
@@ -258,6 +264,23 @@ export class GeographicExperience {
       list.selectedIndex = 0;
       if (value) { this.closePresentationTools(); void this.map(value); }
     };
+    explorationMenu(this.locationControls, topics, list, () => {
+      const observing = this.depth === "observe";
+      const title = el("geo-title").textContent || modelTitle(this.obs,this.world);
+      const description = observing ? "Die Ansicht ist zur eigenständigen Beobachtung geöffnet." :
+        [title, this.orient(), el("geo-model-limit").hidden ? "" : el("geo-model-limit").textContent].filter(Boolean).join(" · ");
+      const actions = [];
+      const available = (id: string) => !el(id).hidden;
+      if (this.obs.study?.diagram) actions.push("Achsen, Messzeitpunkte und Werte vergleichen.");
+      else actions.push("Durch Ziehen den Blickwinkel ändern.");
+      if (available("geo-play")) actions.push("Animation abspielen, pausieren und die Modellzeit verändern.");
+      if (available("geo-release")) actions.push("Mit Begriff freigeben einzelne Strukturen aufdecken.");
+      if (this.world.mode === "inside" && !observing) actions.push("Schalen auswählen und ihre Eigenschaften betrachten.");
+      if (this.obs.atlasState && !observing) actions.push("Unter Werkzeuge die wissenschaftlichen Kartenebenen wählen.");
+      const variants = el<HTMLSelectElement>("geo-preset");
+      const related = !observing && available("geo-preset") ? Array.from(variants.options).filter(o=>o.value).slice(0,3).map(o=>o.text).join(", ") : "";
+      return [description,actions.join(" "),related ? "Unter Darstellungen: "+related : "Weitere Themen und Orte über „Was lernen wir heute?“ öffnen."];
+    });
     this.toolbar.id = "geo-dock";
     this.toolbar.innerHTML =
       '<button id="geo-back" hidden>Zurück</button><button id="geo-skip" hidden>Fahrt beenden</button><button id="geo-land" hidden>Regionales Relief</button><button id="geo-section" hidden>Schnitt öffnen</button><button id="geo-return" hidden>Auf der Erde zeigen</button><button id="geo-play" hidden>Abspielen</button><input id="geo-time" aria-label="Modellzeit" type="range" hidden><button id="geo-step" hidden>Schritt</button><button id="geo-reset" hidden>Zurücksetzen</button><select id="geo-preset" aria-label="Darstellungen" hidden></select><select id="geo-info" aria-label="Informationstiefe"><option value="observe">Beobachten</option><option value="neutral">Beobachten ohne Ort</option><option value="terms" selected>Fachbegriffe</option><option value="explain">Erklären</option></select><button id="geo-release" hidden>Begriff freigeben</button><button id="geo-clear" hidden>Freigabe löschen</button><button id="geo-tools" aria-expanded="false">Werkzeuge</button>';
@@ -311,7 +334,8 @@ export class GeographicExperience {
     el("geo-land").onclick = () => void this.relief();
     el("geo-section").onclick = () => {
       const p = this.currentPlace();
-      if (p) this.openSection(p.model);
+      if(this.atVent()) void this.topic(this.focus.vent==="maunaloa"?"seismic-lava":"seismic-zao");
+      else if (p) this.openSection(p.model);
     };
     el("geo-return").onclick = () => {
       if (this.focus.boundary && this.history.at(-1)?.scene.map.research) {
@@ -437,7 +461,7 @@ export class GeographicExperience {
     this.presentationButton.setAttribute("aria-expanded", String(open));
     if (open) {
       this.drawer(false);
-      el("geo-topic").focus();
+      el("geo-explore").focus();
     } else if (this.presentationTools.contains(document.activeElement)) {
       this.presentationButton.focus();
     }
@@ -577,6 +601,12 @@ export class GeographicExperience {
   }
   private async map(id: string) {
     this.remember();
+    if(viewpoints[id]){
+      const [,lat,lon,d]=viewpoints[id];
+      this.navigate("globe");this.focus=(id==="maunaloa"||id==="zaozan")?{vent:id}:{};
+      this.world.nav.fly({lat,lon,d,tilt:id==="maunaloa"||id==="zaozan"?43:0,bearing:0},false,1100);
+      return;
+    }
     if(id==="globe-ulmen"||id==="globe-nyos"){
       const lake=id==="globe-ulmen"?"ulmen":"nyos",epoch=this.epoch;
       this.focus={lake,overview:true};this.awaiting=true;
@@ -747,8 +777,15 @@ export class GeographicExperience {
       jump = this.source?.id === "g-year" ? 5 : 0.05;
     this.setTime(step ? Math.min(+bar.max, +bar.value + jump) : +bar.min);
   }
+  private atVent() {
+    if (!this.focus.vent || this.obs.mode || this.world.mode!=="globe") return false;
+    const [,lat,lon]=viewpoints[this.focus.vent],p=this.world.nav.pose;
+    return Math.abs(p.lat-lat)<.48 && Math.abs(p.lon-lon)<.55 && p.d<280;
+  }
   private orient() {
     const id=this.obs.lessonView;
+    if(this.atVent()) return (this.focus.vent==="maunaloa"?"Pazifik › Hawaii › Mauna Loa":"Asien › Japan › Zaōzan")+" · Regional";
+    if(id==="forms")return "Hawaii › Mauna Loa · Japan › Zaōzan";
     if(id&&this.obs.study){
       if(["ulmen","aerial","lakeCut","eifel"].includes(id))return id==="eifel"?"Europa › Deutschland › Vulkaneifel · regionales Relief":"Europa › Deutschland › Vulkaneifel › Ulmener Maar";
       if(id==="towns")return "Europa › Deutschland › Eifel und Wittlicher Senke · Regional";
@@ -834,7 +871,8 @@ export class GeographicExperience {
       return "Erde · Globusansicht";
     if (this.world.mode === "nyos") return "Afrika › Kamerun › Nyos-See · Lokal";
     if (this.world.mode === "place") return "Erde › Deutschland › " + this.world.region.name + " · Lokal";
-    return this.obs.atlasState ? "Erde · Global · Forschungsatlas" : "Erde · Global";
+    const extent=this.freeOrientation.describe(this.world.nav.camera);
+    return this.obs.atlasState ? extent+" · Forschungsatlas" : extent;
   }
   private drawMarkers() {
     const show = this.settled && this.focus.overview && this.obs.mode === "map" && !this.obs.atlasState,
@@ -932,6 +970,7 @@ export class GeographicExperience {
       r = this.obs.region;
     const state = [
       this.obs.subject,
+      this.atVent(),
       this.relatedStudy()?.[0],
       this.depth,
       this.history.length,
@@ -968,7 +1007,7 @@ export class GeographicExperience {
         back: this.history.length > 0,
         skip: !!this.world.nav.flight,
         land: !!p && (p.bathy || p.site) && this.focus.overview && this.settled,
-        section: !!p && !s && this.settled,
+        section: this.atVent() || !!p && !s && this.settled,
         return:
           (!!s && !s.interior) ||
           (!!r && r.spec.theme !== "forces" && r.spec.theme !== "lithosphere" && !this.currentPlace()),
@@ -1031,7 +1070,7 @@ export class GeographicExperience {
     if (!title.hidden)
       text(
         title,
-        this.obs.lessonView ? titleFor(this.obs.lessonView) : this.focus.lake ? lakeSites[this.focus.lake].name+" auf der Erde" : this.focus.country === "Kamerun" ? "Kamerun in Zentralafrika" : this.nationalBoundary.visible ? "Deutschland in Mitteleuropa" : globeOutsideSite ? "Die Erde im Überblick" : modelTitle(this.obs, this.world),
+        this.atVent() ? viewpoints[this.focus.vent!][0] : this.obs.lessonView ? titleFor(this.obs.lessonView) : this.focus.lake ? lakeSites[this.focus.lake].name+" auf der Erde" : this.focus.country === "Kamerun" ? "Kamerun in Zentralafrika" : this.nationalBoundary.visible ? "Deutschland in Mitteleuropa" : globeOutsideSite ? "Die Erde im Überblick" : modelTitle(this.obs, this.world),
       );
     for (const [id, value] of [
       ["geo-clock", !staticModel && (ready || !!this.obs.timeState?.displayedTime) && !anonymous && !globeOutsideSite ? timeCaption(this.obs, this.world, this.depth==="explain") : ""],

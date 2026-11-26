@@ -1,3 +1,4 @@
+import profiles from "./volcano-profiles.json";
 import * as T from "three";
 import { Stage, vec } from "./stage";
 import { surface } from "./geology";
@@ -7,29 +8,29 @@ export function volcanoForms(s: Stage) {
   s.halfHeight = 2.4;
   s.duration = 18;
   for (const shield of [true, false]) {
-    const cx = shield ? -2.65 : 2.75,
-      radius = shield ? 2.68 : 1.96,
-      height = shield ? 0.82 : 2.45;
-    const top = (r: number) =>
-      height *
-        (shield ? Math.max(0, 1 - r * r) ** 1.66 : Math.max(0, 1 - r) ** 1.08) -
-      0.16 * Math.exp((-r * r) / 0.006);
-    surface(
-      s,
-      74,
-      32,
-      (u, v) => {
-        const a = -u * Math.PI,
-          r = v;
-        return vec(
-          cx + Math.cos(a) * r * radius,
-          top(r) - 0.85 + 0.03 * Math.sin(a * 8) * Math.sin(v * Math.PI),
-          Math.sin(a) * r * radius,
-        );
-      },
-      shield ? 0x546e58 : 0x8a806b,
-      "Vulkanflanke",
-    );
+    const profile=profiles[shield ? 0 : 1], radius=shield ? 2.6 : 2.2, cx=shield?-2.7:2.6;
+    // One horizontal scale per labelled window. Elevations in both are doubled.
+    const heightAt=(index:number)=>Math.max(0,profile.heights[index])*.001*(radius*2/profile.width)*2;
+    const top=(x:number)=>heightAt(Math.max(0,Math.min(100,Math.round((x+1)*50))));
+    const height=top(0);
+    const positions:number[]=[],colors:number[]=[],indices:number[]=[];
+    for(let j=0;j<36;j++)for(let k=0;k<=100;k++){
+      const i=j*101+k;
+      positions.push(cx+(k/50-1)*radius,heightAt(i)-.85,-j*.02*radius);
+      const color=new T.Color(parseInt(profile.rgb.slice(i*6,i*6+6),16));
+      colors.push(color.r,color.g,color.b);
+      if(j<35&&k<100)indices.push(i,i+1,i+101,i+1,i+102,i+101);
+    }
+    const geo=new T.BufferGeometry();
+    geo.setAttribute("position",new T.Float32BufferAttribute(positions,3));
+    geo.setAttribute("color",new T.Float32BufferAttribute(colors,3));
+    geo.setIndex(indices);geo.computeVertexNormals();
+    const flank=s.mesh(geo,0xffffff,"Vulkanflanke");
+    (flank.material as T.MeshStandardMaterial).vertexColors=true;
+    flank.userData.term = shield ? "Schildvulkan" : "Schichtvulkan";
+    // The irregular contacts describe deposits in an idealised section.
+    const contact=(i:number,x:number)=>i/9 + .037*Math.sin(i*Math.PI/9)*Math.sin(x*5+i*.8);
+    s.box(cx,-1.07,-.34*radius,2*radius,.44,.68*radius,0x645a51,"Anstehendes Gestein");
     for (let i = 0; i < 9; i++) {
       surface(
         s,
@@ -39,7 +40,7 @@ export function volcanoForms(s: Stage) {
           const x = 2 * u - 1;
           return vec(
             cx + x * radius,
-            -0.85 + ((i + v) / 9) * top(Math.abs(x)),
+            -0.85 + T.MathUtils.lerp(contact(i,x),contact(i+1,x),v) * top(x),
             0.015,
           );
         },
@@ -53,8 +54,8 @@ export function volcanoForms(s: Stage) {
       vec(cx, height - 0.85, 0.04),
       shield ? "Schildvulkan" : "Schichtvulkan",
       shield
-        ? "Hawaii · breite flache Lavaflanken"
-        : "Japan · steilere Flanken, Lava und Lockermaterial",
+        ? "Meist breite, flach geneigte Flanken. Dünnflüssige Lava kann sich weit ausbreiten."
+        : "Wiederholte Ablagerungen von Lava und vulkanischem Auswurf bauen häufig steile Flanken auf.",
     );
     if (shield) {
       const flow = s.line(
@@ -90,6 +91,6 @@ export function volcanoForms(s: Stage) {
   }
   s.explain(
     () =>
-      "Idealisierte Schnitte · Wiederholte dünnflüssige Lavaströme bauen breite Flanken auf. Lava und lockerer Auswurf können steilere Schichtvulkane aufbauen. Die Eruptionsweise kann an einem Vulkan wechseln.",
+      "Mauna Loa · 72 km breit. Zaōzan · 20 km breit. Relief jeweils zweifach überhöht. Ablagerungen und Eruptionen sind idealisiert. Wiederholte dünnflüssige Lavaströme bauen breite Flanken auf. Lava und lockerer Auswurf können steilere Schichtvulkane aufbauen. Die Eruptionsweise kann an einem Vulkan wechseln.",
   );
 }
