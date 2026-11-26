@@ -399,7 +399,7 @@ export async function correctionProduct(page, out, { app, film = false } = {}) {
           await nyos("pipe");
           await select("geo-preset", "seismic-pipeCut");
           await arrived("pipeCut");
-          await play(3500);
+          await play(22500);
           await related("profiles");
           await page.waitForTimeout(1900);
           await related("inventory");
@@ -410,7 +410,7 @@ export async function correctionProduct(page, out, { app, film = false } = {}) {
       const result = await screencast(page, out, "G681-" + name, path, {
         fixedFrame: true,
       });
-      assert.ok(result.frames >= 35 && result.seconds >= 18);
+      assert.ok(result.frames >= 35 && result.seconds >= 18, JSON.stringify(result));
       report.movies.push(result);
     }
   }
