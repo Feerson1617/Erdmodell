@@ -111,3 +111,35 @@
 body[data-info-depth="observe"] .lake-evidence{display:none}
 
 .lake-origins{position:absolute;top:.5rem;left:.6rem;display:flex;gap:.45rem;pointer-events:auto}body[data-info-depth="observe"] .lake-origins{display:none}
+
+.column-legend {
+  position: absolute;
+  right: 1%;
+  top: .6rem;
+  display: grid;
+  gap: .28rem;
+  padding: .5rem .65rem;
+  border: 1px solid #6a8988;
+  border-radius: .4rem;
+  background: #14292ff5;
+  font-size: clamp(12px,1.15vw,19px);
+  pointer-events: auto;
+}
+.column-legend span { display: flex; gap: .4rem; align-items: center; }
+.column-legend .gas-scale {
+  width: 2.3em;
+  height: .65em;
+  border-radius: .2em;
+  background: linear-gradient(90deg,#326e92,#77588e);
+}
+.column-legend .water-key { color: #72faed; }
+.column-legend .bubble-key { color: #ffe5ab; }
+body[data-info-depth="observe"] .column-legend { display: none; }
+@media (max-width: 920px) {
+  .column-legend {
+    inset: auto .6rem .55rem auto;
+    background: #14292ffa;
+    padding: .45rem;
+  }
+  .seismic-figure:has(.column-legend) .seismic-caption { max-width: 53%; }
+}

@@ -83,8 +83,8 @@ export const regionViews: Record<
 };
 export const families = {
   maars:{title:"Maarentstehung",variants:{maar:"Maarentstehung · mit See",dryMaar:"Trockenmaar",contactDetail:"Kontakt im Porenraum"}},
-  eifel:{title:"Vulkaneifel",variants:{eifel:"Vulkaneifel · Übersicht",ulmen:"Ulmener Maar · Landschaft",aerial:"Ulmen · Draufsicht",lakeCut:"Idealisierter Seeschnitt"}},
-  lakes:{title:"Seen und Gase",variants:{mixing:"Chemisch stabile Tiefenschicht",turnover:"Jahreszeitliche Vollzirkulation",mixCompare:"Zwei Seetypen im Vergleich",dissolved:"Gelöstes Kohlendioxid",waterColumn:"Nyos · Rückkopplung in der Wassersäule",unsaturated:"Gegenbeispiel · untersättigt",pipeCut:"Nyos · Entgasungsrohr im Schnitt",profiles:"Nyos · historische CO₂-Profile",conductivity:"Nyos · historische Leitfähigkeit",landCompare:"Ulmen und Nyos · Landschaften",lakeCompare:"Ulmener Maar und Nyos"}},
+  eifel:{title:"Vulkaneifel",variants:{eifel:"Vulkaneifel · Übersicht",towns:"Ulmen und Wittlich · regionales Relief",wittlich:"Wittlich · Stadt und Relief",ulmen:"Ulmener Maar · Landschaft",aerial:"Ulmen · Draufsicht",lakeCut:"Idealisierter Seeschnitt"}},
+  lakes:{title:"Seen und Gase",variants:{mixing:"Chemisch stabile Tiefenschicht",turnover:"Jahreszeitliche Vollzirkulation",mixCompare:"Zwei Seetypen im Vergleich",dissolved:"Gelöstes Kohlendioxid",waterColumn:"Gasreiche Wassersäule",unsaturated:"Untersättigte Wassersäule",pipeCut:"Nyos · Entgasungsrohr im Schnitt",profiles:"Nyos · historische CO₂-Profile",conductivity:"Nyos · historische Leitfähigkeit",inventory:"Nyos · historischer CO₂-Gesamtvorrat",landCompare:"Ulmen und Nyos · Landschaften",lakeCompare:"Ulmener Maar und Nyos"}},
   plumbing: {title:"Magmatische Prozesse",variants:{storage:"Schmelze im festen Gestein",degassing:"Vulkanische Gase",contact:"Magma trifft Grundwasser",forms:"Schild- und Schichtvulkan"}},
   faults: {
     title: "Bruchmechanismen",
@@ -176,10 +176,10 @@ export function viewOptions(id: string): [string, string][] {
 }
 // The link is a reversible change of scale or model, accessible alongside free navigation.
 export const connections: Record<string, [string, string]> = {
-  contactDetail:["maar","Zum ganzen Maar"],mixCompare:["dissolved","Gaslösung"],waterColumn:["nyos-event","Zur Ausbreitung im Tal"],unsaturated:["waterColumn","Mit Rückkopplung vergleichen"],pipeCut:["profiles","Historische Tiefenprofile"],profiles:["lakeCompare","Seen vergleichen"],conductivity:["profiles","CO₂ zeigen"],landCompare:["lakeCompare","Gemeinsamer Maßstab"],forms:["shield","Hawaii auf der Erde"],
+  contactDetail:["maar","Zum ganzen Maar"],mixCompare:["dissolved","Gaslösung"],waterColumn:["nyos-event","Zur Ausbreitung im Tal"],unsaturated:["waterColumn","Mit Rückkopplung vergleichen"],pipeCut:["profiles","Historische Tiefenprofile"],profiles:["inventory","Gesamtvorrat zeigen"],inventory:["profiles","Tiefenprofile zeigen"],conductivity:["profiles","CO₂ zeigen"],landCompare:["lakeCompare","Gemeinsamer Maßstab"],forms:["shield","Hawaii auf der Erde"],
   shield:["lava","Lavafluss zeigen"], lava:["cone","Mit Japan vergleichen"],cone:["plume","Eruption zeigen"],plume:["storage","Magmatischer Untergrund"],
   storage:["degassing","Gastransport"],degassing:["monitor","Zur Überwachung"],contact:["maar","Zur Maarentstehung"],
-  eifel:["ulmen","Nach Ulmen"],ulmen:["lakeCut","See im Schnitt"],aerial:["lakeCut","See im Schnitt"],lakeCut:["maar","Entstehung zeigen"],maar:["ulmen","Zum heutigen Maar"],dryMaar:["eifel","Zur Vulkaneifel"],
+  eifel:["ulmen","Nach Ulmen"],towns:["ulmen","Zum Ulmener Maar"],wittlich:["towns","Beide Orte im Relief"],ulmen:["lakeCut","See im Schnitt"],aerial:["lakeCut","See im Schnitt"],lakeCut:["maar","Entstehung zeigen"],maar:["ulmen","Zum heutigen Maar"],dryMaar:["eifel","Zur Vulkaneifel"],
   turnover:["mixing","Mit stabilem Tiefenwasser vergleichen"],mixing:["dissolved","Gelöstes Gas"],dissolved:["nyos-event","Nyos 1986"],lakeCompare:["ulmen","Nach Ulmen"],
   distribution: ["boundaries", "Grenzen zeigen"],
   boundaries: ["park", "Parkfield öffnen"],

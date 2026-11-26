@@ -25,8 +25,8 @@ jobs:
           cache: npm
       - run: npm ci && npm run mac:build
       - run: bash scripts/mount-macos.sh
-      - run: python3 scripts/g52/product-check.py artifacts/macos/GeoRisiko-G6.8-macOS-arm64-app.zip artifacts/GeoRisiko-G6.8-Web-Test.html test-results/G65/Ressourcen.json
-      - run: node tests/g65-science.mjs test-results/G65/App && node tests/g67-science.mjs test-results/G65/App && node tests/g68-science.mjs test-results/G65/App
+      - run: python3 scripts/g52/product-check.py artifacts/macos/GeoRisiko-G6.8.1-macOS-arm64-app.zip artifacts/GeoRisiko-G6.8.1-Web-Test.html test-results/G65/Ressourcen.json
+      - run: node tests/g65-science.mjs test-results/G65/App && node tests/g67-science.mjs test-results/G65/App && node tests/g68-science.mjs test-results/G65/App && node tests/g681-science.mjs test-results/G65/App
       - run: node tests/g68-restart.mjs --installed
       - run: node tests/g65-product.mjs --installed --long
       - if: always()
@@ -41,17 +41,17 @@ jobs:
             !test-results/G65/App/Profil/**
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
-          path: artifacts/macos/GeoRisiko-G6.8-macOS-arm64.dmg
+          path: artifacts/macos/GeoRisiko-G6.8.1-macOS-arm64.dmg
           archive: false
           if-no-files-found: error
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
-          path: artifacts/macos/GeoRisiko-G6.8-macOS-arm64-app.zip
+          path: artifacts/macos/GeoRisiko-G6.8.1-macOS-arm64-app.zip
           archive: false
           if-no-files-found: error
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
-          path: artifacts/GeoRisiko-G6.8-Web-Test.html
+          path: artifacts/GeoRisiko-G6.8.1-Web-Test.html
           archive: false
           if-no-files-found: error
   classroom:
@@ -80,7 +80,7 @@ jobs:
           name: Offline-Pruefung
           path: test-results/G65/HTML/
   comparison:
-    name: Identischer Renderer · G6.7 und G6.8
+    name: Identischer Renderer · G6.8 und G6.8.1
     runs-on: macos-26
     timeout-minutes: 50
     steps:
@@ -94,14 +94,14 @@ jobs:
       - run: npm ci
       - uses: actions/checkout@v4
         with:
-          ref: 63648c1ece2a28ee4e236436ef2e00df23cdc4c0
+          ref: 02700cdbc363195b8c5b798c6f0b4ce97c3cab2c
           path: .scratch/g65
       - run: |
           npm --prefix .scratch/g65 run build && npm --prefix .scratch/g65 run standalone
           npm run build && npm run standalone
           npx playwright install chromium
       - run: |
-          node tests/g68-comparison.mjs .scratch/g65/artifacts/GeoRisiko-G6.7-Web-Test.html artifacts/GeoRisiko-G6.8-Web-Test.html
+          node tests/g681-comparison.mjs .scratch/g65/artifacts/GeoRisiko-G6.8-Web-Test.html artifacts/GeoRisiko-G6.8.1-Web-Test.html
       - if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -127,9 +127,9 @@ jobs:
         with:
           name: Direktvergleich
           path: test-results/Abnahme/Vergleich
-      - run: python3 scripts/g68/report.py
+      - run: python3 scripts/g681/report.py
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
-          path: artifacts/GeoRisiko-G6.8-Sichtpruefung.zip
+          path: artifacts/GeoRisiko-G6.8.1-Sichtpruefung.zip
           archive: false
           if-no-files-found: error

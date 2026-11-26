@@ -2,6 +2,7 @@ import * as T from "three";
 import { Stage, vec } from "./stage";
 import { lakeDimensions } from "./maar-profile";
 import profiles from "./nyos-profiles.json";
+import inventory from "./nyos-inventory.json";
 
 const missing = "Für diese Darstellung liegen keine belastbaren Messdaten vor.";
 const aspects = [
@@ -29,7 +30,7 @@ const aspects = [
   },
 ];
 export function compareBasins(s: Stage) {
-  s.controls.enableRotate=false;
+  s.controls.enableRotate = false;
   s.look(0, 0.2, 15, 0.2);
   s.halfWidth = 5.72;
   s.halfHeight = 2.6;
@@ -129,7 +130,7 @@ export function compareBasins(s: Stage) {
   s.animate((t) => show(t < 4 / 12 ? 0 : t < 9 / 12 ? 1 : 2));
 }
 export function historicalProfiles(s: Stage) {
-  s.controls.enableRotate=false;
+  s.controls.enableRotate = false;
   const conductivity = s.view === "conductivity",
     max = conductivity ? 1800 : 400;
   s.look(0, 0, 14, 0);
@@ -210,13 +211,134 @@ export function historicalProfiles(s: Stage) {
     true,
   );
   (graph.material as T.MeshBasicMaterial).map = tex;
-  const sample=profiles[0].samples[2];
-  s.label(vec((x(sample[conductivity?1:2])/1400-.5)*9.8,(.5-y(sample[0])/720)*5.04,.025),
-    "Tabellenwert", "November 1993 · 50 m Tiefe",()=>document.body.dataset.infoDepth==="observe");
+  const sample = profiles[0].samples[2];
+  s.label(
+    vec(
+      (x(sample[conductivity ? 1 : 2]) / 1400 - 0.5) * 9.8,
+      (0.5 - y(sample[0]) / 720) * 5.04,
+      0.025,
+    ),
+    "Tabellenwert",
+    "November 1993 · 50 m Tiefe",
+    () => document.body.dataset.infoDepth === "observe",
+  );
 
   s.explain(() =>
     conductivity
       ? "Leitfähigkeit beschreibt gelöste Ionen. Die beiden Jahre zeigen eigene Messreihen."
       : "1993 vor und 2006 während der Entgasung. Tabelle 3 enthält Messungen und aus Leitfähigkeit abgeleitete CO₂-Werte. Keine vergleichbare Ulmener CO₂-Kurve im Modell.",
+  );
+}
+
+export function historicalInventory(s: Stage) {
+  s.controls.enableRotate = false;
+  s.look(0, 0, 14, 0);
+  s.halfWidth = 5.2;
+  s.halfHeight = 2.8;
+  const canvas = document.createElement("canvas");
+  canvas.width = 1400;
+  canvas.height = 685;
+  const ctx = canvas.getContext("2d")!;
+  const x = (year: number) => 125 + ((year - 1986) / 20.6) * 1210;
+  const y = (total: number) => 520 - (total / 16) * 387;
+  ctx.fillStyle = "#183136";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = "#f3f3da";
+  ctx.font = "bold 42px system-ui";
+  ctx.fillText("Geschätzter CO₂-Vorrat des ganzen Sees", 45, 58);
+  ctx.font = "32px system-ui";
+  ctx.fillText("Milliarden Mol", 45, 109);
+
+  ctx.lineWidth = 2;
+  for (const total of [0, 4, 8, 12, 16]) {
+    ctx.fillStyle = "#e2e5d7";
+    ctx.textAlign = "right";
+    ctx.fillText(String(total), 105, y(total) + 10);
+    ctx.strokeStyle = total === 0 ? "#b1c1ba" : "#526b6d";
+    ctx.beginPath();
+    ctx.moveTo(x(1986), y(total));
+    ctx.lineTo(x(2006.6), y(total));
+    ctx.stroke();
+  }
+  ctx.textAlign = "center";
+  for (const year of [1986, 1990, 1994, 1998, 2002, 2006])
+    ctx.fillText(String(year), x(year), 565);
+  // The January cast and the launch both date to January 2001. Separate
+  // the date marker slightly in the display so that the cast remains visible.
+  const launch = x(2001 + 0.07);
+  ctx.setLineDash([9, 7]);
+  ctx.strokeStyle = "#f0c68c";
+  ctx.beginPath();
+  ctx.moveTo(launch, 125);
+  ctx.lineTo(launch, 520);
+  ctx.stroke();
+  ctx.fillStyle = "#f0c68c";
+  ctx.textAlign = "right";
+  ctx.fillText("2001 · Entgasung beginnt", launch - 12, 248);
+
+  ctx.strokeStyle = "#9de2df";
+  ctx.lineWidth = 3;
+  ctx.setLineDash([8, 7]);
+  ctx.beginPath();
+  inventory.forEach(({ year, month, total }, i) => {
+    const xp = x(year + (month - 1) / 12);
+    if (i === 0) ctx.moveTo(xp, y(total));
+    else ctx.lineTo(xp, y(total));
+  });
+  ctx.stroke();
+  ctx.setLineDash([]);
+  for (const { year, month, total, uncertainty } of inventory) {
+    const xp = x(year + (month - 1) / 12);
+    ctx.strokeStyle = "#a0c7c4";
+    ctx.beginPath();
+    ctx.moveTo(xp - 6, y(total + uncertainty));
+    ctx.lineTo(xp + 6, y(total + uncertainty));
+    ctx.moveTo(xp, y(total + uncertainty));
+    ctx.lineTo(xp, y(total - uncertainty));
+    ctx.moveTo(xp - 6, y(total - uncertainty));
+    ctx.lineTo(xp + 6, y(total - uncertainty));
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(xp, y(total), 8, 0, 2 * Math.PI);
+    ctx.fillStyle = "#beeeea";
+    ctx.fill();
+  }
+  ctx.textAlign = "left";
+  ctx.fillStyle = "#e2e5d7";
+  ctx.fillText(
+    "● Schätzwert mit Unsicherheit   ·   gestrichelt: Verbindung der Proben",
+    55,
+    621,
+  );
+  ctx.font = "29px system-ui";
+  ctx.fillText(
+    "Kusakabe et al. 2008, Tabelle 4 · historische Angaben bis 2006",
+    55,
+    663,
+  );
+  const texture = new T.CanvasTexture(canvas);
+  texture.colorSpace = T.SRGBColorSpace;
+  const panel = s.mesh(
+    new T.PlaneGeometry(10, 685 / 140),
+    0xffffff,
+    "Publiziertes historisches CO₂-Inventar",
+    true,
+  );
+  panel.scale.y = 0.88;
+  panel.position.y = 0.37;
+  (panel.material as T.MeshBasicMaterial).map = texture;
+  s.label(
+    vec(
+      (x(2006) / 1400 - 0.5) * 10,
+      (((0.5 - y(11.83) / 685) * 685) / 140) * 0.88 + 0.37,
+      0.05,
+    ),
+    "Januar 2006",
+    "11,83 ± 0,43 Milliarden Mol",
+    () => document.body.dataset.infoDepth === "observe",
+  );
+  s.explain(
+    () =>
+      "Entnahme und natürliche Zufuhr verändern den gesamten Vorrat. Einzelne Tiefenbereiche können gasreich bleiben. Die Datenreihe endet 2006.",
   );
 }

@@ -10,9 +10,9 @@ const native = process.argv.includes("--installed"),
 await mkdir(out, { recursive: true });
 const profile = await mkdtemp(join(tmpdir(), "georisiko-neustart-"));
 const file = pathToFileURL(
-  resolve("artifacts/GeoRisiko-G6.8-Web-Test.html"),
+  resolve("artifacts/GeoRisiko-G6.8.1-Web-Test.html"),
 ).href;
-const savedName = "G6.8 Rohrschnitt";
+const savedName = "G6.8.1 Wassersäule";
 let first, restored, mask;
 for (let i = 0; i < 2; i++) {
   const app = native
@@ -38,9 +38,9 @@ for (let i = 0; i < 2; i++) {
     if (!app) await page.goto(file);
     await page.waitForFunction(() => window.geoObservatory?.().ready);
     if (!i) {
-      await page.selectOption("#geo-topic", "seismic-pipeCut");
+      await page.selectOption("#geo-topic", "seismic-waterColumn");
       await page.waitForFunction(
-        () => window.geoObservatory().observatory.lessonView === "pipeCut",
+        () => window.geoObservatory().observatory.lessonView === "waterColumn",
       );
       await page.locator("#geo-time").fill("0.71");
       first = await page.evaluate(
@@ -56,7 +56,7 @@ for (let i = 0; i < 2; i++) {
       await page.click("#view-apply");
       await page.waitForFunction(
         () =>
-          window.geoObservatory().observatory.lessonView === "pipeCut" &&
+          window.geoObservatory().observatory.lessonView === "waterColumn" &&
           Math.abs(window.geoObservatory().observatory.study.time - 0.71) <
             0.001,
       );

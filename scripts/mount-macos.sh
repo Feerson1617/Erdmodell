@@ -11,14 +11,14 @@ uname -a
 sw_vers
 system_profiler SPHardwareDataType SPDisplaysDataType | sed -E '/Serial Number|Hardware UUID|Provisioning UDID/d'
 test "$(uname -m)" = "arm64"
-hdiutil verify "$product/GeoRisiko-G6.8-macOS-arm64.dmg"
-hdiutil attach -readonly -nobrowse -mountpoint "$mount_dir" "$product/GeoRisiko-G6.8-macOS-arm64.dmg"
+hdiutil verify "$product/GeoRisiko-G6.8.1-macOS-arm64.dmg"
+hdiutil attach -readonly -nobrowse -mountpoint "$mount_dir" "$product/GeoRisiko-G6.8.1-macOS-arm64.dmg"
 trap 'hdiutil detach "$mount_dir" >/dev/null 2>&1 || true' EXIT
 test "$(readlink "$mount_dir/Applications")" = "/Applications"
 ditto "$mount_dir/GeoRisiko.app" "$app"
 hdiutil detach "$mount_dir"
 trap - EXIT
-ditto -x -k "$product/GeoRisiko-G6.8-macOS-arm64-app.zip" "$installed/zip"
+ditto -x -k "$product/GeoRisiko-G6.8.1-macOS-arm64-app.zip" "$installed/zip"
 for bundle in "$app" "$installed/zip/GeoRisiko.app"; do
   /usr/libexec/PlistBuddy -c "Print :LSMinimumSystemVersion" "$bundle/Contents/Info.plist"
   test -s "$bundle/Contents/Resources/app.asar"
@@ -37,7 +37,7 @@ if spctl --assess --type execute --verbose=4 "$quarantined"; then
 else
   echo "Gatekeeper-Bewertung der Quarantänekopie auf diesem Runner: abgelehnt (Status $?)."
 fi
-shasum -a 256 "$product/GeoRisiko-G6.8-macOS-arm64.dmg" "$product/GeoRisiko-G6.8-macOS-arm64-app.zip" artifacts/GeoRisiko-G6.8-Web-Test.html > "$out/SHA256.txt"
+shasum -a 256 "$product/GeoRisiko-G6.8.1-macOS-arm64.dmg" "$product/GeoRisiko-G6.8.1-macOS-arm64-app.zip" artifacts/GeoRisiko-G6.8.1-Web-Test.html > "$out/SHA256.txt"
 # LaunchServices uses the same launch mechanism as Finder. Quit gracefully before the instrumented run.
 open -n "$app"
 swift scripts/check-launch.swift "$app"

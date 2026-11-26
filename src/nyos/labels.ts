@@ -28,7 +28,7 @@ export function nyosLabels(world:World,width:number,height:number):Annotation[]{
     }
     if(o.name==="Nyos-Gasstrom"&&o instanceof T.Mesh){
       const row=Math.round(48*(.06+.32*T.MathUtils.smoothstep(lesson.progress,.68,.92)));
-      mark("valley","Bodennaher Gasstrom","CO₂-reiche Luft kann in Mulden und Täler fließen. Farbe, Ausdehnung und Weg sind schematisch.",o,new T.Vector3().fromBufferAttribute(o.geometry.attributes.position,row*21+10));
+      mark("valley","Bodennaher Gasstrom","Hohe CO₂-Konzentrationen beeinträchtigen die Atmung und können lebensgefährlich sein, zugleich kann der Sauerstoffanteil sinken. CO₂ ist farblos. CO₂-reiche Luft kann sich in Mulden sammeln. Gelände, Wind und Durchmischung beeinflussen ihre Ausbreitung. Die Ockerfarbe zeigt den Vorgang schematisch.",o,new T.Vector3().fromBufferAttribute(o.geometry.attributes.position,row*21+10));
     }
   });
   return out;

@@ -1,5 +1,9 @@
 # GeoRisiko für Mac
 
+## G6.8.1 · Release Candidate für den Unterrichtsbesuch
+
+Die beiden Wassersäulen zeigen unterschiedliche qualitative CO₂-Ausgangszustände bei derselben anfänglichen Anhebung. Unter **Ort → Ulmen und Wittlich · Region** sind beide Ortsmitten und das Maar gemeinsam verortet. Die historischen Nyos-Profile führen zum geschätzten Gesamtvorrat des Sees. [Bedienübersicht](docs/g68-lehrkraft.md) · [Fachprüfung und Inventardaten](docs/g681-korrekturen.md) · [Gerätecheck vor Ort](docs/g681-geraetecheck.md)
+
 ## G6.8 · Maare und Seen im Unterricht
 
 Für den Unterrichtsbesuch am 15. Dezember 2026 stehen in **Thema → Maare und Seen** die Landschaften, Prozessschnitte und historischen Tiefenprofile bereit. Der Maßstabsvergleich zeigt beide Becken mit gleichen Metern in Breite und Tiefe. Unter **Ort → Europa → Deutschland** beginnt die Verortung der Vulkaneifel. [Kurzübersicht für Lehrkräfte](docs/g68-lehrkraft.md) · [Daten Ulmen und Nyos](docs/g68-datengrundlage.md) · [Fachprüfung und Korrekturen](docs/g68-fachpruefung.md)
@@ -42,7 +46,7 @@ G6.1 ergänzt die Regionalübersicht durch begehbar wirkende Nahansichten in Met
 
 Voraussetzung ist ein Mac mit Apple Silicon und macOS 13 Ventura oder neuer.
 
-Das Artefakt **GeoRisiko-G6.8-macOS-arm64.dmg** aus dem erfolgreichen macOS-Lauf laden, öffnen und **GeoRisiko** auf **Programme** ziehen. Das Volume auswerfen und die App in Programme doppelklicken. Die private Entwicklungsfassung ist ad hoc signiert. Beim ersten Öffnen kann macOS eine Bestätigung verlangen. Das App-ZIP ist eine alternative Auslieferung für Apple Silicon. [Installation, macOS-Freigabe und Geräteprüfung](docs/mac-installation.md) · [Mac-Builds](https://github.com/Feerson1617/Erdmodell/actions/workflows/macos.yml)
+Das Artefakt **GeoRisiko-G6.8.1-macOS-arm64.dmg** aus dem erfolgreichen macOS-Lauf laden, öffnen und **GeoRisiko** auf **Programme** ziehen. Das Volume auswerfen und die App in Programme doppelklicken. Die private Entwicklungsfassung ist ad hoc signiert. Beim ersten Öffnen kann macOS eine Bestätigung verlangen. Das App-ZIP ist eine alternative Auslieferung für Apple Silicon. [Installation, macOS-Freigabe und Geräteprüfung](docs/mac-installation.md) · [Mac-Builds](https://github.com/Feerson1617/Erdmodell/actions/workflows/macos.yml)
 
 „Präsentieren“ und **⌃⌘F** wechseln ins Vollbild. Zum Prüfen des eigenen Geräts die gewünschte Szene öffnen und im Menü **Hilfe → Kurzprüfung oder Ausführliche Unterrichtsprüfung** wählen. Das Ergebnis lässt sich als JSON sichern.
 
@@ -67,6 +71,6 @@ npm ci
 npm run mac:build
 ```
 
-Die App, das DMG und das alternative App-ZIP liegen unter `artifacts/macos/`. `artifacts/GeoRisiko-G6.8-Web-Test.html` startet auch einzeln per Doppelklick. Zur Entwicklung dienen `npm run dev` und `npm run build`. [Architektur, Funktionsbestand und weitere Phasen](docs/mac-architektur.md) · [Fachanhang zum Plattenatlas](docs/plattenatlas-g4.3.1.md)
+Die App, das DMG und das alternative App-ZIP liegen unter `artifacts/macos/`. `artifacts/GeoRisiko-G6.8.1-Web-Test.html` startet auch einzeln per Doppelklick. Zur Entwicklung dienen `npm run dev` und `npm run build`. [Architektur, Funktionsbestand und weitere Phasen](docs/mac-architektur.md) · [Fachanhang zum Plattenatlas](docs/plattenatlas-g4.3.1.md)
 
 Die frühere G4.3.1-Unterrichtsausgabe mit ihren vollständigen Buildwegen liegt im gesicherten Ausgangscommit. [Archivstand](https://github.com/Feerson1617/Erdmodell/tree/0e74d47e683fe8eccbc9563d51999b696a1ef180)

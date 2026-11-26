@@ -1,3 +1,4 @@
+import {correctionProduct} from "./g681-product.mjs";
 import { ubProduct } from "./g68-product.mjs";
 import { corrections, geometry } from "./g651-visual.mjs";
 import { seismicClassroom } from "./g65-classroom.mjs";
@@ -53,7 +54,7 @@ try {
   const page = native ? await app.firstWindow() : await ctx.newPage();
   if (!native)
     await page.goto(
-      pathToFileURL(resolve("artifacts/GeoRisiko-G6.8-Web-Test.html")).href,
+      pathToFileURL(resolve("artifacts/GeoRisiko-G6.8.1-Web-Test.html")).href,
     );
   if (native) {
     assert.match(page.url(), /^georisiko:/);
@@ -75,7 +76,7 @@ try {
     startMs: performance.now() - time,
     network,
   };
-  if (!["integritaet", "seismologie", "korrektur","vulkaneifel","ub"].includes(group))
+  if (!["integritaet", "seismologie", "korrektur","vulkaneifel","ub","rc"].includes(group))
     await exercise(page, out, {
       group,
       film: false,
@@ -95,7 +96,8 @@ try {
   if (group === "all" || group === "korrektur")
     await corrections(page, out, { app, film: false });
   if(group==="all"||group==="vulkaneifel")await volcanicProduct(page,out,{app,phase:"G67",film:false});
-  if (group==="all" || group==="ub") await ubProduct(page,out,{app,film:process.env.G65_FILM==="1"});
+  if (group==="all" || group==="ub") await ubProduct(page,out,{app,film:false});
+  if (group==="all" || group==="rc") await correctionProduct(page,out,{app,film:process.env.G65_FILM==="1"});
   const targetMinutes=Number(process.env.G68_SOAK_MINUTES||15);
   if (process.argv.includes("--long")) {
     await app.evaluate(({ BrowserWindow }) =>
@@ -108,7 +110,7 @@ try {
       rows = [];
     const set = async (k) => {
       const topic =
-        { stations: "particles", sites: "moment", monitor: "vt" }[k] || k;
+        { stations: "particles", sites: "moment", monitor: "vt", unsaturated: "waterColumn" }[k] || k;
       await page.selectOption("#geo-topic", "seismic-" + topic);
       if (topic !== k) {
         await page.waitForFunction(
@@ -130,6 +132,7 @@ try {
       "maar",
       "mixCompare",
       "waterColumn",
+      "unsaturated",
       "pipeCut",
       "rays",
       "degassing",
