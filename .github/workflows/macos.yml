@@ -102,6 +102,7 @@ jobs:
           npx playwright install chromium
       - run: |
           node tests/g682-comparison.mjs .scratch/g65/artifacts/GeoRisiko-G6.8.2-Web-Test.html artifacts/GeoRisiko-G6.9-Web-Test.html
+      - run: node tests/g69-inputs.mjs test-results/G65/Vergleich artifacts/GeoRisiko-G6.9-Web-Test.html
       - if: always()
         uses: actions/upload-artifact@v4
         with:

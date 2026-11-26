@@ -95,6 +95,9 @@ for folder in (web,native):
     geo=read(folder/"G69.json")
     assert len(geo["views"])>=65 and len(geo["screens"])>=17
     lines.append(f"{folder.name}: {len(geo['views'])} tatsächlich geöffnete Hilfen. Das zugehörige G69.json enthält die Beschriftungen und verfügbaren Erklärungen pro Ansicht.")
+inputs=read(root/"Vergleich/Orte-und-Eingabe.json")
+assert len(inputs["places"])>=39 and len(inputs["inputs"])==6 and len(inputs["ventInputs"])==2
+lines+=["",f"Das Ortsverzeichnis enthält {len(inputs['places'])} einzeln aufgerufene Hilfen. In sechs Fenstergrößen wurden jeweils alle vier Schalen per simuliertem Touch geöffnet, das Mantelmaterial direkt mit der Maus ausgewählt und die Hilfe per Tastatur geöffnet. Die Erklärungen beider Vulkanschnitte reagierten ebenfalls auf die simulierte Berührung. Die Einzelprotokolle stehen in Vergleich/Orte-und-Eingabe.json."]
 sizes=read(root/"Nativ/G65/Dateigroessen.json")
 lines+=["","## Dateigrößen","", "| Offline-Produkt | G6.8.2 | G6.9 |","|---|---:|---:|"]
 for suffix,old in [("macOS-arm64.dmg",167271813),("macOS-arm64-app.zip",161748953),("Web-Test.html",60779431)]:
