@@ -441,15 +441,15 @@ function comparisonColumn(s: Stage, example: GasCase) {
   );
   if (!weak) {
     s.label(
-      vec(0.4, -1.04, 0.28),
+      vec(1.35, -.94, .28),
       "Erste Gasblasen",
-      "Bei Übersättigung kann CO₂ ausperlen",
+      "",
       (t) => t >= 0.38 && t < 0.56,
     );
     s.label(
-      vec(0.78, 0.22, 0.27),
+      vec(1.48, .46, .27),
       "Blasen wachsen",
-      "Das Gemisch wird weniger dicht",
+      "",
       (t) => t >= 0.59 && t < 0.82,
     );
     s.label(

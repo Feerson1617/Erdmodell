@@ -263,9 +263,8 @@ export function historicalInventory(s: Stage) {
   ctx.textAlign = "center";
   for (const year of [1986, 1990, 1994, 1998, 2002, 2006])
     ctx.fillText(String(year), x(year), 565);
-  // The January cast and the launch both date to January 2001. Separate
-  // the date marker slightly in the display so that the cast remains visible.
-  const launch = x(2001 + 0.07);
+  // Kusakabe et al. date the start of controlled degassing at Nyos to March 2001.
+  const launch = x(2001 + 2 / 12);
   ctx.setLineDash([9, 7]);
   ctx.strokeStyle = "#f0c68c";
   ctx.beginPath();

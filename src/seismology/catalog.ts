@@ -176,7 +176,7 @@ export function viewOptions(id: string): [string, string][] {
 }
 // The link is a reversible change of scale or model, accessible alongside free navigation.
 export const connections: Record<string, [string, string]> = {
-  contactDetail:["maar","Zum ganzen Maar"],mixCompare:["dissolved","Gaslösung"],waterColumn:["nyos-event","Zur Ausbreitung im Tal"],unsaturated:["waterColumn","Mit Rückkopplung vergleichen"],pipeCut:["profiles","Historische Tiefenprofile"],profiles:["inventory","Gesamtvorrat zeigen"],inventory:["profiles","Tiefenprofile zeigen"],conductivity:["profiles","CO₂ zeigen"],landCompare:["lakeCompare","Gemeinsamer Maßstab"],forms:["shield","Hawaii auf der Erde"],
+  contactDetail:["maar","Zum ganzen Maar"],mixCompare:["dissolved","Gaslösung"],waterColumn:["nyos-event","Zur Ausbreitung im Tal"],pipeCut:["profiles","Historische Tiefenprofile"],profiles:["inventory","Gesamtvorrat zeigen"],inventory:["profiles","Tiefenprofile zeigen"],conductivity:["profiles","CO₂ zeigen"],landCompare:["lakeCompare","Gemeinsamer Maßstab"],forms:["shield","Hawaii auf der Erde"],
   shield:["lava","Lavafluss zeigen"], lava:["cone","Mit Japan vergleichen"],cone:["plume","Eruption zeigen"],plume:["storage","Magmatischer Untergrund"],
   storage:["degassing","Gastransport"],degassing:["monitor","Zur Überwachung"],contact:["maar","Zur Maarentstehung"],
   eifel:["ulmen","Nach Ulmen"],towns:["ulmen","Zum Ulmener Maar"],wittlich:["towns","Beide Orte im Relief"],ulmen:["lakeCut","See im Schnitt"],aerial:["lakeCut","See im Schnitt"],lakeCut:["maar","Entstehung zeigen"],maar:["ulmen","Zum heutigen Maar"],dryMaar:["eifel","Zur Vulkaneifel"],

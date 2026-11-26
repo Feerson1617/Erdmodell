@@ -872,7 +872,7 @@ export class GeographicExperience {
         clear: this.depth === "observe" && document.body.classList.contains("show-some-labels"),
         tools: !side.hidden && this.depth !== "observe",
         preset: (this.world.mode==="nyos" && !this.obs.mode || !!el("studio-preset") || !!this.obs.lessonView) && this.depth !== "observe",
-        related: (!!this.obs.lessonView || this.world.mode==="nyos"&&!this.obs.mode) && this.depth !== "observe",
+        related: (!!this.relatedStudy() || this.world.mode==="nyos"&&!this.obs.mode) && this.depth !== "observe",
       }))
         el("geo-" + id).hidden = !show;
       const bar = el<HTMLInputElement>("geo-time");

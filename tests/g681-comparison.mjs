@@ -129,7 +129,7 @@ try {
       if (animated) {
         await page
           .locator("#geo-time")
-          .fill(Math.max(0.24, (t ?? 0) - 0.07).toFixed(3));
+          .fill(String(Math.round(Math.max(0.24, (t ?? 0) - 0.07) * 1000) / 1000));
         await page.click("#geo-play");
       }
       const sample = await page.evaluate(async () => {

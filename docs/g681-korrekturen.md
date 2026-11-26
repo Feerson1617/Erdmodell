@@ -30,7 +30,7 @@ Die elf Schätzwerte stammen aus der Spalte „Total CO₂“ in Tabelle 4 auf S
 | Januar 2005 | 12,29 ± 0,45 |
 | Januar 2006 | 11,83 ± 0,43 |
 
-Die Autoren ordnen den Januarwert 2001 der Zeit vor der dauerhaften Entgasung zu. Danach gingen die Gesamtschätzungen im Untersuchungszeitraum zurück. Tiefe Zuflüsse können weiterhin CO₂ liefern. Die Wirkung der technischen Entnahme hängt vom Verhältnis von Zufuhr und Entnahme ab. Die gesamte Stoffmenge und die Konzentration in einzelnen Tiefen sind verschiedene Größen. Die letzten Diagrammdaten stammen aus Januar 2006. Eine Aussage über die heutige Situation erfordert aktuelle Daten. [Originalpublikation mit Tabelle 4](https://doi.org/10.2343/geochemj.42.93) · [Bathymetrie und Überwachung](https://doi.org/10.1073/pnas.0502274102)
+Die Autoren ordnen den Januarwert 2001 der Zeit vor der dauerhaften Entgasung zu. Ihr Artikel datiert den Beginn der kontrollierten Entgasung auf März 2001. Danach gingen die Gesamtschätzungen im Untersuchungszeitraum zurück. Tiefe Zuflüsse können weiterhin CO₂ liefern. Die Wirkung der technischen Entnahme hängt vom Verhältnis von Zufuhr und Entnahme ab. Die gesamte Stoffmenge und die Konzentration in einzelnen Tiefen sind verschiedene Größen. Die letzten Diagrammdaten stammen aus Januar 2006. Eine Aussage über die heutige Situation erfordert aktuelle Daten. [Originalpublikation mit Tabelle 4](https://doi.org/10.2343/geochemj.42.93) · [Bathymetrie und Überwachung](https://doi.org/10.1073/pnas.0502274102)
 
 ## Prüfnachweise
 
