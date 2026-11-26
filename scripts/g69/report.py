@@ -78,6 +78,7 @@ assert presented>=15 and {r["info"] for r in long["rows"] if r["presentation"]}=
 lines+=["## Virtueller Apple-Silicon-Dauerlauf","",f"{long['minutes']:.2f} Minuten, {len(rss)} Abschnitte, davon {presented:.2f} Minuten eigentliche Messzeit im Vollbild über alle vier Informationszustände. {min(fps):.1f}–{max(fps):.1f} gerenderte Bilder/s, Median {statistics.median(fps):.1f}. Summierte Prozess-Working-Sets {min(rss):.0f}–{max(rss):.0f} MiB. Gemeinsam genutzte Seiten können mehrfach enthalten sein. Die Probe umfasst laufende und pausierte Phasen.","","## G6.8.2 und G6.9 unter gleichen Bedingungen","","Die Einzel-HTML liefen im selben Chromium bei 1920 × 1080, mit denselben Modellzuständen und derselben Geräteskalierung. Geometriefläche und Schriftgrößen stehen pro Bild in Messung.json. Das P95 beschreibt Browser-Bildintervalle. Die belegte Breite der Geometrie ist aus den mittleren 98 Prozent heller Modellpixel abgeleitet.","","| Version | Ansicht | Steuerungen Arbeit/Vollbild | Zeichenfläche | Gerenderte Bilder/s | P95 | Modellwechsel | JS-Heap | DOM-Änderungen |","|---|---|---:|---:|---:|---:|---:|---:|---:|"]
 for version in ["G6.8.2","G6.9"]:
     compare=read(root/"Vergleich"/version/"Messung.json")
+    assert len(compare["landscapes"])==5
     assert len(compare["samples"])==19 and len(compare["resources"])==2 and not compare["errors"]
     if version=="G6.9":assert compare["favoriteMigrated"] and compare["commit"]==commit
     for r in compare["samples"]:
@@ -94,7 +95,12 @@ for folder in (web,native):
     geo=read(folder/"G69.json")
     assert len(geo["views"])>=65 and len(geo["screens"])>=17
     lines.append(f"{folder.name}: {len(geo['views'])} tatsächlich geöffnete Hilfen. Das zugehörige G69.json enthält die Beschriftungen und verfügbaren Erklärungen pro Ansicht.")
-lines+=["",Path("docs/g69-abnahme.md").read_text()]
+sizes=read(root/"Nativ/G65/Dateigroessen.json")
+lines+=["","## Dateigrößen","", "| Offline-Produkt | G6.8.2 | G6.9 |","|---|---:|---:|"]
+for suffix,old in [("macOS-arm64.dmg",167271813),("macOS-arm64-app.zip",161748953),("Web-Test.html",60779431)]:
+    new=sizes["products"]["GeoRisiko-G6.9-"+suffix]
+    lines.append(f"| {suffix} | {old/1048576:.1f} MiB | {new/1048576:.1f} MiB |")
+lines+=[f"Installierter Bundle-Inhalt ohne symbolische Verweise: {sizes['installed']/1048576:.1f} MiB. Weltweite Grundraster: {sizes['data']['global']/1048576:.1f} MiB. Nordwesteuropa und die regionalen G6.9-Dateien: {sizes['data']['regionalG69']/1048576:.1f} MiB.","",Path("docs/g69-abnahme.md").read_text()]
 (root/"Abnahmebericht.md").write_text("\n".join(lines)+"\n")
 gallery=['<!doctype html><html lang="de"><meta charset="utf-8"><title>GeoRisiko G6.9 · Sichtprüfung</title><meta name="viewport" content="width=device-width"><style>body{max-width:1280px;margin:auto;padding:2rem 1rem;font:16px/1.55 system-ui;background:#15272b;color:#f2f0e3}a{color:#a6ded8}section{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(310px,100%),1fr));gap:1em}img,video{width:100%;height:auto}figure{margin:0}pre{white-space:pre-wrap}</style><h1>GeoRisiko G6.9 · Sichtprüfung</h1><p><a href="Dokumentation/g68-lehrkraft.md">Bedienübersicht</a> · <a href="Dokumentation/g68-datengrundlage.md">Ulmen und Nyos</a> · <a href="Dokumentation/g682-oberflaeche.md">Oberfläche und Sprache</a> · <a href="Dokumentation/g681-geraetecheck.md">Gerätecheck</a> · <a href="Abnahmebericht.md">Prüfbericht</a></p><details><summary>Abnahmebericht lesen</summary><pre>'+html.escape("\n".join(lines))+'</pre></details>']
 for f in films:

@@ -91,7 +91,7 @@ export class TerrainLODManager {
     if (cover.status === "rejected" || aerial.status === "rejected")
       this.warn("Regionale Detailkarte fehlt · verfügbare Auflösungen aktiv");
     this.regionalAtlas = atlas.status === "fulfilled" ? atlas.value : undefined;
-    const volcanoMap = await texture("g69/volcanoes.webp");
+    const [volcanoMap,volcanoContext] = await Promise.all([texture("g69/volcanoes.webp"),texture("g69/volcano-context.webp")]);
     this.ventGrids = await Promise.all(this.windows.map(async (_,i) => {
       const response = await fetch(dataUrl("g69/vent-"+i+".i16"));
       const grid = new Int16Array(await response.arrayBuffer());
@@ -100,6 +100,7 @@ export class TerrainLODManager {
     }));
     this.material.onBeforeCompile = (shader) => {
       shader.uniforms.volcanoMap={value:volcanoMap};
+      shader.uniforms.volcanoContext={value:volcanoContext};
       shader.uniforms.sunUnit = this.light;shader.uniforms.daylight={value:this.daylight};shader.uniforms.earthDetail={value:this.detailTexture};shader.uniforms.scientific=this.scientificView;
       shader.uniforms.weights = this.mapWeights;
       Object.assign(shader.uniforms, {
@@ -129,7 +130,7 @@ export class TerrainLODManager {
           }`);
       shader.fragmentShader =
         `
-        varying vec3 gNormal;varying vec3 gEye;uniform float scientific;uniform sampler2D volcanoMap,earthDetail,daylight;varying float earthLight;uniform vec3 weights;uniform sampler2D layer0,layer1,layer2;
+        varying vec3 gNormal;varying vec3 gEye;uniform float scientific;uniform sampler2D volcanoContext,volcanoMap,earthDetail,daylight;varying float earthLight;uniform vec3 weights;uniform sampler2D layer0,layer1,layer2;
         uniform vec3 nyosWeights;uniform vec4 nyosFarBounds,nyosMidBounds,nyosBounds;
         uniform sampler2D nyosFar,nyosMid;
         vec4 sampleLayer(sampler2D img,vec2 ll,vec4 rect,float weight){
@@ -164,6 +165,10 @@ export class TerrainLODManager {
           }
           for(int k=0;k<2;k++){
             vec4 box=k==0?vec4(-156.15,18.98,1.03,.92):vec4(140.12,37.90,.64,.50);
+            vec4 outer=k==0?vec4(-157.,18.3,2.6,2.5):vec4(138.8,36.7,3.3,2.9);
+            vec2 q=(ll-outer.xy)/outer.zw;
+            float margin=min(min(q.x,1.-q.x),min(q.y,1.-q.y));
+            if(margin>0.)earth=mix(earth,texture2D(volcanoContext,vec2((q.x+float(k))*.5,q.y)).rgb,smoothstep(0.,.15,margin)*scientific);
             vec2 p=(ll-box.xy)/box.zw;
             float edge=min(min(p.x,1.-p.x),min(p.y,1.-p.y));
             if(edge>0.)earth=mix(earth,texture2D(volcanoMap,vec2((p.x+float(k))*.5,p.y)).rgb,smoothstep(0.,.09,edge)*scientific);

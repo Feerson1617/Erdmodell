@@ -74,7 +74,7 @@ const studySources:Record<string,string>={
       maar:"Idealisiertes Entwicklungsmodell · vier beispielhafte Impulse",dryMaar:"Qualitatives Entwicklungsmodell",lakeMaar:"Qualitatives Entwicklungsmodell",
       waterColumn:"Qualitatives gasreiches Beispiel · Farben ohne Messwerte",pipeCut:"Qualitativer technischer Schnitt",dissolved:"Analysefarbe · qualitativer Gasgehalt",
       unsaturated:"Qualitatives Gegenbeispiel · keine Ortsmessung",mixCompare:"Qualitative Wasserbewegung · identische Beckengeometrie",
-      mixing:"Qualitatives Zirkulationsmodell",turnover:"Qualitatives Zirkulationsmodell",forms:"DEM und Satellitenbild · Mauna Loa 72 km, Zaōzan 20 km · Relief ×2 · Untergrund idealisiert",contactDetail:"Schematischer Porenraum · stark vergrößert"
+      mixing:"Qualitatives Zirkulationsmodell",turnover:"Qualitatives Zirkulationsmodell",maunaCut:"Mauna Loa · DEM-Profil 72 km · Relief ×2 · Gang und Eruption schematisch",zaoCut:"Zaōzan · DEM-Profil 20 km · Relief ×2 · Gang und Eruption schematisch",forms:"DEM und Satellitenbild · Mauna Loa 72 km, Zaōzan 20 km · Relief ×2 · Untergrund idealisiert",contactDetail:"Schematischer Porenraum · stark vergrößert"
     };
 
 export class GeographicExperience {
@@ -287,6 +287,8 @@ export class GeographicExperience {
       const available = (id: string) => !el(id).hidden;
       if (!observing && !this.obs.study?.diagram && guidance[familyOf(id) ?? ""]) actions.push(guidance[familyOf(id)!]);
       if (this.obs.study?.diagram) actions.push("Achsen, Messzeitpunkte und Werte vergleichen.");
+      else if(this.obs.atlasState?.flat) actions.push("Einen Kartenpunkt auswählen und die dort verfügbaren Daten öffnen.");
+      else if(this.obs.study && !this.obs.study.controls.enableRotate) actions.push("Mit dem Mausrad den Kartenausschnitt vergrößern oder verkleinern.");
       else actions.push("Durch Ziehen den Blickwinkel ändern.");
       if (available("geo-play")) actions.push("Animation abspielen, pausieren und die Modellzeit verändern.");
       if (available("geo-release")) actions.push("Mit Begriff freigeben einzelne Strukturen aufdecken.");
@@ -350,7 +352,7 @@ export class GeographicExperience {
     el("geo-land").onclick = () => void this.relief();
     el("geo-section").onclick = () => {
       const p = this.currentPlace();
-      if(this.atVent()) void this.topic(this.focus.vent==="maunaloa"?"seismic-lava":"seismic-zao");
+      if(this.atVent()) void this.topic(this.focus.vent==="maunaloa"?"seismic-maunaCut":"seismic-zaoCut");
       else if (p) this.openSection(p.model);
     };
     el("geo-return").onclick = () => {
@@ -802,6 +804,8 @@ export class GeographicExperience {
   private orient() {
     const id=this.obs.lessonView;
     if(this.atVent()) return (this.focus.vent==="maunaloa"?"Pazifik › Hawaii › Mauna Loa":"Asien › Japan › Zaōzan")+" · Regional";
+    if(id==="maunaCut")return "Pazifik › Hawaii › Mauna Loa · Geländeschnitt";
+    if(id==="zaoCut")return "Asien › Japan › Zaōzan · Geländeschnitt";
     if(id==="forms")return "Hawaii › Mauna Loa · Japan › Zaōzan";
     if(id&&this.obs.study){
       if(["ulmen","aerial","lakeCut","eifel"].includes(id))return id==="eifel"?"Europa › Deutschland › Vulkaneifel · regionales Relief":"Europa › Deutschland › Vulkaneifel › Ulmener Maar";

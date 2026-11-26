@@ -16,5 +16,9 @@ for i,(meta,(lat,lon,width)) in enumerate(zip(json.loads((base/'sources.json').r
     h=np.fromfile(base/f'vent-{i}.i16',dtype='<i2').astype(float).reshape(161,161)
     heights=map_coordinates(h,[v*160,u*160],order=1).round().astype(int)
     rgb=np.stack([map_coordinates(atlas[:,:,k],[v*1023,(u+i)*1023+i],order=1) for k in range(3)],axis=2)
+    # Preserve the full satellite detail for the illuminated north half of each section.
+    left=(i+u.min())*1024;right=(i+u.max())*1024
+    crop=Image.fromarray(atlas).crop((round(left),round(v.min()*1024),round(right),round(v.max()*1024)))
+    crop.save(base/f'profile-{i}.webp',quality=91,method=5)
     rows.append(dict(width=width,heights=heights.ravel().tolist(),rgb=rgb.tobytes().hex()))
 (root/'src/seismology/volcano-profiles.json').write_text(json.dumps(rows,separators=(',',':')))

@@ -1,0 +1,22 @@
+[
+  {
+    "bounds": [
+      -157,
+      18.3,
+      -154.4,
+      20.8
+    ],
+    "url": "https://tiles.maps.eox.at/wms?service=WMS&version=1.1.1&request=GetMap&layers=s2cloudless-2024&styles=&srs=EPSG%3A4326&bbox=-157%2C18.3%2C-154.4%2C20.8&width=1024&height=1024&format=image%2Fjpeg",
+    "sha256": "cb42844515aab570a66668a3fe3a0a851e8030a274da487491962e0b402ecc83"
+  },
+  {
+    "bounds": [
+      138.8,
+      36.7,
+      142.1,
+      39.6
+    ],
+    "url": "https://tiles.maps.eox.at/wms?service=WMS&version=1.1.1&request=GetMap&layers=s2cloudless-2024&styles=&srs=EPSG%3A4326&bbox=138.8%2C36.7%2C142.1%2C39.6&width=1024&height=1024&format=image%2Fjpeg",
+    "sha256": "187e7c9c64f51c3e1f8b6f8bf8b5d3b52e7a1ae373788d6999ee0fabf9c610b6"
+  }
+]

@@ -51,7 +51,7 @@ export function explorationMenu(host: HTMLElement, topics: HTMLSelectElement, pl
     const render=()=>{
       const query=search.value.trim().toLocaleLowerCase("de");
       const entries=routes.filter(r=>query ? r.title.toLocaleLowerCase("de").includes(query) :
-        r.group===group || (r.source===places && examples[group]?.includes(r.id)));
+        r.group===group || (group===volcano && r.id==="seismic-maar") || (r.source===places && examples[group]?.includes(r.id)));
       results.replaceChildren();
       for(const r of entries){
         const b=element("button",r.title);

@@ -1,7 +1,7 @@
 import {PerspectiveCamera, Raycaster, Sphere, Vector2, Vector3} from "three";
 import polygons from "./land-extents.json";
 import {R} from "../geo";
-type Land = [string,string,number[],number[][]];
+type Land = [string,string,number[],number[][],...number[][][]];
 const lands = polygons as Land[];
 const sphere=new Sphere(new Vector3(),R), ray=new Raycaster(), hit=new Vector3();
 const continents: Record<string,string>={Europe:"Europa",Asia:"Asien",Africa:"Afrika","North America":"Nordamerika","South America":"Südamerika",Oceania:"Ozeanien",Antarctica:"Antarktis"};
@@ -11,14 +11,19 @@ export const viewpoints: Record<string,[string,number,number,number]> = {
   maunaloa:["Mauna Loa · Hawaii",19.475,-155.608,88], zaozan:["Zaōzan · Japan",38.144,140.440,49],
 };
 function landAt(lon:number,lat:number) {
-  return lands.find(([, , [w,s,e,n], ring])=>{
-    if(lon<w||lon>e||lat<s||lat>n)return false;
+  const insideRing=(ring:number[][])=>{
     let inside=false;
     for(let i=0,j=ring.length-1;i<ring.length;j=i++){
       const [a,b]=ring[i],[c,d]=ring[j];
       if((b>lat)!==(d>lat)&&lon<(c-a)*(lat-b)/(d-b)+a)inside=!inside;
     }
     return inside;
+  };
+  return lands.find((land)=>{
+    const [w,s,e,n]=land[2];
+    if(lon<w||lon>e||lat<s||lat>n||!insideRing(land[3]))return false;
+    for(let i=4;i<land.length;i++)if(insideRing(land[i] as number[][]))return false;
+    return true;
   });
 }
 export class FreeOrientation {

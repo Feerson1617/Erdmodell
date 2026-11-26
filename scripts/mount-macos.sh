@@ -27,6 +27,19 @@ for bundle in "$app" "$installed/zip/GeoRisiko.app"; do
   codesign --verify --deep --strict --verbose=2 "$bundle"
   codesign -dv --verbose=4 "$bundle" 2>&1 | grep -E 'Signature=adhoc|Identifier=|Runtime Version'
 done
+python3 - "$app" "$product" <<'PYDATA'
+import json, os, sys
+from pathlib import Path
+app,product=map(Path,sys.argv[1:])
+packs={p.name:p.stat().st_size for p in [*product.glob('GeoRisiko-G6.9-*'),Path('artifacts/GeoRisiko-G6.9-Web-Test.html') ] if p.is_file()}
+installed=sum(p.stat().st_size for p in app.rglob('*') if p.is_file() and not p.is_symlink())
+assets=Path('public/data')
+data={name:sum(p.stat().st_size for p in paths) for name,paths in {
+ 'global':[assets/'g6/earth-day.webp',assets/'g5/earth-material.webp',assets/'relief.i16',assets/'earth.webp',assets/'earth-base.webp',assets/'earth-atlas.webp'],
+ 'regionalG69':[assets/'north-europe.webp',*list((assets/'g69').glob('*'))]}.items()}
+Path('test-results/G65').mkdir(exist_ok=True,parents=True)
+Path('test-results/G65/Dateigroessen.json').write_text(json.dumps(dict(products=packs,installed=installed,data=data)))
+PYDATA
 cmp "$app/Contents/Resources/app.asar" "$installed/zip/GeoRisiko.app/Contents/Resources/app.asar"
 # Ask Gatekeeper about a separate download-marked copy without modifying the launch copy or the policy.
 quarantined="$installed/zip/GeoRisiko.app"

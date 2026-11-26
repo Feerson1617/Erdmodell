@@ -1,4 +1,5 @@
-import {beginCandidates,claimObject} from "./reveal";
+import {termInfo} from "./exploration-menu";
+import {beginCandidates,claimObject,allowsLabel} from "./reveal";
 import * as T from "three";
 import {AnnotationLayer,project,type Annotation} from "../annotations";
 import type {RegionalScene} from "./regional";
@@ -84,8 +85,9 @@ export class ObjectLabels{
  clear(){this.auditHit=undefined;this.auditPoint=undefined;this.halo.removeFromParent();this.scene=undefined;this.object=undefined;this.selected="";this.picked=undefined;this.key="";this.targets.clear();this.layer.clear();this.rev++;}
  private select(id:string,object=this.targets.get(id),point?:()=>T.Vector3|undefined){
    if(!object)return;
-   const info=description(object);claimObject(id,info?info.name+" · "+info.answer:"");this.selected=id;this.object=object;this.picked=point;this.auditHit=undefined;this.auditPoint=undefined;this.key="";
+   const info=description(object);const choosing=claimObject(id,info?info.name+" · "+info.answer:"");this.selected=id;this.object=object;this.picked=point;this.auditHit=undefined;this.auditPoint=undefined;this.key="";
    const field=document.getElementById("g-object");
+   if(info && !choosing && allowsLabel(id) && field && !field.parentElement?.offsetWidth)termInfo(info.name,info.answer);
    if(info&&field){field.dataset.selection=id;field.textContent=info.name+" · "+info.answer;field.hidden=false;}
  }
  pick(r:RegionalScene,x:number,y:number){

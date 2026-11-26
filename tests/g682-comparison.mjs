@@ -226,6 +226,29 @@ try {
       await run(false);
     }
     await select("geo-info", "terms");
+    // Restore an identical geographic pose through the saved-view interface in both versions.
+    await topic("globe");
+    await page.click("#saved-views");
+    await page.fill("#view-name","Vergleichskamera");
+    await page.click("#view-save");await page.click("#view-close");
+    report.landscapes=[];
+    for(const [name,lat,lon,d,tilt] of [
+      ["Schleswig-Holstein",54.35,9.78,270,0],["Sylt",54.89,8.38,85,0],["Daenemark",56,10,560,0],
+      ["Mauna-Loa",19.475,-155.608,88,43],["Zaozan",38.144,140.44,49,43],
+    ]){
+      await page.evaluate(pose=>{
+        const key="georisiko.unterrichtsansichten.v1",entries=JSON.parse(localStorage.getItem(key));
+        const v=entries.find(v=>v.name==="Vergleichskamera");
+        Object.assign(v.scene.pose,pose);localStorage.setItem(key,JSON.stringify(entries));
+      },{lat,lon,d,tilt,bearing:0});
+      await page.click("#saved-views");await select("saved-list",{label:"Vergleichskamera"});await page.click("#view-apply");
+      await page.waitForFunction(([lat,lon])=>{
+        const p=window.geoObservatory().rendered.focus;
+        return Math.abs(p[0]-lat)<.002 && Math.abs(p[1]-lon)<.002;
+      },[lat,lon]);await waitReady();await frame();
+      await page.screenshot({path:join(dir,"Gebiet-"+name+".jpg"),type:"jpeg",quality:89,timeout:120000});
+      report.landscapes.push({name,lat,lon,d,tilt});
+    }
     const exit = async () => {
       await topic("globe");
       return (await page.evaluate(() => window.geoDeviceProbe(500))).states.at(

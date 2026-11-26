@@ -20,7 +20,7 @@ export function createSeismic(
   const stage = new Stage(gl, id),
     f = familyOf(id);
   if(id==="contactDetail")contactDetail(stage);
-  else if(id==="forms")volcanoForms(stage);
+  else if(["forms","maunaCut","zaoCut"].includes(id))volcanoForms(stage);
   else if(id==="lakeCompare")compareBasins(stage);
   else if(id==="inventory")historicalInventory(stage);
   else if(id==="profiles"||id==="conductivity")historicalProfiles(stage);

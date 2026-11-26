@@ -626,6 +626,7 @@ export class TectonicStudio {
           line.textContent = e.feature.explanation;
           tag.append(line);
         }
+        if(!e.anonymous)tag.dataset.explanation=e.feature.explanation;
         tag.setAttribute("aria-label", e.anonymous ? "Objekt auswählen" : e.feature.name);
         tag.onclick = () => {
           if (claimObject(e.id, e.feature.explanation)) return;

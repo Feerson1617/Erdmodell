@@ -85,7 +85,7 @@ export const families = {
   maars:{title:"Maarentstehung",variants:{maar:"Maarentstehung",dryMaar:"Trockenmaar",contactDetail:"Magma trifft auf Grundwasser"}},
   eifel:{title:"Vulkaneifel",variants:{eifel:"Vulkaneifel · Übersicht",towns:"Ulmen und Wittlich",wittlich:"Wittlich · Stadt und Relief",ulmen:"Ulmener Maar · Landschaft",aerial:"Ulmen · Draufsicht",lakeCut:"Aufbau des Sees"}},
   lakes:{title:"Seen und Gase",variants:{mixing:"Stabile Tiefenschichtung",turnover:"Jahreszeitliche Durchmischung",mixCompare:"Zwei Seetypen im Vergleich",dissolved:"Gelöstes Kohlendioxid",waterColumn:"Gasreiche Wassersäule",unsaturated:"Untersättigte Wassersäule",pipeCut:"Funktion des Entgasungsrohrs",profiles:"CO₂-Tiefenprofile aus Nyos",conductivity:"Leitfähigkeit im Nyos-See",inventory:"CO₂-Vorrat im Nyos-See",landCompare:"Ulmen und Nyos im Luftbild",lakeCompare:"Ulmener Maar und Nyos"}},
-  plumbing: {title:"Magmatische Prozesse",variants:{storage:"Schmelze und Kristalle im Gestein",degassing:"Vulkanische Gase",contact:"Wasser am Magmagang",forms:"Schild- und Schichtvulkan"}},
+  plumbing: {title:"Magmatische Prozesse",variants:{storage:"Schmelze und Kristalle im Gestein",degassing:"Vulkanische Gase",contact:"Wasser am Magmagang",forms:"Schild- und Schichtvulkan",maunaCut:"Mauna Loa · Geländeschnitt",zaoCut:"Zaōzan · Geländeschnitt"}},
   faults: {
     title: "Bruchmechanismen",
     variants: {
@@ -176,7 +176,7 @@ export function viewOptions(id: string): [string, string][] {
 }
 // The link is a reversible change of scale or model, accessible alongside free navigation.
 export const connections: Record<string, [string, string]> = {
-  contactDetail:["maar","Zum ganzen Maar"],mixCompare:["dissolved","Gaslösung"],waterColumn:["nyos-event","Zur Ausbreitung im Tal"],pipeCut:["profiles","Historische Tiefenprofile"],profiles:["inventory","Gesamtvorrat zeigen"],inventory:["profiles","Tiefenprofile zeigen"],conductivity:["profiles","CO₂ zeigen"],landCompare:["lakeCompare","Gemeinsamer Maßstab"],forms:["shield","Hawaii auf der Erde"],
+  maunaCut:["forms","Mit Zaōzan vergleichen"],zaoCut:["forms","Mit Mauna Loa vergleichen"],contactDetail:["maar","Zum ganzen Maar"],mixCompare:["dissolved","Gaslösung"],waterColumn:["nyos-event","Zur Ausbreitung im Tal"],pipeCut:["profiles","Historische Tiefenprofile"],profiles:["inventory","Gesamtvorrat zeigen"],inventory:["profiles","Tiefenprofile zeigen"],conductivity:["profiles","CO₂ zeigen"],landCompare:["lakeCompare","Gemeinsamer Maßstab"],forms:["shield","Hawaii auf der Erde"],
   shield:["lava","Lavafluss zeigen"], lava:["cone","Mit Japan vergleichen"],cone:["plume","Eruption zeigen"],plume:["storage","Magmatischer Untergrund"],
   storage:["degassing","Gastransport"],degassing:["monitor","Zur Überwachung"],contact:["maar","Zur Maarentstehung"],
   eifel:["ulmen","Nach Ulmen"],towns:["ulmen","Zum Ulmener Maar"],wittlich:["towns","Beide Orte im Relief"],ulmen:["lakeCut","See im Schnitt"],aerial:["lakeCut","See im Schnitt"],lakeCut:["maar","Entstehung zeigen"],maar:["ulmen","Zum heutigen Maar"],dryMaar:["eifel","Zur Vulkaneifel"],
