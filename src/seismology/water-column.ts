@@ -1,6 +1,13 @@
 import * as T from "three";
 import { Stage, vec } from "./stage";
-import { basinFloor, circulationPoint, plumeParcel } from "./lake-physics";
+import {
+  basinFloor,
+  circulationPoint,
+  plumeParcel,
+  gasParcel,
+  dissolvedTint,
+  type GasCase,
+} from "./lake-physics";
 
 const cool = new T.Color(0x326e92),
   warm = new T.Color(0xdbbd6a),
@@ -49,7 +56,7 @@ function water(
   );
   const tint = new T.Color(),
     attr = g.attributes.color;
-  return (t: number, gas: boolean) => {
+  return (t: number, gas: boolean | GasCase) => {
     for (let j = 0; j <= ny; j++)
       for (let i = 0; i <= nx; i++) {
         const x = (i / nx) * 2 - 1,
@@ -59,7 +66,9 @@ function water(
             .copy(cool)
             .lerp(
               dissolved,
-              smooth(depth, 0.3, 0.9) * (0.34 + 0.66 * smooth(t, 0, 0.32)),
+              typeof gas === "string"
+                ? dissolvedTint(depth, x, t, gas)
+                : smooth(depth, 0.3, 0.9) * (0.34 + 0.66 * smooth(t, 0, 0.32)),
             );
         else
           tint
@@ -166,8 +175,11 @@ export function mixingSection(s: Stage) {
 }
 
 export function gasColumn(s: Stage) {
+  if (s.view === "waterColumn" || s.view === "unsaturated") {
+    comparisonColumn(s, s.view === "unsaturated" ? "weak" : "rich");
+    return;
+  }
   const pipe = s.view === "pipeCut",
-    weak = s.view === "unsaturated",
     only = s.view === "dissolved";
   const height = 3.65,
     half = 3.15;
@@ -237,7 +249,7 @@ export function gasColumn(s: Stage) {
   });
   // Parcels enter the intake and continue flushing after the initial lift.
   const parcel = (t: number, seed: number) => {
-    if (!pipe || t < 0.57) return plumeParcel(t, seed, !weak);
+    if (!pipe || t < 0.57) return plumeParcel(t, seed, true);
     const initial = plumeParcel(0.57, seed, true).rise;
     const phase = (Math.sqrt(initial) + (t - 0.57) * (1.5 + seed * 0.85)) % 1;
     const rise = phase * phase;
@@ -261,7 +273,6 @@ export function gasColumn(s: Stage) {
       const seed = i / 55;
       const q = parcel(t, seed);
       b.visible =
-        !weak &&
         q.exsolved > 0.015 &&
         seed < Math.min(1, 0.09 + q.exsolved * 1.1) &&
         (pipe || t < 0.98);
@@ -273,7 +284,7 @@ export function gasColumn(s: Stage) {
       b.scale.setScalar(0.28 + 1.45 * q.exsolved * (0.65 + 0.35 * seed));
     }),
   );
-  if (!weak) {
+  {
     const air = Array.from({ length: 16 }, (_, i) => {
       const o = s.mesh(
         new T.SphereGeometry(1, 16, 10),
@@ -301,35 +312,178 @@ export function gasColumn(s: Stage) {
       }),
     );
   }
-  if (!pipe)
-    s.label(
-      vec(0.2, -0.85, 0.2),
-      weak ? "Wasserpaket" : "Beginnende Blasenbildung",
-      weak
-        ? "Das angehobene Wasser bleibt untersättigt"
-        : "Bei genügend gelöstem Gas kann Druckentlastung Ausperlen auslösen",
-      (t) => t > 0.25 && t < 0.8,
-    );
-  if (!weak)
-    s.label(
-      vec(cx + 0.1, 0.75, 0.24),
-      "Gas-Wasser-Gemisch",
-      "Wachsende Blasen verringern seine mittlere Dichte",
-      (t) => t > 0.55 && t < 0.92,
-    );
+  s.label(
+    vec(cx + 0.1, 0.75, 0.24),
+    "Gas-Wasser-Gemisch",
+    "Wachsende Blasen verringern seine mittlere Dichte",
+    (t) => t > 0.55 && t < 0.92,
+  );
   s.explain((t) =>
-    weak
-      ? "Gegenbeispiel · Das Wasser wird angehoben. Bei diesem Gasgehalt bleibt es untersättigt. Eine selbstverstärkende Freisetzung setzt nicht ein."
-      : t < 0.24
-        ? pipe
-          ? "Zu Beginn wird die Strömung im Rohr angestoßen."
-          : "Gas kann sich über längere Zeit im Tiefenwasser ansammeln. Der historische Auslöser von 1986 ist ungeklärt."
-        : t < 0.55
-          ? "Aufsteigendes Wasser gelangt unter geringeren Druck. Bei genügender Sättigung entsteht eine freie Gasphase."
-          : t < 0.82
-            ? "Blasen wachsen. Das leichtere Gemisch steigt schneller und nimmt weiteres Wasser mit."
-            : pipe
-              ? "Am Auslass entweicht Gas. Über längere Zeit kann das Inventar sinken, wenn die Entnahme die Zufuhr übertrifft."
-              : "CO₂ gelangt in die Atmosphäre. Die helle Analysefarbe zeigt die Gasphase über dem Wasser.",
+    t < 0.24
+      ? "Die Strömung im Rohr wird angestoßen."
+      : t < 0.55
+        ? "Beim Aufstieg sinkt der Druck. Bei Übersättigung entsteht freies Gas."
+        : t < 0.82
+          ? "Blasen wachsen. Das Gemisch steigt schneller."
+          : "Am Auslass entweicht Gas. Wenn mehr entnommen als zugeführt wird, sinkt der Vorrat.",
+  );
+}
+
+function comparisonColumn(s: Stage, example: GasCase) {
+  const weak = example === "weak";
+  s.look(0, 0.46, 14, 0.46);
+  s.halfWidth = 4.85;
+  s.halfHeight = 2.62;
+  s.duration = 18;
+  const colour = water(s, 0, 4.05, 3.65, true);
+  s.animate((t) => colour(t, example));
+  s.box(0, -2.24, -0.12, 8.15, 0.5, 0.24, 0x7b6d5e, "Beckenboden");
+  const waterColour = 0x72faed;
+  const path = (i: number, t: number) => {
+    const q = gasParcel(t, (i % 6) / 6, example);
+    const x = (i - 6.5) * 0.39;
+    // The outer parcels converge as the expanding plume entrains surrounding water.
+    return vec(
+      x * (1 - 0.68 * q.free),
+      -1.79 + 3.34 * q.rise + Math.sin(i * 2.4) * 0.09,
+      0.15,
+    );
+  };
+  const waterArrows = Array.from({ length: 14 }, (_, i) => {
+    const arrow = s.mesh(
+      new T.ConeGeometry(0.104, 0.24, 3),
+      waterColour,
+      "Türkise Pfeilspitze · Wasser",
+      true,
+    );
+    arrow.rotation.z = Math.PI / 2;
+    const trail = s.line(
+      Array.from({ length: 13 }, () => vec()),
+      waterColour,
+      "Strömungsspur",
+      0.88,
+    );
+    trail.frustumCulled = false;
+    return { i, arrow, trail };
+  });
+  const bubbles = weak
+    ? []
+    : Array.from({ length: 39 }, (_, i) =>
+        s.mesh(
+          new T.TorusGeometry(1, 0.155, 7, 18),
+          0xffe5ab,
+          "Freie Gasblase",
+          true,
+        ),
+      );
+  const air = weak
+    ? []
+    : Array.from({ length: 12 }, () => {
+        const blob = s.mesh(
+          new T.SphereGeometry(1, 14, 8),
+          0xe9cc95,
+          "CO₂-reiche Luft · Analysefarbe",
+          true,
+        );
+        const mat = blob.material as T.MeshBasicMaterial;
+        mat.transparent = true;
+        mat.depthWrite = false;
+        return { blob, mat };
+      });
+  s.animate((t) => {
+    for (const { i, arrow, trail } of waterArrows) {
+      const q = gasParcel(t, (i % 6) / 6, example);
+      const point = path(i, t),
+        prev = path(i, t - 0.022);
+      arrow.visible = t > 0.14 && q.rise > 0.012 && q.rise < 0.996;
+      trail.visible = arrow.visible;
+      arrow.position.copy(point);
+      const direction = point.clone().sub(prev);
+      if (direction.lengthSq() > 0.000001)
+        arrow.rotation.z = Math.atan2(direction.y, direction.x) - Math.PI / 2;
+      else arrow.rotation.z = 0;
+      const attr = trail.geometry.attributes.position;
+      for (let j = 0; j < attr.count; j++) {
+        const p = path(i, t - (attr.count - 1 - j) * 0.005);
+        attr.setXYZ(j, p.x, p.y, p.z);
+      }
+      attr.needsUpdate = true;
+    }
+    bubbles.forEach((bubble, i) => {
+      const q = gasParcel(t, (i * 0.618) % 1, example);
+      bubble.visible = q.free > 0.008 + (i % 11) * 0.046 && q.rise < 0.993;
+      bubble.position.set(
+        Math.sin(i * 2.4) * (0.38 + q.free * 0.74),
+        -1.76 + 3.27 * q.rise + 0.08 * Math.cos(i),
+        0.24,
+      );
+      bubble.scale.setScalar(0.046 + q.free * (0.073 + (i % 5) * 0.014));
+    });
+    air.forEach(({ blob, mat }, i) => {
+      const release = smooth(t, 0.81, 0.99);
+      blob.visible = release > 0.01;
+      blob.position.set(
+        Math.sin(i * 2.4) * 2.35 * release,
+        1.68 + (i % 4) * 0.12 * release,
+        0.16,
+      );
+      blob.scale.set(0.2 + 0.49 * release, 0.055 + 0.13 * release, 0.15);
+      mat.opacity = release * 0.24;
+    });
+  });
+
+  s.label(vec(-2.85, -1.28, 0.19), "Gelöstes CO₂");
+  s.label(
+    vec(-1.85, -0.85, 0.19),
+    "Wasser steigt auf",
+    "",
+    (t) => t >= 0.18 && t < 0.4,
+  );
+  if (!weak) {
+    s.label(
+      vec(1.35, -.94, .28),
+      "Erste Gasblasen",
+      "",
+      (t) => t >= 0.38 && t < 0.56,
+    );
+    s.label(
+      vec(1.48, .46, .27),
+      "Blasen wachsen",
+      "",
+      (t) => t >= 0.59 && t < 0.82,
+    );
+    s.label(
+      vec(1.25, 1.81, 0.24),
+      "Gas tritt in die Luft aus",
+      "",
+      (t) => t >= 0.82,
+    );
+  }
+  const legend = document.createElement("div");
+  legend.className = "column-legend";
+  legend.innerHTML =
+    '<span><i class="gas-scale"></i> Gelöstes CO₂ · wenig bis viel</span><span><b class="water-key">↑</b> Wasserbewegung</span><span><b class="bubble-key">○</b> Freie Gasblasen</span>';
+  const compare = document.createElement("button");
+  compare.textContent = weak
+    ? "Gasreiches Beispiel"
+    : "Untersättigtes Beispiel";
+  compare.onclick = () =>
+    s.visitStudy?.(weak ? "waterColumn" : "unsaturated", s.time);
+  legend.append(compare);
+  s.root.append(legend);
+  s.explain((t) =>
+    t < 0.15
+      ? weak
+        ? "Weniger gelöstes CO₂ im Tiefenwasser. Die anfängliche Anhebung ist in beiden Modellen gleich."
+        : "Mehr gelöstes CO₂ im Tiefenwasser. Sättigung hängt auch von Temperatur, Gaspartialdruck, Umgebungsdruck und Wasserchemie ab."
+      : t < 0.37
+        ? "Das Wasser steigt auf. Der Umgebungsdruck sinkt."
+        : weak
+          ? "Das Wasser bleibt untersättigt. Es perlt kein Gas aus. Die anfängliche Bewegung klingt ab."
+          : t < 0.54
+            ? "Bei Übersättigung kann CO₂ ausperlen. Freie Blasen werden sichtbar."
+            : t < 0.82
+              ? "Blasen wachsen. Das Gemisch wird weniger dicht, steigt schneller und reißt Wasser mit."
+              : "Weiterer Aufstieg verstärkt die Druckentlastung. Ein Teil des CO₂ tritt in die Luft aus.",
   );
 }

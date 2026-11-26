@@ -1,0 +1,13 @@
+[
+  {"year":1986,"month":11,"total":13.05,"uncertainty":0.07},
+  {"year":1988,"month":12,"total":13.33,"uncertainty":0.05},
+  {"year":1993,"month":11,"total":13.57,"uncertainty":0.54},
+  {"year":1998,"month":4,"total":14.06,"uncertainty":0.53},
+  {"year":1999,"month":11,"total":14.41,"uncertainty":0.51},
+  {"year":2001,"month":1,"total":14.78,"uncertainty":0.52},
+  {"year":2001,"month":12,"total":14.20,"uncertainty":0.49},
+  {"year":2003,"month":1,"total":13.10,"uncertainty":0.48},
+  {"year":2004,"month":1,"total":13.16,"uncertainty":0.49},
+  {"year":2005,"month":1,"total":12.29,"uncertainty":0.45},
+  {"year":2006,"month":1,"total":11.83,"uncertainty":0.43}
+]

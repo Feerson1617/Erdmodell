@@ -36,6 +36,7 @@ export class Stage {
   camera = new T.OrthographicCamera(-8, 8, 4, -4, 0.1, 200);
   controls: OrbitControls;
   visitPlace?: (id:string)=>void;
+  visitStudy?: (id: string, time?: number) => void;
   pendingTextures = 0;
   painted = false;
   time = 0;
@@ -108,6 +109,7 @@ export class Stage {
     this.controls.maxZoom = 2.4;
     this.controls.maxPolarAngle = Math.PI * 0.82;
     this.root.className = "seismic-figure";
+    this.root.dataset.study = view;
     this.leaders.setAttribute("aria-hidden", "true");
     this.caption.className = "seismic-caption";
     this.root.append(this.leaders, this.caption);

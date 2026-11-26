@@ -6,3 +6,5 @@ Produced using Copernicus WorldDEM-30, © DLR e.V. 2010-2014 and © Airbus Defen
 Bearbeitung: geographisch abgefragtes Raster, auf Meter gerundet, örtliche Maßstabsüberhöhung. Reproduktion: scripts/g67/landschaft.py.
 
 G6.8: nyos.webp und nyos-crop.json sind georeferenzierte Ausschnitte der bereits im Projekt enthaltenen Nyos-Daten. Quellen und Rechte siehe data/nyos/NOTICE.txt und die dort genannten Copernicus-Datensätze.
+
+G6.8.1 Ulmen–Wittlich · Luftbild ©GeoBasis-DE / LVermGeoRP (2026), dl-de/by-2-0. WMS rp_dop20, Abruf 26.11.2026. Rechte und Bearbeitung wie oben. Relief aus GLO-30 N49/N50 E006/E007. Die zwei Ortsmitten wurden beim OpenStreetMap-Nominatim abgeglichen (© OpenStreetMap contributors, ODbL 1.0, https://www.openstreetmap.org/copyright). Das Relief enthält kein OpenStreetMap-Kartenbild. Reproduktion: scripts/g681/region.py.

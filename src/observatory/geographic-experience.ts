@@ -1,3 +1,4 @@
+import { towns } from "../seismology/ulmen-wittlich";
 import { regionalPhase } from "../seismology/regional-rupture";
 import {seismicLegend} from "../seismology/legend";
 import { atlasViews,connections,familyOf,isView,titleFor } from "../seismology/catalog";
@@ -60,14 +61,17 @@ const groups = (select: HTMLSelectElement, title: string) => {
 };
 
 const studySources:Record<string,string>={
+      towns:"Amtliches Luftbild · Norden oben · Großkreisentfernung",
+      wittlich:"Amtliches Luftbild und Oberflächenmodell",
+      inventory:"Kusakabe et al. 2008 · Tabelle 4 · historisch",
       eifel:"Luftbild und Oberflächenhöhen · Relief vierfach überhöht",
       ulmen:"Amtliches Luftbild und Oberflächenmodell · Höhe 1,6-fach überhöht",
       aerial:"Amtliches Luftbild · Norden oben",landCompare:"Georeferenzierte Bildfelder · unterschiedliche Ausschnittbreiten",
       lakeCut:"Idealisierter Seeschnitt · Referenztiefe 38 m",lakeCompare:"Idealisierte Becken · gleicher Maßstab in Breite und Tiefe",
       profiles:"Kusakabe et al. 2008 · Tabelle 3",conductivity:"Kusakabe et al. 2008 · Tabelle 3",
       maar:"Idealisiertes Entwicklungsmodell · vier beispielhafte Impulse",dryMaar:"Qualitatives Entwicklungsmodell",lakeMaar:"Qualitatives Entwicklungsmodell",
-      waterColumn:"Qualitatives Prozessmodell · historischer Auslöser offen",pipeCut:"Qualitativer technischer Schnitt",dissolved:"Analysefarbe · qualitativer Gasgehalt",
-      unsaturated:"Hypothetischer Verlauf bei geringerem Gasgehalt",mixCompare:"Qualitative Wasserbewegung · identische Beckengeometrie",
+      waterColumn:"Qualitatives gasreiches Beispiel · Farben ohne Messwerte",pipeCut:"Qualitativer technischer Schnitt",dissolved:"Analysefarbe · qualitativer Gasgehalt",
+      unsaturated:"Qualitatives Gegenbeispiel · keine Ortsmessung",mixCompare:"Qualitative Wasserbewegung · identische Beckengeometrie",
       mixing:"Qualitatives Zirkulationsmodell",turnover:"Qualitatives Zirkulationsmodell",forms:"Idealisierte Vulkanformen",contactDetail:"Schematischer Porenraum · stark vergrößert"
     };
 
@@ -234,6 +238,8 @@ export class GeographicExperience {
     const germany = groups(list, "Europa › Deutschland");
     option(germany, "country-de", "Deutschland im Überblick");
     option(germany,"eifel","Vulkaneifel");option(germany,"ulmen","Ulmen · Ulmener Maar");
+    option(germany,"towns","Ulmen und Wittlich · Region");
+    option(germany,"wittlich","Wittlich");
     for (const [id, p] of landscapes) option(germany, "local-" + id, p.name);
     list.onchange = () => {
       const value = list.value;
@@ -337,7 +343,7 @@ export class GeographicExperience {
       if (e.key === "Escape") this.drawer(false);
     });
     el("geo-related").onclick=()=>{if(!this.obs.lessonView&&this.world.mode==="nyos"){void this.topic("seismic-lakeCompare");return;}const id=this.relatedStudy()?.[0];if(id)void this.topic(isView(id)?"seismic-"+id:id);};
-    obs.visitStudy=id=>void this.topic("seismic-"+id);
+    obs.visitStudy=(id,time)=>void this.topic("seismic-"+id,time);
     obs.visitModel = (id) => void this.topic("process-" + id);
     obs.visitPlace = (id) => void this.map(id);
     obs.visitBoundary = (step) => void this.boundary(step);
@@ -470,12 +476,19 @@ export class GeographicExperience {
       const site=lakeSites[lake],dest={lat:site.lat,lon:site.lon,d:1850,tilt:0,bearing:0};
       this.goal=dest;this.world.nav.fly(dest,false);this.flight=()=>{};return;
     }
-    if(id==="eifel"||id==="ulmen"){
+    if(id==="eifel"||id==="ulmen"||id==="towns"||id==="wittlich"){
       const epoch=this.epoch;this.focus={country:"Deutschland",overview:true};this.awaiting=true;
       await this.obs.openMap("boundaries",true);if(epoch!==this.epoch)return;
-      this.awaiting=false;const dest=id==="ulmen"?{lat:50.2106,lon:6.9828,d:420,tilt:0,bearing:0}:{lat:50.26,lon:7.02,d:560,tilt:0,bearing:0};
+      this.awaiting=false;
+      const sites = {
+        eifel: {lat:50.26,lon:7.02,d:560},
+        ulmen: {...towns.maar,d:420},
+        towns: {lat:(towns.ulmen.lat+towns.wittlich.lat)/2,lon:(towns.ulmen.lon+towns.wittlich.lon)/2,d:360},
+        wittlich: {...towns.wittlich,d:300}
+      };
+      const dest={...sites[id],tilt:0,bearing:0};
       this.goal=dest;this.world.nav.fly(dest,false,750);
-      this.flight=()=>{if(this.epoch===epoch)void this.topic("seismic-"+id);};return;
+      this.flight=()=>{if(this.epoch===epoch)void this.topic("seismic-"+id,undefined,false);};return;
     }
     if (id === "country-de" || id === "country-cm") {
       const cameroon = id === "country-cm";
@@ -537,8 +550,8 @@ export class GeographicExperience {
       this.openSection(type as ProcessId, false);
     else await this.obs.openBoundary(step, "process");
   }
-  private async topic(value: string) {
-    this.remember();
+  private async topic(value: string, startTime?: number, recordHistory = true) {
+    if (recordHistory) this.remember();
     const epoch = this.epoch;
     this.focus = {};
     if(value==="nyos-event"||value==="nyos-pipe"||value==="nyos-section"){
@@ -553,7 +566,7 @@ export class GeographicExperience {
     }
     if(value.startsWith("seismic-")){
       this.awaiting=true;
-      try{await this.obs.openStudy(value.slice(8));}finally{if(this.epoch===epoch)this.awaiting=false;}
+      try{await this.obs.openStudy(value.slice(8),undefined,startTime);}finally{if(this.epoch===epoch)this.awaiting=false;}
       return;
     }
     if (value.startsWith("process-")) {
@@ -629,7 +642,9 @@ export class GeographicExperience {
     const id=this.obs.lessonView;
     if(id&&this.obs.study){
       if(["ulmen","aerial","lakeCut","eifel"].includes(id))return id==="eifel"?"Europa › Deutschland › Vulkaneifel · regionales Relief":"Europa › Deutschland › Vulkaneifel › Ulmener Maar";
-      if(["waterColumn","pipeCut","profiles","conductivity"].includes(id))return "Erde › Afrika › Kamerun › Nyos · Prozessdetail";
+      if(id==="towns")return "Europa › Deutschland › Eifel und Wittlicher Senke · Regional";
+      if(id==="wittlich")return "Europa › Deutschland › Wittlicher Senke › Wittlich";
+      if(["pipeCut","profiles","conductivity","inventory"].includes(id))return "Erde › Afrika › Kamerun › Nyos · Prozessdetail";
       if(id==="landCompare"||id==="lakeCompare")return "Deutschland · Ulmen ↔ Kamerun · Nyos";
       if(familyOf(id)==="section")return "Erde › Asien › Japan · regionales Tiefenprofil";
       if(id==="record")return "Erde › Japan → New Mexico · Stationsaufzeichnung";
@@ -822,7 +837,7 @@ export class GeographicExperience {
       r?.localStill,
       document.body.dataset.reveal,
     ].join("/");
-    const staticModel = ["eifel", "ulmen", "aerial", "lakeCut", "lakeCompare","landCompare","profiles","conductivity"].includes(this.obs.lessonView ?? "");
+    const staticModel = ["eifel", "ulmen", "aerial", "lakeCut", "lakeCompare","landCompare","profiles","conductivity","inventory","towns","wittlich"].includes(this.obs.lessonView ?? "");
     if (this.signature !== state || this.root !== side.firstChild) {
       this.signature = state;
       this.root = side.firstChild;
@@ -857,7 +872,7 @@ export class GeographicExperience {
         clear: this.depth === "observe" && document.body.classList.contains("show-some-labels"),
         tools: !side.hidden && this.depth !== "observe",
         preset: (this.world.mode==="nyos" && !this.obs.mode || !!el("studio-preset") || !!this.obs.lessonView) && this.depth !== "observe",
-        related: (!!this.obs.lessonView || this.world.mode==="nyos"&&!this.obs.mode) && this.depth !== "observe",
+        related: (!!this.relatedStudy() || this.world.mode==="nyos"&&!this.obs.mode) && this.depth !== "observe",
       }))
         el("geo-" + id).hidden = !show;
       const bar = el<HTMLInputElement>("geo-time");

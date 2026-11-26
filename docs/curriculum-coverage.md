@@ -163,3 +163,14 @@ Für Jahrgang 9 verbinden Parkfield und Japan die regionale Orientierung mit dem
 | Mensch–Umwelt-Beziehungen, F4 S19/S20 | Ulmener Gewässerbewirtschaftung und kontrollierte Entgasung am Nyos vergleichen | Zweck und Grenzen verschiedener Eingriffe diskutieren. Die Gewichtung gesellschaftlicher Fragen liegt bei der Lerngruppe. |
 
 [Bedienübersicht](g68-lehrkraft.md) · [Quellen und Modellgrenzen](g68-datengrundlage.md)
+
+## G6.8.1 · Ergänzungen für Jahrgang 9
+
+| Kompetenzbezug | Anschauung und Gegenstand der Erarbeitung |
+|---|---|
+| Räumliche Orientierung und Maßstabswechsel | Vom Globus über Europa und Deutschland zum Relief Ulmen–Wittlich. Den Maßstabsbalken und die Luftlinie mit der Lage der Ortsmitten verbinden. |
+| Struktur, Funktion, Prozess und systemisches Denken | Zwei Wassersäulen in gleicher Perspektive und Phase beobachten. Den Zusammenhang von Druckentlastung, Sättigung, Blasen und Auftrieb erklären. |
+| Erkenntnisgewinnung und Modellkritik | Historische Tiefenkonzentrationen mit Schätzungen der gesamten Stoffmenge verbinden. Unsicherheiten, Datenzeitraum und lokale Datenlücken berücksichtigen. |
+| Mensch–Umwelt-Beziehungen, Verwundbarkeit und Resilienz | Die Wirkung hohen CO₂-Gehalts und die Nyos-Entgasung fachlich einordnen. Die Lerngruppe prüft die Tragweite der Geodaten für die Wohnortfrage anhand weiterer Unterrichtsbelege. |
+
+[Fachquellen und Modellgrenzen](g681-korrekturen.md) · [Bedienübersicht](g68-lehrkraft.md)

@@ -5,6 +5,8 @@ import ulmen from "./ulmen-dsm.json";
 import region from "./eifel-dsm.json";
 import nyos from "./nyos-crop.json";
 import environs from "./umfeld-dsm.json";
+import townRegion from "./ulmen-wittlich-dsm.json";
+import { greatCircleKm, towns } from "./ulmen-wittlich";
 
 function landscape(
   s: Stage,
@@ -158,5 +160,91 @@ export function lakeAtlas(s: Stage) {
       : vertical
         ? "Norden oben · Jungferweiher und Ulmener Maar liegen in benachbarten Becken."
         : "Blick über das Ulmener Maar. Luftbild und Oberflächenmodell enthalten Wald und Bebauung. Höhen 1,6-fach überhöht.",
+  );
+}
+
+export function regionalTowns(s: Stage) {
+  const detail = s.view === "wittlich";
+  const width = 11.8;
+  const at = landscape(s, townRegion, "ulmen-wittlich", 0, width, 3);
+  const using = (p: typeof towns.ulmen) => at(p.lon, p.lat);
+  const ulmenCenter = using(towns.ulmen);
+  const wittlichCenter = using(towns.wittlich);
+  const maarCenter = using(towns.maar);
+  const park = vec(-4.55, 0.4, 3.85);
+  for (const [pos, name] of [
+    [ulmenCenter, "Ulmen"],
+    [wittlichCenter, "Wittlich"],
+  ] as const) {
+    const marker = s.dot(pos, 0xf7dfaa, 0.087, name);
+    marker.position.y += 0.07;
+    s.label(marker.position, name);
+  }
+  s.label(
+    maarCenter.clone().add(vec(0.025, 0.085, -0.15)),
+    "Ulmener Maar",
+    "Maarsee bei Ulmen",
+  );
+
+  if (detail) {
+    s.camera.position.set(wittlichCenter.x, 14, wittlichCenter.z + 0.002);
+    s.controls.target.copy(wittlichCenter);
+    s.controls.update();
+    s.halfWidth = 3.2;
+    s.halfHeight = 2.15;
+    s.label(
+      using({ lat: 49.969, lon: 6.95 }),
+      "Wittlicher Senke",
+      "Südöstlich der Eifel",
+    );
+  } else {
+    s.look(0, 14, 0.001, 0);
+    s.controls.enableRotate = false;
+    s.halfWidth = 6.04;
+    s.halfHeight = 4.48;
+    const top = 0.6;
+    const route = Array.from({ length: 51 }, (_, i) => {
+      const q = ulmenCenter.clone().lerp(wittlichCenter, i / 50);
+      q.y = top;
+      return q;
+    });
+    s.mesh(
+      new T.TubeGeometry(
+        new T.LineCurve3(route[0], route.at(-1)!),
+        1,
+        0.021,
+        6,
+        false,
+      ),
+      0xf4deaa,
+      "Luftlinie",
+      true,
+    );
+    const center = route[25];
+    const distance = Math.round(greatCircleKm(towns.ulmen, towns.wittlich));
+    s.label(
+      center,
+      "Rund " + distance + " km Luftlinie",
+      "Großkreis zwischen den Ortsmitten",
+    );
+    const length = (5000 / townRegion.width) * width;
+    s.line(
+      [park, park.clone().add(vec(length, 0, 0))],
+      0xf4deaa,
+      "Maßstabsbalken",
+    );
+    for (const x of [park.x, park.x + length])
+      s.line(
+        [vec(x, park.y, park.z - 0.11), vec(x, park.y, park.z + 0.11)],
+        0xf4deaa,
+        "Maßstabsmarke",
+      );
+    s.label(park.clone().add(vec(length * 0.5, 0, 0)), "5 km");
+    s.label(vec(4.6, 0.4, -3.62), "↑ Nord");
+  }
+  s.explain(() =>
+    detail
+      ? "Wittlich liegt in der Wittlicher Senke. Das Relief ist dreifach überhöht."
+      : "Ulmen liegt in der Vulkaneifel, Wittlich südöstlich davon. Die helle Linie verbindet die Ortsmitten.",
   );
 }

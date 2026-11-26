@@ -30,7 +30,7 @@ function eventCaption(p: number) {
   if (p < .53) return "CO₂ tritt aus der Lösung aus. Die Blasen verstärken den Auftrieb und reißen weiteres Wasser mit.";
   if (p < .68) return "An der Oberfläche entweicht das Gas. In der Luft ist CO₂ unsichtbar.";
   if (p < .87) return "CO₂-reiche Luft kann in tieferes Gelände fließen. Wind und Durchmischung verändern ihren Weg und verdünnen sie.";
-  return "In tieferen Talräumen waren Menschen besonders gefährdet. Unter anderem waren Nyos, Cha und Subum betroffen.";
+  return "Hohe CO₂-Konzentrationen beeinträchtigen die Atmung und können lebensgefährlich sein. Gleichzeitig kann der Sauerstoffanteil sinken. 1986 waren unter anderem Nyos, Cha und Subum betroffen.";
 }
 
 function pipeCaption(p: number) {
