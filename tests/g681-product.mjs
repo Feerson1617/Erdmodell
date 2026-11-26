@@ -391,11 +391,12 @@ export async function correctionProduct(page, out, { app, film = false } = {}) {
           await located("towns");
           await page.waitForTimeout(2200);
           await located("wittlich");
-          await page.waitForTimeout(1200);
+          await page.waitForTimeout(2400);
           await page.click("#geo-back");
           await arrived("towns");
+          await page.waitForTimeout(1600);
           await related("ulmen");
-          await page.waitForTimeout(1000);
+          await page.waitForTimeout(1800);
           await nyos("pipe");
           await select("geo-preset", "seismic-pipeCut");
           await arrived("pipeCut");
@@ -409,6 +410,9 @@ export async function correctionProduct(page, out, { app, film = false } = {}) {
     ]) {
       const result = await screencast(page, out, "G681-" + name, path, {
         fixedFrame: true,
+        // Record fresh viewport rasters during the geography route. A sparse
+        // DevTools stream can retain a transition frame over a paused relief.
+        resizeFilm: name === "Orte-und-Nyos-Daten",
       });
       assert.ok(result.frames >= 35 && result.seconds >= 18, JSON.stringify(result));
       report.movies.push(result);
