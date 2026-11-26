@@ -109,6 +109,7 @@ export class AnnotationLayer {
       }
       const { anchor, button, line } = node;
       node.label = label;
+      if(button.dataset.explanation!==label.text)button.dataset.explanation=label.text;
       if (label.source && button.dataset.source !== label.source) button.dataset.source = label.source;
       if (label.model && button.dataset.model !== label.model) button.dataset.model = label.model;
       if (label.phase && button.dataset.phase !== label.phase) button.dataset.phase = label.phase;

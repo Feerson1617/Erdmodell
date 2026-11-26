@@ -1,3 +1,7 @@
+# Aktueller Einstieg in G6.9
+
+**Was lernen wir heute?** öffnet die Themen- und Ortsauswahl. Die folgenden Anleitungen aus G6.8 verwenden dafür die früheren Bezeichnungen Thema und Ort. Über die Suche lassen sich beide direkt aufrufen. [G6.9 bedienen](g69-abnahme.md)
+
 # GeoRisiko G6.8.2 im Unterricht
 
 Die Mac-App aus dem DMG nach Programme ziehen. Alternativ die einzelne Web-Test-HTML vollständig herunterladen und in einem WebGL-2-fähigen Browser öffnen. Beide Produkte enthalten die Geodaten. **Präsentieren** öffnet das Modell im Vollbild. Durch Ziehen im Bild lässt sich die Kamera bewegen. Im Vollbild öffnet **Steuerung** bei Bedarf die Ortswahl, **Darstellungen**, die Informationsstufen, Favoriten und **Präsentation beenden**. Escape schließt eine geöffnete Steuerung.

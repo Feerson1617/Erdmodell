@@ -1,3 +1,4 @@
+import {selectControl} from "./lesson-navigation.mjs";
 import assert from "node:assert/strict";
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -98,7 +99,7 @@ export async function focusProduct(page, out, { app, film = false } = {}) {
       id,
     );
   const click = (id) => page.click("#" + id);
-  const select = (id, v) => page.selectOption("#" + id, v);
+  const select = (id, v) => selectControl(page, "#" + id, v);
   const wait = () =>
     page.evaluate(
       () =>
@@ -398,7 +399,7 @@ export async function focusProduct(page, out, { app, film = false } = {}) {
   await page.reload();
   await page.waitForFunction(() => window.geoObservatory?.().ready);
   await click("saved-views");
-  await page.selectOption("#saved-list", { label: "G6.8.2 · Präsentation" });
+  await selectControl(page, "#saved-list", { label: "G6.8.2 · Präsentation" });
   await click("view-apply");
   await arrived("waterColumn");
   assert.ok(

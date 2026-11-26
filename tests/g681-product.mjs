@@ -1,3 +1,4 @@
+import {selectControl} from "./lesson-navigation.mjs";
 import { chooseRelated, switchPresentation } from "./geographic-controls.mjs";
 import assert from "node:assert/strict";
 import { writeFile } from "node:fs/promises";
@@ -41,7 +42,7 @@ export async function correctionProduct(page, out, { app, film = false } = {}) {
   function onerror(e) {
     report.errors.push(String(e));
   }
-  const select = (id, value) => page.selectOption("#" + id, value);
+  const select = (id, value) => selectControl(page, "#" + id, value);
   const geometryReady = () =>
     page.waitForFunction(
       () =>
@@ -102,7 +103,7 @@ export async function correctionProduct(page, out, { app, film = false } = {}) {
     return pixel;
   };
   const swap = async (weak) => {
-    await page.selectOption("#geo-preset",weak ? "unsaturated" : "waterColumn");
+    await selectControl(page, "#geo-preset",weak ? "unsaturated" : "waterColumn");
     await arrived(weak ? "unsaturated" : "waterColumn");
   };
   const geo = () =>
@@ -268,7 +269,7 @@ export async function correctionProduct(page, out, { app, film = false } = {}) {
   await page.reload();
   await page.waitForFunction(() => window.geoObservatory?.().ready);
   await page.click("#saved-views");
-  await page.selectOption("#saved-list", { label: "G6.8.1 Rückkopplung" });
+  await selectControl(page, "#saved-list", { label: "G6.8.1 Rückkopplung" });
   await page.click("#view-apply");
   await arrived("waterColumn");
   const restored = (await geo()).study;

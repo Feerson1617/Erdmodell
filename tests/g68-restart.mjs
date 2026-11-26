@@ -1,3 +1,4 @@
+import {selectControl} from "./lesson-navigation.mjs";
 import assert from "node:assert/strict";
 import { chromium, _electron } from "playwright";
 import { readFile, writeFile, mkdtemp, mkdir } from "node:fs/promises";
@@ -10,7 +11,7 @@ const native = process.argv.includes("--installed"),
 await mkdir(out, { recursive: true });
 const profile = await mkdtemp(join(tmpdir(), "georisiko-neustart-"));
 const file = pathToFileURL(
-  resolve("artifacts/GeoRisiko-G6.8.2-Web-Test.html"),
+  resolve("artifacts/GeoRisiko-G6.9-Web-Test.html"),
 ).href;
 const savedName = "G6.8.1 Wassersäule";
 let first, restored, mask;
@@ -38,7 +39,7 @@ for (let i = 0; i < 2; i++) {
     if (!app) await page.goto(file);
     await page.waitForFunction(() => window.geoObservatory?.().ready);
     if (!i) {
-      await page.selectOption("#geo-topic", "seismic-waterColumn");
+      await selectControl(page, "#geo-topic", "seismic-waterColumn");
       await page.waitForFunction(
         () => window.geoObservatory().observatory.lessonView === "waterColumn",
       );
@@ -52,7 +53,7 @@ for (let i = 0; i < 2; i++) {
       await page.click("#view-close");
     } else {
       await page.click("#saved-views");
-      await page.selectOption("#saved-list", { label: savedName });
+      await selectControl(page, "#saved-list", { label: savedName });
       await page.click("#view-apply");
       await page.waitForFunction(
         () =>

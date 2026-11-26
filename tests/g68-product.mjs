@@ -1,3 +1,4 @@
+import {selectControl} from "./lesson-navigation.mjs";
 import { chooseRelated, compareLake, switchPresentation } from "./geographic-controls.mjs";
 import utils from "playwright-core/lib/utilsBundle";
 const { jpegjs } = utils;
@@ -17,7 +18,7 @@ export async function ubProduct(page, out, { app, film = false } = {}) {
   };
   const onerror = (e) => report.errors.push(String(e));
   page.on("pageerror", onerror);
-  const select = (id, value) => page.selectOption("#" + id, value);
+  const select = (id, value) => selectControl(page, "#" + id, value);
   const settled = () =>
     page.waitForFunction(
       () =>
@@ -247,7 +248,7 @@ export async function ubProduct(page, out, { app, film = false } = {}) {
   await shot("G-Landschaften");
   report.globeOrigins=[];
   for(const [name,lat,lon] of [["Ulmen verorten",50.2106,6.9828],["Nyos verorten",6.43834,10.298663]]){
-    await page.selectOption("#geo-preset",{label:name});await settled();
+    await selectControl(page, "#geo-preset",{label:name});await settled();
     await page.waitForFunction(()=>window.geoObservatory().rendered.globe&&document.querySelector("#geo-crumb").textContent.includes("Verortung"));
     const center=await geo();assert.ok(Math.abs(center.lat-lat)<.05&&Math.abs(center.lon-lon)<.05&&center.globe);
     report.globeOrigins.push(center);await page.click("#geo-back");await arrived("landCompare");
@@ -304,7 +305,7 @@ export async function ubProduct(page, out, { app, film = false } = {}) {
   await page.reload();
   await page.waitForFunction(() => window.geoObservatory?.().ready);
   await page.click("#saved-views");
-  await page.selectOption("#saved-list", { label: "UB G6.8 Wassersäule" });
+  await selectControl(page, "#saved-list", { label: "UB G6.8 Wassersäule" });
   await page.click("#view-apply");
   await arrived("waterColumn");
   const restored = await page.evaluate(

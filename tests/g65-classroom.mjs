@@ -1,3 +1,4 @@
+import {selectControl} from "./lesson-navigation.mjs";
 import { chooseRelated } from "./geographic-controls.mjs";
 import assert from "node:assert/strict";
 import { writeFile } from "node:fs/promises";
@@ -19,7 +20,7 @@ export async function seismicClassroom(page, out, { app, film = false } = {}) {
   };
   const onError = (e) => proof.errors.push(e.message);
   page.on("pageerror", onError);
-  const select = (id, v) => page.selectOption("#" + id, v),
+  const select = (id, v) => selectControl(page, "#" + id, v),
     click = (id) => page.click("#" + id);
   const settled = () =>
     page.waitForFunction(

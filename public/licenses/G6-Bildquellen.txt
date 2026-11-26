@@ -16,7 +16,7 @@ Poly Haven veröffentlicht die Oberflächen unter CC0. Verwendet werden *Withere
 
 Dateiname | Byte | SHA-256 | Herkunft und Nutzung
 botany.webp | 216420 | 44d26d51a81ec9e3f6014c3155997626898ec3e0af15fb57cfef6ecbd2582967 | Eigene CC0-Modelle · acht Pflanzengruppen · scripts/g6/botany.py
-earth-day.webp | 1656068 | 23af54483de1954ba679c8fe56823895b904e04f1b607be51f5113f748557650 | NASA Blue Marble Next Generation · earth-source.json · heutiger Globus
+earth-day.webp | 2909884 | 1ac7e0a9e65c7f0ee4f459b5ba120d974992e4e20f7a6f77a5e3650935c14f5e | NASA Blue Marble Next Generation · earth-source.json · heutiger Globus
 facies-relief.webp | 4698768 | 498656f877cd0344ea254439c6c662e7139462702453293010159ccb89337f1e | Poly Haven · CC0 · facies-source.json · Farbe bzw. Normalen-RG und Rauheit-B
 facies.webp | 2914764 | d083b8c1a7f900e050905a4a1e7b729d408fbccc2677fc7bf141b8f3e56dcbb1 | Poly Haven · CC0 · facies-source.json · Farbe bzw. Normalen-RG und Rauheit-B
 hawaii-relief.webp | 338666 | e97f8c67e562ee153395bdc678f14a4af9679eebee7248b9013ecf6f42eac2f4 | Mapzen/Terrarium · hawaii-source.json · Hangnormalen und Horizontverschattung
