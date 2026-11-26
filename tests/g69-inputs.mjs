@@ -7,7 +7,7 @@ import {selectControl} from "./lesson-navigation.mjs";
 import {sizes} from "./g651-visual.mjs";
 
 const output=process.argv[2], file=process.argv[3];
-const browser=await chromium.launch(process.env.G6_NATIVE_GPU?{headless:false}:{args:["--use-angle=swiftshader","--enable-unsafe-swiftshader"]});
+const browser=await chromium.launch(process.env.G6_NATIVE_GPU?{headless:true}:{args:["--use-angle=swiftshader","--enable-unsafe-swiftshader"]});
 const page=await browser.newPage({viewport:{width:1366,height:768},hasTouch:true,reducedMotion:"reduce"});
 const network=[], errors=[], places=[], inputs=[];
 page.on("pageerror",e=>errors.push(String(e)));
@@ -27,6 +27,7 @@ try{
   }
   for(const [w,h] of sizes){
     await page.setViewportSize({width:w,height:h});await open("topic","inside");await settle();
+    console.log("Prüfe Touch und Maus bei",w,h);
     const layers=[];
     for(let i=0;i<4;i++){
       const pin=page.locator('#pins [data-object="shell-'+i+'"]');
@@ -36,9 +37,17 @@ try{
       assert.ok(explanation.length>25);layers.push({layer,explanation});await close();
     }
     const mantle=page.locator('#pins [data-object="shell-1"]');
-    const [x,y]=await mantle.evaluate(e=>{const r=e.parentElement.getBoundingClientRect();return [r.x,r.y];});
-    await page.mouse.click(x,y);
-    assert.equal(await page.locator("#dialogTitle").innerText(),"Erdmantel");await close();
+    // The synthetic viewport may extend beyond the runner's physical desktop.
+    // Resolve an unobstructed point on the rendered canvas next to the projected material anchor.
+    const hit=await mantle.evaluate(button=>{
+      const a=button.parentElement.getBoundingClientRect(),canvas=document.querySelector("#earth"),r=canvas.getBoundingClientRect();
+      for(const [dx,dy] of [[0,0],[-5,0],[5,0],[0,5],[0,-5],[-10,0],[10,0],[0,10],[0,-10]]){
+        if(document.elementFromPoint(a.x+dx,a.y+dy)===canvas)return {x:a.x+dx-r.x,y:a.y+dy-r.y};
+      }
+      throw Error("Kein sichtbarer Mantelpunkt am projizierten Anker.");
+    });
+    await page.locator("#earth").click({position:hit});
+    assert.equal(await page.locator("#dialog[open] #dialogTitle").innerText({timeout:5000}),"Erdmantel");await close();
     await page.locator("#geo-help").focus();await page.keyboard.press("Enter");
     assert.ok(await page.locator("#dialog").isVisible());await close();
     await open("info","neutral");await page.tap("#geo-help");
@@ -58,4 +67,8 @@ try{
   }
   assert.deepEqual(network,[]);assert.deepEqual(errors,[]);
   await writeFile(join(output,"Orte-und-Eingabe.json"),JSON.stringify({places,inputs,ventInputs,errors,network},null,2));
+}catch(error){
+  await page.screenshot({path:join(output,"Eingabefehler.png")});
+  console.error(await page.evaluate(()=>({viewport:[innerWidth,innerHeight],pixelRatio:devicePixelRatio,visualViewport:visualViewport.scale,shell:window.geoObservatory().shell,dialog:document.querySelector("#dialog").open})));
+  throw error;
 }finally{await browser.close();}
