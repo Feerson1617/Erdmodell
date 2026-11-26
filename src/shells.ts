@@ -144,6 +144,21 @@ export class Shells {
           side: T.DoubleSide,
         });
         // All parts are closed manifold patches or planar faces. A single pass avoids double blending of transparent cut faces.
+        if(kind==="section" && this.style==="A"){
+          // Continuous shading across the section, independent of mesh density.
+          mat.onBeforeCompile=shader=>{
+            shader.vertexShader="varying vec3 shellPoint;\n"+shader.vertexShader.replace("#include <begin_vertex>","#include <begin_vertex>\n shellPoint=position/6371.;");
+            const patterns=[
+              "sin(95.*p.y+18.*sin(9.*p.x))",
+              "sin(18.*p.y+3.*sin(8.*p.z-5.*p.y))+0.45*sin(44.*p.x-16.*p.y)",
+              "sin(24.*length(p)+2.*sin(7.*p.y))",
+              "cos(42.*p.x+12.*p.y)*sin(24.*p.y-15.*p.z)"
+            ];
+            shader.fragmentShader="varying vec3 shellPoint;\n"+shader.fragmentShader.replace("#include <color_fragment>","#include <color_fragment>\n vec3 p=shellPoint;diffuseColor.rgb *= 1.+0.07*("+patterns[i]+");");
+          };
+          mat.customProgramCacheKey=()=>"earth-section-"+i;
+          mat.metalness=i>=2 ? .22 : .02;
+        }
         mat.forceSinglePass = true;
         const part = new T.Mesh(g, mat);
         part.userData = { layer: i, kind, inner, base };

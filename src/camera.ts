@@ -10,6 +10,7 @@ export class CameraController {
   goal = { ...HOME };
   enabled = true;
   orbit = false;
+  geographicMinimum?: (lat:number,lon:number)=>number;
   minimumDistance = .06;
   orbitMinimum = 38;
   inputRevision = 0;
@@ -75,7 +76,7 @@ export class CameraController {
   }
   zoom(f: number) {
     this.stop();
-    this.goal.d = clamp(this.goal.d * f, this.orbit ? this.orbitMinimum : this.minimumDistance, 35000);
+    this.goal.d = clamp(this.goal.d * f, this.orbit ? this.orbitMinimum : Math.max(this.minimumDistance,this.geographicMinimum?.(this.goal.lat,this.goal.lon)??0), 35000);
   }
   pan(dx: number, dy: number) {
     this.stop();

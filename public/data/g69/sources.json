@@ -1,0 +1,40 @@
+[
+  {
+    "name": "Mauna Loa",
+    "bounds": [
+      -156.15,
+      18.98,
+      -155.12,
+      19.9
+    ],
+    "sources": [
+      "https://tiles.maps.eox.at/wms?service=WMS&version=1.1.1&request=GetMap&layers=s2cloudless-2024&styles=&srs=EPSG%3A4326&bbox=-156.15%2C18.98%2C-155.12%2C19.9&width=1024&height=1024&format=image%2Fjpeg",
+      "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/9/33/227.png",
+      "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/9/34/227.png",
+      "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/9/35/227.png",
+      "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/9/33/228.png",
+      "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/9/34/228.png",
+      "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/9/35/228.png"
+    ],
+    "grid": 161,
+    "maxMetres": 4149
+  },
+  {
+    "name": "Za\u014dzan",
+    "bounds": [
+      140.12,
+      37.9,
+      140.76,
+      38.4
+    ],
+    "sources": [
+      "https://tiles.maps.eox.at/wms?service=WMS&version=1.1.1&request=GetMap&layers=s2cloudless-2024&styles=&srs=EPSG%3A4326&bbox=140.12%2C37.9%2C140.76%2C38.4&width=1024&height=1024&format=image%2Fjpeg",
+      "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/9/455/196.png",
+      "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/9/456/196.png",
+      "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/9/455/197.png",
+      "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/9/456/197.png"
+    ],
+    "grid": 161,
+    "maxMetres": 1814
+  }
+]

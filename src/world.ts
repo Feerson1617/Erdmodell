@@ -144,6 +144,13 @@ export class World {
     this.gl.toneMappingExposure = 1.06;
     this.gl.setClearColor(0, 0);
     this.nav = new CameraController(canvas);
+    this.nav.geographicMinimum=(lat,lon)=>{
+      if(this.mode!=="globe" || this.mosaic?.pair) return 0;
+      if(lat>=54.42&&lat<=54.80&&lon>=8.26&&lon<=8.88) return 4;
+      if(lat>=51&&lat<=59&&lon>=4&&lon<=13) return 22;
+      if((lat>18.98&&lat<19.9&&lon>=-156.15&&lon<=-155.12)||(lat>37.9&&lat<38.4&&lon>140.12&&lon<140.76))return 18;
+      return 240;
+    };
     this.planet = new TerrainLODManager(warn);
     this.nyos = new NyosTerrain((lat, lon) => this.planet.elevation(lat, lon));
     this.scene.add(this.nyos.group);
@@ -306,7 +313,7 @@ export class World {
     this.planet.setStyle(s);
     for (const terrain of this.terrains.values()) terrain.setStyle(s);
     this.shell.style = s;
-    this.shell.map = this.planet.maps[s] ?? this.planet.baseline;
+    this.shell.map = this.planet.skin(s);
     if (this.shell.map) {
       this.shell.map.wrapS = T.RepeatWrapping;
       if (this.shell.map.version === 0) this.shell.map.needsUpdate = true;
@@ -1020,7 +1027,7 @@ export class World {
         .addScaledVector(b.north, 1.05)
         .addScaledVector(b.east, -1.2)
         .normalize();
-    this.planet.setObservatoryLight(this.mode==="globe"?smooth((d-1800)/5200):0);
+    this.planet.setObservatoryLight(this.mode==="globe" && this.planet.style==="A" ? 1 : 0);
     this.planet.lightDirection(dir);
     this.nyos.lightDirection(dir);
     const shadow = this.local.group.visible && d < 2.3;

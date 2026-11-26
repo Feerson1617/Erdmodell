@@ -23,6 +23,8 @@ export class TerrainLODManager {
   heightData?: Int16Array;
   maps: Partial<Record<Style, T.Texture>> = {};
   material = new T.MeshBasicMaterial({ vertexColors: true });
+  private ventGrids: Int16Array[] = [];
+  private readonly windows = [[-156.15,18.98,-155.12,19.9],[140.12,37.90,140.76,38.40]];
   private scientificView={value:0};
   private detailTexture?:T.Texture;private daylight?:T.Texture;
   setObservatoryLight(amount:number){this.scientificView.value=amount;}
@@ -89,7 +91,15 @@ export class TerrainLODManager {
     if (cover.status === "rejected" || aerial.status === "rejected")
       this.warn("Regionale Detailkarte fehlt · verfügbare Auflösungen aktiv");
     this.regionalAtlas = atlas.status === "fulfilled" ? atlas.value : undefined;
+    const volcanoMap = await texture("g69/volcanoes.webp");
+    this.ventGrids = await Promise.all(this.windows.map(async (_,i) => {
+      const response = await fetch(dataUrl("g69/vent-"+i+".i16"));
+      const grid = new Int16Array(await response.arrayBuffer());
+      if (grid.length !== 161*161) throw Error("Höhenraster unvollständig");
+      return grid;
+    }));
     this.material.onBeforeCompile = (shader) => {
+      shader.uniforms.volcanoMap={value:volcanoMap};
       shader.uniforms.sunUnit = this.light;shader.uniforms.daylight={value:this.daylight};shader.uniforms.earthDetail={value:this.detailTexture};shader.uniforms.scientific=this.scientificView;
       shader.uniforms.weights = this.mapWeights;
       Object.assign(shader.uniforms, {
@@ -119,7 +129,7 @@ export class TerrainLODManager {
           }`);
       shader.fragmentShader =
         `
-        varying vec3 gNormal;varying vec3 gEye;uniform float scientific;uniform sampler2D earthDetail,daylight;varying float earthLight;uniform vec3 weights;uniform sampler2D layer0,layer1,layer2;
+        varying vec3 gNormal;varying vec3 gEye;uniform float scientific;uniform sampler2D volcanoMap,earthDetail,daylight;varying float earthLight;uniform vec3 weights;uniform sampler2D layer0,layer1,layer2;
         uniform vec3 nyosWeights;uniform vec4 nyosFarBounds,nyosMidBounds,nyosBounds;
         uniform sampler2D nyosFar,nyosMid;
         vec4 sampleLayer(sampler2D img,vec2 ll,vec4 rect,float weight){
@@ -133,11 +143,13 @@ export class TerrainLODManager {
           vec2 ll=vMapUv*vec2(360.,180.)-vec2(180.,90.);
           vec4 local=sampleLayer(layer2,ll,vec4(8.26,54.42,.62,.38),weights.z);
           vec4 cover=sampleLayer(layer1,ll,vec4(7.55,54.01,1.44,1.09),weights.y);
+          vec4 region=sampleLayer(layer0,ll,vec4(4.,51.,9.,8.),weights.x);
+          vec3 globalColor=mix(texture2D(map,vMapUv).rgb,texture2D(daylight,vMapUv).rgb,scientific*.95);
           vec3 earth=cover.rgb;
           if(cover.a<.9999){
-            vec4 region=sampleLayer(layer0,ll,vec4(4.,51.,9.,8.),weights.x);
+
             earth=region.rgb;
-            if(region.a<.9999)earth=mix(texture2D(map,vMapUv).rgb,region.rgb,region.a);
+            if(region.a<.9999)earth=mix(globalColor,region.rgb,region.a);
             earth=mix(earth,cover.rgb,cover.a);
           }
           if(nyosWeights.x>0.0) {
@@ -148,15 +160,18 @@ export class TerrainLODManager {
             vec4 nearRegion=sampleLayer(nyosMid,ll,nyosMidBounds,nyosWeights.y);
             earth=mix(earth,nearRegion.rgb,nearRegion.a);
           }
+          for(int k=0;k<2;k++){
+            vec4 box=k==0?vec4(-156.15,18.98,1.03,.92):vec4(140.12,37.90,.64,.50);
+            vec2 p=(ll-box.xy)/box.zw;
+            float edge=min(min(p.x,1.-p.x),min(p.y,1.-p.y));
+            if(edge>0.)earth=mix(earth,texture2D(volcanoMap,vec2((p.x+float(k))*.5,p.y)).rgb,smoothstep(0.,.09,edge)*scientific);
+          }
           diffuseColor.rgb*=mix(earth,local.rgb,local.a);
           diffuseColor.rgb*=earthLight;
           if(scientific>.001){
             vec3 detail=texture2D(earthDetail,vMapUv).rgb;
             float shade=dot(detail.rg-vec2(.5),vec2(-.68,.56));
             float ocean=smoothstep(.002,.055,detail.b),rim=pow(1.-max(0.,dot(normalize(gNormal),normalize(gEye))),3.5);
-            vec3 mapped=texture2D(daylight,vMapUv).rgb;vec3 day=mapped*earthLight;
-            float mappedWeight=scientific*(1.-max(weights.x,nyosWeights.x));
-            diffuseColor.rgb=mix(diffuseColor.rgb,day,mappedWeight*.89);
             vec3 oceanTint=vec3(.006,.033,.054)*(.55+.45*(1.-detail.b));
             diffuseColor.rgb*=1.+scientific*clamp(shade*1.45,-.20,.24);
             diffuseColor.rgb+=scientific*(ocean*oceanTint+rim*vec3(.025,.068,.094)*(.62+.38*min(1.,earthLight)));
@@ -177,8 +192,18 @@ export class TerrainLODManager {
     const h =
       (1 - t) * ((1 - s) * a[j * 721 + i] + s * a[j * 721 + i + 1]) +
       t * ((1 - s) * a[(j + 1) * 721 + i] + s * a[(j + 1) * 721 + i + 1]);
+    for(const [k,[w,south,e,north]] of this.windows.entries()){
+      const u=(lon-w)/(e-w), v=(north-lat)/(north-south), grid=this.ventGrids[k];
+      const margin=Math.min(u,1-u,v,1-v);
+      if(!grid || margin<=0) continue;
+      const x=u*160,y=v*160,i=Math.floor(x),j=Math.floor(y),dx=x-i,dy=y-j;
+      const a=j*161+i;
+      const local=(1-dy)*((1-dx)*grid[a]+dx*grid[a+1])+dy*((1-dx)*grid[a+161]+dx*grid[a+162]);
+      return Math.max(0,h+(local-h)*smooth(margin/.09))*.001;
+    }
     return Math.max(0, h * 0.001) * flattening(lat, lon);
   }
+  skin(style:Style){return (style==="A"?this.daylight:this.maps[style])??this.baseline;}
   setStyle(s: Style) {
     if (this.style !== s) {
       for (const { mesh } of this.cache.values()) mesh.visible = false;
